@@ -18,6 +18,16 @@ npm install
 npm run dev               # http://localhost:3000 — migrations run on start
 ```
 
+On first visit the app runs a setup wizard (household name, region, shared or single
+household, owner PIN). To load the real sample invoices afterwards:
+
+```bash
+npm run db:seed
+```
+
+For a fictional demo household instead, set `DEMO_MODE=true` in `.env` before first
+start, or run `npm run db:seed:demo` on an empty database.
+
 Checks: `npm run check` (lint + typecheck + tests).
 
 ## Docker

@@ -3,11 +3,270 @@
     "name": "Home Utilities",
     "tagline": "Bills in, totals out, everyone knows their share."
   },
+  "nav": {
+    "home": "Home",
+    "bills": "Bills",
+    "services": "Services",
+    "members": "Members",
+    "settings": "Settings",
+    "logout": "Log out"
+  },
+  "setup": {
+    "eyebrow": "Welcome",
+    "title": "Set up your household",
+    "submit": "Finish setup",
+    "sections": {
+      "household": "Household",
+      "region": "Region",
+      "owner": "Your account"
+    },
+    "fields": {
+      "householdName": "Household name",
+      "splitMode": "How are bills handled?",
+      "currency": "Currency",
+      "locale": "Locale",
+      "timezone": "Timezone",
+      "fiscalYearStartMonth": "Financial year starts in",
+      "ownerName": "Your name",
+      "pin": "PIN",
+      "pinConfirm": "Confirm PIN",
+      "activeFrom": "Living here since"
+    },
+    "placeholders": {
+      "householdName": "Smith Household"
+    },
+    "hints": {
+      "householdName": "Shown at the top of every screen and on the wall display.",
+      "splitMode": "You can change this later in Settings.",
+      "fiscalYearStartMonth": "Annual totals run from this month. July for an Australian financial year, January for a calendar year.",
+      "pin": "4–8 digits. Used to log in on any device.",
+      "activeFrom": "Bills before this date won’t include you. A rough date is fine."
+    },
+    "splitModes": {
+      "shared": {
+        "label": "Shared house",
+        "body": "Split each bill between housemates and track who has paid."
+      },
+      "single": {
+        "label": "Single household",
+        "body": "Just track totals and trends. No splitting."
+      }
+    }
+  },
+  "login": {
+    "title": "Who's this?",
+    "who": "Member",
+    "pin": "PIN",
+    "submit": "Log in"
+  },
   "home": {
-    "title": "Phase 0 scaffold is running",
-    "body": "The data directory, database migrations, and health check are wired up. Members, services, and bills arrive in Phase 1.",
-    "healthLink": "View health check",
-    "dataDir": "Data directory"
+    "greeting": "Hi {name}",
+    "addBill": "Add bill",
+    "recentTotal": "Last 5 bills",
+    "services": "Services",
+    "members": "Members",
+    "phaseNote": "The full dashboard with monthly totals, your share, upcoming bills and trends arrives in Phase 2. Bills, services and members are ready to use now."
+  },
+  "bills": {
+    "title": "Bills",
+    "add": "Add bill",
+    "new": "New bill",
+    "editTitle": "Edit bill",
+    "edit": "Edit",
+    "delete": "Delete bill",
+    "deleteConfirm": "Delete this bill and its shares? This cannot be undone.",
+    "due": "due",
+    "overdue": "Overdue",
+    "sharesPaid": "{paid}/{total} paid",
+    "empty": {
+      "title": "No bills yet",
+      "body": "Add your first bill by hand, or wait for the mailbox to pick one up once ingestion is set up.",
+      "noServices": "Create a service first, then add bills against it.",
+      "addService": "Add a service"
+    },
+    "source": {
+      "manual": "Entered by hand",
+      "template": "Parsed",
+      "llm": "AI extracted"
+    },
+    "detail": {
+      "amount": "Amount",
+      "includesTax": "includes {amount} {label}",
+      "tax": "tax",
+      "paidToProvider": "Paid to provider",
+      "unpaid": "Not yet paid",
+      "dueDate": "Due date",
+      "issueDate": "Issued",
+      "externalRef": "Invoice number",
+      "usage": "Usage",
+      "account": "Account",
+      "paidToProviderAt": "Paid on",
+      "markPaidProvider": "Mark paid to provider",
+      "markUnpaidProvider": "Mark not paid to provider"
+    },
+    "shares": {
+      "title": "Shares",
+      "payerNote": "{name} pays the provider; everyone else pays {name} back.",
+      "none": "No members were active during this billing period.",
+      "you": "you",
+      "paidProvider": "Paid the provider",
+      "paidOn": "Paid {date}",
+      "unpaid": "Unpaid",
+      "ref": "Reference: {ref}",
+      "prorated": "{days} of {total} days",
+      "markPaid": "Mark paid",
+      "markUnpaid": "Undo",
+      "payTo": "Pay {name}"
+    },
+    "form": {
+      "create": "Add bill",
+      "save": "Save changes",
+      "cancel": "Cancel",
+      "lockedNote": "A housemate has already paid their share, so the amount, period and service are locked. Delete and re-enter the bill if they are wrong.",
+      "service": "Service",
+      "amount": "Amount ({currency})",
+      "externalRef": "Invoice number",
+      "externalRefHint": "Optional. Stops the same bill being added twice.",
+      "tax": "Tax included",
+      "taxLabel": "Tax label",
+      "dates": "Dates",
+      "periodStart": "Period start",
+      "periodEnd": "Period end",
+      "issueDate": "Issue date",
+      "dueDate": "Due date",
+      "usage": "Usage and notes",
+      "usageQuantity": "Usage",
+      "usageUnit": "Unit",
+      "notes": "Notes",
+      "paidToProvider": "Already paid to the provider"
+    }
+  },
+  "services": {
+    "title": "Services",
+    "add": "Add service",
+    "addBill": "Add bill",
+    "new": "New service",
+    "inactive": "Inactive",
+    "paidBy": "paid by {name}",
+    "empty": {
+      "title": "No services yet",
+      "body": "A service is one thing you pay for: internet, electricity, gas, water, rent. Bills belong to services."
+    },
+    "types": {
+      "title": "Service types",
+      "body": "Built-in types cover the usual utilities. Add your own for anything else (cleaning, streaming, strata).",
+      "label": "New type",
+      "placeholder": "Streaming",
+      "unit": "Usage unit",
+      "add": "Add type"
+    },
+    "form": {
+      "create": "Add service",
+      "save": "Save changes",
+      "cancel": "Cancel",
+      "type": "Type",
+      "name": "Name",
+      "provider": "Provider",
+      "accountRef": "Account number",
+      "cadence": "Billing frequency",
+      "usageUnit": "Usage unit",
+      "noUsage": "No usage tracking",
+      "colour": "Colour",
+      "notes": "Notes",
+      "isActive": "Active (uncheck when you cancel this service)",
+      "splitting": "Splitting",
+      "payer": "Who pays the provider?",
+      "payerHint": "Their own share is marked paid automatically and the others pay them back.",
+      "noPayer": "Nobody in particular",
+      "splitMode": "Split",
+      "cadences": {
+        "weekly": "Weekly",
+        "fortnightly": "Fortnightly",
+        "monthly": "Monthly",
+        "bimonthly": "Every two months",
+        "quarterly": "Quarterly",
+        "annual": "Yearly",
+        "irregular": "Irregular"
+      },
+      "splitModes": {
+        "equal": "Equal",
+        "weighted": "By member weight",
+        "custom": "Custom weights"
+      }
+    }
+  },
+  "members": {
+    "title": "Members",
+    "add": "Add member",
+    "new": "New member",
+    "you": "you",
+    "owner": "Owner",
+    "inactive": "Not living here",
+    "since": "Since {date}",
+    "until": "until {date}",
+    "weight": "weight {weight}",
+    "singleNote": "This is a single household, so bills are not split. Members can still log in.",
+    "delete": "Delete",
+    "deleteConfirm": "Delete this member? If they already have bill shares, set a move-out date instead.",
+    "form": {
+      "create": "Add member",
+      "save": "Save changes",
+      "cancel": "Cancel",
+      "name": "Name",
+      "colour": "Colour",
+      "pin": "PIN",
+      "pinHint": "4–8 digits.",
+      "newPin": "New PIN",
+      "newPinHint": "Leave blank to keep the current PIN.",
+      "pinConfirm": "Confirm PIN",
+      "residency": "Residency",
+      "activeFrom": "Moved in",
+      "activeFromHint": "Shares are pro-rated from this date.",
+      "activeTo": "Moved out",
+      "activeToHint": "Leave blank if they still live here.",
+      "splitWeight": "Split weight",
+      "splitWeightHint": "Used when a service splits by weight. 1 = a normal share, 2 = double.",
+      "paymentDetails": "How to pay this member back",
+      "paymentDetailsHint": "Shown to housemates on bills this member pays. PayID, BSB and account, IBAN, Venmo, anything.",
+      "pdLabel": "Label (e.g. PayID)",
+      "pdValue": "Value"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "ownerOnly": "Only the owner can change these.",
+    "saved": "Saved.",
+    "save": "Save",
+    "region": "Region",
+    "fields": {
+      "name": "Household name",
+      "splitMode": "Bills are",
+      "paymentReferenceTemplate": "Payment reference template",
+      "currency": "Currency",
+      "locale": "Locale",
+      "timezone": "Timezone",
+      "fiscalYearStartMonth": "Financial year starts in",
+      "weekStartsOn": "Week starts on"
+    },
+    "hints": {
+      "splitMode": "Switching to single stops new bills being split. Existing shares are kept.",
+      "paymentReferenceTemplate": "Placeholders: {service}, {period}, {member}, {ref}. Trimmed to 18 characters."
+    },
+    "splitModes": {
+      "shared": "split between members",
+      "single": "not split (single household)"
+    },
+    "system": {
+      "title": "System",
+      "dataDir": "Data directory",
+      "mailbox": "Bills mailbox",
+      "llm": "AI extraction",
+      "demoMode": "Demo mode",
+      "configured": "Configured",
+      "notConfigured": "Not configured",
+      "on": "On",
+      "off": "Off"
+    }
   },
   "health": {
     "ok": "OK"

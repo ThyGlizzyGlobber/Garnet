@@ -67,7 +67,8 @@ Docker multi-stage on node:22-bookworm-slim with Next standalone output.
 - `npm run lint` · `npm run typecheck` · `npm test` · `npm run format`
 - `npm run db:generate` — generate a migration from `src/db/schema.ts` changes
 - `npm run db:migrate` — apply migrations to `DATA_DIR/db/utilities.sqlite`
-- `npm run db:seed` — seed members/services/bills for development (Phase 1)
+- `npm run db:seed` — load the four real Aussie Broadband invoices into the existing household (creates a dev household + owner PIN 1234 if none)
+- `npm run db:seed:demo` — create the fictional "Riverside House" demo household (also runs automatically when `DEMO_MODE=true`)
 - `npm run extract:dry-run <file>` — run the extractor pipeline on a bill file (Phase 3)
 - `docker compose up --build` — run the container locally with `./data` mounted
 
@@ -136,3 +137,8 @@ Append entries as `- YYYY-MM-DD — decision — why`. Do not rewrite old entrie
 - 2026-09-23 — Node 22 LTS — Next 16 needs ≥20.9 and Vitest 5 needs ≥22.12; Node 19 on the dev Mac was EOL.
 - 2026-09-24 — ESLint pinned to 9.x — eslint-config-next 16 bundles eslint-plugin-react, which still calls `context.getFilename` and crashes on ESLint 10.
 - 2026-09-24 — Turbopack filesystem cache disabled — the SMB mount rejects fsync (os error 45); builds and dev run uncached.
+- 2026-09-24 — Setup wizard moved from Phase 4 to Phase 1 — owner wants the household name and shared/single choice captured on first run, before any data exists.
+- 2026-09-24 — `household.split_mode` (shared|single) — single households skip share creation and hide share UI; switchable in Settings, existing shares are kept.
+- 2026-09-24 — Auth guard lives in the `(app)` route-group layout, not middleware — the guard needs the DB (household + member lookup), which Next proxies/middleware cannot touch.
+- 2026-09-24 — Share amounts and periods lock once a non-payer share is paid — prevents silently changing what someone already settled; delete and re-enter instead.
+- 2026-09-24 — Payment references capped at 18 chars — fits the common bank transfer reference limit; template placeholders {service} {period} {member} {ref}.
