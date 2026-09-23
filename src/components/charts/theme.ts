@@ -25,6 +25,6 @@ export function seriesColour(light: string, dark: boolean): string {
 export const chartInk = {
   grid: 'var(--color-border)',
   axis: 'var(--color-fg-muted)',
-  tooltipBg: 'var(--color-surface)',
+  tooltipBg: 'var(--color-surface-solid)',
   tooltipBorder: 'var(--color-border)',
 };

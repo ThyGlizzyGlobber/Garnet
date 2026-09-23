@@ -86,7 +86,7 @@ export function MonthlyBars({
               name={s.name}
               stackId="cost"
               fill={seriesColour(s.colour, dark)}
-              stroke="var(--color-surface)"
+              stroke="var(--color-surface-solid)"
               strokeWidth={1}
               radius={i === series.length - 1 ? [4, 4, 0, 0] : 0}
               isAnimationActive={false}

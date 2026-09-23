@@ -13,7 +13,8 @@
     "ledger": "Ledger",
     "wall": "Wall display",
     "review": "Review queue",
-    "status": "Ingestion status"
+    "status": "Ingestion status",
+    "addBill": "Add bill"
   },
   "setup": {
     "eyebrow": "Welcome",
@@ -271,7 +272,7 @@
     "ok": "OK"
   },
   "dashboard": {
-    "greeting": "Hi {name}",
+    "greeting": "Hey, {name}.",
     "addBill": "Add bill",
     "empty": {
       "title": "Nothing to show yet",
@@ -324,7 +325,13 @@
       "empty": "No unusual bills. Anything far above or below the usual cost per day shows here."
     },
     "reviewBanner": "{count, plural, one {# bill needs review} other {# bills need review}}",
-    "reviewLink": "Open review queue"
+    "reviewLink": "Open review queue",
+    "greetingLine": {
+      "level": "{month} is tracking level.",
+      "up": "{month} is running {pct} above August.",
+      "down": "{month} is running {pct} under last month.",
+      "first": "Your first month on the board."
+    }
   },
   "ledger": {
     "titleMe": "Your ledger",

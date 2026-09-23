@@ -1,40 +1,73 @@
 @import 'tailwindcss';
 
 /*
-  Design tokens — Apple-like: system font, soft neutral surfaces, one accent,
-  generous radii. Light and dark follow the OS.
+  Design tokens — "Ink & Mist" (dark) and "Linen" (light), from the approved
+  Phase 4 mockups. Glass cards over a soft gradient ground, slate/mist accent.
+  Fonts come from next/font in layout.tsx as --font-outfit / --font-manrope.
 */
 @theme {
-  --font-sans:
-    -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', system-ui, 'Segoe UI', Roboto,
-    sans-serif;
-  --font-mono: 'SF Mono', ui-monospace, Menlo, Consolas, monospace;
+  --font-sans: var(--font-manrope), system-ui, sans-serif;
+  --font-display: var(--font-outfit), var(--font-manrope), system-ui, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, monospace;
 
-  --color-bg: #f5f5f7;
-  --color-surface: #ffffff;
-  --color-surface-2: #f2f2f7;
-  --color-border: #e5e5ea;
-  --color-fg: #1d1d1f;
-  --color-fg-muted: #6e6e73;
-  --color-accent: #0a84ff;
+  --color-bg: #ece7df;
+  --color-surface: rgba(255, 255, 255, 0.55);
+  --color-surface-2: rgba(31, 29, 24, 0.06);
+  --color-surface-solid: #f6f3ee;
+  --color-border: rgba(255, 255, 255, 0.85);
+  --color-border-strong: rgba(31, 29, 24, 0.12);
+  --color-fg: #1f1d18;
+  --color-fg-muted: #66625a;
+  --color-accent: #5b6f82;
   --color-accent-fg: #ffffff;
-  --color-success: #34c759;
-  --color-warning: #ff9f0a;
-  --color-danger: #ff453a;
+  --color-accent-soft: rgba(91, 111, 130, 0.12);
+  --color-success: #4a6079;
+  --color-success-soft: rgba(91, 111, 130, 0.14);
+  --color-warning: #8a5a00;
+  --color-warning-soft: rgba(230, 194, 122, 0.3);
+  --color-danger: #a43b32;
+  --color-danger-soft: rgba(164, 59, 50, 0.12);
+  --color-hatch: rgba(31, 29, 24, 0.22);
 
-  --radius-card: 1.25rem;
-  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.04), 0 8px 24px rgb(0 0 0 / 0.06);
+  --radius-card: 22px;
+  --shadow-card: 0 1px 2px rgba(31, 29, 24, 0.05), 0 12px 32px rgba(31, 29, 24, 0.1);
+  --blur-glass: 24px;
+}
+
+:root {
+  --ground:
+    radial-gradient(900px 600px at 10% 100%, rgba(217, 160, 124, 0.26), transparent 60%),
+    radial-gradient(800px 500px at 90% 0%, rgba(150, 175, 200, 0.4), transparent 60%),
+    linear-gradient(160deg, #f3efe8 0%, #ece7df 55%, #efe9e0 100%);
+  --stripe: rgba(255, 255, 255, 0.35);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-bg: #000000;
-    --color-surface: #1c1c1e;
-    --color-surface-2: #2c2c2e;
-    --color-border: #3a3a3c;
-    --color-fg: #f5f5f7;
-    --color-fg-muted: #98989d;
-    --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px rgb(0 0 0 / 0.5);
+    --color-bg: #171b22;
+    --color-surface: rgba(255, 255, 255, 0.06);
+    --color-surface-2: rgba(255, 255, 255, 0.08);
+    --color-surface-solid: #1f242d;
+    --color-border: rgba(255, 255, 255, 0.12);
+    --color-border-strong: rgba(255, 255, 255, 0.2);
+    --color-fg: #f1ede6;
+    --color-fg-muted: rgba(241, 237, 230, 0.64);
+    --color-accent: #b9c7d6;
+    --color-accent-fg: #171b22;
+    --color-accent-soft: rgba(185, 199, 214, 0.12);
+    --color-success: #8fa6bd;
+    --color-success-soft: rgba(143, 166, 189, 0.16);
+    --color-warning: #e6c27a;
+    --color-warning-soft: rgba(230, 194, 122, 0.16);
+    --color-danger: #e8a09a;
+    --color-danger-soft: rgba(232, 160, 154, 0.16);
+    --color-hatch: rgba(255, 255, 255, 0.2);
+    --shadow-card: 0 12px 40px rgba(0, 0, 0, 0.3);
+    --ground:
+      radial-gradient(900px 600px at 12% 100%, rgba(185, 199, 214, 0.14), transparent 60%),
+      radial-gradient(700px 500px at 88% 0%, rgba(150, 130, 170, 0.14), transparent 60%),
+      linear-gradient(160deg, #1f242d 0%, #171b22 55%, #1b1f27 100%);
+    --stripe: rgba(255, 255, 255, 0.02);
   }
 }
 
@@ -45,8 +78,43 @@ html {
 
 body {
   background: var(--color-bg);
+  background-image: var(--ground);
+  background-attachment: fixed;
   color: var(--color-fg);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   min-height: 100dvh;
+  position: relative;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(115deg, var(--stripe) 0 2px, transparent 2px 46px);
+  z-index: 0;
+}
+
+body > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Frosted glass surface used by cards, the top bar, and the floating nav. */
+.glass {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-card);
+  backdrop-filter: blur(var(--blur-glass));
+  -webkit-backdrop-filter: blur(var(--blur-glass));
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+/* Hatched fill for estimates / pending in charts. */
+.hatch {
+  background: repeating-linear-gradient(135deg, var(--color-hatch) 0 4px, transparent 4px 9px);
 }

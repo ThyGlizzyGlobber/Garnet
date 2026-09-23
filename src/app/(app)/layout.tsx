@@ -36,6 +36,8 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       reviewHref="/review"
       reviewLabel={t('review')}
       reviewCount={documentCounts().needs_review}
+      addHref="/bills/new"
+      addLabel={t('addBill')}
     >
       {children}
     </AppShell>

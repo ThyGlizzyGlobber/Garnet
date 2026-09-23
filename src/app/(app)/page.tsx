@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { Legend } from '@/components/charts/legend';
 import { MonthlyBars } from '@/components/charts/monthly-bars';
-import { Badge, Card, EmptyState, LinkButton, PageHeader } from '@/components/ui';
+import { Badge, Card, EmptyState, LinkButton, PageHeader, Stat } from '@/components/ui';
 import { pageContext } from '@/lib/context';
 import { darkVariant } from '@/lib/palette';
 import { listServices } from '@/lib/services';
@@ -74,11 +74,27 @@ export default async function HomePage() {
 
   return (
     <>
-      <PageHeader
-        title={t('greeting', { name: me.name })}
-        subtitle={hh.name}
-        action={<LinkButton href="/bills/new">{t('addBill')}</LinkButton>}
-      />
+      <header className="mb-6">
+        <h1 className="font-display text-[32px] leading-[1.08] font-semibold tracking-tight sm:text-[40px]">
+          {t('greeting', { name: me.name })}
+          <br />
+          <span className="font-normal text-fg-muted">
+            {delta === null
+              ? t('greetingLine.first')
+              : Math.abs(delta) < 0.02
+                ? t('greetingLine.level', { month: thisMonthName })
+                : delta > 0
+                  ? t('greetingLine.up', {
+                      month: thisMonthName,
+                      pct: pct(Math.abs(delta)).replace('+', ''),
+                    })
+                  : t('greetingLine.down', {
+                      month: thisMonthName,
+                      pct: pct(Math.abs(delta)).replace('+', ''),
+                    })}
+          </span>
+        </h1>
+      </header>
 
       {documentCounts().needs_review > 0 && (
         <Link
@@ -115,52 +131,49 @@ export default async function HomePage() {
       )}
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <Card>
-          <p className="text-sm text-fg-muted">{t('tiles.thisMonth', { month: thisMonthName })}</p>
-          <p className="mt-1 text-3xl font-semibold tabular-nums">{money(s.thisMonth.total)}</p>
-          <p className="mt-1 text-xs text-fg-muted">
-            {delta !== null ? t('tiles.vsLastMonth', { pct: pct(delta) }) : t('tiles.noLastMonth')}
-            {yoy !== null && ` · ${t('tiles.vsLastYear', { pct: pct(yoy) })}`}
-          </p>
-        </Card>
+        <Stat
+          hero
+          label={t('tiles.thisMonth', { month: thisMonthName })}
+          value={money(s.thisMonth.total)}
+          hint={
+            <>
+              {delta !== null
+                ? t('tiles.vsLastMonth', { pct: pct(delta) })
+                : t('tiles.noLastMonth')}
+              {yoy !== null && ` · ${t('tiles.vsLastYear', { pct: pct(yoy) })}`}
+            </>
+          }
+        />
         {shared && ledger ? (
-          <Link href="/ledger" className="block">
-            <Card className="h-full transition hover:bg-surface-2">
-              <p className="text-sm text-fg-muted">{t('tiles.yourShare')}</p>
-              <p
-                className={`mt-1 text-3xl font-semibold tabular-nums ${ledger.owed > 0 ? 'text-warning' : 'text-success'}`}
-              >
-                {money(ledger.owed)}
-              </p>
-              <p className="mt-1 text-xs text-fg-muted">
-                {ledger.owed > 0
-                  ? t('tiles.unpaidShares', { count: ledger.unpaid.length })
-                  : t('tiles.allSettled')}
-                {ledger.owedToMe > 0 &&
-                  ` · ${t('tiles.owedToYou', { amount: money(ledger.owedToMe) })}`}
-              </p>
-            </Card>
+          <Link href="/ledger" className="block text-fg">
+            <Stat
+              className="h-full transition hover:bg-surface-2"
+              label={t('tiles.yourShare')}
+              value={money(ledger.owed)}
+              tone={ledger.owed > 0 ? 'warning' : 'success'}
+              hint={
+                <>
+                  {ledger.owed > 0
+                    ? t('tiles.unpaidShares', { count: ledger.unpaid.length })
+                    : t('tiles.allSettled')}
+                  {ledger.owedToMe > 0 &&
+                    ` · ${t('tiles.owedToYou', { amount: money(ledger.owedToMe) })}`}
+                </>
+              }
+            />
           </Link>
         ) : (
-          <Card>
-            <p className="text-sm text-fg-muted">{t('tiles.perPersonDay')}</p>
-            <p className="mt-1 text-3xl font-semibold tabular-nums">
-              {s.costPerPersonPerDay !== null ? money(s.costPerPersonPerDay) : '—'}
-            </p>
-            <p className="mt-1 text-xs text-fg-muted">
-              {t('tiles.perPersonDayHint', { count: s.activeMemberCount })}
-            </p>
-          </Card>
+          <Stat
+            label={t('tiles.perPersonDay')}
+            value={s.costPerPersonPerDay !== null ? money(s.costPerPersonPerDay) : '—'}
+            hint={t('tiles.perPersonDayHint', { count: s.activeMemberCount })}
+          />
         )}
-        <Card>
-          <p className="text-sm text-fg-muted">
-            {t('tiles.fiscalYear', { label: s.fiscalYear.label })}
-          </p>
-          <p className="mt-1 text-3xl font-semibold tabular-nums">{money(s.fiscalYear.total)}</p>
-          <p className="mt-1 text-xs text-fg-muted">
-            {t('tiles.fiscalYearHint', { from: date(s.fiscalYear.start, 'short') })}
-          </p>
-        </Card>
+        <Stat
+          label={t('tiles.fiscalYear', { label: s.fiscalYear.label })}
+          value={money(s.fiscalYear.total)}
+          hint={t('tiles.fiscalYearHint', { from: date(s.fiscalYear.start, 'short') })}
+        />
       </div>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-5">
