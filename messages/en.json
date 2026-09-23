@@ -1,0 +1,15 @@
+{
+  "app": {
+    "name": "Home Utilities",
+    "tagline": "Bills in, totals out, everyone knows their share."
+  },
+  "home": {
+    "title": "Phase 0 scaffold is running",
+    "body": "The data directory, database migrations, and health check are wired up. Members, services, and bills arrive in Phase 1.",
+    "healthLink": "View health check",
+    "dataDir": "Data directory"
+  },
+  "health": {
+    "ok": "OK"
+  }
+}

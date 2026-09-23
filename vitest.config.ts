@@ -1,0 +1,16 @@
+import { defineConfig } from 'vitest/config';
+import path from 'node:path';
+
+export default defineConfig({
+  resolve: {
+    alias: { '@': path.resolve(__dirname, 'src') },
+  },
+  test: {
+    environment: 'node',
+    include: ['tests/**/*.test.ts', 'src/**/*.test.ts'],
+    env: {
+      DATA_DIR: '.vitest-data',
+      AUTH_SECRET: 'test-secret-test-secret-test-secret-1234',
+    },
+  },
+});

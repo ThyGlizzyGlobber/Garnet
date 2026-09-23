@@ -1,0 +1,28 @@
+# dependencies
+node_modules/
+# next
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+# env / secrets
+.env
+.env.*
+!.env.example
+# runtime data (SQLite, config, raw bills) — lives on the mounted volume
+data/*
+!data/.gitkeep
+# real bills contain personal details; never commit
+sample-bills/
+# test + coverage
+coverage/
+# os / editor / smb artefacts
+.DS_Store
+._*
+.smbdelete*
+.vscode/
+.idea/
+# logs
+*.log
+npm-debug.log*
+.vitest-data/

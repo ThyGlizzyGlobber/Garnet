@@ -1,0 +1,17 @@
+node_modules
+.next
+out
+.git
+data
+sample-bills
+.env
+.env.*
+!.env.example
+coverage
+*.log
+.DS_Store
+._*
+.smbdelete*
+README.md
+SCOPE.md
+CLAUDE.md
