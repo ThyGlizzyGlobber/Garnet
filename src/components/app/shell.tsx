@@ -15,6 +15,10 @@ export function AppShell({
   nav,
   logoutAction,
   logoutLabel,
+  settingsHref,
+  settingsLabel,
+  wallHref,
+  wallLabel,
   children,
 }: {
   householdName: string;
@@ -22,6 +26,10 @@ export function AppShell({
   nav: NavItem[];
   logoutAction: () => Promise<void>;
   logoutLabel: string;
+  settingsHref: string;
+  settingsLabel: string;
+  wallHref: string;
+  wallLabel: string;
   children: ReactNode;
 }) {
   return (
@@ -37,8 +45,24 @@ export function AppShell({
           <nav className="hidden items-center gap-1 md:flex">
             <NavLinks items={nav} variant="top" />
           </nav>
-          <form action={logoutAction} className="flex items-center gap-3 text-sm">
+          <form action={logoutAction} className="flex items-center gap-2 text-sm">
             <span className="hidden text-fg-muted sm:inline">{memberName}</span>
+            <Link
+              href={wallHref}
+              title={wallLabel}
+              aria-label={wallLabel}
+              className="hidden rounded-full p-2 text-fg-muted hover:bg-surface-2 hover:text-fg md:inline-flex"
+            >
+              <Icon name="wall" width={20} height={20} />
+            </Link>
+            <Link
+              href={settingsHref}
+              title={settingsLabel}
+              aria-label={settingsLabel}
+              className="rounded-full p-2 text-fg-muted hover:bg-surface-2 hover:text-fg"
+            >
+              <Icon name="gear" width={20} height={20} />
+            </Link>
             <button className="rounded-full bg-surface-2 px-3 py-1.5 font-medium hover:bg-border">
               {logoutLabel}
             </button>
@@ -47,7 +71,7 @@ export function AppShell({
       </header>
       <main className="mx-auto max-w-5xl px-4 py-6">{children}</main>
       <nav className="fixed inset-x-0 bottom-0 z-10 border-t border-border bg-bg/90 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
-        <div className="mx-auto grid max-w-md grid-cols-5">
+        <div className="mx-auto flex max-w-md justify-around">
           <NavLinks items={nav} variant="bottom" />
         </div>
       </nav>

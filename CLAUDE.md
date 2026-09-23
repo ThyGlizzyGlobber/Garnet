@@ -142,3 +142,8 @@ Append entries as `- YYYY-MM-DD — decision — why`. Do not rewrite old entrie
 - 2026-09-24 — Auth guard lives in the `(app)` route-group layout, not middleware — the guard needs the DB (household + member lookup), which Next proxies/middleware cannot touch.
 - 2026-09-24 — Share amounts and periods lock once a non-payer share is paid — prevents silently changing what someone already settled; delete and re-enter instead.
 - 2026-09-24 — Payment references capped at 18 chars — fits the common bank transfer reference limit; template placeholders {service} {period} {member} {ref}.
+- 2026-09-24 — Monthly totals accrue bills across the months they cover (pro-rata by days) — a quarterly bill shows as three months of cost, so trends and seasonality are honest; "due" lists still use the real due date.
+- 2026-09-24 — Anomaly = cost per day ≥30% above or below the median of prior bills for the same service (needs 2 priors) — cadence-agnostic, so a quarterly bill after monthly ones compares fairly. Computed on bill create/update, stored on the bill.
+- 2026-09-24 — Service and member colours come from the dataviz-validated 8-step palette (`src/lib/palette.ts`, light + dark steps) — Apple system colours failed CVD separation and contrast checks. User-picked colours still allowed.
+- 2026-09-24 — `/wall` sits behind the normal session (log in once on the iPad) — a LAN-only alpha still shouldn't show household finances to any device that finds the port.
+- 2026-09-24 — Settings moved to a header gear; bottom tab bar is Home · Bills · Ledger · Services · Members (Ledger hidden for single households).

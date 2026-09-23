@@ -5,6 +5,8 @@ import { pageContext } from '@/lib/context';
 import { listMembers } from '@/lib/members';
 import { listServiceTypes } from '@/lib/services';
 import { listUnits } from '@/lib/units';
+import { nextPaletteColour, TYPE_COLOUR } from '@/lib/palette';
+import { listServices } from '@/lib/services';
 import { createServiceAction } from '../actions';
 import { ServiceForm } from '../service-form';
 
@@ -13,6 +15,11 @@ export default async function NewServicePage() {
   const t = await getTranslations('services');
   const types = listServiceTypes();
   const first = types[0]!;
+  const used = listServices(undefined, true).map((s) => s.colour);
+  const colour =
+    TYPE_COLOUR[first.slug] && !used.includes(TYPE_COLOUR[first.slug]!)
+      ? TYPE_COLOUR[first.slug]!
+      : nextPaletteColour(used);
   return (
     <div className="mx-auto max-w-xl">
       <PageHeader title={t('new')} />
@@ -35,7 +42,7 @@ export default async function NewServicePage() {
           usageUnit: first.defaultUnit ?? '',
           splitMode: 'equal',
           payerMemberId: me.id,
-          colour: '#0a84ff',
+          colour,
           isActive: true,
           notes: '',
           customSplits: {},

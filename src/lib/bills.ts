@@ -15,6 +15,7 @@ import { getHousehold } from '@/lib/households';
 import { listMembers } from '@/lib/members';
 import { getCustomSplits, getService, type ServiceWithType } from '@/lib/services';
 import { computeShares, renderPaymentReference } from '@/lib/splits';
+import { anomalyNote, detectAnomaly } from '@/lib/anomaly';
 
 export interface BillInput {
   serviceId: string;
@@ -82,11 +83,14 @@ export function createBill(input: BillInput, db: Db = getDb()): BillDetail {
   const now = new Date().toISOString();
   const id = ulid();
   const currency = input.currency ?? hh.currency;
+  const anomaly = anomalyFor(input.serviceId, input, null, db);
 
   db.transaction((tx) => {
     tx.insert(bill)
       .values({
         id,
+        isAnomaly: anomaly.isAnomaly,
+        anomalyNote: anomaly.note,
         serviceId: input.serviceId,
         sourceDocumentId: input.sourceDocumentId ?? null,
         amountMinor: input.amountMinor,
@@ -173,6 +177,31 @@ function insertShares(
     .run();
 }
 
+/** Compare against earlier bills of the same service (by period start). */
+function anomalyFor(
+  serviceId: string,
+  b: { amountMinor: number; periodStart: string; periodEnd: string },
+  excludeId: string | null,
+  db: Db,
+): { isAnomaly: boolean; note: string | null } {
+  const priors = db
+    .select({
+      id: bill.id,
+      amountMinor: bill.amountMinor,
+      periodStart: bill.periodStart,
+      periodEnd: bill.periodEnd,
+    })
+    .from(bill)
+    .where(eq(bill.serviceId, serviceId))
+    .all()
+    .filter((p) => p.id !== excludeId && p.periodStart < b.periodStart);
+  const r = detectAnomaly(b, priors);
+  return {
+    isAnomaly: r.isAnomaly,
+    note: r.isAnomaly && r.ratio !== null ? anomalyNote(r.ratio) : null,
+  };
+}
+
 export function getBill(id: string, db: Db = getDb()): BillDetail | null {
   const b = db.select().from(bill).where(eq(bill.id, id)).get();
   if (!b) return null;
@@ -237,9 +266,14 @@ export function updateBill(id: string, patch: Partial<BillInput>, db: Db = getDb
   if (locked && affectsShares)
     throw new Error('Shares have been paid; amount and period are locked');
   const now = new Date().toISOString();
+  const anomaly = affectsShares ? anomalyFor(merged.serviceId, merged, id, db) : null;
   db.transaction((tx) => {
     tx.update(bill)
-      .set({ ...patch, updatedAt: now })
+      .set({
+        ...patch,
+        ...(anomaly ? { isAnomaly: anomaly.isAnomaly, anomalyNote: anomaly.note } : {}),
+        updatedAt: now,
+      })
       .where(eq(bill.id, id))
       .run();
     if (affectsShares && hh.splitMode === 'shared') {

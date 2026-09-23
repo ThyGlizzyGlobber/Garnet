@@ -23,13 +23,29 @@ beforeAll(() => {
   db = opened.db;
   close = () => opened.sqlite.close();
   createHousehold(
-    { name: 'Smith Household', currency: 'AUD', locale: 'en-AU', timezone: 'Australia/Melbourne', fiscalYearStartMonth: 7, splitMode: 'shared' },
+    {
+      name: 'Smith Household',
+      currency: 'AUD',
+      locale: 'en-AU',
+      timezone: 'Australia/Melbourne',
+      fiscalYearStartMonth: 7,
+      splitMode: 'shared',
+    },
     db,
   );
-  bejay = createMember({ name: 'Bejay', pinHash: 'x', role: 'owner', activeFrom: '2025-01-01' }, db).id;
+  bejay = createMember(
+    { name: 'Bejay', pinHash: 'x', role: 'owner', activeFrom: '2025-01-01' },
+    db,
+  ).id;
   sam = createMember({ name: 'Sam', pinHash: 'x', activeFrom: '2025-01-01' }, db).id;
   internet = createService(
-    { typeSlug: 'internet', name: 'Internet', provider: 'Aussie Broadband', accountRef: '14809800', payerMemberId: bejay },
+    {
+      typeSlug: 'internet',
+      name: 'Internet',
+      provider: 'Aussie Broadband',
+      accountRef: '14809800',
+      payerMemberId: bejay,
+    },
     db,
   ).id;
 });
@@ -41,7 +57,14 @@ afterAll(() => {
 
 describe('service type catalog', () => {
   it('is seeded by the migration', () => {
-    expect(listServiceTypes(db).map((t) => t.slug)).toEqual(['internet', 'electricity', 'gas', 'water', 'rent', 'other']);
+    expect(listServiceTypes(db).map((t) => t.slug)).toEqual([
+      'internet',
+      'electricity',
+      'gas',
+      'water',
+      'rent',
+      'other',
+    ]);
   });
 });
 
@@ -76,7 +99,15 @@ describe('createBill', () => {
   it('rejects a duplicate invoice number for the same service', () => {
     expect(() =>
       createBill(
-        { serviceId: internet, amountMinor: 1, periodStart: '2026-07-14', periodEnd: '2026-08-13', dueDate: '2026-07-28', source: 'manual', externalRef: '59259831' },
+        {
+          serviceId: internet,
+          amountMinor: 1,
+          periodStart: '2026-07-14',
+          periodEnd: '2026-08-13',
+          dueDate: '2026-07-28',
+          source: 'manual',
+          externalRef: '59259831',
+        },
         db,
       ),
     ).toThrow(/already exists/);
@@ -102,7 +133,14 @@ describe('createBill', () => {
 
   it('recomputes shares when the amount changes and nothing is paid', () => {
     const b = createBill(
-      { serviceId: internet, amountMinor: 1000, periodStart: '2026-07-14', periodEnd: '2026-08-13', dueDate: '2026-07-28', source: 'manual' },
+      {
+        serviceId: internet,
+        amountMinor: 1000,
+        periodStart: '2026-07-14',
+        periodEnd: '2026-08-13',
+        dueDate: '2026-07-28',
+        source: 'manual',
+      },
       db,
     );
     const u = updateBill(b.id, { amountMinor: 2000 }, db);
@@ -112,7 +150,14 @@ describe('createBill', () => {
   it('creates no shares in single mode', () => {
     updateHousehold({ splitMode: 'single' }, db);
     const b = createBill(
-      { serviceId: internet, amountMinor: 500, periodStart: '2026-08-14', periodEnd: '2026-09-13', dueDate: '2026-08-28', source: 'manual' },
+      {
+        serviceId: internet,
+        amountMinor: 500,
+        periodStart: '2026-08-14',
+        periodEnd: '2026-09-13',
+        dueDate: '2026-08-28',
+        source: 'manual',
+      },
       db,
     );
     expect(b.shares).toEqual([]);

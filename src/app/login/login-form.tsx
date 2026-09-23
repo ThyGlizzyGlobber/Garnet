@@ -8,8 +8,10 @@ import { login } from './actions';
 
 export function LoginForm({
   members,
+  next,
 }: {
   members: { id: string; name: string; colour: string }[];
+  next: string;
 }) {
   const t = useTranslations('login');
   const [selected, setSelected] = useState(members[0]?.id ?? '');
@@ -17,6 +19,7 @@ export function LoginForm({
     <ActionForm action={login} submitLabel={t('submit')}>
       {() => (
         <Card className="flex flex-col gap-4">
+          <input type="hidden" name="next" value={next} />
           <fieldset>
             <legend className="mb-1.5 block text-sm font-medium">{t('who')}</legend>
             <div className="flex flex-wrap gap-2">

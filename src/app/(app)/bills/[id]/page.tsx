@@ -53,6 +53,7 @@ export default async function BillPage({ params }: { params: Promise<{ id: strin
               <Badge tone="warning">{t('detail.unpaid')}</Badge>
             )}
             <Badge>{t(`source.${b.source}`)}</Badge>
+            {b.isAnomaly && <Badge tone="warning">{t('anomaly')}</Badge>}
           </div>
         </div>
         <dl className="mt-5 grid grid-cols-2 gap-x-4 gap-y-3 text-sm sm:grid-cols-3">
@@ -66,6 +67,11 @@ export default async function BillPage({ params }: { params: Promise<{ id: strin
           <Row label={t('detail.account')} value={b.service.accountRef ?? '—'} />
           <Row label={t('detail.paidToProviderAt')} value={date(b.paidToProviderAt) || '—'} />
         </dl>
+        {b.isAnomaly && b.anomalyNote && (
+          <p className="mt-4 rounded-xl bg-warning/10 px-4 py-3 text-sm text-warning">
+            {b.anomalyNote}
+          </p>
+        )}
         {b.notes && <p className="mt-4 whitespace-pre-wrap text-sm text-fg-muted">{b.notes}</p>}
         <div className="mt-5 flex flex-wrap gap-2">
           <InlineAction

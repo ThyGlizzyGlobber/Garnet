@@ -7,7 +7,12 @@ import { LoginForm } from './login-form';
 
 export const dynamic = 'force-dynamic';
 
-export default async function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string }>;
+}) {
+  const { next } = await searchParams;
   const hh = getHousehold();
   if (!hh) redirect('/setup');
   if (await currentMember()) redirect('/');
@@ -17,7 +22,7 @@ export default async function LoginPage() {
     <main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center px-4 py-10">
       <p className="text-sm font-medium text-fg-muted">{hh.name}</p>
       <h1 className="mt-1 mb-6 text-3xl font-semibold tracking-tight">{t('title')}</h1>
-      <LoginForm members={members} />
+      <LoginForm members={members} next={next ?? ''} />
     </main>
   );
 }

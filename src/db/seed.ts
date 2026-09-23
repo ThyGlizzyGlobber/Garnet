@@ -1,10 +1,13 @@
 import { getDb, type Db } from '@/db/client';
 import { hashPin } from '@/lib/auth/pin';
 import { createBill, listBills } from '@/lib/bills';
+import { eq, lt } from 'drizzle-orm';
+import { bill, share } from '@/db/schema';
 import { todayIn } from '@/lib/dates';
 import { createHousehold, getHousehold } from '@/lib/households';
 import { createMember, listMembers } from '@/lib/members';
 import { createService, listServices } from '@/lib/services';
+import { PALETTE, TYPE_COLOUR } from '@/lib/palette';
 
 /**
  * Real seed: the four Aussie Broadband invoices from sample-bills/ (values only,
@@ -41,7 +44,7 @@ export async function seedReal(db: Db = getDb()) {
         accountRef: '14809800',
         cadence: 'monthly',
         payerMemberId: owner?.id ?? null,
-        colour: '#ff6b00',
+        colour: TYPE_COLOUR.internet,
       },
       db,
     );
@@ -124,7 +127,7 @@ export async function seedDemo(db: Db = getDb()) {
       pinHash: pin,
       role: 'owner',
       activeFrom: '2025-02-01',
-      colour: '#0a84ff',
+      colour: PALETTE[0]!.light,
       paymentDetails: [{ label: 'PayID', value: 'alex@example.com' }],
     },
     db,
@@ -134,13 +137,13 @@ export async function seedDemo(db: Db = getDb()) {
       name: 'Jordan',
       pinHash: pin,
       activeFrom: '2025-02-01',
-      colour: '#34c759',
+      colour: PALETTE[2]!.light,
       paymentDetails: [{ label: 'PayID', value: '0400 000 000' }],
     },
     db,
   );
   const sam = createMember(
-    { name: 'Sam', pinHash: pin, activeFrom: '2026-08-01', colour: '#ff9f0a' },
+    { name: 'Sam', pinHash: pin, activeFrom: '2026-08-01', colour: PALETTE[4]!.light },
     db,
   );
   const internet = createService(
@@ -150,7 +153,7 @@ export async function seedDemo(db: Db = getDb()) {
       provider: 'Example Broadband',
       cadence: 'monthly',
       payerMemberId: alex.id,
-      colour: '#ff6b00',
+      colour: TYPE_COLOUR.internet,
     },
     db,
   );
@@ -162,7 +165,7 @@ export async function seedDemo(db: Db = getDb()) {
       cadence: 'quarterly',
       usageUnit: 'kWh',
       payerMemberId: jordan.id,
-      colour: '#ffcc00',
+      colour: TYPE_COLOUR.electricity,
     },
     db,
   );
@@ -174,7 +177,7 @@ export async function seedDemo(db: Db = getDb()) {
       cadence: 'bimonthly',
       usageUnit: 'MJ',
       payerMemberId: jordan.id,
-      colour: '#ff375f',
+      colour: TYPE_COLOUR.gas,
     },
     db,
   );
@@ -186,7 +189,7 @@ export async function seedDemo(db: Db = getDb()) {
       cadence: 'quarterly',
       usageUnit: 'kL',
       payerMemberId: alex.id,
-      colour: '#32ade6',
+      colour: TYPE_COLOUR.water,
     },
     db,
   );
@@ -197,7 +200,7 @@ export async function seedDemo(db: Db = getDb()) {
       provider: 'Landlord',
       cadence: 'monthly',
       payerMemberId: alex.id,
-      colour: '#8e8e93',
+      colour: TYPE_COLOUR.rent,
     },
     db,
   );
@@ -342,5 +345,14 @@ export async function seedDemo(db: Db = getDb()) {
     );
   });
   void sam;
+  // Settle everything before the current cycle so the demo shows a realistic "who owes what".
+  const settled = db.select({ id: bill.id }).from(bill).where(lt(bill.dueDate, '2026-09-01')).all();
+  const paidAt = '2026-09-01T00:00:00Z';
+  for (const b of settled) {
+    db.update(share)
+      .set({ paidAt, paidMethod: 'transfer', updatedAt: paidAt })
+      .where(eq(share.billId, b.id))
+      .run();
+  }
   return { household: hh.name, members: 3 };
 }

@@ -17,7 +17,8 @@ export async function login(_prev: ActionState, fd: FormData): Promise<ActionSta
     return { error: 'Wrong PIN. Try again.' };
   }
   await loginAs(m.id);
-  redirect('/');
+  const next = str(fd, 'next');
+  redirect(next.startsWith('/') && !next.startsWith('//') ? next : '/');
 }
 
 export async function logout(): Promise<void> {

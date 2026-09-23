@@ -32,12 +32,9 @@ export async function getSession() {
 export async function currentMember(): Promise<Member | null> {
   const session = await getSession();
   if (!session.memberId) return null;
-  const m = getMember(session.memberId);
-  if (!m) {
-    session.destroy();
-    return null;
-  }
-  return m;
+  // A stale cookie (member deleted, database reset) just means "not logged in".
+  // Cookies can't be modified during render, so the login action overwrites it later.
+  return getMember(session.memberId) ?? null;
 }
 
 /** Redirects to /login when nobody is logged in. */

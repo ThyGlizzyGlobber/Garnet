@@ -48,6 +48,7 @@ export default async function BillsPage() {
                       {t('sharesPaid', { paid: b.paidShareCount, total: b.shareCount })}
                     </Badge>
                   )}
+                  {b.isAnomaly && <Badge tone="warning">{t('anomaly')}</Badge>}
                   {overdue && <Badge tone="danger">{t('overdue')}</Badge>}
                   <span className="font-semibold tabular-nums">
                     {money(b.amountMinor, b.currency)}

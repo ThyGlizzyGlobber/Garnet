@@ -28,7 +28,7 @@ export function NavLinks({ items, variant }: { items: NavItem[]; variant: 'top' 
           <Link
             key={item.href}
             href={item.href}
-            className={`flex flex-col items-center gap-0.5 py-2 text-[11px] font-medium ${
+            className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-medium ${
               active ? 'text-accent' : 'text-fg-muted'
             }`}
           >

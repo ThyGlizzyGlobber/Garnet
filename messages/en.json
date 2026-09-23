@@ -9,7 +9,9 @@
     "services": "Services",
     "members": "Members",
     "settings": "Settings",
-    "logout": "Log out"
+    "logout": "Log out",
+    "ledger": "Ledger",
+    "wall": "Wall display"
   },
   "setup": {
     "eyebrow": "Welcome",
@@ -58,14 +60,6 @@
     "who": "Member",
     "pin": "PIN",
     "submit": "Log in"
-  },
-  "home": {
-    "greeting": "Hi {name}",
-    "addBill": "Add bill",
-    "recentTotal": "Last 5 bills",
-    "services": "Services",
-    "members": "Members",
-    "phaseNote": "The full dashboard with monthly totals, your share, upcoming bills and trends arrives in Phase 2. Bills, services and members are ready to use now."
   },
   "bills": {
     "title": "Bills",
@@ -139,7 +133,8 @@
       "usageUnit": "Unit",
       "notes": "Notes",
       "paidToProvider": "Already paid to the provider"
-    }
+    },
+    "anomaly": "Unusual"
   },
   "services": {
     "title": "Services",
@@ -270,5 +265,97 @@
   },
   "health": {
     "ok": "OK"
+  },
+  "dashboard": {
+    "greeting": "Hi {name}",
+    "addBill": "Add bill",
+    "empty": {
+      "title": "Nothing to show yet",
+      "body": "Add your first bill and the dashboard fills in: monthly totals, your share, upcoming due dates and trends.",
+      "noServices": "Create a service first, then add a bill against it.",
+      "addBill": "Add a bill",
+      "addService": "Add a service"
+    },
+    "overdue": {
+      "title": "{count, plural, one {# overdue bill} other {# overdue bills}}",
+      "by": "{days, plural, one {# day overdue} other {# days overdue}}"
+    },
+    "tiles": {
+      "thisMonth": "{month} so far",
+      "vsLastMonth": "{pct} vs last month",
+      "noLastMonth": "No bills last month",
+      "vsLastYear": "{pct} vs a year ago",
+      "yourShare": "Your share to pay",
+      "unpaidShares": "{count, plural, one {# unpaid share} other {# unpaid shares}}",
+      "allSettled": "All settled",
+      "owedToYou": "{amount} owed to you",
+      "perPersonDay": "Per person per day",
+      "perPersonDayHint": "{count, plural, one {# member} other {# members}} this month",
+      "fiscalYear": "Year {label} to date",
+      "fiscalYearHint": "Since {from}"
+    },
+    "chart": {
+      "title": "Monthly cost by service",
+      "hint": "Bills spread across the months they cover, so a quarterly bill shows as three months."
+    },
+    "ranking": {
+      "title": "Cost by service, {label}",
+      "empty": "No bills in this financial year yet."
+    },
+    "upcoming": {
+      "title": "Coming up",
+      "empty": "Nothing due. Nice.",
+      "today": "Due today",
+      "inDays": "{days, plural, one {Due tomorrow} other {Due in # days}}"
+    },
+    "balances": {
+      "title": "Who owes what",
+      "settled": "Everyone is settled up.",
+      "you": "you",
+      "bills": "{count, plural, one {# bill} other {# bills}}"
+    },
+    "anomaly": {
+      "title": "Unusual bills",
+      "badge": "Unusual",
+      "empty": "No unusual bills. Anything far above or below the usual cost per day shows here."
+    }
+  },
+  "ledger": {
+    "titleMe": "Your ledger",
+    "titleOther": "{name}'s ledger",
+    "subtitle": "{label}",
+    "tiles": {
+      "owed": "You owe",
+      "owedToYou": "Owed to you",
+      "paidFy": "Paid this year",
+      "ofTotal": "of {total} in shares"
+    },
+    "unpaid": {
+      "title": "To pay",
+      "empty": "Nothing to pay. You're all square.",
+      "payTo": "Pay {name}",
+      "noPayer": "No payer set for this service",
+      "ref": "ref {ref}",
+      "overdue": "Overdue",
+      "markPaid": "Mark paid"
+    },
+    "history": {
+      "title": "History",
+      "paidProvider": "Paid the provider",
+      "paidOn": "Paid {date}",
+      "unpaid": "Unpaid"
+    }
+  },
+  "wall": {
+    "empty": "No bills yet",
+    "thisMonth": "{month}",
+    "nextDue": "Next due",
+    "overdueBy": "{days, plural, one {# day overdue} other {# days overdue}}",
+    "dueToday": "Due today",
+    "dueIn": "{days, plural, one {Due tomorrow} other {Due in # days}}",
+    "nothingDue": "Nothing due",
+    "whoOwes": "Who owes what",
+    "settled": "Settled",
+    "footer": "Financial year {label}: {total}"
   }
 }

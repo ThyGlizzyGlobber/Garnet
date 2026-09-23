@@ -17,9 +17,9 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   const nav = [
     { href: '/', label: t('home'), icon: 'home' },
     { href: '/bills', label: t('bills'), icon: 'receipt' },
+    ...(hh.splitMode === 'shared' ? [{ href: '/ledger', label: t('ledger'), icon: 'ledger' }] : []),
     { href: '/services', label: t('services'), icon: 'bolt' },
     { href: '/members', label: t('members'), icon: 'people' },
-    { href: '/settings', label: t('settings'), icon: 'gear' },
   ];
   return (
     <AppShell
@@ -28,6 +28,10 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       nav={nav}
       logoutAction={logout}
       logoutLabel={t('logout')}
+      settingsHref="/settings"
+      settingsLabel={t('settings')}
+      wallHref="/wall"
+      wallLabel={t('wall')}
     >
       {children}
     </AppShell>
