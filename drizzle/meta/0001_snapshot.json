@@ -180,24 +180,17 @@
       "indexes": {
         "bill_service_external_ref_unique": {
           "name": "bill_service_external_ref_unique",
-          "columns": [
-            "service_id",
-            "external_ref"
-          ],
+          "columns": ["service_id", "external_ref"],
           "isUnique": true
         },
         "bill_period_idx": {
           "name": "bill_period_idx",
-          "columns": [
-            "period_start"
-          ],
+          "columns": ["period_start"],
           "isUnique": false
         },
         "bill_due_idx": {
           "name": "bill_due_idx",
-          "columns": [
-            "due_date"
-          ],
+          "columns": ["due_date"],
           "isUnique": false
         }
       },
@@ -206,12 +199,8 @@
           "name": "bill_service_id_service_id_fk",
           "tableFrom": "bill",
           "tableTo": "service",
-          "columnsFrom": [
-            "service_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["service_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -219,12 +208,8 @@
           "name": "bill_source_document_id_source_document_id_fk",
           "tableFrom": "bill",
           "tableTo": "source_document",
-          "columnsFrom": [
-            "source_document_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["source_document_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -232,12 +217,8 @@
           "name": "bill_created_by_member_id_member_id_fk",
           "tableFrom": "bill",
           "tableTo": "member",
-          "columnsFrom": [
-            "created_by_member_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by_member_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -425,9 +406,7 @@
       "indexes": {
         "member_name_unique": {
           "name": "member_name_unique",
-          "columns": [
-            "name"
-          ],
+          "columns": ["name"],
           "isUnique": true
         }
       },
@@ -499,10 +478,7 @@
       "indexes": {
         "projection_service_month_unique": {
           "name": "projection_service_month_unique",
-          "columns": [
-            "service_id",
-            "period_month"
-          ],
+          "columns": ["service_id", "period_month"],
           "isUnique": true
         }
       },
@@ -511,12 +487,8 @@
           "name": "projection_service_id_service_id_fk",
           "tableFrom": "projection",
           "tableTo": "service",
-          "columnsFrom": [
-            "service_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["service_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -634,9 +606,7 @@
       "indexes": {
         "service_type_idx": {
           "name": "service_type_idx",
-          "columns": [
-            "type_slug"
-          ],
+          "columns": ["type_slug"],
           "isUnique": false
         }
       },
@@ -645,12 +615,8 @@
           "name": "service_type_slug_service_type_slug_fk",
           "tableFrom": "service",
           "tableTo": "service_type",
-          "columnsFrom": [
-            "type_slug"
-          ],
-          "columnsTo": [
-            "slug"
-          ],
+          "columnsFrom": ["type_slug"],
+          "columnsTo": ["slug"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -658,12 +624,8 @@
           "name": "service_payer_member_id_member_id_fk",
           "tableFrom": "service",
           "tableTo": "member",
-          "columnsFrom": [
-            "payer_member_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["payer_member_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -701,10 +663,7 @@
       "indexes": {
         "service_split_unique": {
           "name": "service_split_unique",
-          "columns": [
-            "service_id",
-            "member_id"
-          ],
+          "columns": ["service_id", "member_id"],
           "isUnique": true
         }
       },
@@ -713,12 +672,8 @@
           "name": "service_split_service_id_service_id_fk",
           "tableFrom": "service_split",
           "tableTo": "service",
-          "columnsFrom": [
-            "service_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["service_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -726,12 +681,8 @@
           "name": "service_split_member_id_member_id_fk",
           "tableFrom": "service_split",
           "tableTo": "member",
-          "columnsFrom": [
-            "member_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["member_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -900,17 +851,12 @@
       "indexes": {
         "share_bill_member_unique": {
           "name": "share_bill_member_unique",
-          "columns": [
-            "bill_id",
-            "member_id"
-          ],
+          "columns": ["bill_id", "member_id"],
           "isUnique": true
         },
         "share_member_idx": {
           "name": "share_member_idx",
-          "columns": [
-            "member_id"
-          ],
+          "columns": ["member_id"],
           "isUnique": false
         }
       },
@@ -919,12 +865,8 @@
           "name": "share_bill_id_bill_id_fk",
           "tableFrom": "share",
           "tableTo": "bill",
-          "columnsFrom": [
-            "bill_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["bill_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -932,12 +874,8 @@
           "name": "share_member_id_member_id_fk",
           "tableFrom": "share",
           "tableTo": "member",
-          "columnsFrom": [
-            "member_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["member_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -945,12 +883,8 @@
           "name": "share_marked_by_member_id_member_id_fk",
           "tableFrom": "share",
           "tableTo": "member",
-          "columnsFrom": [
-            "marked_by_member_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["marked_by_member_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -1065,16 +999,12 @@
       "indexes": {
         "source_document_sha_unique": {
           "name": "source_document_sha_unique",
-          "columns": [
-            "sha256"
-          ],
+          "columns": ["sha256"],
           "isUnique": true
         },
         "source_document_status_idx": {
           "name": "source_document_status_idx",
-          "columns": [
-            "status"
-          ],
+          "columns": ["status"],
           "isUnique": false
         }
       },

@@ -11,7 +11,9 @@
     "settings": "Settings",
     "logout": "Log out",
     "ledger": "Ledger",
-    "wall": "Wall display"
+    "wall": "Wall display",
+    "review": "Review queue",
+    "status": "Ingestion status"
   },
   "setup": {
     "eyebrow": "Welcome",
@@ -96,7 +98,9 @@
       "account": "Account",
       "paidToProviderAt": "Paid on",
       "markPaidProvider": "Mark paid to provider",
-      "markUnpaidProvider": "Mark not paid to provider"
+      "markUnpaidProvider": "Mark not paid to provider",
+      "sourceDocument": "Source file",
+      "viewSource": "View"
     },
     "shares": {
       "title": "Shares",
@@ -318,7 +322,9 @@
       "title": "Unusual bills",
       "badge": "Unusual",
       "empty": "No unusual bills. Anything far above or below the usual cost per day shows here."
-    }
+    },
+    "reviewBanner": "{count, plural, one {# bill needs review} other {# bills need review}}",
+    "reviewLink": "Open review queue"
   },
   "ledger": {
     "titleMe": "Your ledger",
@@ -357,5 +363,109 @@
     "whoOwes": "Who owes what",
     "settled": "Settled",
     "footer": "Financial year {label}: {total}"
+  },
+  "review": {
+    "title": "Review queue",
+    "subtitle": "{review} to review · {total} documents archived",
+    "upload": "Upload a bill",
+    "filter": {
+      "review": "Needs review",
+      "all": "All documents"
+    },
+    "reprocessAll": "Re-run extraction on everything",
+    "reprocessAllConfirm": "Re-run the extractors over every archived document that isn't already a bill? Existing bills are untouched.",
+    "empty": {
+      "title": "Nothing to review",
+      "allTitle": "No documents yet",
+      "body": "Bills that can't be read confidently land here with the file beside a pre-filled form. Upload one to try it."
+    },
+    "kind": {
+      "email": "Email",
+      "pdf": "PDF attachment",
+      "upload": "Upload"
+    },
+    "status": {
+      "unprocessed": "Queued",
+      "extracted": "Bill created",
+      "needs_review": "Needs review",
+      "ignored": "Ignored"
+    },
+    "footnote": "Every file is kept permanently under the data directory's inbox folder, so a bill can always be re-read later.",
+    "detail": {
+      "untitled": "Document",
+      "viewBill": "View bill",
+      "confidence": "{pct}% via {extractor}",
+      "warnings": "Extractor notes",
+      "noPreview": "No text could be read from this file.",
+      "alreadyBill": "This document already became a bill.",
+      "reprocess": "Re-run extraction",
+      "ignore": "Ignore",
+      "ignoreConfirm": "Ignore this document? It stays archived but leaves the queue.",
+      "openFile": "Open file",
+      "attempts": "Extractors tried",
+      "attemptError": "error: {error}",
+      "attemptNone": "no result"
+    },
+    "form": {
+      "approve": "Create bill",
+      "noServiceMatch": "No service matches \"{provider}\". Pick one below, or add a service first.",
+      "noServices": "No services yet",
+      "service": "Service",
+      "amount": "Amount ({currency})",
+      "externalRef": "Invoice number",
+      "tax": "Tax included",
+      "taxLabel": "Tax label",
+      "periodStart": "Period start",
+      "periodEnd": "Period end",
+      "issueDate": "Issue date",
+      "dueDate": "Due date",
+      "usageQuantity": "Usage",
+      "usageUnit": "Unit",
+      "notes": "Notes"
+    }
+  },
+  "upload": {
+    "title": "Upload a bill",
+    "subtitleLlm": "PDF, HTML or text. Known providers are read instantly; anything else goes through AI extraction.",
+    "subtitleNoLlm": "PDF, HTML or text. Known providers are read instantly; others land in the review queue because AI extraction is not configured.",
+    "submit": "Upload and read",
+    "file": "Bill file",
+    "fileHint": "Up to 25 MB. The file is archived permanently."
+  },
+  "status": {
+    "title": "Ingestion status",
+    "tiles": {
+      "autoRate": "Auto-read rate",
+      "autoRateHint": "Bills read without typing, of all documents that needed a decision",
+      "queue": "Awaiting review",
+      "queueHint": "{extracted} bills created · {ignored} ignored",
+      "archived": "Documents archived",
+      "archivedHint": "Emails, attachments and uploads kept forever"
+    },
+    "mailbox": {
+      "title": "Bills mailbox",
+      "notConfigured": "Set IMAP_HOST, IMAP_USER and IMAP_PASSWORD in .env to enable polling.",
+      "off": "Not configured",
+      "on": "Polling",
+      "paused": "Paused",
+      "error": "Error",
+      "interval": "Poll interval",
+      "everySeconds": "Every {seconds} s",
+      "disabled": "Disabled",
+      "lastPoll": "Last poll",
+      "nextPoll": "Next poll",
+      "lastResult": "Last result",
+      "result": "{messages} messages, {docs} new documents",
+      "polls": "Polls since start",
+      "pollsValue": "{polls} ({errors} errors)",
+      "lastUid": "Last processed message UID",
+      "pollNow": "Poll now"
+    },
+    "extractors": {
+      "title": "Extractors (in order)",
+      "ready": "Ready",
+      "needsKey": "Needs ANTHROPIC_API_KEY",
+      "threshold": "Results below {pct}% confidence go to the review queue."
+    }
   }
 }

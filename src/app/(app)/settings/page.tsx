@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { Card, PageHeader } from '@/components/ui';
 import { pageContext } from '@/lib/context';
@@ -34,7 +35,11 @@ export default async function SettingsPage() {
         }}
       />
       <Card className="mt-4">
-        <h2 className="font-semibold">{t('system.title')}</h2>
+        <h2 className="font-semibold">
+          <Link href="/status" className="text-accent">
+            {t('system.title')} →
+          </Link>
+        </h2>
         <dl className="mt-2 grid grid-cols-2 gap-2 text-sm">
           <dt className="text-fg-muted">{t('system.dataDir')}</dt>
           <dd className="truncate font-mono text-xs">{env.DATA_DIR}</dd>

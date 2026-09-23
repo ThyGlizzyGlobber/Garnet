@@ -19,6 +19,9 @@ export function AppShell({
   settingsLabel,
   wallHref,
   wallLabel,
+  reviewHref,
+  reviewLabel,
+  reviewCount,
   children,
 }: {
   householdName: string;
@@ -30,6 +33,9 @@ export function AppShell({
   settingsLabel: string;
   wallHref: string;
   wallLabel: string;
+  reviewHref: string;
+  reviewLabel: string;
+  reviewCount: number;
   children: ReactNode;
 }) {
   return (
@@ -47,6 +53,19 @@ export function AppShell({
           </nav>
           <form action={logoutAction} className="flex items-center gap-2 text-sm">
             <span className="hidden text-fg-muted sm:inline">{memberName}</span>
+            <Link
+              href={reviewHref}
+              title={reviewLabel}
+              aria-label={reviewLabel}
+              className="relative rounded-full p-2 text-fg-muted hover:bg-surface-2 hover:text-fg"
+            >
+              <Icon name="inbox" width={20} height={20} />
+              {reviewCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 grid min-w-4 place-items-center rounded-full bg-warning px-1 text-[10px] font-bold text-white">
+                  {reviewCount}
+                </span>
+              )}
+            </Link>
             <Link
               href={wallHref}
               title={wallLabel}

@@ -5,6 +5,7 @@ import { AppShell } from '@/components/app/shell';
 import { currentMember } from '@/lib/auth/session';
 import { getHousehold } from '@/lib/households';
 import { logout } from '@/app/login/actions';
+import { documentCounts } from '@/lib/review';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,6 +33,9 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       settingsLabel={t('settings')}
       wallHref="/wall"
       wallLabel={t('wall')}
+      reviewHref="/review"
+      reviewLabel={t('review')}
+      reviewCount={documentCounts().needs_review}
     >
       {children}
     </AppShell>

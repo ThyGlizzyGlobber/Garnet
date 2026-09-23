@@ -62,7 +62,7 @@ Docker multi-stage on node:22-bookworm-slim with Next standalone output.
 ## Commands
 
 - `npm run dev` — dev server; migrations run on start via `src/instrumentation.ts`
-- `npm run build` / `npm start` — production build / server
+- `npm run build` / `npm start` — production build (copies static + public + drizzle into `.next/standalone`) / standalone server
 - `npm run check` — lint + typecheck + tests (must pass before every commit)
 - `npm run lint` · `npm run typecheck` · `npm test` · `npm run format`
 - `npm run db:generate` — generate a migration from `src/db/schema.ts` changes
@@ -147,3 +147,23 @@ Append entries as `- YYYY-MM-DD — decision — why`. Do not rewrite old entrie
 - 2026-09-24 — Service and member colours come from the dataviz-validated 8-step palette (`src/lib/palette.ts`, light + dark steps) — Apple system colours failed CVD separation and contrast checks. User-picked colours still allowed.
 - 2026-09-24 — `/wall` sits behind the normal session (log in once on the iPad) — a LAN-only alpha still shouldn't show household finances to any device that finds the port.
 - 2026-09-24 — Settings moved to a header gear; bottom tab bar is Home · Bills · Ledger · Services · Members (Ledger hidden for single households).
+- 2026-09-24 — Extractor order: template parsers → LLM → review; first result at/above `EXTRACTOR_CONFIDENCE_THRESHOLD` wins, otherwise the best attempt is stored on the document for the review form. Nothing below threshold, with no matching service, or with a duplicate invoice number ever becomes a bill silently.
+- 2026-09-24 — Every archived document keeps `extraction_json` (best result, all attempts, reason, text preview) — powers the review UI and the status page's auto-read rate, and makes re-parse from archive a one-click action.
+- 2026-09-24 — Emails with PDF attachments: the .eml is archived and marked `ignored` as an envelope; each PDF is its own document. Emails without attachments run through the pipeline on their HTML/text body.
+- 2026-09-24 — IMAP progress tracked by UID in `DATA_DIR/config/imap-state.json` (reset on UIDVALIDITY change) rather than by \Seen flags — a human reading the mailbox can't cause reprocessing or skipping.
+- 2026-09-24 — LLM extractor uses `messages.parse` with a zod output schema and a cached system prompt; only bill _text_ is sent (max 60k chars), never the file. Model comes from `ANTHROPIC_MODEL`.
+- 2026-09-24 — Template parser fixtures are redacted copies of real invoice text (`tests/fixtures/`); real PDFs stay gitignored.
+- 2026-09-24 — Review queue lives in the header (inbox icon with count) rather than the tab bar — five tabs is the phone limit.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->
+
+- 2026-09-24 — `npm start` runs `.next/standalone/server.js`, never `next start` — with `output: standalone`, `next start` silently 404s some routes (seen on /review and /status) while the standalone server serves them; Docker uses the same server.
+- 2026-09-24 — Standalone server chdirs into `.next/standalone`, so `npm start` makes a relative `DATA_DIR` absolute first (`$PWD/data`); Docker passes `/data` so it's unaffected.

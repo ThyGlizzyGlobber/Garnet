@@ -7,6 +7,7 @@ import { pageContext } from '@/lib/context';
 import { darkVariant } from '@/lib/palette';
 import { listServices } from '@/lib/services';
 import { dashboardSummary, hasAnyBills, householdBalances, memberLedger } from '@/lib/stats';
+import { documentCounts } from '@/lib/review';
 
 export default async function HomePage() {
   const { hh, me, money, date, today } = await pageContext();
@@ -79,6 +80,15 @@ export default async function HomePage() {
         action={<LinkButton href="/bills/new">{t('addBill')}</LinkButton>}
       />
 
+      {documentCounts().needs_review > 0 && (
+        <Link
+          href="/review"
+          className="mb-4 flex items-center justify-between rounded-card bg-warning/10 px-5 py-3 text-sm font-medium text-warning"
+        >
+          <span>{t('reviewBanner', { count: documentCounts().needs_review })}</span>
+          <span>{t('reviewLink')} →</span>
+        </Link>
+      )}
       {s.overdue.length > 0 && (
         <Card className="mb-4 border border-danger/30">
           <p className="font-semibold text-danger">

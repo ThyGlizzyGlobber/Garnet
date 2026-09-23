@@ -1,0 +1,213 @@
+import { and, eq } from 'drizzle-orm';
+import { getDb, type Db } from '@/db/client';
+import { bill, type SourceDocument } from '@/db/schema';
+import { createBill, type BillDetail } from '@/lib/bills';
+import { getEnv } from '@/lib/env';
+import { getHousehold } from '@/lib/households';
+import { listServices, listServiceTypes } from '@/lib/services';
+import { getDocument, readDocument, setDocumentStatus } from './archive';
+import { fallbackExtractors, templateExtractors } from './extractors';
+import type { ExtractionInput, ExtractionResult, Extractor } from './extractors/types';
+import { extractText } from './text';
+
+export interface PipelineOutcome {
+  documentId: string;
+  status: 'extracted' | 'needs_review' | 'ignored';
+  reason: string;
+  result: ExtractionResult | null;
+  billId?: string;
+}
+
+/** What gets stored in source_document.extraction_json for the review UI. */
+export interface StoredExtraction {
+  result: ExtractionResult | null;
+  attempts: { extractor: string; confidence: number | null; error?: string }[];
+  reason: string;
+  textPreview: string;
+  processedAt: string;
+}
+
+export function buildInput(
+  text: string,
+  doc: Partial<SourceDocument>,
+  db: Db = getDb(),
+): ExtractionInput {
+  const hh = getHousehold(db);
+  return {
+    text,
+    filename: doc.originalFilename ?? null,
+    email:
+      doc.emailFrom || doc.emailSubject
+        ? { from: doc.emailFrom ?? null, subject: doc.emailSubject ?? null }
+        : null,
+    locale: hh?.locale ?? 'en-AU',
+    defaultCurrency: hh?.currency ?? 'AUD',
+    services: listServices(db).map((s) => ({
+      id: s.id,
+      name: s.name,
+      provider: s.provider,
+      typeSlug: s.typeSlug,
+    })),
+    serviceTypes: listServiceTypes(db).map((t) => t.slug),
+  };
+}
+
+/**
+ * Try extractors in order and return the first result at or above the threshold,
+ * otherwise the best attempt. Never throws for an extractor failure.
+ */
+export async function runExtractors(
+  input: ExtractionInput,
+  opts: { extractors?: Extractor[]; threshold?: number } = {},
+): Promise<{ best: ExtractionResult | null; attempts: StoredExtraction['attempts'] }> {
+  const extractors = opts.extractors ?? [...templateExtractors, ...fallbackExtractors];
+  const threshold = opts.threshold ?? getEnv().EXTRACTOR_CONFIDENCE_THRESHOLD;
+  const attempts: StoredExtraction['attempts'] = [];
+  let best: ExtractionResult | null = null;
+  for (const ex of extractors) {
+    if (!ex.canHandle(input)) continue;
+    try {
+      const r = await ex.extract(input);
+      attempts.push({ extractor: ex.name, confidence: r?.confidence ?? null });
+      if (r && (!best || r.confidence > best.confidence)) best = r;
+      if (r && r.confidence >= threshold) break;
+    } catch (e) {
+      attempts.push({ extractor: ex.name, confidence: null, error: (e as Error).message });
+    }
+  }
+  return { best, attempts };
+}
+
+/**
+ * Full pipeline for an archived document: text → extractors → bill or review.
+ * Low-confidence, unmatched-service, and duplicate results never become bills silently.
+ */
+export async function processDocument(
+  documentId: string,
+  db: Db = getDb(),
+): Promise<PipelineOutcome> {
+  const doc = getDocument(documentId, db);
+  if (!doc) throw new Error('Document not found');
+  const env = getEnv();
+  const text = await extractText(readDocument(doc), doc.mimeType, doc.originalFilename);
+  const store = (
+    status: PipelineOutcome['status'],
+    reason: string,
+    result: ExtractionResult | null,
+    attempts: StoredExtraction['attempts'],
+  ) => {
+    const stored: StoredExtraction = {
+      result,
+      attempts,
+      reason,
+      textPreview: text.slice(0, 4000),
+      processedAt: new Date().toISOString(),
+    };
+    setDocumentStatus(doc.id, status, JSON.stringify(stored), db);
+  };
+
+  if (text.trim().length < 20) {
+    store('needs_review', 'No readable text (scanned image or unsupported file)', null, []);
+    return { documentId: doc.id, status: 'needs_review', reason: 'no-text', result: null };
+  }
+
+  const input = buildInput(text, doc, db);
+  const { best, attempts } = await runExtractors(input);
+  if (!best) {
+    store(
+      'needs_review',
+      attempts.length
+        ? 'No extractor could read this bill'
+        : 'No extractor applies and AI extraction is not configured',
+      null,
+      attempts,
+    );
+    return { documentId: doc.id, status: 'needs_review', reason: 'no-result', result: null };
+  }
+  if (best.confidence < env.EXTRACTOR_CONFIDENCE_THRESHOLD) {
+    store(
+      'needs_review',
+      `Confidence ${Math.round(best.confidence * 100)}% is below the ${Math.round(env.EXTRACTOR_CONFIDENCE_THRESHOLD * 100)}% threshold`,
+      best,
+      attempts,
+    );
+    return { documentId: doc.id, status: 'needs_review', reason: 'low-confidence', result: best };
+  }
+  const serviceId = best.bill.serviceId ?? matchService(best, db);
+  if (!serviceId) {
+    store('needs_review', `No service matches provider "${best.bill.provider}"`, best, attempts);
+    return { documentId: doc.id, status: 'needs_review', reason: 'no-service', result: best };
+  }
+  if (best.bill.externalRef) {
+    const dup = db
+      .select({ id: bill.id })
+      .from(bill)
+      .where(and(eq(bill.serviceId, serviceId), eq(bill.externalRef, best.bill.externalRef)))
+      .get();
+    if (dup) {
+      store('ignored', `Duplicate of an existing bill (${best.bill.externalRef})`, best, attempts);
+      return {
+        documentId: doc.id,
+        status: 'ignored',
+        reason: 'duplicate',
+        result: best,
+        billId: dup.id,
+      };
+    }
+  }
+  const created = createBillFromExtraction(best, serviceId, doc.id, db);
+  store('extracted', `Created bill via ${best.extractor}`, best, attempts);
+  return {
+    documentId: doc.id,
+    status: 'extracted',
+    reason: 'created',
+    result: best,
+    billId: created.id,
+  };
+}
+
+/** Match by provider name (case-insensitive, either containing the other) then by service type when unique. */
+export function matchService(result: ExtractionResult, db: Db = getDb()): string | null {
+  const services = listServices(db);
+  const p = result.bill.provider.toLowerCase();
+  const byProvider = services.filter(
+    (s) =>
+      s.provider.toLowerCase() === p ||
+      p.includes(s.provider.toLowerCase()) ||
+      s.provider.toLowerCase().includes(p),
+  );
+  if (byProvider.length === 1) return byProvider[0]!.id;
+  const byType = services.filter((s) => s.typeSlug === result.bill.serviceType);
+  return byType.length === 1 ? byType[0]!.id : null;
+}
+
+export function createBillFromExtraction(
+  result: ExtractionResult,
+  serviceId: string,
+  sourceDocumentId: string,
+  db: Db = getDb(),
+): BillDetail {
+  const b = result.bill;
+  return createBill(
+    {
+      serviceId,
+      sourceDocumentId,
+      amountMinor: b.amountMinor,
+      currency: b.currency,
+      taxMinor: b.taxMinor ?? null,
+      taxLabel: b.taxLabel ?? null,
+      periodStart: b.periodStart,
+      periodEnd: b.periodEnd,
+      issueDate: b.issueDate ?? null,
+      dueDate: b.dueDate,
+      usageQuantity: b.usageQuantity ?? null,
+      usageUnit: b.usageUnit ?? null,
+      source: result.extractor.startsWith('template') ? 'template' : 'llm',
+      extractor: result.extractor,
+      confidence: result.confidence,
+      externalRef: b.externalRef ?? null,
+      notes: result.warnings.length ? result.warnings.join('\n') : null,
+    },
+    db,
+  );
+}

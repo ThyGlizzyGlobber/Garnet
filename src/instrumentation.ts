@@ -15,4 +15,6 @@ export async function register() {
     const result = await seedDemo();
     if (!('skipped' in result)) console.log('[demo] seeded fictional household:', result.household);
   }
+  const { startWorker } = await import('./worker');
+  startWorker();
 }

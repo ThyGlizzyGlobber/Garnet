@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { Badge, Card, LinkButton, PageHeader } from '@/components/ui';
@@ -66,6 +67,16 @@ export default async function BillPage({ params }: { params: Promise<{ id: strin
           />
           <Row label={t('detail.account')} value={b.service.accountRef ?? '—'} />
           <Row label={t('detail.paidToProviderAt')} value={date(b.paidToProviderAt) || '—'} />
+          {b.sourceDocumentId && (
+            <div>
+              <dt className="text-fg-muted">{t('detail.sourceDocument')}</dt>
+              <dd>
+                <Link href={`/review/${b.sourceDocumentId}`} className="font-medium text-accent">
+                  {t('detail.viewSource')}
+                </Link>
+              </dd>
+            </div>
+          )}
         </dl>
         {b.isAnomaly && b.anomalyNote && (
           <p className="mt-4 rounded-xl bg-warning/10 px-4 py-3 text-sm text-warning">
