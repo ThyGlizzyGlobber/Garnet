@@ -38,7 +38,35 @@ On the NAS, reference the pushed tag; Docker pulls the matching architecture.
 3. Turn on periodic snapshots for the dataset. That is the entire backup plan;
    the app never writes outside `/data`.
 
-## 3. Create the custom app
+## 3a. Recommended: YAML app that builds from the repo on the NAS
+
+If the repo checkout lives on the NAS (it does: the share holds the git working
+copy), skip images and registries entirely. Paste `deploy/truenas-app.yaml`
+into Apps → Discover Apps → **Install via YAML**, after replacing the two
+`<POOL>/<SHARE>` paths and `AUTH_SECRET`. TrueNAS builds the image from that
+folder and runs it.
+
+Release flow from then on:
+
+1. Get the new commits into the folder. From the Mac, `git push nas main`
+   updates the NAS working copy directly (the NAS repo has
+   `receive.denyCurrentBranch=updateInstead`). Or `git pull` on the NAS from
+   wherever you host the repo.
+2. Press **Update** (or Redeploy) on the app. `pull_policy: build` makes it
+   rebuild from the folder; migrations run on start; the volume is untouched.
+
+To script step 2, run `deploy/update.sh` on the NAS: it builds the image and
+calls `midclt call app.redeploy home-utilities`. Chain both steps from the Mac:
+
+```bash
+git push nas main && ssh root@nas 'sh "/mnt/<POOL>/<SHARE>/BRJ Labs/Home Utilities Software (Prototype-1)/deploy/update.sh"'
+```
+
+If your TrueNAS version rejects `build:` in YAML apps, keep the YAML but delete
+the `build`/`pull_policy` lines and run `deploy/update.sh` for each release;
+it produces the `brjlabs/home-utilities:local` tag the YAML references.
+
+## 3b. Alternative: pre-built image as a custom app
 
 Apps → Discover Apps → Custom App:
 

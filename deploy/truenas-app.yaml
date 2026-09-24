@@ -1,0 +1,54 @@
+# TrueNAS SCALE (24.10+) · Apps → Discover Apps → Install via YAML
+#
+# Builds the image from the repo checkout on the NAS. Pressing the app's
+# Update (or Redeploy) button rebuilds from whatever commit is in that folder,
+# so the release flow is: push commits into the folder → press Update.
+#
+# Replace the two <...> paths and the AUTH_SECRET before pasting.
+services:
+  app:
+    build:
+      context: /mnt/<POOL>/<SHARE>/BRJ Labs/Home Utilities Software (Prototype-1)
+      dockerfile: Dockerfile
+    image: brjlabs/home-utilities:local
+    pull_policy: build
+    container_name: home-utilities
+    restart: unless-stopped
+    ports:
+      - '30080:3000'
+    volumes:
+      - /mnt/<POOL>/apps/utilities-dashboard:/data
+    environment:
+      DATA_DIR: /data
+      AUTH_SECRET: '<openssl rand -base64 48>'
+      AUTH_SESSION_DAYS: '30'
+      DEFAULT_CURRENCY: AUD
+      DEFAULT_LOCALE: en-AU
+      DEFAULT_TIMEZONE: Australia/Melbourne
+      DEFAULT_FISCAL_YEAR_START_MONTH: '7'
+      # Email ingestion (leave IMAP_USER/IMAP_PASSWORD empty to disable)
+      IMAP_HOST: imap.gmail.com
+      IMAP_PORT: '993'
+      IMAP_SECURE: 'true'
+      IMAP_USER: ''
+      IMAP_PASSWORD: ''
+      IMAP_MAILBOX: INBOX
+      IMAP_POLL_INTERVAL_SECONDS: '300'
+      # AI extraction (leave empty to send unknown providers to the review queue)
+      ANTHROPIC_API_KEY: ''
+      ANTHROPIC_MODEL: claude-sonnet-5
+      EXTRACTOR_CONFIDENCE_THRESHOLD: '0.85'
+      DEMO_MODE: 'false'
+      LOG_LEVEL: info
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
