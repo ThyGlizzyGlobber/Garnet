@@ -57,7 +57,10 @@
         "label": "Single household",
         "body": "Just track totals and trends. No splitting."
       }
-    }
+    },
+    "next": "Next",
+    "back": "Back",
+    "progress": "Setup steps"
   },
   "login": {
     "title": "Who's this?",

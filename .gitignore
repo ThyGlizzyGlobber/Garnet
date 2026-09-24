@@ -28,3 +28,4 @@ npm-debug.log*
 .vitest-data/
 .claude/launch.json
 data-demo/
+data-setup/

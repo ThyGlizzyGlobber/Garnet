@@ -21,12 +21,15 @@ export function ActionForm({
   children,
   className,
   footer,
+  hideSubmit,
 }: {
   action: FormAction;
   submitLabel: string;
-  children: (fieldErrors: Record<string, string>) => ReactNode;
+  children: (fieldErrors: Record<string, string>, pending: boolean) => ReactNode;
   className?: string;
   footer?: ReactNode;
+  /** Render your own submit button inside children (e.g. a paged wizard). */
+  hideSubmit?: boolean;
 }) {
   const [state, formAction, pending] = useActionState<ActionState, FormData>(action, {});
   return (
@@ -39,13 +42,15 @@ export function ActionForm({
           {state.error}
         </p>
       )}
-      {children(state.fieldErrors ?? {})}
-      <div className="mt-2 flex items-center justify-between gap-3">
-        {footer ?? <span />}
-        <Button type="submit" disabled={pending}>
-          {pending ? '…' : submitLabel}
-        </Button>
-      </div>
+      {children(state.fieldErrors ?? {}, pending)}
+      {!hideSubmit && (
+        <div className="mt-2 flex items-center justify-between gap-3">
+          {footer ?? <span />}
+          <Button type="submit" disabled={pending}>
+            {pending ? '…' : submitLabel}
+          </Button>
+        </div>
+      )}
     </form>
   );
 }
