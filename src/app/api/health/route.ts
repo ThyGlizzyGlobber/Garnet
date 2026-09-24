@@ -3,6 +3,7 @@ import { sql } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import { getEnv, isImapConfigured, isLlmConfigured } from '@/lib/env';
 import { dataPaths } from '@/lib/paths';
+import pkg from '../../../../package.json';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,7 +14,7 @@ export function GET() {
     getDb().run(sql`select 1`);
     return NextResponse.json({
       status: 'ok',
-      version: process.env.npm_package_version ?? '0.0.1',
+      version: pkg.version,
       dataDir: dataPaths(env.DATA_DIR).root,
       database: 'ok',
       imapConfigured: isImapConfigured(env),

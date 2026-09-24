@@ -15,3 +15,6 @@ coverage
 README.md
 SCOPE.md
 CLAUDE.md
+.claude
+data-demo
+.vitest-data

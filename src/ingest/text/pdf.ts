@@ -1,7 +1,10 @@
-import { PDFParse } from 'pdf-parse';
-
-/** Extract plain text from a PDF buffer. Returns '' for image-only PDFs. */
+/**
+ * Extract plain text from a PDF buffer. Returns '' for image-only PDFs.
+ * pdf-parse (pdf.js) is loaded lazily: it is heavy and probes for canvas
+ * polyfills at load time, which must not happen during server start-up.
+ */
 export async function pdfToText(buffer: Buffer): Promise<string> {
+  const { PDFParse } = await import('pdf-parse');
   const parser = new PDFParse({ data: new Uint8Array(buffer) });
   try {
     const result = await parser.getText();

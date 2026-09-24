@@ -4,6 +4,10 @@
 
 FROM node:22-bookworm-slim AS deps
 WORKDIR /app
+# better-sqlite3 has no prebuilt binary for every Node/arch pair (e.g. arm64),
+# so the deps stage carries a compiler. The runtime stage stays slim.
+RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ \
+    && rm -rf /var/lib/apt/lists/*
 COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
 
@@ -25,6 +29,11 @@ ENV NODE_ENV=production \
 RUN groupadd -g 1001 app && useradd -u 1001 -g app -m app \
     && mkdir -p /data && chown app:app /data
 COPY --from=build --chown=app:app /app/.next/standalone ./
+# pdf.js loads its worker and canvas polyfill dynamically, which Next's file
+# tracing cannot see, so copy those packages whole from the deps stage.
+COPY --from=deps --chown=app:app /app/node_modules/@napi-rs ./node_modules/@napi-rs
+COPY --from=deps --chown=app:app /app/node_modules/pdfjs-dist ./node_modules/pdfjs-dist
+COPY --from=deps --chown=app:app /app/node_modules/pdf-parse ./node_modules/pdf-parse
 USER app
 EXPOSE 3000
 VOLUME ["/data"]
