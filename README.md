@@ -30,10 +30,8 @@ start, or run `npm run db:seed:demo` on an empty database.
 
 Checks: `npm run check` (lint + typecheck + tests).
 
-## Docker
+## Deployment
 
-```bash
-docker compose up --build   # data persists in ./data
-```
-
-Deployment on TrueNAS Scale (and plain Docker Compose) is documented in [DEPLOY.md](DEPLOY.md).
+The app runs as a TrueNAS SCALE YAML app that builds from the repo folder on
+the NAS; pushing commits into that folder and pressing Update releases a new
+version. See [DEPLOY.md](DEPLOY.md) and `deploy/`.

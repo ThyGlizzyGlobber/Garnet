@@ -57,7 +57,7 @@ DB, never hardcoded.
 Next.js 16 (App Router, Turbopack) · TypeScript 5 strict · Tailwind v4 · Recharts ·
 Drizzle ORM + better-sqlite3 · next-intl · Vitest · ESLint 9 + Prettier ·
 iron-session + bcryptjs · imapflow + mailparser + pdf-parse · @anthropic-ai/sdk ·
-Docker multi-stage on node:22-bookworm-slim with Next standalone output.
+Docker multi-stage on node:22-bookworm-slim with Next standalone output, built on the NAS from the repo checkout (`deploy/`).
 
 ## Commands
 
@@ -70,7 +70,7 @@ Docker multi-stage on node:22-bookworm-slim with Next standalone output.
 - `npm run db:seed` — load the four real Aussie Broadband invoices into the existing household (creates a dev household + owner PIN 1234 if none)
 - `npm run db:seed:demo` — create the fictional "Riverside House" demo household (also runs automatically when `DEMO_MODE=true`)
 - `npm run extract:dry-run -- <file...>` — run the extractor pipeline on bill files, no DB writes (`--llm` forces the AI extractor, `--json` for machine output)
-- `docker compose up --build` — run the container locally with `./data` mounted
+- `docker build -t brjlabs/home-utilities:local .` — build the image locally; production builds happen on the NAS via `deploy/truenas-app.yaml`
 
 ## Layout
 
@@ -179,4 +179,4 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - 2026-09-24 — Dashboard follows the merged mockup tile grid (stats · chart/next-due/bills · who-owes/settled-gauge/set-aside · ranking/anomalies). Next-due shows the viewer's own share with a one-click mark-paid; settled gauge = paid non-payer shares on bills due this month.
 - 2026-09-24 — Multi-arch image: `docker buildx build --platform linux/amd64,linux/arm64 --push`; amd64 verified building under emulation on the Mac. Pushing needs a `docker login` the owner performs (credentials are never entered by the assistant).
 - 2026-09-24 — Services are tinted tiles (service colour mixed into the surface via color-mix), Bills is a tile grid with a document strip (source, confidence, shares, invoice no.), and /wall follows the Glass Night wall board (two-column glass, 8vw month figure, sparkline, per-service legend, red-tinted next-due when overdue).
-- 2026-09-24 — Release flow: the NAS working copy accepts pushes (; Mac remote `nas`), and `deploy/truenas-app.yaml` builds the image from that folder so the TrueNAS Update button rebuilds from the current commit; `deploy/update.sh` scripts build + redeploy via midclt.
+- 2026-09-24 — Release flow: the NAS working copy accepts pushes (`receive.denyCurrentBranch=updateInstead`; Mac remote `nas`), and `deploy/truenas-app.yaml` builds the image from that folder so the TrueNAS Update button rebuilds from the current commit; `deploy/update.sh` scripts build + redeploy via midclt. The old docker-compose.yml and registry/prebuilt-image paths were removed as redundant.
