@@ -69,7 +69,7 @@ Docker multi-stage on node:22-bookworm-slim with Next standalone output.
 - `npm run db:migrate` — apply migrations to `DATA_DIR/db/utilities.sqlite`
 - `npm run db:seed` — load the four real Aussie Broadband invoices into the existing household (creates a dev household + owner PIN 1234 if none)
 - `npm run db:seed:demo` — create the fictional "Riverside House" demo household (also runs automatically when `DEMO_MODE=true`)
-- `npm run extract:dry-run <file>` — run the extractor pipeline on a bill file (Phase 3)
+- `npm run extract:dry-run -- <file...>` — run the extractor pipeline on bill files, no DB writes (`--llm` forces the AI extractor, `--json` for machine output)
 - `docker compose up --build` — run the container locally with `./data` mounted
 
 ## Layout
@@ -169,3 +169,8 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - 2026-09-24 — Standalone server chdirs into `.next/standalone`, so `npm start` makes a relative `DATA_DIR` absolute first (`$PWD/data`); Docker passes `/data` so it's unaffected.
 - 2026-09-24 — Phase 4 restyle: "Ink & Mist" dark / "Linen" light, chosen by the owner from the mockup canvas (https://claude.ai/artifact/BzeEmm3c16cbvCdTTtGmh4, boards F4 + F5). Glass cards (`.glass`) over a gradient ground with faint diagonal stripes, Outfit display + Manrope body via next/font, slate/mist accent, softened status colours (ochre/rose/slate), floating segmented bottom nav on every breakpoint, no sidebar. All tokens live in `globals.css`; chart tooltips use `--color-surface-solid` because translucent glass is unreadable over bars.
 - 2026-09-24 — Dashboard greeting is two lines from the mockup: "Hey, {name}." then a computed line ("September is tracking level / running 4% above August…"), replacing the plain page title.
+- 2026-09-24 — Projections (`src/lib/projections.ts`): per service, cost per day from (a) the same month last year × bounded drift when ≥4 bills and last-year coverage exists ("seasonal"), else (b) mean of the last 3 bills ("recent"), else the single bill. Month estimate = known accrual + per-day × remaining days; cached in `projection` on every read. Set-aside splits each service's estimate with its own split rules across active members; the headline "each" figure is the mean.
+- 2026-09-24 — Reminders are in-app only for the alpha (`src/lib/reminders.ts`): a member's unpaid shares ranked overdue → due within 7 days → later, shown on the dashboard and ledger. Push/email is roadmap.
+- 2026-09-24 — Statement export is CSV (`/api/export`): per-member financial-year statement (self, or anyone for the owner) and an owner-only all-bills export. PDF statements are roadmap.
+- 2026-09-24 — PWA: manifest + SVG/PNG icons + a network-first service worker that keeps the last copy of pages so the dashboard opens when the NAS is briefly unreachable. API routes are never cached.
+- 2026-09-24 — Dockerfile copies only `.next/standalone` because `postbuild` already places static, public and drizzle inside it; DEPLOY.md covers TrueNAS Scale custom app + plain compose. Container UID/GID 1001 must own the host path.

@@ -18,9 +18,11 @@ import { listMembers } from '@/lib/members';
 import { listServices, listServiceTypes } from '@/lib/services';
 import { listUnits, unitLabel } from '@/lib/units';
 import { createServiceTypeAction } from './actions';
+import { nextMonth, projectMonth } from '@/lib/projections';
 
 export default async function ServicesPage() {
-  const { hh } = await pageContext();
+  const { hh, money, date, today } = await pageContext();
+  const proj = new Map(projectMonth(nextMonth(today)).services.map((p) => [p.service.id, p]));
   const t = await getTranslations('services');
   const services = listServices(undefined, true);
   const members = new Map(listMembers().map((m) => [m.id, m.name]));
@@ -56,6 +58,14 @@ export default async function ServicesPage() {
                     {hh.splitMode === 'shared' &&
                       s.payerMemberId &&
                       ` · ${t('paidBy', { name: members.get(s.payerMemberId) ?? '?' })}`}
+                  </p>
+                  <p className="truncate text-xs text-fg-muted">
+                    {proj.get(s.id)?.nextBill
+                      ? t('nextBill', {
+                          amount: money(proj.get(s.id)!.nextBill!.amountMinor),
+                          date: date(proj.get(s.id)!.nextBill!.dueDate, 'short'),
+                        })
+                      : t('noHistory')}
                   </p>
                 </div>
               </div>

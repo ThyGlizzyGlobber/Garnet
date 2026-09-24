@@ -3,7 +3,7 @@
 services:
   app:
     build: .
-    image: brjlabs/home-utilities-dashboard:dev
+    image: brjlabs/home-utilities:0.4.0
     container_name: home-utilities
     restart: unless-stopped
     ports:

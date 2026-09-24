@@ -1,6 +1,6 @@
 {
   "name": "home-utilities-dashboard",
-  "version": "0.0.1",
+  "version": "0.4.0",
   "private": true,
   "description": "Self-hosted household utilities dashboard \u2014 BRJ Labs Prototype 1",
   "engines": {

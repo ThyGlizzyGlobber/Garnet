@@ -7,6 +7,7 @@ import { formatDate, formatMoney } from '@/lib/format';
 import { getHousehold } from '@/lib/households';
 import { darkVariant } from '@/lib/palette';
 import { dashboardSummary, hasAnyBills, householdBalances } from '@/lib/stats';
+import { nextMonth, projectMonth } from '@/lib/projections';
 import { AutoRefresh } from './auto-refresh';
 
 export const dynamic = 'force-dynamic';
@@ -26,6 +27,12 @@ export default async function WallPage() {
   const s = hasAnyBills() ? dashboardSummary(today, hh.fiscalYearStartMonth) : null;
   const balances = shared ? householdBalances() : [];
   const next = s ? (s.overdue[0] ?? s.upcoming[0]) : undefined;
+  const proj = s ? projectMonth(nextMonth(today)) : null;
+  const projMonthName = proj
+    ? new Intl.DateTimeFormat(hh.locale, { month: 'long', timeZone: 'UTC' }).format(
+        new Date(`${proj.month}-01T00:00:00Z`),
+      )
+    : '';
   const monthName = new Intl.DateTimeFormat(hh.locale, { month: 'long', timeZone: 'UTC' }).format(
     new Date(`${today.slice(0, 7)}-01T00:00:00Z`),
   );
@@ -122,11 +129,16 @@ export default async function WallPage() {
           </section>
         </div>
       )}
-      <footer className="text-[1.4vw] text-fg-muted">
-        {t('footer', {
-          label: s?.fiscalYear.label ?? '',
-          total: s ? money(s.fiscalYear.total) : '',
-        })}
+      <footer className="flex items-center justify-between text-[1.4vw] text-fg-muted">
+        <span>
+          {t('footer', {
+            label: s?.fiscalYear.label ?? '',
+            total: s ? money(s.fiscalYear.total) : '',
+          })}
+        </span>
+        {proj?.setAsideEach !== null && proj?.setAsideEach !== undefined && (
+          <span>{t('setAside', { amount: money(proj.setAsideEach), month: projMonthName })}</span>
+        )}
       </footer>
     </main>
   );

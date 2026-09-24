@@ -93,5 +93,6 @@ export function renderPaymentReference(
     .replace(/\{ref\}/g, vars.ref ?? '')
     .replace(/\s+/g, ' ')
     .trim()
-    .slice(0, 18);
+    .slice(0, 18)
+    .trim();
 }

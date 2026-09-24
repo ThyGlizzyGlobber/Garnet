@@ -36,4 +36,4 @@ Checks: `npm run check` (lint + typecheck + tests).
 docker compose up --build   # data persists in ./data
 ```
 
-Deployment on TrueNAS Scale is documented in `DEPLOY.md` (Phase 4).
+Deployment on TrueNAS Scale (and plain Docker Compose) is documented in [DEPLOY.md](DEPLOY.md).

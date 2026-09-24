@@ -8,6 +8,8 @@ import { darkVariant } from '@/lib/palette';
 import { listServices } from '@/lib/services';
 import { dashboardSummary, hasAnyBills, householdBalances, memberLedger } from '@/lib/stats';
 import { documentCounts } from '@/lib/review';
+import { nextMonth, projectMonth } from '@/lib/projections';
+import { remindersFor, summariseReminders } from '@/lib/reminders';
 
 export default async function HomePage() {
   const { hh, me, money, date, today } = await pageContext();
@@ -33,6 +35,14 @@ export default async function HomePage() {
   }
 
   const s = dashboardSummary(today, hh.fiscalYearStartMonth);
+  const proj = projectMonth(nextMonth(today));
+  const projMonthName = new Intl.DateTimeFormat(hh.locale, {
+    month: 'long',
+    timeZone: 'UTC',
+  }).format(new Date(`${proj.month}-01T00:00:00Z`));
+  const mine = shared ? remindersFor(me.id, today) : [];
+  const mineSum = summariseReminders(mine);
+  const members = new Map(householdBalances().map((b) => [b.member.id, b.member.name]));
   const ledger = shared ? memberLedger(me.id, today, hh.fiscalYearStartMonth) : null;
   const balances = shared ? householdBalances().filter((b) => b.owed > 0) : [];
   const monthLabel = (m: string) =>
@@ -104,6 +114,62 @@ export default async function HomePage() {
           <span>{t('reviewBanner', { count: documentCounts().needs_review })}</span>
           <span>{t('reviewLink')} →</span>
         </Link>
+      )}
+      {shared && (mineSum.overdueCount > 0 || mineSum.soonCount > 0) && (
+        <Card className="mb-4 flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <span className="font-display font-semibold">{t('reminders.title')}</span>
+            <Link href="/ledger" className="text-sm font-semibold text-accent">
+              {t('reminders.open')} →
+            </Link>
+          </div>
+          {mineSum.overdueCount > 0 && (
+            <p className="text-sm font-semibold text-danger">
+              {t('reminders.overdue', {
+                count: mineSum.overdueCount,
+                amount: money(mineSum.overdueMinor),
+              })}
+            </p>
+          )}
+          {mineSum.soonCount > 0 && (
+            <p className="text-sm font-semibold text-warning">
+              {t('reminders.soon', { count: mineSum.soonCount, amount: money(mineSum.soonMinor) })}
+            </p>
+          )}
+          <ul className="divide-y divide-border text-sm">
+            {mine
+              .filter((r) => r.level !== 'upcoming')
+              .slice(0, 4)
+              .map((r) => (
+                <li key={r.share.id} className="flex items-center justify-between py-2">
+                  <span>
+                    {r.serviceName}
+                    <span className="text-fg-muted">
+                      {' · '}
+                      {r.payerMemberId
+                        ? t('reminders.payTo', { name: members.get(r.payerMemberId) ?? '' })
+                        : ''}
+                      {r.share.paymentReference ? ` · ${r.share.paymentReference}` : ''}
+                    </span>
+                  </span>
+                  <span className="flex items-center gap-3">
+                    <span
+                      className={
+                        r.level === 'overdue' ? 'text-xs text-danger' : 'text-xs text-warning'
+                      }
+                    >
+                      {r.level === 'overdue'
+                        ? t('reminders.overdueBy', { days: -r.daysUntilDue })
+                        : t('reminders.dueIn', { days: r.daysUntilDue })}
+                    </span>
+                    <span className="font-semibold tabular-nums">
+                      {money(r.share.amountMinor, r.share.currency)}
+                    </span>
+                  </span>
+                </li>
+              ))}
+          </ul>
+        </Card>
       )}
       {s.overdue.length > 0 && (
         <Card className="mb-4 border border-danger/30">
@@ -310,12 +376,37 @@ export default async function HomePage() {
         )}
       </div>
 
-      {shared && s.anomalies.length > 0 && (
-        <Card className="mt-4">
-          <h2 className="font-semibold">{t('anomaly.title')}</h2>
-          <AnomalyList items={s.anomalies} money={money} empty={t('anomaly.empty')} />
-        </Card>
-      )}
+      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+        <Stat
+          hero
+          label={t('setAside.title', { month: projMonthName })}
+          value={
+            proj.setAsideEach !== null ? (
+              <>
+                {money(proj.setAsideEach)}{' '}
+                <span className="text-base font-normal text-fg-muted">{t('setAside.each')}</span>
+              </>
+            ) : (
+              money(proj.totalMinor)
+            )
+          }
+          hint={
+            <>
+              {t('setAside.household', { amount: money(proj.totalMinor) })}
+              {' · '}
+              {t(
+                `setAside.method.${proj.services.some((p) => p.method === 'seasonal') ? 'seasonal' : proj.services.some((p) => p.method === 'recent') ? 'recent' : proj.services.some((p) => p.method === 'single') ? 'single' : 'none'}`,
+              )}
+            </>
+          }
+        />
+        {shared && s.anomalies.length > 0 && (
+          <Card>
+            <h2 className="font-semibold">{t('anomaly.title')}</h2>
+            <AnomalyList items={s.anomalies} money={money} empty={t('anomaly.empty')} />
+          </Card>
+        )}
+      </div>
     </>
   );
 }

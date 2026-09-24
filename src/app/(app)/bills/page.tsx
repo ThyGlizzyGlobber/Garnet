@@ -5,7 +5,7 @@ import { pageContext } from '@/lib/context';
 import { listServices } from '@/lib/services';
 
 export default async function BillsPage() {
-  const { hh, money, date, today } = await pageContext();
+  const { hh, me, money, date, today } = await pageContext();
   const t = await getTranslations('bills');
   const bills = listBills();
   const hasServices = listServices().length > 0;
@@ -13,7 +13,19 @@ export default async function BillsPage() {
     <>
       <PageHeader
         title={t('title')}
-        action={hasServices ? <LinkButton href="/bills/new">{t('add')}</LinkButton> : undefined}
+        action={
+          <span className="flex items-center gap-2">
+            {me.role === 'owner' && bills.length > 0 && (
+              <a
+                href="/api/export?kind=bills"
+                className="glass hidden items-center rounded-full px-4 py-2 text-sm font-semibold text-fg hover:bg-surface-2 sm:inline-flex"
+              >
+                {t('download')}
+              </a>
+            )}
+            {hasServices && <LinkButton href="/bills/new">{t('add')}</LinkButton>}
+          </span>
+        }
       />
       {bills.length === 0 ? (
         <EmptyState

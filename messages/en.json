@@ -139,7 +139,8 @@
       "notes": "Notes",
       "paidToProvider": "Already paid to the provider"
     },
-    "anomaly": "Unusual"
+    "anomaly": "Unusual",
+    "download": "Download all bills (CSV)"
   },
   "services": {
     "title": "Services",
@@ -193,7 +194,9 @@
         "weighted": "By member weight",
         "custom": "Custom weights"
       }
-    }
+    },
+    "nextBill": "Next bill about {amount} · due {date}",
+    "noHistory": "No bills yet"
   },
   "members": {
     "title": "Members",
@@ -311,7 +314,8 @@
       "title": "Coming up",
       "empty": "Nothing due. Nice.",
       "today": "Due today",
-      "inDays": "{days, plural, one {Due tomorrow} other {Due in # days}}"
+      "inDays": "{days, plural, one {Due tomorrow} other {Due in # days}}",
+      "expected": "Expected"
     },
     "balances": {
       "title": "Who owes what",
@@ -331,6 +335,27 @@
       "up": "{month} is running {pct} above August.",
       "down": "{month} is running {pct} under last month.",
       "first": "Your first month on the board."
+    },
+    "setAside": {
+      "title": "Set aside for {month}",
+      "each": "each",
+      "household": "{amount} household estimate",
+      "method": {
+        "seasonal": "Seasonal: same month last year, adjusted for drift",
+        "recent": "Average of the last 3 bills per service",
+        "single": "Based on one bill per service so far",
+        "none": "No history yet"
+      }
+    },
+    "reminders": {
+      "title": "Your reminders",
+      "overdue": "{count, plural, one {# share overdue} other {# shares overdue}} · {amount}",
+      "soon": "{count, plural, one {# share due this week} other {# shares due this week}} · {amount}",
+      "clear": "Nothing due from you this week.",
+      "payTo": "Pay {name}",
+      "dueIn": "{days, plural, =0 {due today} one {due tomorrow} other {due in # days}}",
+      "overdueBy": "{days, plural, one {# day overdue} other {# days overdue}}",
+      "open": "Open ledger"
     }
   },
   "ledger": {
@@ -357,7 +382,8 @@
       "paidProvider": "Paid the provider",
       "paidOn": "Paid {date}",
       "unpaid": "Unpaid"
-    }
+    },
+    "download": "Download statement (CSV)"
   },
   "wall": {
     "empty": "No bills yet",
@@ -369,7 +395,8 @@
     "nothingDue": "Nothing due",
     "whoOwes": "Who owes what",
     "settled": "Settled",
-    "footer": "Financial year {label}: {total}"
+    "footer": "Financial year {label}: {total}",
+    "setAside": "Set aside {amount} each for {month}"
   },
   "review": {
     "title": "Review queue",
