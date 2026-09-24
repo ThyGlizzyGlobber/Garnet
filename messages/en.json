@@ -140,7 +140,22 @@
       "paidToProvider": "Already paid to the provider"
     },
     "anomaly": "Unusual",
-    "download": "Download all bills (CSV)"
+    "download": "Download all bills (CSV)",
+    "tile": {
+      "paidProvider": "Paid",
+      "unpaid": "Unpaid",
+      "overdue": "Overdue",
+      "period": "{start} – {end}",
+      "source": {
+        "manual": "Entered by hand",
+        "template": "Read {pct}% · template",
+        "llm": "Read {pct}% · AI",
+        "review": "Confirmed in review"
+      },
+      "document": "View file",
+      "shares": "{paid}/{total} shares paid",
+      "upload": "Upload PDF"
+    }
   },
   "services": {
     "title": "Services",
@@ -196,7 +211,16 @@
       }
     },
     "nextBill": "Next bill about {amount} · due {date}",
-    "noHistory": "No bills yet"
+    "noHistory": "No bills yet",
+    "tile": {
+      "next": "Next bill",
+      "due": "due {date}",
+      "noHistory": "No bills yet",
+      "payer": "Paid by {name}",
+      "noPayer": "No payer set",
+      "cadence": "{cadence}",
+      "perDay": "{amount} / day"
+    }
   },
   "members": {
     "title": "Members",
@@ -426,7 +450,8 @@
     "whoOwes": "Who owes what",
     "settled": "Settled",
     "footer": "Financial year {label}: {total}",
-    "setAside": "Set aside {amount} each for {month}"
+    "setAside": "Set aside {amount} each for {month}",
+    "legendMore": "+{count} more"
   },
   "review": {
     "title": "Review queue",
