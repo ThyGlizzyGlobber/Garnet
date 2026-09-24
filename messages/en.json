@@ -14,7 +14,8 @@
     "wall": "Wall display",
     "review": "Review queue",
     "status": "Ingestion status",
-    "addBill": "Add bill"
+    "addBill": "Add bill",
+    "search": "Search bills, providers, invoice numbers"
   },
   "setup": {
     "eyebrow": "Welcome",
@@ -155,7 +156,9 @@
       "document": "View file",
       "shares": "{paid}/{total} shares paid",
       "upload": "Upload PDF"
-    }
+    },
+    "searchResults": "{count, plural, =0 {No bills match} one {# bill matches} other {# bills match}} “{q}”",
+    "clearSearch": "Clear"
   },
   "services": {
     "title": "Services",
@@ -314,7 +317,7 @@
     },
     "tiles": {
       "thisMonth": "{month} so far",
-      "vsLastMonth": "{pct} vs last month",
+      "vsLastMonth": "vs last month",
       "noLastMonth": "No bills last month",
       "vsLastYear": "{pct} vs a year ago",
       "yourShare": "Your share to pay",
@@ -327,7 +330,8 @@
       "fiscalYearHint": "Since {from}",
       "owedToYouTile": "Owed to you",
       "owedBy": "{list}",
-      "nobodyOwes": "Nobody owes you"
+      "nobodyOwes": "Nobody owes you",
+      "paidOfYear": "{pct}% of your {label} shares paid"
     },
     "chart": {
       "title": "Monthly cost by service",
@@ -410,6 +414,18 @@
       "hint": "of {month}'s shares paid",
       "none": "No shares due this month",
       "count": "{paid} of {total} paid"
+    },
+    "forecast": {
+      "title": "Next six months",
+      "hint": "Estimated household cost per month"
+    },
+    "budgetRing": {
+      "label": "of the {month} set-aside used",
+      "over": "over the set-aside"
+    },
+    "chips": {
+      "services": "{count, plural, one {# service} other {# services}}",
+      "members": "{count, plural, one {# member} other {# members}}"
     }
   },
   "ledger": {

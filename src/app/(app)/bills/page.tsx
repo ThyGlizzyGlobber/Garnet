@@ -7,10 +7,27 @@ import { pageContext } from '@/lib/context';
 import { darkVariant } from '@/lib/palette';
 import { listServices } from '@/lib/services';
 
-export default async function BillsPage() {
+export default async function BillsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
+  const { q = '' } = await searchParams;
+  const needle = q.trim().toLowerCase();
   const { hh, me, money, date, today } = await pageContext();
   const t = await getTranslations('bills');
-  const bills = listBills();
+  const all = listBills();
+  const bills = needle
+    ? all.filter((b) =>
+        [
+          b.service.name,
+          b.service.provider,
+          b.externalRef ?? '',
+          b.notes ?? '',
+          b.service.type.label,
+        ].some((x) => x.toLowerCase().includes(needle)),
+      )
+    : all;
   const hasServices = listServices().length > 0;
 
   return (
@@ -34,7 +51,15 @@ export default async function BillsPage() {
           </span>
         }
       />
-      {bills.length === 0 ? (
+      {needle && (
+        <p className="mb-4 flex items-center gap-3 text-sm text-fg-muted">
+          {t('searchResults', { count: bills.length, q })}
+          <Link href="/bills" className="font-semibold text-accent">
+            {t('clearSearch')}
+          </Link>
+        </p>
+      )}
+      {bills.length === 0 && !needle ? (
         <EmptyState
           title={t('empty.title')}
           body={hasServices ? t('empty.body') : t('empty.noServices')}

@@ -18,6 +18,10 @@ import { darkVariant } from '@/lib/palette';
 import { nextMonth, projectMonth } from '@/lib/projections';
 import { listServices, listServiceTypes } from '@/lib/services';
 import { listUnits, unitLabel } from '@/lib/units';
+import { Sparkline } from '@/components/charts/sparkline';
+import { monthlySeries } from '@/lib/stats';
+import { lastMonths } from '@/lib/periods';
+import { monthOf } from '@/lib/dates';
 import { createServiceTypeAction } from './actions';
 
 /** Tinted tile background in the service's colour, readable in both schemes. */
@@ -36,6 +40,7 @@ export default async function ServicesPage() {
   const members = new Map(listMembers().map((m) => [m.id, m.name]));
   const types = listServiceTypes();
   const proj = new Map(projectMonth(nextMonth(today)).services.map((p) => [p.service.id, p]));
+  const history = monthlySeries(lastMonths(monthOf(today), 12));
 
   return (
     <>
@@ -58,7 +63,7 @@ export default async function ServicesPage() {
               <Link
                 key={s.id}
                 href={`/services/${s.id}/edit`}
-                className="glass flex min-h-44 flex-col justify-between rounded-card p-5 text-fg transition hover:brightness-110"
+                className="glass lift flex min-h-52 flex-col justify-between rounded-card p-5 text-fg"
                 style={tint(s.colour)}
               >
                 <div className="flex items-start justify-between gap-3">
@@ -97,7 +102,14 @@ export default async function ServicesPage() {
                       : t('tile.noHistory')}
                   </p>
                 </div>
-                <p className="mt-3 truncate text-xs text-fg-muted">
+                <div className="mt-3 -mx-1">
+                  <Sparkline
+                    values={history.map((r) => r.byService[s.id] ?? 0)}
+                    colour={s.colour}
+                    height={36}
+                  />
+                </div>
+                <p className="mt-2 truncate text-xs text-fg-muted">
                   {s.provider} · {t(`form.cadences.${s.cadence}`)}
                   {s.usageUnit && ` · ${unitLabel(s.usageUnit)}`}
                   {hh.splitMode === 'shared' &&

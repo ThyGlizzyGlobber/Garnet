@@ -89,6 +89,19 @@ export function Icon({ name, ...props }: { name: string } & ComponentProps<'svg'
           <path d="M3 13h5l1.5 2.5h5L16 13h5" />
         </svg>
       );
+    case 'search':
+      return (
+        <svg {...base} {...props}>
+          <circle cx="11" cy="11" r="7" />
+          <path d="M20 20l-3.5-3.5" />
+        </svg>
+      );
+    case 'sparkle':
+      return (
+        <svg {...base} {...props}>
+          <path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6" />
+        </svg>
+      );
     case 'plus':
       return (
         <svg {...base} {...props}>

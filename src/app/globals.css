@@ -1,8 +1,9 @@
 @import 'tailwindcss';
 
 /*
-  Design tokens — "Ink & Mist" (dark) and "Linen" (light), from the approved
-  Phase 4 mockups. Glass cards over a soft gradient ground, slate/mist accent.
+  Design tokens — "Ink & Mist" (dark) and "Linen" (light).
+  Scene: slow-drifting blurred colour blobs behind one big frosted window;
+  cards are opaque-ish glass with a light rim and inner highlight.
   Fonts come from next/font in layout.tsx as --font-outfit / --font-manrope.
 */
 @theme {
@@ -10,17 +11,19 @@
   --font-display: var(--font-outfit), var(--font-manrope), system-ui, sans-serif;
   --font-mono: ui-monospace, 'SF Mono', Menlo, monospace;
 
-  --color-bg: #ece7df;
-  --color-surface: rgba(255, 255, 255, 0.55);
+  --color-bg: #e9e4dc;
+  --color-window: rgba(255, 255, 255, 0.42);
+  --color-surface: rgba(255, 255, 255, 0.58);
   --color-surface-2: rgba(31, 29, 24, 0.06);
-  --color-surface-solid: #f6f3ee;
-  --color-border: rgba(255, 255, 255, 0.85);
+  --color-surface-solid: #f7f4ef;
+  --color-border: rgba(255, 255, 255, 0.9);
   --color-border-strong: rgba(31, 29, 24, 0.12);
   --color-fg: #1f1d18;
   --color-fg-muted: #66625a;
   --color-accent: #5b6f82;
+  --color-accent-2: #a77b5b;
   --color-accent-fg: #ffffff;
-  --color-accent-soft: rgba(91, 111, 130, 0.12);
+  --color-accent-soft: rgba(91, 111, 130, 0.14);
   --color-success: #4a6079;
   --color-success-soft: rgba(91, 111, 130, 0.14);
   --color-warning: #8a5a00;
@@ -29,32 +32,38 @@
   --color-danger-soft: rgba(164, 59, 50, 0.12);
   --color-hatch: rgba(31, 29, 24, 0.22);
 
-  --radius-card: 22px;
-  --shadow-card: 0 1px 2px rgba(31, 29, 24, 0.05), 0 12px 32px rgba(31, 29, 24, 0.1);
-  --blur-glass: 24px;
+  --radius-card: 24px;
+  --radius-window: 34px;
+  --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.6) inset, 0 12px 32px rgba(31, 29, 24, 0.1);
+  --shadow-window: 0 30px 80px rgba(31, 29, 24, 0.18);
+  --blur-glass: 28px;
 }
 
 :root {
-  --ground:
-    radial-gradient(900px 600px at 10% 100%, rgba(217, 160, 124, 0.26), transparent 60%),
-    radial-gradient(800px 500px at 90% 0%, rgba(150, 175, 200, 0.4), transparent 60%),
-    linear-gradient(160deg, #f3efe8 0%, #ece7df 55%, #efe9e0 100%);
-  --stripe: rgba(255, 255, 255, 0.35);
+  --blob-1: rgba(255, 190, 140, 0.75);
+  --blob-2: rgba(150, 175, 200, 0.8);
+  --blob-3: rgba(190, 170, 210, 0.6);
+  --blob-4: rgba(160, 200, 190, 0.55);
+  --scene-base: linear-gradient(160deg, #f1ece4 0%, #e9e4dc 55%, #ece6dd 100%);
+  --vignette: rgba(31, 29, 24, 0.12);
+  --grain: 0.06;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-bg: #171b22;
-    --color-surface: rgba(255, 255, 255, 0.06);
-    --color-surface-2: rgba(255, 255, 255, 0.08);
+    --color-bg: #12151b;
+    --color-window: rgba(24, 28, 36, 0.55);
+    --color-surface: rgba(255, 255, 255, 0.07);
+    --color-surface-2: rgba(255, 255, 255, 0.09);
     --color-surface-solid: #1f242d;
-    --color-border: rgba(255, 255, 255, 0.12);
+    --color-border: rgba(255, 255, 255, 0.13);
     --color-border-strong: rgba(255, 255, 255, 0.2);
     --color-fg: #f1ede6;
     --color-fg-muted: rgba(241, 237, 230, 0.64);
     --color-accent: #b9c7d6;
+    --color-accent-2: #e0b48c;
     --color-accent-fg: #171b22;
-    --color-accent-soft: rgba(185, 199, 214, 0.12);
+    --color-accent-soft: rgba(185, 199, 214, 0.14);
     --color-success: #8fa6bd;
     --color-success-soft: rgba(143, 166, 189, 0.16);
     --color-warning: #e6c27a;
@@ -62,12 +71,15 @@
     --color-danger: #e8a09a;
     --color-danger-soft: rgba(232, 160, 154, 0.16);
     --color-hatch: rgba(255, 255, 255, 0.2);
-    --shadow-card: 0 12px 40px rgba(0, 0, 0, 0.3);
-    --ground:
-      radial-gradient(900px 600px at 12% 100%, rgba(185, 199, 214, 0.14), transparent 60%),
-      radial-gradient(700px 500px at 88% 0%, rgba(150, 130, 170, 0.14), transparent 60%),
-      linear-gradient(160deg, #1f242d 0%, #171b22 55%, #1b1f27 100%);
-    --stripe: rgba(255, 255, 255, 0.02);
+    --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.08) inset, 0 12px 36px rgba(0, 0, 0, 0.32);
+    --shadow-window: 0 40px 120px rgba(0, 0, 0, 0.55);
+    --blob-1: rgba(224, 160, 110, 0.55);
+    --blob-2: rgba(80, 120, 170, 0.6);
+    --blob-3: rgba(120, 90, 160, 0.5);
+    --blob-4: rgba(40, 120, 120, 0.45);
+    --scene-base: linear-gradient(160deg, #1b2130 0%, #12151b 55%, #171b24 100%);
+    --vignette: rgba(0, 0, 0, 0.45);
+    --grain: 0.09;
   }
 }
 
@@ -78,22 +90,93 @@ html {
 
 body {
   background: var(--color-bg);
-  background-image: var(--ground);
-  background-attachment: fixed;
+  background-image: var(--scene-base);
   color: var(--color-fg);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   min-height: 100dvh;
   position: relative;
+  overflow-x: hidden;
 }
 
-body::before {
-  content: '';
+/* ---- Ambient scene: blurred drifting blobs + grain + vignette ---- */
+.scene {
+  position: fixed;
+  inset: -20vmax;
+  z-index: 0;
+  pointer-events: none;
+  filter: blur(70px) saturate(1.15);
+  overflow: hidden;
+}
+.scene span {
+  position: absolute;
+  border-radius: 50%;
+  will-change: transform;
+  animation: drift 38s ease-in-out infinite alternate;
+}
+.scene .b1 {
+  width: 60vmax;
+  height: 60vmax;
+  left: -10vmax;
+  bottom: -15vmax;
+  background: var(--blob-1);
+}
+.scene .b2 {
+  width: 70vmax;
+  height: 70vmax;
+  right: -20vmax;
+  top: -20vmax;
+  background: var(--blob-2);
+  animation-duration: 46s;
+  animation-delay: -12s;
+}
+.scene .b3 {
+  width: 45vmax;
+  height: 45vmax;
+  left: 30vmax;
+  top: 10vmax;
+  background: var(--blob-3);
+  animation-duration: 52s;
+  animation-delay: -25s;
+}
+.scene .b4 {
+  width: 40vmax;
+  height: 40vmax;
+  right: 15vmax;
+  bottom: -5vmax;
+  background: var(--blob-4);
+  animation-duration: 41s;
+  animation-delay: -6s;
+}
+@keyframes drift {
+  from {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    transform: translate3d(6vmax, -4vmax, 0) scale(1.12);
+  }
+}
+.scene-grain {
   position: fixed;
   inset: 0;
-  pointer-events: none;
-  background: repeating-linear-gradient(115deg, var(--stripe) 0 2px, transparent 2px 46px);
   z-index: 0;
+  pointer-events: none;
+  opacity: var(--grain);
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 1 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  background-size: 180px 180px;
+  mix-blend-mode: overlay;
+}
+.scene-vignette {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(120% 90% at 50% 40%, transparent 55%, var(--vignette) 100%);
+}
+@media (prefers-reduced-motion: reduce) {
+  .scene span {
+    animation: none;
+  }
 }
 
 body > * {
@@ -101,7 +184,17 @@ body > * {
   z-index: 1;
 }
 
-/* Frosted glass surface used by cards, the top bar, and the floating nav. */
+/* ---- Glass surfaces ---- */
+.window {
+  background: var(--color-window);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-window);
+  box-shadow:
+    var(--shadow-window),
+    0 1px 0 rgba(255, 255, 255, 0.18) inset;
+  backdrop-filter: blur(calc(var(--blur-glass) + 8px)) saturate(1.2);
+  -webkit-backdrop-filter: blur(calc(var(--blur-glass) + 8px)) saturate(1.2);
+}
 .glass {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -109,12 +202,46 @@ body > * {
   backdrop-filter: blur(var(--blur-glass));
   -webkit-backdrop-filter: blur(var(--blur-glass));
 }
+.glass-strong {
+  background: var(--color-surface-solid);
+}
+.lift {
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease;
+}
+.lift:hover {
+  transform: translateY(-2px);
+}
 
 .font-display {
   font-family: var(--font-display);
 }
-
-/* Hatched fill for estimates / pending in charts. */
 .hatch {
   background: repeating-linear-gradient(135deg, var(--color-hatch) 0 4px, transparent 4px 9px);
+}
+
+/* Product-style glowing icon disc used on service tiles. */
+.glow-disc {
+  position: relative;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: radial-gradient(
+    circle at 35% 30%,
+    rgba(255, 255, 255, 0.35),
+    rgba(255, 255, 255, 0.04) 60%
+  );
+  box-shadow:
+    0 0 0 1px var(--color-border) inset,
+    0 18px 40px -12px var(--glow, transparent);
+}
+.glow-disc::before {
+  content: '';
+  position: absolute;
+  inset: -14px;
+  border-radius: inherit;
+  background: radial-gradient(circle, var(--glow, transparent) 0%, transparent 70%);
+  opacity: 0.55;
+  z-index: -1;
 }

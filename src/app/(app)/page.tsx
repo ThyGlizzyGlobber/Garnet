@@ -1,13 +1,15 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { Icon } from '@/components/app/icons';
+import { AreaStack } from '@/components/charts/area-stack';
 import { Legend } from '@/components/charts/legend';
-import { MonthlyBars } from '@/components/charts/monthly-bars';
-import { Badge, Card, EmptyState, LinkButton, PageHeader, Stat } from '@/components/ui';
+import { Badge, Card, EmptyState, LinkButton, PageHeader } from '@/components/ui';
 import { InlineAction } from '@/components/ui/form';
+import { Arc, Ring } from '@/components/ui/ring';
 import { getBill } from '@/lib/bills';
 import { pageContext } from '@/lib/context';
 import { darkVariant } from '@/lib/palette';
+import { addMonths } from '@/lib/periods';
 import { nextMonth, projectMonth } from '@/lib/projections';
 import { remindersFor, summariseReminders } from '@/lib/reminders';
 import { documentCounts } from '@/lib/review';
@@ -22,6 +24,7 @@ import {
 import { toggleSharePaidAction } from './bills/actions';
 
 const swatch = (c: string) => ({ background: `light-dark(${c}, ${darkVariant(c)})` });
+const tile = 'glass lift rounded-card p-5 sm:p-6';
 
 export default async function HomePage() {
   const { hh, me, money, date, today } = await pageContext();
@@ -47,10 +50,13 @@ export default async function HomePage() {
   }
 
   const s = dashboardSummary(today, hh.fiscalYearStartMonth);
+  const projNow = projectMonth(s.thisMonth.month);
   const proj = projectMonth(nextMonth(today));
+  const forecast = Array.from({ length: 6 }, (_, i) =>
+    projectMonth(addMonths(s.thisMonth.month, i + 1)),
+  );
   const ledger = shared ? memberLedger(me.id, today, hh.fiscalYearStartMonth) : null;
   const balances = shared ? householdBalances() : [];
-  const memberNames = new Map(balances.map((b) => [b.member.id, b.member.name]));
   const mine = shared ? remindersFor(me.id, today) : [];
   const mineSum = summariseReminders(mine);
   const settled = shared ? settlementRate(s.thisMonth.month) : null;
@@ -61,7 +67,6 @@ export default async function HomePage() {
       new Date(`${m}-01T00:00:00Z`),
     );
   const thisMonthName = monthName(s.thisMonth.month, 'long');
-  const projMonthName = monthName(proj.month, 'long');
   const pct = (x: number) =>
     Math.abs(x) < 0.005
       ? '±0%'
@@ -75,8 +80,13 @@ export default async function HomePage() {
   const yoy = s.sameMonthLastYearTotal
     ? (s.thisMonth.total - s.sameMonthLastYearTotal) / s.sameMonthLastYearTotal
     : null;
+  const budgetPct =
+    projNow.totalMinor > 0 ? Math.round((s.thisMonth.total / projNow.totalMinor) * 100) : 0;
+  const sharePct =
+    ledger && ledger.totalThisFy > 0
+      ? Math.round((ledger.paidThisFy / ledger.totalThisFy) * 100)
+      : 0;
 
-  // Chart data (major units for the axis; preformatted strings for the tooltip).
   const series = s.services
     .filter((svc) => s.series.some((r) => (r.byService[svc.id] ?? 0) > 0))
     .map((svc) => ({ id: svc.id, name: svc.name, colour: svc.colour }));
@@ -92,7 +102,6 @@ export default async function HomePage() {
     for (const sv of series) format[`${r.month}:${sv.id}`] = money(r.byService[sv.id] ?? 0);
   }
 
-  // Next due: the most urgent unpaid bill, with the viewer's own share on it.
   const nextBill = s.overdue[0] ?? s.upcoming[0];
   const nextDetail = nextBill ? getBill(nextBill.id) : null;
   const myShare = nextDetail?.shares.find((sh) => sh.memberId === me.id) ?? null;
@@ -103,11 +112,12 @@ export default async function HomePage() {
       : proj.services.some((p) => p.method === 'single')
         ? 'single'
         : 'none';
+  const maxForecast = Math.max(...forecast.map((f) => f.totalMinor), 1);
 
   return (
     <>
-      <header className="mb-6">
-        <h1 className="font-display text-[32px] leading-[1.08] font-semibold tracking-tight sm:text-[40px]">
+      <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
+        <h1 className="font-display text-[32px] leading-[1.06] font-semibold tracking-tight sm:text-[42px]">
           {t('greeting', { name: me.name })}
           <br />
           <span className="font-normal text-fg-muted">
@@ -126,6 +136,31 @@ export default async function HomePage() {
                     })}
           </span>
         </h1>
+        <div className="flex flex-wrap gap-2">
+          <span className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-fg">
+            {thisMonthName}
+          </span>
+          <Link
+            href="/bills"
+            className="rounded-full bg-surface-2 px-4 py-2 text-sm font-semibold text-fg-muted hover:text-fg"
+          >
+            {s.fiscalYear.label}
+          </Link>
+          <Link
+            href="/services"
+            className="rounded-full bg-surface-2 px-4 py-2 text-sm font-semibold text-fg-muted hover:text-fg"
+          >
+            {t('chips.services', { count: s.services.length })}
+          </Link>
+          {shared && (
+            <Link
+              href="/members"
+              className="rounded-full bg-surface-2 px-4 py-2 text-sm font-semibold text-fg-muted hover:text-fg"
+            >
+              {t('chips.members', { count: s.activeMemberCount })}
+            </Link>
+          )}
+        </div>
       </header>
 
       {reviewCount > 0 && (
@@ -139,7 +174,7 @@ export default async function HomePage() {
       )}
 
       {shared && (mineSum.overdueCount > 0 || mineSum.soonCount > 0) && (
-        <Card className="mb-4 flex flex-col gap-2">
+        <Card className="mb-4 flex flex-col gap-2 border-warning/30">
           <div className="flex items-center justify-between">
             <span className="font-display font-semibold">{t('reminders.title')}</span>
             <Link href="/ledger" className="text-sm font-semibold text-accent">
@@ -159,126 +194,177 @@ export default async function HomePage() {
               {t('reminders.soon', { count: mineSum.soonCount, amount: money(mineSum.soonMinor) })}
             </p>
           )}
-          <ul className="divide-y divide-border text-sm">
-            {mine
-              .filter((r) => r.level !== 'upcoming')
-              .slice(0, 4)
-              .map((r) => (
-                <li key={r.share.id} className="flex items-center justify-between py-2">
-                  <span>
-                    {r.serviceName}
-                    <span className="text-fg-muted">
-                      {r.payerMemberId
-                        ? ` · ${t('reminders.payTo', { name: memberNames.get(r.payerMemberId) ?? '' })}`
-                        : ''}
-                      {r.share.paymentReference ? ` · ${r.share.paymentReference}` : ''}
-                    </span>
-                  </span>
-                  <span className="flex items-center gap-3">
-                    <span
-                      className={
-                        r.level === 'overdue' ? 'text-xs text-danger' : 'text-xs text-warning'
-                      }
-                    >
-                      {r.level === 'overdue'
-                        ? t('reminders.overdueBy', { days: -r.daysUntilDue })
-                        : t('reminders.dueIn', { days: r.daysUntilDue })}
-                    </span>
-                    <span className="font-semibold tabular-nums">
-                      {money(r.share.amountMinor, r.share.currency)}
-                    </span>
-                  </span>
-                </li>
-              ))}
-          </ul>
         </Card>
       )}
 
-      {/* Row 1: stat tiles */}
-      <div className={`grid gap-4 sm:grid-cols-2 ${shared ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
-        <Stat
-          hero
-          label={t('tiles.thisMonth', { month: thisMonthName })}
-          value={money(s.thisMonth.total)}
-          hint={
-            <>
+      {/* Row 1: instruments */}
+      <div
+        className={`grid gap-4 ${shared ? 'lg:grid-cols-[1.3fr_1fr_1fr]' : 'lg:grid-cols-[1.3fr_1fr]'}`}
+      >
+        <section className={`${tile} flex items-center gap-6 bg-accent-soft`}>
+          <Ring id="budget" pct={budgetPct} size={132} stroke={13}>
+            <span className="flex flex-col items-center leading-none">
+              <span className="font-display text-[26px] font-semibold tabular-nums">
+                {budgetPct}%
+              </span>
+              <span className="mt-1 text-[10px] font-semibold tracking-wide text-fg-muted uppercase">
+                {thisMonthName.slice(0, 3)}
+              </span>
+            </span>
+          </Ring>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold">
+              {t('tiles.thisMonth', { month: thisMonthName })}
+            </p>
+            <p className="font-display text-[38px] leading-none font-semibold tracking-tight tabular-nums sm:text-[44px]">
+              {money(s.thisMonth.total)}
+            </p>
+            <p className="mt-2 flex flex-wrap items-center gap-2 text-xs text-fg-muted">
+              <span className="rounded-full bg-surface-2 px-2 py-0.5 font-bold text-fg">
+                {delta !== null ? pct(delta) : '—'}
+              </span>
               {delta !== null
-                ? t('tiles.vsLastMonth', { pct: pct(delta) })
+                ? t('tiles.vsLastMonth', { pct: '' }).replace('  ', ' ').trim()
                 : t('tiles.noLastMonth')}
               {yoy !== null && ` · ${t('tiles.vsLastYear', { pct: pct(yoy) })}`}
-            </>
-          }
-        />
+            </p>
+            <p className="mt-1 text-xs text-fg-muted">
+              {budgetPct > 100
+                ? t('budgetRing.over')
+                : t('budgetRing.label', { month: thisMonthName })}{' '}
+              · {money(projNow.totalMinor)}
+            </p>
+          </div>
+        </section>
+
         {shared && ledger ? (
-          <>
-            <Link href="/ledger" className="block text-fg">
-              <Stat
-                className="h-full transition hover:bg-surface-2"
-                label={t('tiles.yourShare')}
-                value={money(ledger.owed)}
-                tone={ledger.owed > 0 ? 'warning' : 'success'}
-                hint={
-                  ledger.owed > 0
-                    ? t('tiles.unpaidShares', { count: ledger.unpaid.length })
-                    : t('tiles.allSettled')
-                }
+          <Link href="/ledger" className={`${tile} flex flex-col text-fg`}>
+            <div className="flex items-start justify-between">
+              <p className="text-sm font-semibold">{t('tiles.yourShare')}</p>
+              <Badge tone={ledger.owed > 0 ? 'warning' : 'success'}>
+                {ledger.owed > 0
+                  ? t('tiles.unpaidShares', { count: ledger.unpaid.length })
+                  : t('tiles.allSettled')}
+              </Badge>
+            </div>
+            <div className="relative mt-2 flex flex-col items-center">
+              <Arc
+                id="share"
+                pct={sharePct}
+                width={190}
+                stroke={13}
+                from="var(--color-accent-2)"
+                to="var(--color-accent)"
               />
-            </Link>
-            <Stat
-              label={t('tiles.owedToYouTile')}
-              value={money(ledger.owedToMe)}
-              hint={
-                ledger.owedToMeBy.length
-                  ? ledger.owedToMeBy.map((x) => `${x.member.name} ${money(x.minor)}`).join(' · ')
-                  : t('tiles.nobodyOwes')
-              }
-            />
-          </>
+              <span className="absolute bottom-1 flex flex-col items-center leading-none">
+                <span
+                  className={`font-display text-[32px] font-semibold tabular-nums ${ledger.owed > 0 ? 'text-warning' : 'text-success'}`}
+                >
+                  {money(ledger.owed)}
+                </span>
+                <span className="mt-1 text-[11px] text-fg-muted">
+                  {t('tiles.owedToYou', { amount: money(ledger.owedToMe) })}
+                </span>
+              </span>
+            </div>
+            <p className="mt-3 text-center text-xs text-fg-muted">
+              {t('tiles.paidOfYear', { pct: sharePct, label: s.fiscalYear.label })}
+            </p>
+          </Link>
         ) : (
-          <Stat
-            label={t('tiles.perPersonDay')}
-            value={s.costPerPersonPerDay !== null ? money(s.costPerPersonPerDay) : '—'}
-            hint={t('tiles.perPersonDayHint', { count: s.activeMemberCount })}
-          />
+          <section className={`${tile} flex flex-col justify-between`}>
+            <p className="text-sm font-semibold">{t('tiles.perPersonDay')}</p>
+            <p className="font-display text-[40px] leading-none font-semibold tracking-tight tabular-nums">
+              {s.costPerPersonPerDay !== null ? money(s.costPerPersonPerDay) : '—'}
+            </p>
+            <p className="text-xs text-fg-muted">
+              {t('tiles.perPersonDayHint', { count: s.activeMemberCount })}
+            </p>
+          </section>
         )}
-        <Stat
-          label={t('tiles.fiscalYear', { label: s.fiscalYear.label })}
-          value={money(s.fiscalYear.total)}
-          hint={t('tiles.fiscalYearHint', { from: date(s.fiscalYear.start, 'short') })}
-        />
+
+        <section className={`${tile} flex flex-col`}>
+          <div className="flex items-start justify-between">
+            <p className="text-sm font-semibold">{t('forecast.title')}</p>
+            <span className="text-xs text-fg-muted">{t('forecast.hint')}</span>
+          </div>
+          <div className="mt-4 flex flex-1 items-end justify-between gap-2">
+            {forecast.map((f, i) => (
+              <div key={f.month} className="flex flex-1 flex-col items-center gap-1.5">
+                <span className="text-[11px] font-semibold tabular-nums">
+                  {money(f.totalMinor, hh.currency).replace(/\.\d+$/, '')}
+                </span>
+                <div
+                  className={`w-full max-w-9 rounded-full ${i === 0 ? 'bg-accent' : 'hatch'}`}
+                  style={{
+                    height: `${Math.max(10, Math.round((f.totalMinor / maxForecast) * 90))}px`,
+                  }}
+                />
+                <span className="text-[11px] text-fg-muted">{monthName(f.month)}</span>
+              </div>
+            ))}
+          </div>
+          <p className="mt-3 text-xs text-fg-muted">
+            {t('setAside.title', { month: monthName(proj.month, 'long') })}:{' '}
+            <span className="font-semibold text-fg">
+              {proj.setAsideEach !== null
+                ? `${money(proj.setAsideEach)} ${t('setAside.each')}`
+                : money(proj.totalMinor)}
+            </span>{' '}
+            · {t(`setAside.method.${projMethod}`)}
+          </p>
+        </section>
       </div>
 
       {/* Row 2: chart · next due · bills */}
-      <div className="mt-4 grid gap-4 lg:grid-cols-[1.55fr_1fr_1fr]">
-        <Card className="flex flex-col gap-3">
-          <div>
-            <h2 className="font-display font-semibold">{t('chart.title')}</h2>
-            <p className="text-xs text-fg-muted">{t('chart.hint')}</p>
+      <div className="mt-4 grid gap-4 lg:grid-cols-[1.6fr_1fr_1fr]">
+        <section className={`${tile} flex flex-col gap-3`}>
+          <div className="flex items-start justify-between">
+            <div>
+              <h2 className="font-display text-lg font-semibold">{t('chart.title')}</h2>
+              <p className="text-xs text-fg-muted">{t('chart.hint')}</p>
+            </div>
+            <span className="rounded-full bg-surface-2 px-3 py-1 text-xs font-semibold text-fg-muted">
+              12 mo
+            </span>
           </div>
-          <MonthlyBars rows={rows} series={series} format={format} />
+          <AreaStack rows={rows} series={series} format={format} />
           <Legend items={series} />
-        </Card>
+        </section>
 
-        <Card className="flex flex-col gap-2">
-          <h2 className="font-display font-semibold">{t('nextDue.title')}</h2>
+        <section
+          className={`${tile} flex flex-col gap-2 ${nextBill && nextBill.daysUntilDue < 0 ? 'bg-danger-soft' : ''}`}
+        >
+          <div className="flex items-center justify-between">
+            <h2 className="font-display text-lg font-semibold">{t('nextDue.title')}</h2>
+            {nextBill && (
+              <span
+                className="grid size-10 place-items-center rounded-full text-white"
+                style={swatch(nextBill.service.colour)}
+              >
+                <Icon name={nextBill.service.type.icon} width={18} height={18} />
+              </span>
+            )}
+          </div>
           {nextBill && nextDetail ? (
             <>
               <Link
                 href={`/bills/${nextBill.id}`}
-                className="font-display text-[22px] leading-tight font-semibold text-accent"
+                className="font-display text-[24px] leading-tight font-semibold"
               >
-                {nextBill.service.name} · {nextBill.service.provider}
+                {nextBill.service.name}
               </Link>
+              <p className="font-display text-[34px] leading-none font-semibold tracking-tight tabular-nums">
+                {money(nextBill.amountMinor, nextBill.currency)}
+              </p>
               <p className="text-sm text-fg-muted">
                 {nextBill.daysUntilDue < 0 ? (
-                  <span className="text-danger">
+                  <span className="font-semibold text-danger">
                     {t('billsTile.overdue', { days: -nextBill.daysUntilDue })}
                   </span>
                 ) : (
                   t('billsTile.due', { date: date(nextBill.dueDate, 'short') })
                 )}
-                {' · '}
-                {money(nextBill.amountMinor, nextBill.currency)}
                 {myShare &&
                   ` · ${t('nextDue.yourShare', { amount: money(myShare.amountMinor, myShare.currency) })}`}
               </p>
@@ -301,11 +387,11 @@ export default async function HomePage() {
           ) : (
             <p className="text-sm text-success">{t('nextDue.none')}</p>
           )}
-        </Card>
+        </section>
 
-        <Card className="flex flex-col gap-3">
+        <section className={`${tile} flex flex-col gap-3`}>
           <div className="flex items-center justify-between">
-            <h2 className="font-display font-semibold">{t('billsTile.title')}</h2>
+            <h2 className="font-display text-lg font-semibold">{t('billsTile.title')}</h2>
             <Link href="/bills" className="text-xs font-bold text-accent">
               {t('billsTile.all', { count: s.upcoming.length + s.overdue.length })}
             </Link>
@@ -318,10 +404,8 @@ export default async function HomePage() {
               >
                 <Icon name={b.service.type.icon} width={16} height={16} />
               </span>
-              <span className="flex min-w-0 flex-col">
-                <span className="truncate text-sm font-semibold">
-                  {b.service.name} {money(b.amountMinor, b.currency)}
-                </span>
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="truncate text-sm font-semibold">{b.service.name}</span>
                 <span
                   className={`truncate text-xs ${b.daysUntilDue < 0 ? 'text-danger' : b.isAnomaly ? 'text-warning' : 'text-fg-muted'}`}
                 >
@@ -332,27 +416,35 @@ export default async function HomePage() {
                       : t('billsTile.due', { date: date(b.dueDate, 'short') })}
                 </span>
               </span>
+              <span className="text-sm font-semibold tabular-nums">
+                {money(b.amountMinor, b.currency)}
+              </span>
             </Link>
           ))}
           {s.upcoming.length + s.overdue.length === 0 && (
             <p className="text-sm text-fg-muted">{t('upcoming.empty')}</p>
           )}
-        </Card>
+        </section>
       </div>
 
-      {/* Row 3: who owes what · settled · set aside */}
-      <div className="mt-4 grid gap-4 lg:grid-cols-[1.55fr_1fr_1fr]">
+      {/* Row 3: people · settled · ranking */}
+      <div className="mt-4 grid gap-4 lg:grid-cols-[1.6fr_1fr_1fr]">
         {shared ? (
-          <Card className="flex flex-col gap-3">
-            <h2 className="font-display font-semibold">{t('balances.title')}</h2>
+          <section className={`${tile} flex flex-col gap-3`}>
+            <h2 className="font-display text-lg font-semibold">{t('balances.title')}</h2>
             {balances.map((b) => {
               const overdue =
-                b.owed > 0 &&
-                mine.length >= 0 &&
-                remindersFor(b.member.id, today).some((r) => r.level === 'overdue');
+                b.owed > 0 && remindersFor(b.member.id, today).some((r) => r.level === 'overdue');
               return (
                 <div key={b.member.id} className="flex items-center gap-3 text-sm">
-                  <span className="size-8 rounded-full" style={swatch(b.member.colour)} />
+                  <span
+                    className="grid size-10 place-items-center rounded-full text-sm font-bold text-white shadow-inner"
+                    style={{
+                      background: `linear-gradient(135deg, light-dark(${b.member.colour}, ${darkVariant(b.member.colour)}), var(--color-accent))`,
+                    }}
+                  >
+                    {b.member.name.slice(0, 1).toUpperCase()}
+                  </span>
                   <span className="flex min-w-0 flex-1 flex-col leading-tight">
                     <span className="font-semibold">
                       {b.member.name}{' '}
@@ -376,105 +468,52 @@ export default async function HomePage() {
                 </div>
               );
             })}
-          </Card>
+          </section>
         ) : (
-          <Card>
-            <h2 className="font-display font-semibold">{t('anomaly.title')}</h2>
+          <section className={tile}>
+            <h2 className="font-display text-lg font-semibold">{t('anomaly.title')}</h2>
             <AnomalyList items={s.anomalies} money={money} empty={t('anomaly.empty')} />
-          </Card>
+          </section>
         )}
 
-        {shared ? (
-          <Card className="flex flex-col items-center gap-1">
-            <h2 className="self-start font-display font-semibold">{t('settled.title')}</h2>
-            <Gauge pct={settled?.pct ?? 0} />
-            <span className="-mt-8 font-display text-[30px] font-semibold tabular-nums">
-              {settled?.pct === null || settled === null ? '—' : `${settled.pct}%`}
-            </span>
-            <span className="text-xs text-fg-muted">
+        {shared && (
+          <section className={`${tile} flex flex-col items-center gap-2`}>
+            <h2 className="self-start font-display text-lg font-semibold">{t('settled.title')}</h2>
+            <Ring
+              id="settled"
+              pct={settled?.pct ?? 0}
+              size={140}
+              stroke={14}
+              from="var(--color-success)"
+              to="var(--color-accent-2)"
+            >
+              <span className="font-display text-[30px] font-semibold tabular-nums">
+                {settled?.pct === null || settled === null ? '—' : `${settled.pct}%`}
+              </span>
+            </Ring>
+            <span className="text-center text-xs text-fg-muted">
               {settled && settled.total > 0
                 ? `${t('settled.count', { paid: settled.paid, total: settled.total })} · ${t('settled.hint', { month: thisMonthName })}`
                 : t('settled.none')}
             </span>
-          </Card>
-        ) : (
-          <Card>
-            <h2 className="font-display font-semibold">
-              {t('ranking.title', { label: s.fiscalYear.label })}
-            </h2>
-            <Ranking rows={s.fiscalYear.byService} money={money} empty={t('ranking.empty')} />
-          </Card>
+          </section>
         )}
 
-        <Stat
-          hero
-          label={t('setAside.title', { month: projMonthName })}
-          value={
-            proj.setAsideEach !== null ? (
-              <>
-                {money(proj.setAsideEach)}{' '}
-                <span className="text-base font-normal text-fg-muted">{t('setAside.each')}</span>
-              </>
-            ) : (
-              money(proj.totalMinor)
-            )
-          }
-          hint={
-            <>
-              {t('setAside.household', { amount: money(proj.totalMinor) })} ·{' '}
-              {t(`setAside.method.${projMethod}`)}
-            </>
-          }
-        />
-      </div>
+        <section className={tile}>
+          <h2 className="font-display text-lg font-semibold">
+            {t('ranking.title', { label: s.fiscalYear.label })}
+          </h2>
+          <Ranking rows={s.fiscalYear.byService} money={money} empty={t('ranking.empty')} />
+        </section>
 
-      {/* Row 4: ranking + anomalies (shared households) */}
-      {shared && (
-        <div className="mt-4 grid gap-4 lg:grid-cols-2">
-          <Card>
-            <h2 className="font-display font-semibold">
-              {t('ranking.title', { label: s.fiscalYear.label })}
-            </h2>
-            <Ranking rows={s.fiscalYear.byService} money={money} empty={t('ranking.empty')} />
-          </Card>
-          <Card>
-            <h2 className="font-display font-semibold">{t('anomaly.title')}</h2>
+        {shared && s.anomalies.length > 0 && (
+          <section className={`${tile} lg:col-span-3`}>
+            <h2 className="font-display text-lg font-semibold">{t('anomaly.title')}</h2>
             <AnomalyList items={s.anomalies} money={money} empty={t('anomaly.empty')} />
-          </Card>
-        </div>
-      )}
+          </section>
+        )}
+      </div>
     </>
-  );
-}
-
-function Gauge({ pct }: { pct: number }) {
-  // Semicircle from 180° to 0°; arc length proportional to pct.
-  const r = 75;
-  const cx = 90;
-  const cy = 95;
-  const angle = Math.PI * (1 - Math.max(0, Math.min(100, pct)) / 100);
-  const x = cx + r * Math.cos(angle);
-  const y = cy - r * Math.sin(angle);
-  const large = pct > 50 ? 1 : 0;
-  return (
-    <svg width="180" height="100" viewBox="0 0 180 100" aria-hidden="true">
-      <path
-        d={`M${cx - r} ${cy} A${r} ${r} 0 0 1 ${cx + r} ${cy}`}
-        fill="none"
-        stroke="var(--color-surface-2)"
-        strokeWidth="16"
-        strokeLinecap="round"
-      />
-      {pct > 0 && (
-        <path
-          d={`M${cx - r} ${cy} A${r} ${r} 0 ${large} 1 ${x.toFixed(1)} ${y.toFixed(1)}`}
-          fill="none"
-          stroke="var(--color-accent)"
-          strokeWidth="16"
-          strokeLinecap="round"
-        />
-      )}
-    </svg>
   );
 }
 
@@ -500,9 +539,9 @@ function Ranking({
             </span>
             <span className="font-semibold tabular-nums">{money(row.minor)}</span>
           </div>
-          <div className="mt-1 h-1.5 rounded-full bg-surface-2">
+          <div className="mt-1 h-2 rounded-full bg-surface-2">
             <div
-              className="h-1.5 rounded-full"
+              className="h-2 rounded-full"
               style={{
                 width: `${Math.max(4, Math.round((row.minor / max) * 100))}%`,
                 ...swatch(row.service.colour),
