@@ -112,7 +112,7 @@ export function Arc({
       />
       {clamped > 0 && (
         <path
-          d={`M${cx - r} ${cy} A${r} ${r} 0 ${clamped > 50 ? 1 : 0} 1 ${x.toFixed(1)} ${y.toFixed(1)}`}
+          d={`M${cx - r} ${cy} A${r} ${r} 0 0 1 ${x.toFixed(1)} ${y.toFixed(1)}`}
           fill="none"
           stroke={`url(#arc-${id})`}
           strokeWidth={stroke}

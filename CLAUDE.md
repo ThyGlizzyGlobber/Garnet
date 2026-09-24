@@ -4,7 +4,7 @@ Self-hosted household utilities dashboard: ingests utility bills from a dedicate
 mailbox, totals costs per service, splits them between housemates, tracks who has
 paid, and projects upcoming bills. Runs as one Docker container on TrueNAS Scale.
 
-**SCOPE.md is the source of truth.** Never contradict it. If something is ambiguous
+**SCOPE.md is the source of truth** for scope; **BRAND.md** for look, voice and design tokens. Never contradict it. If something is ambiguous
 or a decision seems wrong, stop and ask the owner before building around it.
 §3 (provider inventory) may contain TODOs — providers are configurable data in the
 DB, never hardcoded.
@@ -181,3 +181,4 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - 2026-09-24 — Services are tinted tiles (service colour mixed into the surface via color-mix), Bills is a tile grid with a document strip (source, confidence, shares, invoice no.), and /wall follows the Glass Night wall board (two-column glass, 8vw month figure, sparkline, per-service legend, red-tinted next-due when overdue).
 - 2026-09-24 — Release flow: the NAS working copy accepts pushes (`receive.denyCurrentBranch=updateInstead`; Mac remote `nas`), and `deploy/truenas-app.yaml` builds the image from that folder so the TrueNAS Update button rebuilds from the current commit; `deploy/update.sh` scripts build + redeploy via midclt. The old docker-compose.yml and registry/prebuilt-image paths were removed as redundant.
 - 2026-09-24 — Visual system v2 (owner found v1 boring): fixed ambient scene of four slow-drifting blurred colour blobs + film grain + vignette (`.scene`), one big frosted `.window` holding the top bar and content, opaque-ish `.glass` tiles with rim + inner highlight and hover lift, ring/arc instruments (`src/components/ui/ring.tsx`), gradient stacked area chart, six-month forecast strip, glowing icon discs + sparklines on service tiles, working header search (→ /bills?q=). No photo backdrop by owner's choice.
+- 2026-09-24 — BRAND.md created as the design reference (voice, colour tokens both themes, scene, glass recipes, type: Outfit display / Manrope body / JetBrains Mono for identifiers, instruments, layout, motion, a11y). Tabular numerals enabled globally. Scene layers now render once from the root layout, behind everything; nav pill uses an 88%-opaque glass; the arc gauge never uses the SVG large-arc flag.

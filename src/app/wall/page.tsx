@@ -1,6 +1,5 @@
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import { Scene } from '@/components/app/scene';
 import { Sparkline } from '@/components/charts/sparkline';
 import { currentMember } from '@/lib/auth/session';
 import { todayIn } from '@/lib/dates';
@@ -39,7 +38,6 @@ export default async function WallPage() {
 
   return (
     <>
-      <Scene />
       <main className="flex min-h-dvh flex-col gap-[2.4vw] p-[3.6vw] text-fg">
         <AutoRefresh seconds={60} />
         <header className="flex items-baseline justify-between">

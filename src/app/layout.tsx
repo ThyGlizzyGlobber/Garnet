@@ -1,12 +1,19 @@
 import type { Metadata, Viewport } from 'next';
-import { Manrope, Outfit } from 'next/font/google';
+import { JetBrains_Mono, Manrope, Outfit } from 'next/font/google';
 import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getMessages } from 'next-intl/server';
 import { RegisterServiceWorker } from '@/components/app/pwa';
+import { Scene } from '@/components/app/scene';
 import './globals.css';
 
 const manrope = Manrope({ subsets: ['latin'], variable: '--font-manrope', display: 'swap' });
 const outfit = Outfit({ subsets: ['latin'], variable: '--font-outfit', display: 'swap' });
+const mono = JetBrains_Mono({
+  subsets: ['latin'],
+  variable: '--font-jetbrains',
+  display: 'swap',
+  weight: ['400', '500'],
+});
 
 export const metadata: Metadata = {
   title: 'Home Utilities',
@@ -31,8 +38,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const locale = await getLocale();
   const messages = await getMessages();
   return (
-    <html lang={locale} className={`${manrope.variable} ${outfit.variable}`}>
+    <html lang={locale} className={`${manrope.variable} ${outfit.variable} ${mono.variable}`}>
       <body>
+        <Scene />
         <NextIntlClientProvider messages={messages}>{children}</NextIntlClientProvider>
         <RegisterServiceWorker />
       </body>

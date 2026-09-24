@@ -2,7 +2,6 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { Icon } from './icons';
 import { NavLinks } from './nav-links';
-import { Scene } from './scene';
 
 export interface NavItem {
   href: string;
@@ -53,7 +52,6 @@ export function AppShell({
     'relative grid size-11 place-items-center rounded-full bg-surface-2 text-fg transition hover:bg-border-strong';
   return (
     <div className="min-h-dvh px-3 pt-3 pb-32 sm:px-6 sm:pt-6">
-      <Scene />
       <div className="window mx-auto max-w-[1400px] px-4 pt-4 pb-8 sm:px-8 sm:pt-6 sm:pb-10">
         <header className="flex items-center justify-between gap-4">
           <Link href="/" className="flex items-center gap-2.5 font-display text-lg font-bold">
@@ -133,7 +131,7 @@ export function AppShell({
         <main className="pt-7">{children}</main>
       </div>
       <nav className="fixed inset-x-0 bottom-[max(16px,env(safe-area-inset-bottom))] z-10 flex justify-center px-3 sm:bottom-7">
-        <div className="glass flex w-full max-w-md gap-1 rounded-full p-1.5 sm:w-auto sm:max-w-none sm:gap-1.5 sm:p-2">
+        <div className="glass-nav flex w-full max-w-md gap-1 rounded-full p-1.5 sm:w-auto sm:max-w-none sm:gap-1.5 sm:p-2">
           <NavLinks items={nav} variant="segment" />
         </div>
       </nav>

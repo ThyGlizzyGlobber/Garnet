@@ -247,7 +247,7 @@ export default async function HomePage() {
                   : t('tiles.allSettled')}
               </Badge>
             </div>
-            <div className="relative mt-2 flex flex-col items-center">
+            <div className="mt-2 flex flex-col items-center">
               <Arc
                 id="share"
                 pct={sharePct}
@@ -256,7 +256,7 @@ export default async function HomePage() {
                 from="var(--color-accent-2)"
                 to="var(--color-accent)"
               />
-              <span className="absolute bottom-1 flex flex-col items-center leading-none">
+              <span className="-mt-9 flex flex-col items-center leading-none">
                 <span
                   className={`font-display text-[32px] font-semibold tabular-nums ${ledger.owed > 0 ? 'text-warning' : 'text-success'}`}
                 >
