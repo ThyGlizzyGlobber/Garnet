@@ -106,7 +106,11 @@ export async function seedReal(db: Db = getDb()) {
   return { household: hh.name, billsAdded: added };
 }
 
-/** Fictional household for demos and screenshots. Never uses real names or numbers. */
+/**
+ * Fictional household for demos and screenshots. Never uses real names or numbers.
+ * Amounts track typical Melbourne share-house costs (2026): rent ≈ $530/week,
+ * quarterly electricity $410–530, bi-monthly-ish gas peaking in winter, water ≈ $300/quarter.
+ */
 export async function seedDemo(db: Db = getDb()) {
   if (getHousehold(db)) return { skipped: true };
   const hh = createHousehold(
@@ -238,7 +242,7 @@ export async function seedDemo(db: Db = getDb()) {
     createBill(
       {
         serviceId: rent.id,
-        amountMinor: 260000,
+        amountMinor: 230000,
         periodStart: `${m}-01`,
         periodEnd: end,
         dueDate: `${m}-01`,
