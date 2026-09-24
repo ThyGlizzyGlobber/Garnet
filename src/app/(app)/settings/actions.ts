@@ -4,8 +4,13 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import type { ActionState } from '@/components/ui/form';
 import { str, zodToState } from '@/lib/actions';
-import { requireOwner } from '@/lib/auth/session';
+import { requireMember, requireOwner } from '@/lib/auth/session';
 import { updateHousehold } from '@/lib/households';
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
+import { logout } from '@/lib/auth/session';
+import { exitDemo } from '@/lib/demo';
+import { THEME_COOKIE, THEMES, type Theme } from '@/lib/theme';
 
 const schema = z.object({
   name: z.string().min(1, 'Required').max(60),
@@ -40,4 +45,23 @@ export async function updateSettingsAction(_prev: ActionState, fd: FormData): Pr
   }
   revalidatePath('/', 'layout');
   return { ok: true };
+}
+
+/** Per-browser theme choice; any member can set it. */
+export async function setThemeAction(fd: FormData): Promise<void> {
+  await requireMember();
+  const v = str(fd, 'theme');
+  const theme: Theme = (THEMES as readonly string[]).includes(v) ? (v as Theme) : 'auto';
+  const jar = await cookies();
+  if (theme === 'auto') jar.delete(THEME_COOKIE);
+  else jar.set(THEME_COOKIE, theme, { path: '/', maxAge: 60 * 60 * 24 * 365, sameSite: 'lax' });
+  revalidatePath('/', 'layout');
+}
+
+/** Owner only: wipe the fictional household and start the real setup wizard. */
+export async function exitDemoAction(): Promise<void> {
+  await requireOwner();
+  exitDemo();
+  await logout();
+  redirect('/setup');
 }

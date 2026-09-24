@@ -4,11 +4,17 @@ import { Card, PageHeader } from '@/components/ui';
 import { pageContext } from '@/lib/context';
 import { getEnv, isImapConfigured, isLlmConfigured } from '@/lib/env';
 import { SettingsForm } from './settings-form';
+import { InlineAction } from '@/components/ui/form';
+import { isDemoData } from '@/lib/demo';
+import { getTheme, THEMES } from '@/lib/theme';
+import { exitDemoAction, setThemeAction } from './actions';
 
 export default async function SettingsPage() {
   const { hh, me } = await pageContext();
   const t = await getTranslations('settings');
   const env = getEnv();
+  const theme = await getTheme();
+  const demo = isDemoData();
   const months = Array.from({ length: 12 }, (_, i) =>
     new Intl.DateTimeFormat(hh.locale, { month: 'long' }).format(new Date(2026, i, 1)),
   );
@@ -34,6 +40,34 @@ export default async function SettingsPage() {
           paymentReferenceTemplate: hh.paymentReferenceTemplate,
         }}
       />
+      <Card className="mt-4 flex flex-col gap-3">
+        <h2 className="font-display font-semibold">{t('theme.title')}</h2>
+        <p className="text-xs text-fg-muted">{t('theme.body')}</p>
+        <form action={setThemeAction} className="flex flex-wrap gap-2">
+          {THEMES.map((th) => (
+            <button
+              key={th}
+              name="theme"
+              value={th}
+              className={`rounded-full px-4 py-2 text-sm font-semibold transition ${theme === th ? 'bg-accent text-accent-fg' : 'bg-surface-2 text-fg-muted hover:text-fg'}`}
+            >
+              {t(`theme.${th}`)}
+            </button>
+          ))}
+        </form>
+      </Card>
+      {demo && me.role === 'owner' && (
+        <Card className="mt-4 flex flex-col gap-3 border-warning/40 bg-warning-soft">
+          <h2 className="font-display font-semibold">{t('demo.title')}</h2>
+          <p className="text-xs text-fg-muted">{t('demo.body')}</p>
+          <InlineAction
+            action={exitDemoAction}
+            label={t('demo.exit')}
+            variant="danger"
+            confirm={t('demo.confirm')}
+          />
+        </Card>
+      )}
       <Card className="mt-4">
         <h2 className="font-semibold">
           <Link href="/status" className="text-accent">

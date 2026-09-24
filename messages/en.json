@@ -309,6 +309,19 @@
       "notConfigured": "Not configured",
       "on": "On",
       "off": "Off"
+    },
+    "theme": {
+      "title": "Appearance",
+      "body": "Applies to this browser or device only. Auto follows the device setting.",
+      "auto": "Auto",
+      "light": "Light",
+      "dark": "Dark"
+    },
+    "demo": {
+      "title": "Demo mode",
+      "body": "This household is the fictional demo. Exiting deletes every demo member, service and bill on this server and opens the setup wizard for your real household. Demo data will not be re-created, even with DEMO_MODE still set.",
+      "exit": "Exit demo mode",
+      "confirm": "Delete the demo household and start real setup? This cannot be undone."
     }
   },
   "health": {
@@ -594,6 +607,7 @@
       "ready": "Ready",
       "needsKey": "Needs ANTHROPIC_API_KEY",
       "threshold": "Results below {pct}% confidence go to the review queue."
-    }
+    },
+    "demoOn": "Demo data"
   }
 }

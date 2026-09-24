@@ -4,6 +4,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getMessages } from 'next-intl/server';
 import { RegisterServiceWorker } from '@/components/app/pwa';
 import { Scene } from '@/components/app/scene';
+import { getTheme } from '@/lib/theme';
 import './globals.css';
 
 const manrope = Manrope({ subsets: ['latin'], variable: '--font-manrope', display: 'swap' });
@@ -37,8 +38,13 @@ export const viewport: Viewport = {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const locale = await getLocale();
   const messages = await getMessages();
+  const theme = await getTheme();
   return (
-    <html lang={locale} className={`${manrope.variable} ${outfit.variable} ${mono.variable}`}>
+    <html
+      lang={locale}
+      className={`${manrope.variable} ${outfit.variable} ${mono.variable}`}
+      data-theme={theme === 'auto' ? undefined : theme}
+    >
       <body>
         <Scene />
         <NextIntlClientProvider messages={messages}>{children}</NextIntlClientProvider>

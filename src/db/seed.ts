@@ -8,6 +8,7 @@ import { createHousehold, getHousehold } from '@/lib/households';
 import { createMember, listMembers } from '@/lib/members';
 import { createService, listServices } from '@/lib/services';
 import { PALETTE, TYPE_COLOUR } from '@/lib/palette';
+import { demoExited, markDemoSeeded } from '@/lib/demo';
 
 /**
  * Real seed: the four Aussie Broadband invoices from sample-bills/ (values only,
@@ -112,7 +113,7 @@ export async function seedReal(db: Db = getDb()) {
  * quarterly electricity $410–530, bi-monthly-ish gas peaking in winter, water ≈ $300/quarter.
  */
 export async function seedDemo(db: Db = getDb()) {
-  if (getHousehold(db)) return { skipped: true };
+  if (getHousehold(db) || demoExited()) return { skipped: true };
   const hh = createHousehold(
     {
       name: 'Riverside House',
@@ -358,5 +359,6 @@ export async function seedDemo(db: Db = getDb()) {
       .where(eq(share.billId, b.id))
       .run();
   }
+  markDemoSeeded();
   return { household: hh.name, members: 3 };
 }

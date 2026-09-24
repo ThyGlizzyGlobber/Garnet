@@ -8,14 +8,22 @@ const query = '(prefers-color-scheme: dark)';
 function subscribe(cb: () => void) {
   const mq = window.matchMedia(query);
   mq.addEventListener('change', cb);
-  return () => mq.removeEventListener('change', cb);
+  const obs = new MutationObserver(cb);
+  obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  return () => {
+    mq.removeEventListener('change', cb);
+    obs.disconnect();
+  };
 }
+function isDark(): boolean {
+  const forced = document.documentElement.dataset.theme;
+  if (forced === 'dark') return true;
+  if (forced === 'light') return false;
+  return window.matchMedia(query).matches;
+}
+/** Tracks the effective theme: Settings override first, then the device setting. */
 export function useDarkMode(): boolean {
-  return useSyncExternalStore(
-    subscribe,
-    () => window.matchMedia(query).matches,
-    () => false,
-  );
+  return useSyncExternalStore(subscribe, isDark, () => false);
 }
 
 export function seriesColour(light: string, dark: boolean): string {
