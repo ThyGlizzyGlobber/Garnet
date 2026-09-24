@@ -300,7 +300,10 @@
       "perPersonDay": "Per person per day",
       "perPersonDayHint": "{count, plural, one {# member} other {# members}} this month",
       "fiscalYear": "Year {label} to date",
-      "fiscalYearHint": "Since {from}"
+      "fiscalYearHint": "Since {from}",
+      "owedToYouTile": "Owed to you",
+      "owedBy": "{list}",
+      "nobodyOwes": "Nobody owes you"
     },
     "chart": {
       "title": "Monthly cost by service",
@@ -321,7 +324,12 @@
       "title": "Who owes what",
       "settled": "Everyone is settled up.",
       "you": "you",
-      "bills": "{count, plural, one {# bill} other {# bills}}"
+      "bills": "{count, plural, one {# bill} other {# bills}}",
+      "pending": "Pending",
+      "overdue": "Overdue",
+      "settledChip": "Settled",
+      "owes": "Owes {amount} · {count, plural, one {# bill} other {# bills}}",
+      "allSettled": "All settled"
     },
     "anomaly": {
       "title": "Unusual bills",
@@ -356,6 +364,28 @@
       "dueIn": "{days, plural, =0 {due today} one {due tomorrow} other {due in # days}}",
       "overdueBy": "{days, plural, one {# day overdue} other {# days overdue}}",
       "open": "Open ledger"
+    },
+    "nextDue": {
+      "title": "Next due",
+      "yourShare": "your share {amount}",
+      "markPaid": "Mark my share paid",
+      "paid": "Your share is paid",
+      "noShare": "Not split with you",
+      "none": "Nothing due",
+      "viewBill": "View bill"
+    },
+    "billsTile": {
+      "title": "Bills",
+      "all": "All {count} ›",
+      "overdue": "{days, plural, one {# day overdue} other {# days overdue}}",
+      "due": "Due {date}",
+      "unusual": "Unusual · {note}"
+    },
+    "settled": {
+      "title": "Shares settled",
+      "hint": "of {month}'s shares paid",
+      "none": "No shares due this month",
+      "count": "{paid} of {total} paid"
     }
   },
   "ledger": {

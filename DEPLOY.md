@@ -13,8 +13,19 @@ git clone <your repo> home-utilities && cd home-utilities
 docker build -t brjlabs/home-utilities:0.4.0 .
 ```
 
-Push it to a registry the NAS can pull from, or build directly on the NAS with
-`docker build` and reference the local tag.
+That builds for the machine you are on. To publish one tag that works on both
+an Apple-silicon Mac and an x86 NAS, log in to your registry once and let
+buildx build both architectures and push in a single step:
+
+```bash
+docker login <registry>            # e.g. ghcr.io, or omit for Docker Hub
+docker buildx build --platform linux/amd64,linux/arm64 \
+  -t <registry>/<namespace>/home-utilities:0.4.0 \
+  -t <registry>/<namespace>/home-utilities:latest --push .
+```
+
+The amd64 half builds under emulation on a Mac and takes a few minutes longer.
+On the NAS, reference the pushed tag; Docker pulls the matching architecture.
 
 ## 2. Prepare the data directory on TrueNAS Scale
 
@@ -31,24 +42,24 @@ Push it to a registry the NAS can pull from, or build directly on the NAS with
 
 Apps → Discover Apps → Custom App:
 
-| Field | Value |
-|---|---|
+| Field                  | Value                                                      |
+| ---------------------- | ---------------------------------------------------------- |
 | Image repository / tag | `brjlabs/home-utilities` / `0.4.0` (or your registry path) |
-| Port | container `3000` → node port of your choice, e.g. `30080` |
-| Host path volume | host `/mnt/tank/apps/utilities-dashboard` → mount `/data` |
-| Restart policy | Always |
+| Port                   | container `3000` → node port of your choice, e.g. `30080`  |
+| Host path volume       | host `/mnt/tank/apps/utilities-dashboard` → mount `/data`  |
+| Restart policy         | Always                                                     |
 
 Environment variables (Container → Environment):
 
-| Variable | Required | Notes |
-|---|---|---|
-| `DATA_DIR` | yes | `/data` |
-| `AUTH_SECRET` | yes | ≥32 random chars: `openssl rand -base64 48` |
-| `DEFAULT_CURRENCY`, `DEFAULT_LOCALE`, `DEFAULT_TIMEZONE`, `DEFAULT_FISCAL_YEAR_START_MONTH` | no | Wizard defaults; e.g. `AUD`, `en-AU`, `Australia/Melbourne`, `7` |
+| Variable                                                                                                            | Required            | Notes                                                                  |
+| ------------------------------------------------------------------------------------------------------------------- | ------------------- | ---------------------------------------------------------------------- |
+| `DATA_DIR`                                                                                                          | yes                 | `/data`                                                                |
+| `AUTH_SECRET`                                                                                                       | yes                 | ≥32 random chars: `openssl rand -base64 48`                            |
+| `DEFAULT_CURRENCY`, `DEFAULT_LOCALE`, `DEFAULT_TIMEZONE`, `DEFAULT_FISCAL_YEAR_START_MONTH`                         | no                  | Wizard defaults; e.g. `AUD`, `en-AU`, `Australia/Melbourne`, `7`       |
 | `IMAP_HOST`, `IMAP_PORT`, `IMAP_SECURE`, `IMAP_USER`, `IMAP_PASSWORD`, `IMAP_MAILBOX`, `IMAP_POLL_INTERVAL_SECONDS` | for email ingestion | Gmail: `imap.gmail.com`, `993`, an app password. `0` disables polling. |
-| `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` | for AI extraction | Without a key, unknown providers go to the review queue. |
-| `EXTRACTOR_CONFIDENCE_THRESHOLD` | no | Default `0.85` |
-| `DEMO_MODE` | no | `true` seeds a fictional household on an empty volume |
+| `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL`                                                                              | for AI extraction   | Without a key, unknown providers go to the review queue.               |
+| `EXTRACTOR_CONFIDENCE_THRESHOLD`                                                                                    | no                  | Default `0.85`                                                         |
+| `DEMO_MODE`                                                                                                         | no                  | `true` seeds a fictional household on an empty volume                  |
 
 Deploy, then open `http://<nas-ip>:30080`. The first visit runs the setup
 wizard. Migrations run automatically on every start.
@@ -64,7 +75,7 @@ services:
     image: brjlabs/home-utilities:0.4.0
     restart: unless-stopped
     ports: ['30080:3000']
-    env_file: .env          # DATA_DIR=/data plus the variables above
+    env_file: .env # DATA_DIR=/data plus the variables above
     volumes: ['/srv/utilities-dashboard:/data']
 ```
 

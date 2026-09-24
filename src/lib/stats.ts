@@ -257,3 +257,24 @@ export function householdBalances(
 export function hasAnyBills(db: Db = getDb()): boolean {
   return db.select({ id: bill.id }).from(bill).limit(1).get() !== undefined;
 }
+
+/** Share settlement for bills due in a month (or overdue into it): paid / all non-payer shares. */
+export function settlementRate(
+  month: string,
+  db: Db = getDb(),
+): { paid: number; total: number; pct: number | null } {
+  const { start, end } = monthBounds(month);
+  const rows = db
+    .select({ paidAt: share.paidAt, paidMethod: share.paidMethod })
+    .from(share)
+    .innerJoin(bill, eq(share.billId, bill.id))
+    .where(and(gte(bill.dueDate, start), lte(bill.dueDate, end)))
+    .all()
+    .filter((r) => r.paidMethod !== 'payer');
+  const paid = rows.filter((r) => r.paidAt).length;
+  return {
+    paid,
+    total: rows.length,
+    pct: rows.length ? Math.round((paid / rows.length) * 100) : null,
+  };
+}
