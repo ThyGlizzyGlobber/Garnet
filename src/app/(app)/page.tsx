@@ -1,8 +1,7 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { Icon } from '@/components/app/icons';
-import { AreaStack } from '@/components/charts/area-stack';
-import { Legend } from '@/components/charts/legend';
+import { TrendLine } from '@/components/charts/trend-line';
 import { Badge, Card, EmptyState, LinkButton, PageHeader } from '@/components/ui';
 import { InlineAction } from '@/components/ui/form';
 import { Arc, Ring } from '@/components/ui/ring';
@@ -87,20 +86,21 @@ export default async function HomePage() {
       ? Math.round((ledger.paidThisFy / ledger.totalThisFy) * 100)
       : 0;
 
-  const series = s.services
-    .filter((svc) => s.series.some((r) => (r.byService[svc.id] ?? 0) > 0))
-    .map((svc) => ({ id: svc.id, name: svc.name, colour: svc.colour }));
-  const rows = s.series.map((r) => ({
-    month: r.month,
-    label: monthName(r.month),
-    total: r.total / 100,
-    ...Object.fromEntries(series.map((sv) => [sv.id, (r.byService[sv.id] ?? 0) / 100])),
-  }));
-  const format: Record<string, string> = {};
-  for (const r of s.series) {
-    format[`${r.month}:total`] = money(r.total);
-    for (const sv of series) format[`${r.month}:${sv.id}`] = money(r.byService[sv.id] ?? 0);
-  }
+  const serviceName = new Map(s.services.map((svc) => [svc.id, svc.name]));
+  const points = s.series.map((r) => {
+    const top = Object.entries(r.byService)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([id, v]) => `${serviceName.get(id) ?? '?'} ${money(v)}`)
+      .join(' · ');
+    return {
+      key: r.month,
+      label: monthName(r.month),
+      value: r.total / 100,
+      text: money(r.total),
+      detail: top || undefined,
+    };
+  });
 
   const nextBill = s.overdue[0] ?? s.upcoming[0];
   const nextDetail = nextBill ? getBill(nextBill.id) : null;
@@ -328,8 +328,7 @@ export default async function HomePage() {
               12 mo
             </span>
           </div>
-          <AreaStack rows={rows} series={series} format={format} />
-          <Legend items={series} />
+          <TrendLine points={points} id="dash" />
         </section>
 
         <section

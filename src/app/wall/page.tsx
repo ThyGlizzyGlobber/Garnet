@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { Icon } from '@/components/app/icons';
-import { AreaStack } from '@/components/charts/area-stack';
+import { TrendLine } from '@/components/charts/trend-line';
 import { Ring } from '@/components/ui/ring';
 import { currentMember } from '@/lib/auth/session';
 import { todayIn } from '@/lib/dates';
@@ -47,25 +47,14 @@ export default async function WallPage() {
     s && projNow && projNow.totalMinor > 0
       ? Math.round((s.thisMonth.total / projNow.totalMinor) * 100)
       : 0;
-  const series = s
-    ? s.services
-        .filter((svc) => s.series.some((r) => (r.byService[svc.id] ?? 0) > 0))
-        .map((svc) => ({ id: svc.id, name: svc.name, colour: svc.colour }))
-    : [];
-  const rows = s
+  const points = s
     ? s.series.map((r) => ({
-        month: r.month,
+        key: r.month,
         label: monthName(r.month, 'short'),
-        total: r.total / 100,
-        ...Object.fromEntries(series.map((sv) => [sv.id, (r.byService[sv.id] ?? 0) / 100])),
+        value: r.total / 100,
+        text: money(r.total),
       }))
     : [];
-  const format: Record<string, string> = {};
-  if (s)
-    for (const r of s.series) {
-      format[`${r.month}:total`] = money(r.total);
-      for (const sv of series) format[`${r.month}:${sv.id}`] = money(r.byService[sv.id] ?? 0);
-    }
 
   return (
     <main className="flex min-h-dvh flex-col p-[2vw] text-fg">
@@ -133,7 +122,7 @@ export default async function WallPage() {
               <section className="glass flex flex-grow flex-col rounded-[2.2vw] p-[2vw]">
                 <span className="mb-[0.6vw] text-[1.3vw] text-fg-muted">{t('chart')}</span>
                 <div className="flex-grow">
-                  <AreaStack rows={rows} series={series} format={format} height={230} />
+                  <TrendLine points={points} height={230} id="wall" />
                 </div>
               </section>
             </div>
