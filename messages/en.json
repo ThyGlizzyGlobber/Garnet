@@ -155,10 +155,23 @@
       },
       "document": "View file",
       "shares": "{paid}/{total} shares paid",
-      "upload": "Upload PDF"
+      "upload": "Upload PDF",
+      "sharesBar": "{paid} of {total} shares paid"
     },
     "searchResults": "{count, plural, =0 {No bills match} one {# bill matches} other {# bills match}} “{q}”",
-    "clearSearch": "Clear"
+    "clearSearch": "Clear",
+    "filters": {
+      "all": "All",
+      "unpaid": "Unpaid",
+      "overdue": "Overdue",
+      "unusual": "Unusual",
+      "paid": "Paid"
+    },
+    "summary": {
+      "count": "{count, plural, one {# bill} other {# bills}}",
+      "total": "{amount} total",
+      "unpaid": "{amount} unpaid"
+    }
   },
   "services": {
     "title": "Services",
@@ -436,7 +449,10 @@
       "owed": "You owe",
       "owedToYou": "Owed to you",
       "paidFy": "Paid this year",
-      "ofTotal": "of {total} in shares"
+      "ofTotal": "of {total} in shares",
+      "paidRing": "paid",
+      "owedToYouBy": "{name} {amount}",
+      "nobody": "Nobody owes you right now"
     },
     "unpaid": {
       "title": "To pay",
@@ -445,13 +461,15 @@
       "noPayer": "No payer set for this service",
       "ref": "ref {ref}",
       "overdue": "Overdue",
-      "markPaid": "Mark paid"
+      "markPaid": "Mark paid",
+      "count": "{count, plural, =0 {nothing to pay} one {# share to pay} other {# shares to pay}}"
     },
     "history": {
       "title": "History",
       "paidProvider": "Paid the provider",
       "paidOn": "Paid {date}",
-      "unpaid": "Unpaid"
+      "unpaid": "Unpaid",
+      "month": "{month}"
     },
     "download": "Download statement (CSV)"
   },
@@ -464,10 +482,15 @@
     "dueIn": "{days, plural, one {Due tomorrow} other {Due in # days}}",
     "nothingDue": "Nothing due",
     "whoOwes": "Who owes what",
-    "settled": "Settled",
+    "settled": "settled",
     "footer": "Financial year {label}: {total}",
     "setAside": "Set aside {amount} each for {month}",
-    "legendMore": "+{count} more"
+    "legendMore": "+{count} more",
+    "back": "Back to dashboard",
+    "chart": "Last 12 months",
+    "settledLabel": "Settled",
+    "setAsideLabel": "Set aside for {month}",
+    "each": "each"
   },
   "review": {
     "title": "Review queue",

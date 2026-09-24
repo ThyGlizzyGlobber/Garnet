@@ -1,22 +1,28 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import { Sparkline } from '@/components/charts/sparkline';
+import { Icon } from '@/components/app/icons';
+import { AreaStack } from '@/components/charts/area-stack';
+import { Ring } from '@/components/ui/ring';
 import { currentMember } from '@/lib/auth/session';
 import { todayIn } from '@/lib/dates';
 import { formatDate, formatMoney } from '@/lib/format';
 import { getHousehold } from '@/lib/households';
 import { darkVariant } from '@/lib/palette';
 import { nextMonth, projectMonth } from '@/lib/projections';
-import { dashboardSummary, hasAnyBills, householdBalances } from '@/lib/stats';
+import { dashboardSummary, hasAnyBills, householdBalances, settlementRate } from '@/lib/stats';
 import { AutoRefresh } from './auto-refresh';
 
 export const dynamic = 'force-dynamic';
 
 const swatch = (c: string) => ({ background: `light-dark(${c}, ${darkVariant(c)})` });
+const avatar = (colour: string) => ({
+  background: `linear-gradient(135deg, light-dark(${colour}, ${darkVariant(colour)}), var(--color-accent))`,
+});
 
 /**
- * Kiosk view for an iPad on the wall, laid out like the approved wall board.
- * Log in once on the device; the session lasts AUTH_SESSION_DAYS. Refreshes every minute.
+ * Kiosk view for an iPad on the wall. Log in once on the device; the session
+ * lasts AUTH_SESSION_DAYS. Refreshes every minute.
  */
 export default async function WallPage() {
   const hh = getHousehold();
@@ -30,126 +36,219 @@ export default async function WallPage() {
   const balances = shared ? householdBalances() : [];
   const next = s ? (s.overdue[0] ?? s.upcoming[0]) : undefined;
   const proj = s ? projectMonth(nextMonth(today)) : null;
-  const monthName = (m: string) =>
-    new Intl.DateTimeFormat(hh.locale, { month: 'long', timeZone: 'UTC' }).format(
+  const projNow = s ? projectMonth(s.thisMonth.month) : null;
+  const settled = s && shared ? settlementRate(s.thisMonth.month) : null;
+  const monthName = (m: string, style: 'short' | 'long' = 'long') =>
+    new Intl.DateTimeFormat(hh.locale, { month: style, timeZone: 'UTC' }).format(
       new Date(`${m}-01T00:00:00Z`),
     );
   const overdue = !!next && next.daysUntilDue < 0;
+  const budgetPct =
+    s && projNow && projNow.totalMinor > 0
+      ? Math.round((s.thisMonth.total / projNow.totalMinor) * 100)
+      : 0;
+  const series = s
+    ? s.services
+        .filter((svc) => s.series.some((r) => (r.byService[svc.id] ?? 0) > 0))
+        .map((svc) => ({ id: svc.id, name: svc.name, colour: svc.colour }))
+    : [];
+  const rows = s
+    ? s.series.map((r) => ({
+        month: r.month,
+        label: monthName(r.month, 'short'),
+        total: r.total / 100,
+        ...Object.fromEntries(series.map((sv) => [sv.id, (r.byService[sv.id] ?? 0) / 100])),
+      }))
+    : [];
+  const format: Record<string, string> = {};
+  if (s)
+    for (const r of s.series) {
+      format[`${r.month}:total`] = money(r.total);
+      for (const sv of series) format[`${r.month}:${sv.id}`] = money(r.byService[sv.id] ?? 0);
+    }
 
   return (
-    <>
-      <main className="flex min-h-dvh flex-col gap-[2.4vw] p-[3.6vw] text-fg">
-        <AutoRefresh seconds={60} />
-        <header className="flex items-baseline justify-between">
-          <h1 className="font-display text-[3.4vw] leading-none font-semibold tracking-tight">
-            {hh.name}
-          </h1>
-          <p className="text-[2vw] text-fg-muted">
-            {formatDate(`${today}T12:00:00Z`, hh.locale, 'UTC', 'long')}
-          </p>
+    <main className="flex min-h-dvh flex-col p-[2vw] text-fg">
+      <AutoRefresh seconds={60} />
+      <div className="window flex flex-grow flex-col gap-[2vw] p-[2.8vw]">
+        <header className="flex items-center justify-between">
+          <div className="flex items-center gap-[1.2vw]">
+            <span className="grid size-[3.4vw] place-items-center rounded-[1vw] bg-accent text-accent-fg">
+              <Icon name="home" width={22} height={22} />
+            </span>
+            <h1 className="font-display text-[3vw] leading-none font-semibold tracking-tight">
+              {hh.name}
+            </h1>
+          </div>
+          <div className="flex items-center gap-[1.5vw]">
+            <p className="text-[1.7vw] text-fg-muted">
+              {formatDate(`${today}T12:00:00Z`, hh.locale, 'UTC', 'long')}
+            </p>
+            <Link
+              href="/"
+              className="glass-nav flex items-center gap-[0.6vw] rounded-full px-[1.4vw] py-[0.7vw] text-[1.2vw] font-semibold text-fg"
+              aria-label={t('back')}
+            >
+              <Icon name="home" width={18} height={18} />
+              {t('back')}
+            </Link>
+          </div>
         </header>
 
         {!s ? (
           <p className="my-auto text-center text-[3vw] text-fg-muted">{t('empty')}</p>
         ) : (
-          <div className="grid flex-grow gap-[2.4vw] lg:grid-cols-2">
-            <section className="glass flex flex-col justify-between rounded-[2.6vw] p-[3vw]">
-              <div className="flex flex-col gap-[0.4vw]">
-                <span className="text-[1.9vw] text-fg-muted">{monthName(s.thisMonth.month)}</span>
-                <span className="font-display text-[8vw] leading-none font-semibold tracking-[-0.03em] tabular-nums">
-                  {money(s.thisMonth.total)}
-                </span>
-              </div>
-              <div className="my-[1.6vw]">
-                <Sparkline values={s.series.map((r) => r.total)} colour="#5b6f82" height={90} />
-              </div>
-              <ul className="flex flex-wrap gap-x-[2.2vw] gap-y-[0.6vw] text-[1.7vw] text-fg-muted">
-                {s.thisMonth.byService.slice(0, 5).map((r) => (
-                  <li key={r.service.id} className="flex items-center gap-[0.8vw]">
-                    <span
-                      className="size-[1.1vw] rounded-[0.3vw]"
-                      style={swatch(r.service.colour)}
-                    />
-                    {r.service.name}{' '}
-                    <span className="font-semibold text-fg tabular-nums">{money(r.minor)}</span>
-                  </li>
-                ))}
-                {s.thisMonth.byService.length > 5 && (
-                  <li>{t('legendMore', { count: s.thisMonth.byService.length - 5 })}</li>
-                )}
-              </ul>
-            </section>
+          <div className="grid flex-grow gap-[2vw] lg:grid-cols-[1.35fr_1fr]">
+            <div className="flex flex-col gap-[2vw]">
+              <section className="glass flex items-center gap-[2.4vw] rounded-[2.2vw] bg-accent-soft p-[2.4vw]">
+                <Ring id="wall-budget" pct={budgetPct} size={150} stroke={14}>
+                  <span className="flex flex-col items-center leading-none">
+                    <span className="font-display text-[2.2vw] font-semibold tabular-nums">
+                      {budgetPct}%
+                    </span>
+                    <span className="mt-[0.3vw] text-[0.9vw] font-semibold tracking-wide text-fg-muted uppercase">
+                      {monthName(s.thisMonth.month, 'short')}
+                    </span>
+                  </span>
+                </Ring>
+                <div className="min-w-0 flex-1">
+                  <span className="text-[1.6vw] text-fg-muted">{monthName(s.thisMonth.month)}</span>
+                  <p className="font-display text-[6.4vw] leading-none font-semibold tracking-[-0.03em] tabular-nums">
+                    {money(s.thisMonth.total)}
+                  </p>
+                  <ul className="mt-[1.2vw] flex flex-wrap gap-x-[1.8vw] gap-y-[0.4vw] text-[1.3vw] text-fg-muted">
+                    {s.thisMonth.byService.slice(0, 5).map((r) => (
+                      <li key={r.service.id} className="flex items-center gap-[0.6vw]">
+                        <span
+                          className="size-[0.9vw] rounded-[0.25vw]"
+                          style={swatch(r.service.colour)}
+                        />
+                        {r.service.name}{' '}
+                        <span className="font-semibold text-fg tabular-nums">{money(r.minor)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </section>
+              <section className="glass flex flex-grow flex-col rounded-[2.2vw] p-[2vw]">
+                <span className="mb-[0.6vw] text-[1.3vw] text-fg-muted">{t('chart')}</span>
+                <div className="flex-grow">
+                  <AreaStack rows={rows} series={series} format={format} height={230} />
+                </div>
+              </section>
+            </div>
 
-            <div className="flex flex-col gap-[2.4vw]">
+            <div className="flex flex-col gap-[2vw]">
               <section
-                className={`glass flex flex-col gap-[0.5vw] rounded-[2.6vw] p-[3vw] ${overdue ? 'border-danger/40 bg-danger-soft' : ''}`}
+                className={`glass flex items-center gap-[1.6vw] rounded-[2.2vw] p-[2.2vw] ${overdue ? 'border-danger/40 bg-danger-soft' : ''}`}
               >
-                <span className="text-[1.9vw] text-fg-muted">{t('nextDue')}</span>
-                {next ? (
-                  <>
-                    <span className="font-display text-[3.8vw] leading-[1.1] font-semibold tracking-tight">
-                      {next.service.name}{' '}
-                      <span className="text-fg-muted">{money(next.amountMinor)}</span>
-                    </span>
-                    <span className={`text-[2.1vw] ${overdue ? 'text-danger' : 'text-fg-muted'}`}>
-                      {overdue
-                        ? t('overdueBy', { days: -next.daysUntilDue })
-                        : next.daysUntilDue === 0
-                          ? t('dueToday')
-                          : t('dueIn', { days: next.daysUntilDue })}
-                    </span>
-                  </>
-                ) : (
-                  <span className="font-display text-[3vw] font-semibold text-success">
-                    {t('nothingDue')}
+                {next && (
+                  <span
+                    className="glow-disc size-[5.2vw] shrink-0"
+                    style={{
+                      color: `light-dark(${next.service.colour}, ${darkVariant(next.service.colour)})`,
+                      ['--glow' as string]: `light-dark(${next.service.colour}, ${darkVariant(next.service.colour)})`,
+                    }}
+                  >
+                    <Icon name={next.service.type.icon} width={34} height={34} />
                   </span>
                 )}
+                <div className="min-w-0">
+                  <span className="text-[1.4vw] text-fg-muted">{t('nextDue')}</span>
+                  {next ? (
+                    <>
+                      <p className="font-display text-[2.8vw] leading-[1.1] font-semibold tracking-tight">
+                        {next.service.name}{' '}
+                        <span className="text-fg-muted tabular-nums">
+                          {money(next.amountMinor)}
+                        </span>
+                      </p>
+                      <p
+                        className={`text-[1.5vw] ${overdue ? 'font-semibold text-danger' : 'text-fg-muted'}`}
+                      >
+                        {overdue
+                          ? t('overdueBy', { days: -next.daysUntilDue })
+                          : next.daysUntilDue === 0
+                            ? t('dueToday')
+                            : t('dueIn', { days: next.daysUntilDue })}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="font-display text-[2.4vw] font-semibold text-success">
+                      {t('nothingDue')}
+                    </p>
+                  )}
+                </div>
               </section>
 
               {shared && (
-                <section className="glass flex flex-grow flex-col gap-[1.2vw] rounded-[2.6vw] p-[3vw]">
-                  <span className="text-[1.9vw] text-fg-muted">{t('whoOwes')}</span>
-                  <ul className="flex flex-col gap-[1vw]">
+                <section className="glass flex flex-grow flex-col gap-[1vw] rounded-[2.2vw] p-[2.2vw]">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[1.4vw] text-fg-muted">{t('whoOwes')}</span>
+                    {settled && settled.total > 0 && (
+                      <span className="flex items-center gap-[0.8vw] text-[1.1vw] text-fg-muted">
+                        <Ring
+                          id="wall-settled"
+                          pct={settled.pct ?? 0}
+                          size={54}
+                          stroke={7}
+                          from="var(--color-success)"
+                          to="var(--color-accent-2)"
+                        >
+                          <span className="text-[0.85vw] font-bold tabular-nums">
+                            {settled.pct}%
+                          </span>
+                        </Ring>
+                        {t('settled')}
+                      </span>
+                    )}
+                  </div>
+                  <ul className="flex flex-col gap-[0.9vw]">
                     {balances.map((b) => (
                       <li
                         key={b.member.id}
-                        className="flex items-center justify-between text-[2.5vw]"
+                        className="flex items-center justify-between text-[2vw]"
                       >
                         <span className="flex items-center gap-[1vw]">
                           <span
-                            className="size-[1.5vw] rounded-full"
-                            style={swatch(b.member.colour)}
-                          />
+                            className="grid size-[2.6vw] place-items-center rounded-full text-[1.1vw] font-bold text-white"
+                            style={avatar(b.member.colour)}
+                          >
+                            {b.member.name.slice(0, 1).toUpperCase()}
+                          </span>
                           {b.member.name}
                         </span>
                         <span
                           className={`font-semibold tabular-nums ${b.owed > 0 ? 'text-warning' : 'text-success'}`}
                         >
-                          {b.owed > 0 ? money(b.owed) : t('settled')}
+                          {b.owed > 0 ? money(b.owed) : t('settledLabel')}
                         </span>
                       </li>
                     ))}
                   </ul>
                 </section>
               )}
+
+              <section className="glass flex items-center justify-between rounded-[2.2vw] bg-accent-soft p-[1.8vw]">
+                <span className="flex flex-col">
+                  <span className="text-[1.2vw] text-fg-muted">
+                    {t('setAsideLabel', { month: proj ? monthName(proj.month) : '' })}
+                  </span>
+                  <span className="font-display text-[2.6vw] leading-none font-semibold tabular-nums">
+                    {proj?.setAsideEach !== null && proj?.setAsideEach !== undefined
+                      ? money(proj.setAsideEach)
+                      : '—'}{' '}
+                    <span className="text-[1.2vw] font-normal text-fg-muted">{t('each')}</span>
+                  </span>
+                </span>
+                <span className="text-right text-[1.1vw] text-fg-muted">
+                  {t('footer', { label: s.fiscalYear.label, total: money(s.fiscalYear.total) })}
+                </span>
+              </section>
             </div>
           </div>
         )}
-
-        <footer className="flex items-center justify-between text-[1.5vw] text-fg-muted">
-          <span>
-            {t('footer', {
-              label: s?.fiscalYear.label ?? '',
-              total: s ? money(s.fiscalYear.total) : '',
-            })}
-          </span>
-          {proj?.setAsideEach !== null && proj?.setAsideEach !== undefined && (
-            <span>
-              {t('setAside', { amount: money(proj.setAsideEach), month: monthName(proj.month) })}
-            </span>
-          )}
-        </footer>
-      </main>
-    </>
+      </div>
+    </main>
   );
 }
