@@ -10,12 +10,12 @@ import { workerStatus } from '@/worker';
 import { pollNowAction } from '../review/actions';
 
 export default async function StatusPage() {
-  const { date } = await pageContext();
+  const { hh, date } = await pageContext();
   const t = await getTranslations('status');
   const env = getEnv();
   const w = workerStatus();
-  const counts = documentCounts();
-  const ing = ingestionStats();
+  const counts = documentCounts(hh.id);
+  const ing = ingestionStats(hh.id);
   const imap = readImapState();
   const total = counts.extracted + counts.needs_review + counts.ignored + counts.unprocessed;
   const decided = ing.auto + ing.reviewed + counts.needs_review;

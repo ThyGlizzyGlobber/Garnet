@@ -11,7 +11,7 @@ export default async function EditMemberPage({ params }: { params: Promise<{ id:
   const { id } = await params;
   const { hh, me } = await pageContext();
   const t = await getTranslations('members');
-  const m = getMember(id);
+  const m = getMember(hh.id, id);
   if (!m) notFound();
   if (me.role !== 'owner' && me.id !== m.id) redirect('/members');
   return (

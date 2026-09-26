@@ -13,7 +13,7 @@ export default async function EditServicePage({ params }: { params: Promise<{ id
   const { id } = await params;
   const { hh } = await pageContext();
   const t = await getTranslations('services');
-  const s = getService(id);
+  const s = getService(hh.id, id);
   if (!s) notFound();
   return (
     <div className="mx-auto max-w-xl">
@@ -30,7 +30,7 @@ export default async function EditServicePage({ params }: { params: Promise<{ id
         action={updateServiceAction}
         types={listServiceTypes()}
         units={listUnits()}
-        members={listMembers().map((m) => ({ id: m.id, name: m.name }))}
+        members={listMembers(hh.id).map((m) => ({ id: m.id, name: m.name }))}
         cadences={CADENCES}
         splitModes={SPLIT_MODES}
         sharedHousehold={hh.splitMode === 'shared'}
@@ -49,7 +49,7 @@ export default async function EditServicePage({ params }: { params: Promise<{ id
           colour: s.colour,
           isActive: s.isActive,
           notes: s.notes ?? '',
-          customSplits: getCustomSplits(s.id),
+          customSplits: getCustomSplits(hh.id, s.id),
         }}
       />
     </div>

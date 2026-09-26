@@ -1,24 +1,17 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { getDb, type Db } from '@/db/client';
-import {
-  bill,
-  household,
-  member,
-  projection,
-  service,
-  serviceSplit,
-  share,
-  sourceDocument,
-} from '@/db/schema';
+import { household } from '@/db/schema';
+import { deleteHousehold, getHousehold } from '@/lib/households';
 import { ensureDataDirs } from '@/lib/paths';
 
-const FLAG = 'demo.json';
+/** Before household.is_demo existed, demo data was marked by this file. */
+const LEGACY_FLAG = 'demo.json';
 const OFF = 'demo-off.json';
 
-/** True when the current data was created by the demo seeder. */
-export function isDemoData(): boolean {
-  return fs.existsSync(path.join(ensureDataDirs().config, FLAG));
+/** True when this household is the fictional demo one. */
+export function isDemoHousehold(householdId: string, db: Db = getDb()): boolean {
+  return getHousehold(householdId, db)?.isDemo ?? false;
 }
 
 /** True once the owner has exited demo mode; the seeder then stays off even with DEMO_MODE=true. */
@@ -26,26 +19,23 @@ export function demoExited(): boolean {
   return fs.existsSync(path.join(ensureDataDirs().config, OFF));
 }
 
-export function markDemoSeeded(): void {
-  fs.writeFileSync(
-    path.join(ensureDataDirs().config, FLAG),
-    JSON.stringify({ seededAt: new Date().toISOString() }),
-  );
+/**
+ * One-time upgrade: installs seeded before multi-household kept a demo.json flag.
+ * At that point the database held exactly one household, so that one is the demo.
+ */
+export function adoptLegacyDemoFlag(db: Db = getDb()): void {
+  const flag = path.join(ensureDataDirs().config, LEGACY_FLAG);
+  if (!fs.existsSync(flag)) return;
+  db.update(household).set({ isDemo: true }).run();
+  fs.rmSync(flag, { force: true });
 }
 
-/** Wipe every household record (the service-type catalog stays) and remember that demo mode was left. */
-export function exitDemo(db: Db = getDb()): void {
-  db.transaction((tx) => {
-    tx.delete(share).run();
-    tx.delete(bill).run();
-    tx.delete(projection).run();
-    tx.delete(sourceDocument).run();
-    tx.delete(serviceSplit).run();
-    tx.delete(service).run();
-    tx.delete(member).run();
-    tx.delete(household).run();
-  });
-  const { config } = ensureDataDirs();
-  fs.rmSync(path.join(config, FLAG), { force: true });
-  fs.writeFileSync(path.join(config, OFF), JSON.stringify({ exitedAt: new Date().toISOString() }));
+/** Delete the demo household and everything it owns, and remember that demo mode was left. */
+export function exitDemo(householdId: string, db: Db = getDb()): void {
+  if (!isDemoHousehold(householdId, db)) throw new Error('This is not the demo household');
+  deleteHousehold(householdId, db);
+  fs.writeFileSync(
+    path.join(ensureDataDirs().config, OFF),
+    JSON.stringify({ exitedAt: new Date().toISOString() }),
+  );
 }

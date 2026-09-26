@@ -19,6 +19,7 @@ export interface Reminder {
  * Overdue first, then due within `soonDays`, then the rest.
  */
 export function remindersFor(
+  householdId: string,
   memberId: string,
   today: string,
   soonDays = 7,
@@ -29,7 +30,9 @@ export function remindersFor(
     .from(share)
     .innerJoin(bill, eq(share.billId, bill.id))
     .innerJoin(service, eq(bill.serviceId, service.id))
-    .where(and(eq(share.memberId, memberId), isNull(share.paidAt)))
+    .where(
+      and(eq(share.householdId, householdId), eq(share.memberId, memberId), isNull(share.paidAt)),
+    )
     .all();
   return rows
     .map((r) => {

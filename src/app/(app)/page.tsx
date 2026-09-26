@@ -30,8 +30,8 @@ export default async function HomePage() {
   const t = await getTranslations('dashboard');
   const shared = hh.splitMode === 'shared';
 
-  if (!hasAnyBills()) {
-    const hasServices = listServices().length > 0;
+  if (!hasAnyBills(hh.id)) {
+    const hasServices = listServices(hh.id).length > 0;
     return (
       <>
         <PageHeader title={t('greeting', { name: me.name })} subtitle={hh.name} />
@@ -48,18 +48,18 @@ export default async function HomePage() {
     );
   }
 
-  const s = dashboardSummary(today, hh.fiscalYearStartMonth);
-  const projNow = projectMonth(s.thisMonth.month);
-  const proj = projectMonth(nextMonth(today));
+  const s = dashboardSummary(hh.id, today, hh.fiscalYearStartMonth);
+  const projNow = projectMonth(hh.id, s.thisMonth.month);
+  const proj = projectMonth(hh.id, nextMonth(today));
   const forecast = Array.from({ length: 6 }, (_, i) =>
-    projectMonth(addMonths(s.thisMonth.month, i + 1)),
+    projectMonth(hh.id, addMonths(s.thisMonth.month, i + 1)),
   );
-  const ledger = shared ? memberLedger(me.id, today, hh.fiscalYearStartMonth) : null;
-  const balances = shared ? householdBalances() : [];
-  const mine = shared ? remindersFor(me.id, today) : [];
+  const ledger = shared ? memberLedger(hh.id, me.id, today, hh.fiscalYearStartMonth) : null;
+  const balances = shared ? householdBalances(hh.id) : [];
+  const mine = shared ? remindersFor(hh.id, me.id, today) : [];
   const mineSum = summariseReminders(mine);
-  const settled = shared ? settlementRate(s.thisMonth.month) : null;
-  const reviewCount = documentCounts().needs_review;
+  const settled = shared ? settlementRate(hh.id, s.thisMonth.month) : null;
+  const reviewCount = documentCounts(hh.id).needs_review;
 
   const monthName = (m: string, style: 'short' | 'long' = 'short') =>
     new Intl.DateTimeFormat(hh.locale, { month: style, timeZone: 'UTC' }).format(
@@ -103,7 +103,7 @@ export default async function HomePage() {
   });
 
   const nextBill = s.overdue[0] ?? s.upcoming[0];
-  const nextDetail = nextBill ? getBill(nextBill.id) : null;
+  const nextDetail = nextBill ? getBill(hh.id, nextBill.id) : null;
   const myShare = nextDetail?.shares.find((sh) => sh.memberId === me.id) ?? null;
   const projMethod = proj.services.some((p) => p.method === 'seasonal')
     ? 'seasonal'
@@ -433,7 +433,8 @@ export default async function HomePage() {
             <h2 className="font-display text-lg font-semibold">{t('balances.title')}</h2>
             {balances.map((b) => {
               const overdue =
-                b.owed > 0 && remindersFor(b.member.id, today).some((r) => r.level === 'overdue');
+                b.owed > 0 &&
+                remindersFor(hh.id, b.member.id, today).some((r) => r.level === 'overdue');
               return (
                 <div key={b.member.id} className="flex items-center gap-3 text-sm">
                   <span

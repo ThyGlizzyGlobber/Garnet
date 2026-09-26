@@ -3,17 +3,18 @@ import { getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
 import { AppShell } from '@/components/app/shell';
 import { currentMember } from '@/lib/auth/session';
-import { getHousehold } from '@/lib/households';
+import { getHousehold, isSetUp } from '@/lib/households';
 import { logout } from '@/app/login/actions';
 import { documentCounts } from '@/lib/review';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
-  const hh = getHousehold();
-  if (!hh) redirect('/setup');
+  if (!isSetUp()) redirect('/setup');
   const me = await currentMember();
   if (!me) redirect('/login');
+  const hh = getHousehold(me.householdId);
+  if (!hh) redirect('/login');
   const t = await getTranslations('nav');
   const nav = [
     { href: '/', label: t('home'), icon: 'home' },
@@ -35,7 +36,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       wallLabel={t('wall')}
       reviewHref="/review"
       reviewLabel={t('review')}
-      reviewCount={documentCounts().needs_review}
+      reviewCount={documentCounts(hh.id).needs_review}
       addHref="/bills/new"
       addLabel={t('addBill')}
       searchLabel={t('search')}

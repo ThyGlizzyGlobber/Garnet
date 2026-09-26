@@ -51,7 +51,7 @@ function read(fd: FormData) {
 }
 
 export async function createMemberAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
-  await requireMember();
+  const me = await requireMember();
   const parsed = read(fd);
   if (!parsed.success) return zodToState(parsed.error);
   const v = parsed.data;
@@ -61,7 +61,7 @@ export async function createMemberAction(_prev: ActionState, fd: FormData): Prom
       fieldErrors: { pin: 'A PIN is required' },
     };
   try {
-    createMember({
+    createMember(me.householdId, {
       name: v.name,
       pinHash: await hashPin(v.pin),
       splitWeight: v.splitWeight,
@@ -80,7 +80,7 @@ export async function createMemberAction(_prev: ActionState, fd: FormData): Prom
 export async function updateMemberAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
   const me = await requireMember();
   const id = str(fd, 'id');
-  const target = getMember(id);
+  const target = getMember(me.householdId, id);
   if (!target) return { error: 'Member not found' };
   // Members edit themselves; the owner edits anyone.
   if (me.role !== 'owner' && me.id !== id)
@@ -89,7 +89,7 @@ export async function updateMemberAction(_prev: ActionState, fd: FormData): Prom
   if (!parsed.success) return zodToState(parsed.error);
   const v = parsed.data;
   try {
-    updateMember(id, {
+    updateMember(me.householdId, id, {
       name: v.name,
       splitWeight: v.splitWeight,
       activeFrom: v.activeFrom,
@@ -106,9 +106,9 @@ export async function updateMemberAction(_prev: ActionState, fd: FormData): Prom
 }
 
 export async function deleteMemberAction(fd: FormData): Promise<void> {
-  await requireOwner();
+  const me = await requireOwner();
   try {
-    deleteMember(str(fd, 'id'));
+    deleteMember(me.householdId, str(fd, 'id'));
   } catch {
     // Members with shares can't be deleted; the page explains to set a move-out date instead.
   }

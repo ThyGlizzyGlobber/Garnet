@@ -15,14 +15,14 @@ export default async function ReviewItemPage({ params }: { params: Promise<{ id:
   const { id } = await params;
   const { hh, date } = await pageContext();
   const t = await getTranslations('review');
-  const d = getReviewItem(id);
+  const d = getReviewItem(hh.id, id);
   if (!d) notFound();
   const r = d.extraction?.result ?? null;
-  const services = listServices();
+  const services = listServices(hh.id);
   const digits = minorUnitDigits(r?.bill.currency ?? hh.currency);
   const major = (m: number | null | undefined) =>
     m === null || m === undefined ? '' : (m / 10 ** digits).toFixed(digits);
-  const suggested = r ? (r.bill.serviceId ?? matchService(r)) : null;
+  const suggested = r ? (r.bill.serviceId ?? matchService(hh.id, r)) : null;
   const isPdf = (d.mimeType ?? '').includes('pdf') || d.path.endsWith('.pdf');
   const canReview = d.status !== 'extracted';
 

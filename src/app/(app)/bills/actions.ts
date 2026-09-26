@@ -96,7 +96,7 @@ function toInput(
 
 export async function createBillAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
   const me = await requireMember();
-  const hh = getHousehold()!;
+  const hh = getHousehold(me.householdId)!;
   const parsed = read(fd);
   if (!parsed.success) return zodToState(parsed.error);
   const input = toInput(parsed.data, hh.currency);
@@ -104,7 +104,7 @@ export async function createBillAction(_prev: ActionState, fd: FormData): Promis
     return { error: 'Please fix the highlighted fields.', fieldErrors: input.fieldErrors };
   let id: string;
   try {
-    id = createBill({ ...input, source: 'manual', createdByMemberId: me.id }).id;
+    id = createBill(hh.id, { ...input, source: 'manual', createdByMemberId: me.id }).id;
   } catch (e) {
     return { error: (e as Error).message };
   }
@@ -113,10 +113,10 @@ export async function createBillAction(_prev: ActionState, fd: FormData): Promis
 }
 
 export async function updateBillAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
-  await requireMember();
-  const hh = getHousehold()!;
+  const me = await requireMember();
+  const hh = getHousehold(me.householdId)!;
   const id = str(fd, 'id');
-  const existing = getBill(id);
+  const existing = getBill(hh.id, id);
   if (!existing) return { error: 'Bill not found' };
   const parsed = read(fd);
   if (!parsed.success) return zodToState(parsed.error);
@@ -128,7 +128,7 @@ export async function updateBillAction(_prev: ActionState, fd: FormData): Promis
     const paidToProviderAt = input.paidToProviderAt
       ? (existing.paidToProviderAt ?? input.paidToProviderAt)
       : null;
-    updateBill(id, { ...input, paidToProviderAt });
+    updateBill(hh.id, id, { ...input, paidToProviderAt });
   } catch (e) {
     return { error: (e as Error).message };
   }
@@ -137,8 +137,8 @@ export async function updateBillAction(_prev: ActionState, fd: FormData): Promis
 }
 
 export async function deleteBillAction(fd: FormData): Promise<void> {
-  await requireMember();
-  deleteBill(str(fd, 'id'));
+  const me = await requireMember();
+  deleteBill(me.householdId, str(fd, 'id'));
   revalidatePath('/bills');
   redirect('/bills');
 }
@@ -147,7 +147,7 @@ export async function toggleSharePaidAction(fd: FormData): Promise<void> {
   const me = await requireMember();
   const shareId = str(fd, 'shareId');
   const paid = str(fd, 'paid') === 'true';
-  setSharePaid(shareId, paid, {
+  setSharePaid(me.householdId, shareId, paid, {
     markedByMemberId: me.id,
     method: optStr(fd, 'method') ?? 'transfer',
   });
@@ -156,9 +156,9 @@ export async function toggleSharePaidAction(fd: FormData): Promise<void> {
 }
 
 export async function toggleBillPaidAction(fd: FormData): Promise<void> {
-  await requireMember();
+  const me = await requireMember();
   const id = str(fd, 'id');
-  setBillPaidToProvider(id, str(fd, 'paid') === 'true');
+  setBillPaidToProvider(me.householdId, id, str(fd, 'paid') === 'true');
   revalidatePath(`/bills/${id}`);
   revalidatePath('/bills');
 }

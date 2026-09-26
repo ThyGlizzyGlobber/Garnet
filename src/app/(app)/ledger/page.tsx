@@ -25,10 +25,10 @@ export default async function LedgerPage({
   const t = await getTranslations('ledger');
   const { member: requested } = await searchParams;
   const viewingId = me.role === 'owner' && requested ? requested : me.id;
-  const ledger = memberLedger(viewingId, today, hh.fiscalYearStartMonth);
+  const ledger = memberLedger(hh.id, viewingId, today, hh.fiscalYearStartMonth);
   if (!ledger) redirect('/ledger');
   const isMe = ledger.member.id === me.id;
-  const members = me.role === 'owner' ? listMembers() : [];
+  const members = me.role === 'owner' ? listMembers(hh.id) : [];
   const paidPct =
     ledger.totalThisFy > 0 ? Math.round((ledger.paidThisFy / ledger.totalThisFy) * 100) : 0;
   const monthLabel = (iso: string) =>

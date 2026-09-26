@@ -18,6 +18,7 @@ import {
 
 let dir: string;
 let db: Db;
+let hid: string;
 let close: () => void;
 let a: string;
 let b: string;
@@ -30,7 +31,7 @@ beforeAll(() => {
   const o = openDb(dir);
   db = o.db;
   close = () => o.sqlite.close();
-  createHousehold(
+  hid = createHousehold(
     {
       name: 'H',
       currency: 'AUD',
@@ -40,20 +41,20 @@ beforeAll(() => {
       splitMode: 'shared',
     },
     db,
-  );
-  a = createMember({ name: 'A', pinHash: 'x', role: 'owner', activeFrom: '2025-01-01' }, db).id;
-  b = createMember({ name: 'B', pinHash: 'x', activeFrom: '2025-01-01' }, db).id;
-  net = createService(
+  ).id;
+  a = createMember(hid, { name: 'A', pinHash: 'x', role: 'owner', activeFrom: '2025-01-01' }, db).id;
+  b = createMember(hid, { name: 'B', pinHash: 'x', activeFrom: '2025-01-01' }, db).id;
+  net = createService(hid,
     { typeSlug: 'internet', name: 'Internet', provider: 'P', payerMemberId: a },
     db,
   ).id;
-  power = createService(
+  power = createService(hid,
     { typeSlug: 'electricity', name: 'Power', provider: 'Q', payerMemberId: b, usageUnit: 'kWh' },
     db,
   ).id;
   // Monthly internet, $100 each, Jul–Sep 2026.
   for (const m of ['2026-07', '2026-08', '2026-09']) {
-    createBill(
+    createBill(hid,
       {
         serviceId: net,
         amountMinor: 10000,
@@ -68,7 +69,7 @@ beforeAll(() => {
     );
   }
   // Quarterly power Jul–Sep 2026 $300 → $100/month accrued.
-  createBill(
+  createBill(hid,
     {
       serviceId: power,
       amountMinor: 30000,
@@ -89,13 +90,13 @@ afterAll(() => {
 
 describe('monthly series', () => {
   it('accrues bills into months per service', () => {
-    const rows = monthlySeries(['2026-07', '2026-08', '2026-09'], db);
+    const rows = monthlySeries(hid, ['2026-07', '2026-08', '2026-09'], db);
     expect(rows.map((r) => r.total)).toEqual([20108, 20108, 19784]); // 92-day quarter, remainder to September
     expect(rows[0]?.byService[power]).toBe(10108);
     expect(rows.reduce((t, r) => t + (r.byService[power] ?? 0), 0)).toBe(30000);
   });
   it('totals a range with the same accrual', () => {
-    const t = totalsForRange('2026-08-01', '2026-08-31', db);
+    const t = totalsForRange(hid, '2026-08-01', '2026-08-31', db);
     expect(t.total).toBe(20109); // 10000 + round(30000 × 31 / 92)
     expect(t.byService[0]?.minor).toBe(10109);
   });
@@ -103,7 +104,7 @@ describe('monthly series', () => {
 
 describe('dashboard summary', () => {
   it('reports this month, upcoming and overdue', () => {
-    const s = dashboardSummary('2026-09-20', 7, db);
+    const s = dashboardSummary(hid, '2026-09-20', 7, db);
     expect(s.thisMonth.total).toBe(19783); // 10000 + round(30000 × 30 / 92)
     expect(s.lastMonthTotal).toBe(20109);
     expect(s.fiscalYear.label).toBe('2026–27');
@@ -117,13 +118,13 @@ describe('dashboard summary', () => {
 
 describe('ledger', () => {
   it('shows what a member owes and is owed', () => {
-    const lb = memberLedger(b, '2026-09-20', 7, db)!;
+    const lb = memberLedger(hid, b, '2026-09-20', 7, db)!;
     // B owes A half of each internet bill (3 × 5000); A owes B half of power (15000).
     expect(lb.owed).toBe(15000);
     expect(lb.unpaid).toHaveLength(3);
     expect(lb.owedToMe).toBe(15000);
     expect(lb.owedToMeBy[0]?.member.id).toBe(a);
-    const balances = householdBalances(db);
+    const balances = householdBalances(hid, db);
     expect(balances.find((x) => x.member.id === a)?.owed).toBe(15000);
     expect(balances.find((x) => x.member.id === b)?.unpaidCount).toBe(3);
   });
@@ -131,7 +132,7 @@ describe('ledger', () => {
 
 describe('anomaly flag on create', () => {
   it('flags a bill far above the prior median', () => {
-    const big = createBill(
+    const big = createBill(hid,
       {
         serviceId: net,
         amountMinor: 20000,
@@ -144,8 +145,8 @@ describe('anomaly flag on create', () => {
       db,
     );
     expect(big.isAnomaly).toBe(true);
-    expect(getBill(big.id, db)?.anomalyNote).toMatch(/100% above/);
-    const normal = createBill(
+    expect(getBill(hid, big.id, db)?.anomalyNote).toMatch(/100% above/);
+    const normal = createBill(hid,
       {
         serviceId: net,
         amountMinor: 10000,

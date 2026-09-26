@@ -4,7 +4,7 @@ import { bill, type SourceDocument } from '@/db/schema';
 import { createBill, type BillDetail } from '@/lib/bills';
 import { getEnv } from '@/lib/env';
 import { getHousehold } from '@/lib/households';
-import { listServices, listServiceTypes } from '@/lib/services';
+import { getService, listServices, listServiceTypes } from '@/lib/services';
 import { getDocument, readDocument, setDocumentStatus } from './archive';
 import { fallbackExtractors, templateExtractors } from './extractors';
 import type { ExtractionInput, ExtractionResult, Extractor } from './extractors/types';
@@ -28,11 +28,12 @@ export interface StoredExtraction {
 }
 
 export function buildInput(
+  householdId: string,
   text: string,
   doc: Partial<SourceDocument>,
   db: Db = getDb(),
 ): ExtractionInput {
-  const hh = getHousehold(db);
+  const hh = getHousehold(householdId, db);
   return {
     text,
     filename: doc.originalFilename ?? null,
@@ -42,7 +43,7 @@ export function buildInput(
         : null,
     locale: hh?.locale ?? 'en-AU',
     defaultCurrency: hh?.currency ?? 'AUD',
-    services: listServices(db).map((s) => ({
+    services: listServices(householdId, {}, db).map((s) => ({
       id: s.id,
       name: s.name,
       provider: s.provider,
@@ -83,10 +84,11 @@ export async function runExtractors(
  * Low-confidence, unmatched-service, and duplicate results never become bills silently.
  */
 export async function processDocument(
+  householdId: string,
   documentId: string,
   db: Db = getDb(),
 ): Promise<PipelineOutcome> {
-  const doc = getDocument(documentId, db);
+  const doc = getDocument(householdId, documentId, db);
   if (!doc) throw new Error('Document not found');
   const env = getEnv();
   const text = await extractText(readDocument(doc), doc.mimeType, doc.originalFilename);
@@ -103,7 +105,7 @@ export async function processDocument(
       textPreview: text.slice(0, 4000),
       processedAt: new Date().toISOString(),
     };
-    setDocumentStatus(doc.id, status, JSON.stringify(stored), db);
+    setDocumentStatus(householdId, doc.id, status, JSON.stringify(stored), db);
   };
 
   if (text.trim().length < 20) {
@@ -111,7 +113,7 @@ export async function processDocument(
     return { documentId: doc.id, status: 'needs_review', reason: 'no-text', result: null };
   }
 
-  const input = buildInput(text, doc, db);
+  const input = buildInput(householdId, text, doc, db);
   const { best, attempts } = await runExtractors(input);
   if (!best) {
     store(
@@ -133,7 +135,10 @@ export async function processDocument(
     );
     return { documentId: doc.id, status: 'needs_review', reason: 'low-confidence', result: best };
   }
-  const serviceId = best.bill.serviceId ?? matchService(best, db);
+  const serviceId =
+    best.bill.serviceId && getService(householdId, best.bill.serviceId, db)
+      ? best.bill.serviceId
+      : matchService(householdId, best, db);
   if (!serviceId) {
     store('needs_review', `No service matches provider "${best.bill.provider}"`, best, attempts);
     return { documentId: doc.id, status: 'needs_review', reason: 'no-service', result: best };
@@ -142,7 +147,13 @@ export async function processDocument(
     const dup = db
       .select({ id: bill.id })
       .from(bill)
-      .where(and(eq(bill.serviceId, serviceId), eq(bill.externalRef, best.bill.externalRef)))
+      .where(
+        and(
+          eq(bill.householdId, householdId),
+          eq(bill.serviceId, serviceId),
+          eq(bill.externalRef, best.bill.externalRef),
+        ),
+      )
       .get();
     if (dup) {
       store('ignored', `Duplicate of an existing bill (${best.bill.externalRef})`, best, attempts);
@@ -155,7 +166,7 @@ export async function processDocument(
       };
     }
   }
-  const created = createBillFromExtraction(best, serviceId, doc.id, db);
+  const created = createBillFromExtraction(householdId, best, serviceId, doc.id, db);
   store('extracted', `Created bill via ${best.extractor}`, best, attempts);
   return {
     documentId: doc.id,
@@ -167,8 +178,12 @@ export async function processDocument(
 }
 
 /** Match by provider name (case-insensitive, either containing the other) then by service type when unique. */
-export function matchService(result: ExtractionResult, db: Db = getDb()): string | null {
-  const services = listServices(db);
+export function matchService(
+  householdId: string,
+  result: ExtractionResult,
+  db: Db = getDb(),
+): string | null {
+  const services = listServices(householdId, {}, db);
   const p = result.bill.provider.toLowerCase();
   const byProvider = services.filter(
     (s) =>
@@ -182,6 +197,7 @@ export function matchService(result: ExtractionResult, db: Db = getDb()): string
 }
 
 export function createBillFromExtraction(
+  householdId: string,
   result: ExtractionResult,
   serviceId: string,
   sourceDocumentId: string,
@@ -189,6 +205,7 @@ export function createBillFromExtraction(
 ): BillDetail {
   const b = result.bill;
   return createBill(
+    householdId,
     {
       serviceId,
       sourceDocumentId,

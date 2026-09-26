@@ -5,7 +5,6 @@ import { pageContext } from '@/lib/context';
 import { getEnv, isImapConfigured, isLlmConfigured } from '@/lib/env';
 import { SettingsForm } from './settings-form';
 import { InlineAction } from '@/components/ui/form';
-import { isDemoData } from '@/lib/demo';
 import { getTheme, THEMES } from '@/lib/theme';
 import { exitDemoAction, setThemeAction } from './actions';
 import { UpdateCard } from './update-card';
@@ -15,7 +14,7 @@ export default async function SettingsPage() {
   const t = await getTranslations('settings');
   const env = getEnv();
   const theme = await getTheme();
-  const demo = isDemoData();
+  const demo = hh.isDemo;
   const months = Array.from({ length: 12 }, (_, i) =>
     new Intl.DateTimeFormat(hh.locale, { month: 'long' }).format(new Date(2026, i, 1)),
   );

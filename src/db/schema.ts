@@ -6,6 +6,8 @@ import { index, integer, real, sqliteTable, text, uniqueIndex } from 'drizzle-or
  *  - timestamps are ISO-8601 strings in UTC; calendar dates are YYYY-MM-DD
  *  - money is integer minor units + ISO 4217 currency code (src/lib/format.ts)
  *  - nothing country- or provider-specific lives here
+ *  - every household-owned row carries household_id; all reads and writes are
+ *    scoped to the signed-in member's household (src/lib/*)
  */
 
 export const household = sqliteTable('household', {
@@ -29,14 +31,23 @@ export const household = sqliteTable('household', {
   paymentReferenceTemplate: text('payment_reference_template')
     .notNull()
     .default('{service} {period} {member}'),
+  /** The fictional demo household; "Exit demo" deletes it. */
+  isDemo: integer('is_demo', { mode: 'boolean' }).notNull().default(false),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });
+
+/** FK used by every household-owned table; deleting a household deletes its rows. */
+const householdId = () =>
+  text('household_id')
+    .notNull()
+    .references(() => household.id, { onDelete: 'cascade' });
 
 export const member = sqliteTable(
   'member',
   {
     id: text('id').primaryKey(),
+    householdId: householdId(),
     name: text('name').notNull(),
     pinHash: text('pin_hash').notNull(),
     role: text('role', { enum: ['owner', 'member'] })
@@ -57,10 +68,10 @@ export const member = sqliteTable(
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
-  (t) => [uniqueIndex('member_name_unique').on(t.name)],
+  (t) => [uniqueIndex('member_household_name_unique').on(t.householdId, t.name)],
 );
 
-/** Editable catalog of service types. Seeded with the built-ins; households can add their own. */
+/** Catalog of service types, shared by every household (built-ins seeded by migration). */
 export const serviceType = sqliteTable('service_type', {
   slug: text('slug').primaryKey(),
   label: text('label').notNull(),
@@ -89,6 +100,7 @@ export const service = sqliteTable(
   'service',
   {
     id: text('id').primaryKey(),
+    householdId: householdId(),
     typeSlug: text('type_slug')
       .notNull()
       .references(() => serviceType.slug),
@@ -107,13 +119,17 @@ export const service = sqliteTable(
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
-  (t) => [index('service_type_idx').on(t.typeSlug)],
+  (t) => [
+    index('service_type_idx').on(t.typeSlug),
+    index('service_household_idx').on(t.householdId),
+  ],
 );
 
 /** Per-member weights, only consulted when service.splitMode === 'custom'. */
 export const serviceSplit = sqliteTable(
   'service_split',
   {
+    householdId: householdId(),
     serviceId: text('service_id')
       .notNull()
       .references(() => service.id, { onDelete: 'cascade' }),
@@ -132,6 +148,7 @@ export const sourceDocument = sqliteTable(
   'source_document',
   {
     id: text('id').primaryKey(),
+    householdId: householdId(),
     kind: text('kind', { enum: ['email', 'pdf', 'upload'] }).notNull(),
     /** Path relative to DATA_DIR/inbox. */
     path: text('path').notNull(),
@@ -149,7 +166,7 @@ export const sourceDocument = sqliteTable(
     createdAt: text('created_at').notNull(),
   },
   (t) => [
-    uniqueIndex('source_document_sha_unique').on(t.sha256),
+    uniqueIndex('source_document_household_sha_unique').on(t.householdId, t.sha256),
     index('source_document_status_idx').on(t.status),
   ],
 );
@@ -161,6 +178,7 @@ export const bill = sqliteTable(
   'bill',
   {
     id: text('id').primaryKey(),
+    householdId: householdId(),
     serviceId: text('service_id')
       .notNull()
       .references(() => service.id),
@@ -192,6 +210,7 @@ export const bill = sqliteTable(
   },
   (t) => [
     uniqueIndex('bill_service_external_ref_unique').on(t.serviceId, t.externalRef),
+    index('bill_household_idx').on(t.householdId),
     index('bill_period_idx').on(t.periodStart),
     index('bill_due_idx').on(t.dueDate),
   ],
@@ -201,6 +220,7 @@ export const share = sqliteTable(
   'share',
   {
     id: text('id').primaryKey(),
+    householdId: householdId(),
     billId: text('bill_id')
       .notNull()
       .references(() => bill.id, { onDelete: 'cascade' }),
@@ -226,6 +246,7 @@ export const share = sqliteTable(
   (t) => [
     uniqueIndex('share_bill_member_unique').on(t.billId, t.memberId),
     index('share_member_idx').on(t.memberId),
+    index('share_household_idx').on(t.householdId),
   ],
 );
 
@@ -233,6 +254,7 @@ export const projection = sqliteTable(
   'projection',
   {
     id: text('id').primaryKey(),
+    householdId: householdId(),
     serviceId: text('service_id')
       .notNull()
       .references(() => service.id, { onDelete: 'cascade' }),

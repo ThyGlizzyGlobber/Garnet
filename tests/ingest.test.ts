@@ -52,6 +52,7 @@ describe('html to text', () => {
 describe('archive + pipeline', () => {
   let dir: string;
   let db: Db;
+  let hid: string;
   let close: () => void;
   let net: string;
 
@@ -64,7 +65,7 @@ describe('archive + pipeline', () => {
     const o = openDb(dir);
     db = o.db;
     close = () => o.sqlite.close();
-    createHousehold(
+    hid = createHousehold(
       {
         name: 'H',
         currency: 'AUD',
@@ -74,9 +75,9 @@ describe('archive + pipeline', () => {
         splitMode: 'single',
       },
       db,
-    );
-    createMember({ name: 'A', pinHash: 'x', role: 'owner', activeFrom: '2025-01-01' }, db);
-    net = createService(
+    ).id;
+    createMember(hid, { name: 'A', pinHash: 'x', role: 'owner', activeFrom: '2025-01-01' }, db);
+    net = createService(hid,
       { typeSlug: 'internet', name: 'Internet', provider: 'Aussie Broadband' },
       db,
     ).id;
@@ -88,7 +89,7 @@ describe('archive + pipeline', () => {
 
   it('archives a file under inbox/YYYY/MM and dedupes by content hash', () => {
     const buf = Buffer.from('hello bill');
-    const a = archiveDocument(
+    const a = archiveDocument(hid,
       {
         kind: 'upload',
         buffer: buf,
@@ -101,7 +102,7 @@ describe('archive + pipeline', () => {
     expect(a.duplicate).toBe(false);
     expect(a.doc.path.startsWith('2026/09/')).toBe(true);
     expect(readDocument(a.doc).toString()).toBe('hello bill');
-    const b = archiveDocument(
+    const b = archiveDocument(hid,
       { kind: 'upload', buffer: buf, originalFilename: 'again.txt', mimeType: 'text/plain' },
       db,
     );
@@ -111,7 +112,7 @@ describe('archive + pipeline', () => {
 
   it('routes a confident template result to a bill and blocks duplicates', async () => {
     const text = fs.readFileSync(path.join(__dirname, 'fixtures', 'aussie-broadband.txt'), 'utf8');
-    const doc = archiveDocument(
+    const doc = archiveDocument(hid,
       {
         kind: 'upload',
         buffer: Buffer.from(text),
@@ -120,16 +121,16 @@ describe('archive + pipeline', () => {
       },
       db,
     ).doc;
-    const outcome = await processDocument(doc.id, db);
+    const outcome = await processDocument(hid, doc.id, db);
     expect(outcome.status).toBe('extracted');
     expect(outcome.result?.extractor).toBe('template:aussie-broadband');
     expect(outcome.result?.bill.amountMinor).toBe(12900);
     expect(outcome.result?.bill.externalRef).toBe('59259831');
     expect(outcome.result?.bill.accountRef).toBe('14809800');
     expect(outcome.result?.bill.issueDate).toBe('2026-06-14');
-    expect(getDocument(doc.id, db)?.status).toBe('extracted');
+    expect(getDocument(hid, doc.id, db)?.status).toBe('extracted');
     // Same invoice, different bytes → duplicate detection by invoice number.
-    const doc2 = archiveDocument(
+    const doc2 = archiveDocument(hid,
       {
         kind: 'upload',
         buffer: Buffer.from(text + '\n'),
@@ -138,13 +139,13 @@ describe('archive + pipeline', () => {
       },
       db,
     ).doc;
-    const dup = await processDocument(doc2.id, db);
+    const dup = await processDocument(hid, doc2.id, db);
     expect(dup.status).toBe('ignored');
     expect(dup.reason).toBe('duplicate');
   });
 
   it('sends unreadable and unknown documents to review without the LLM configured', async () => {
-    const empty = archiveDocument(
+    const empty = archiveDocument(hid,
       {
         kind: 'upload',
         buffer: Buffer.from('x'),
@@ -153,8 +154,8 @@ describe('archive + pipeline', () => {
       },
       db,
     ).doc;
-    expect((await processDocument(empty.id, db)).reason).toBe('no-text');
-    const unknown = archiveDocument(
+    expect((await processDocument(hid, empty.id, db)).reason).toBe('no-text');
+    const unknown = archiveDocument(hid,
       {
         kind: 'upload',
         buffer: Buffer.from(
@@ -165,7 +166,7 @@ describe('archive + pipeline', () => {
       },
       db,
     ).doc;
-    const o = await processDocument(unknown.id, db);
+    const o = await processDocument(hid, unknown.id, db);
     expect(o.status).toBe('needs_review');
     expect(o.reason).toBe('no-result');
   });
@@ -191,7 +192,7 @@ describe('archive + pipeline', () => {
         },
       }),
     };
-    const { best, attempts } = await runExtractors(buildInput('any text at all here', {}, db), {
+    const { best, attempts } = await runExtractors(buildInput(hid, 'any text at all here', {}, db), {
       extractors: [shaky],
       threshold: 0.85,
     });

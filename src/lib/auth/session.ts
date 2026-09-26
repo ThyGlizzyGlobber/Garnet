@@ -2,7 +2,7 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { getIronSession, type SessionOptions } from 'iron-session';
 import { getEnv } from '@/lib/env';
-import { getMember } from '@/lib/members';
+import { getMemberForSession } from '@/lib/members';
 import type { Member } from '@/db/schema';
 
 export interface SessionData {
@@ -34,7 +34,7 @@ export async function currentMember(): Promise<Member | null> {
   if (!session.memberId) return null;
   // A stale cookie (member deleted, database reset) just means "not logged in".
   // Cookies can't be modified during render, so the login action overwrites it later.
-  return getMember(session.memberId) ?? null;
+  return getMemberForSession(session.memberId) ?? null;
 }
 
 /** Redirects to /login when nobody is logged in. */

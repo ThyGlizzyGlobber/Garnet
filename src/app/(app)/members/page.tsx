@@ -6,7 +6,7 @@ import { listMembers } from '@/lib/members';
 export default async function MembersPage() {
   const { hh, me, date, today } = await pageContext();
   const t = await getTranslations('members');
-  const members = listMembers();
+  const members = listMembers(hh.id);
   return (
     <>
       <PageHeader

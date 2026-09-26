@@ -7,7 +7,7 @@ import { Ring } from '@/components/ui/ring';
 import { currentMember } from '@/lib/auth/session';
 import { todayIn } from '@/lib/dates';
 import { formatDate, formatMoney } from '@/lib/format';
-import { getHousehold } from '@/lib/households';
+import { getHousehold, isSetUp } from '@/lib/households';
 import { darkVariant } from '@/lib/palette';
 import { nextMonth, projectMonth } from '@/lib/projections';
 import { dashboardSummary, hasAnyBills, householdBalances, settlementRate } from '@/lib/stats';
@@ -25,19 +25,21 @@ const avatar = (colour: string) => ({
  * lasts AUTH_SESSION_DAYS. Refreshes every minute.
  */
 export default async function WallPage() {
-  const hh = getHousehold();
-  if (!hh) redirect('/setup');
-  if (!(await currentMember())) redirect('/login?next=/wall');
+  if (!isSetUp()) redirect('/setup');
+  const me = await currentMember();
+  if (!me) redirect('/login?next=/wall');
+  const hh = getHousehold(me.householdId);
+  if (!hh) redirect('/login?next=/wall');
   const t = await getTranslations('wall');
   const today = todayIn(hh.timezone);
   const money = (m: number) => formatMoney(m, hh.currency, hh.locale);
   const shared = hh.splitMode === 'shared';
-  const s = hasAnyBills() ? dashboardSummary(today, hh.fiscalYearStartMonth) : null;
-  const balances = shared ? householdBalances() : [];
+  const s = hasAnyBills(hh.id) ? dashboardSummary(hh.id, today, hh.fiscalYearStartMonth) : null;
+  const balances = shared ? householdBalances(hh.id) : [];
   const next = s ? (s.overdue[0] ?? s.upcoming[0]) : undefined;
-  const proj = s ? projectMonth(nextMonth(today)) : null;
-  const projNow = s ? projectMonth(s.thisMonth.month) : null;
-  const settled = s && shared ? settlementRate(s.thisMonth.month) : null;
+  const proj = s ? projectMonth(hh.id, nextMonth(today)) : null;
+  const projNow = s ? projectMonth(hh.id, s.thisMonth.month) : null;
+  const settled = s && shared ? settlementRate(hh.id, s.thisMonth.month) : null;
   const monthName = (m: string, style: 'short' | 'long' = 'long') =>
     new Intl.DateTimeFormat(hh.locale, { month: style, timeZone: 'UTC' }).format(
       new Date(`${m}-01T00:00:00Z`),

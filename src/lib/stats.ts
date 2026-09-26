@@ -25,20 +25,31 @@ export interface MonthRow {
 }
 
 /** Bills whose billing period overlaps [start, end]. */
-export function billsOverlapping(start: string, end: string, db: Db = getDb()): Bill[] {
+export function billsOverlapping(
+  householdId: string,
+  start: string,
+  end: string,
+  db: Db = getDb(),
+): Bill[] {
   return db
     .select()
     .from(bill)
-    .where(and(lte(bill.periodStart, end), gte(bill.periodEnd, start)))
+    .where(
+      and(
+        eq(bill.householdId, householdId),
+        lte(bill.periodStart, end),
+        gte(bill.periodEnd, start),
+      ),
+    )
     .all();
 }
 
 /** Accrued cost per month per service, pro-rata by days, for the given months. */
-export function monthlySeries(months: string[], db: Db = getDb()): MonthRow[] {
+export function monthlySeries(householdId: string, months: string[], db: Db = getDb()): MonthRow[] {
   const first = months[0];
   const last = months[months.length - 1];
   if (!first || !last) return [];
-  const bills = billsOverlapping(monthBounds(first).start, monthBounds(last).end, db);
+  const bills = billsOverlapping(householdId, monthBounds(first).start, monthBounds(last).end, db);
   const rows = new Map<string, MonthRow>(
     months.map((m) => [m, { month: m, total: 0, byService: {} }]),
   );
@@ -55,12 +66,15 @@ export function monthlySeries(months: string[], db: Db = getDb()): MonthRow[] {
 
 /** Accrued total for a date range, per service. */
 export function totalsForRange(
+  householdId: string,
   start: string,
   end: string,
   db: Db = getDb(),
 ): { total: number; byService: ServiceTotal[] } {
-  const services = new Map(listServices(db, true).map((s) => [s.id, s]));
-  const bills = billsOverlapping(start, end, db);
+  const services = new Map(
+    listServices(householdId, { includeInactive: true }, db).map((s) => [s.id, s]),
+  );
+  const bills = billsOverlapping(householdId, start, end, db);
   const byId = new Map<string, number>();
   let total = 0;
   for (const b of bills) {
@@ -101,22 +115,25 @@ export interface DashboardSummary {
 }
 
 export function dashboardSummary(
+  householdId: string,
   today: string,
   fiscalYearStartMonth: number,
   db: Db = getDb(),
 ): DashboardSummary {
   const month = monthOf(today);
   const mb = monthBounds(month);
-  const thisMonth = totalsForRange(mb.start, mb.end, db);
+  const thisMonth = totalsForRange(householdId, mb.start, mb.end, db);
   const lm = monthBounds(addMonths(month, -1));
-  const lastMonthTotal = totalsForRange(lm.start, lm.end, db).total;
+  const lastMonthTotal = totalsForRange(householdId, lm.start, lm.end, db).total;
   const ly = monthBounds(addMonths(month, -12));
-  const lyBills = billsOverlapping(ly.start, ly.end, db);
-  const sameMonthLastYearTotal = lyBills.length ? totalsForRange(ly.start, ly.end, db).total : null;
+  const lyBills = billsOverlapping(householdId, ly.start, ly.end, db);
+  const sameMonthLastYearTotal = lyBills.length
+    ? totalsForRange(householdId, ly.start, ly.end, db).total
+    : null;
   const fy = fiscalYearBounds(today, fiscalYearStartMonth);
-  const fyTotals = totalsForRange(fy.start, fy.end > today ? today : fy.end, db);
-  const series = monthlySeries(lastMonths(month, 12), db);
-  const all = listBills(db);
+  const fyTotals = totalsForRange(householdId, fy.start, fy.end > today ? today : fy.end, db);
+  const series = monthlySeries(householdId, lastMonths(month, 12), db);
+  const all = listBills(householdId, {}, db);
   const unpaid = all.filter((b) => !b.paidToProviderAt);
   const withDays = (b: BillListItem) => ({ ...b, daysUntilDue: daysUntil(today, b.dueDate) });
   const overdue = unpaid
@@ -129,7 +146,7 @@ export function dashboardSummary(
     .sort((a, b) => a.daysUntilDue - b.daysUntilDue)
     .slice(0, 8);
   const anomalies = all.filter((b) => b.isAnomaly).slice(0, 5);
-  const members = db.select().from(member).all();
+  const members = db.select().from(member).where(eq(member.householdId, householdId)).all();
   const activeMemberCount = members.filter(
     (m) => m.activeFrom <= today && (!m.activeTo || m.activeTo >= today),
   ).length;
@@ -144,7 +161,7 @@ export function dashboardSummary(
     sameMonthLastYearTotal,
     fiscalYear: { ...fy, ...fyTotals },
     series,
-    services: listServices(db),
+    services: listServices(householdId, {}, db),
     upcoming,
     overdue,
     anomalies,
@@ -168,18 +185,26 @@ export interface MemberLedger {
 }
 
 export function memberLedger(
+  householdId: string,
   memberId: string,
   today: string,
   fiscalYearStartMonth: number,
   db: Db = getDb(),
 ): MemberLedger | null {
-  const me = db.select().from(member).where(eq(member.id, memberId)).get();
+  const me = db
+    .select()
+    .from(member)
+    .where(and(eq(member.householdId, householdId), eq(member.id, memberId)))
+    .get();
   if (!me) return null;
-  const services = new Map(listServices(db, true).map((s) => [s.id, s]));
+  const services = new Map(
+    listServices(householdId, { includeInactive: true }, db).map((s) => [s.id, s]),
+  );
   const members = new Map(
     db
       .select()
       .from(member)
+      .where(eq(member.householdId, householdId))
       .all()
       .map((m) => [m.id, m]),
   );
@@ -188,7 +213,7 @@ export function memberLedger(
     .select()
     .from(share)
     .innerJoin(bill, eq(share.billId, bill.id))
-    .where(eq(share.memberId, memberId))
+    .where(and(eq(share.householdId, householdId), eq(share.memberId, memberId)))
     .orderBy(desc(bill.dueDate))
     .all();
   const enrich = (r: { share: Share; bill: Bill }): LedgerShare => {
@@ -212,7 +237,13 @@ export function memberLedger(
         .select()
         .from(share)
         .innerJoin(bill, eq(share.billId, bill.id))
-        .where(and(inArray(bill.serviceId, myServiceIds), ne(share.memberId, memberId)))
+        .where(
+          and(
+            eq(share.householdId, householdId),
+            inArray(bill.serviceId, myServiceIds),
+            ne(share.memberId, memberId),
+          ),
+        )
         .all()
         .filter((r) => !r.share.paidAt)
     : [];
@@ -235,12 +266,14 @@ export function memberLedger(
 
 /** Per-member unpaid totals, for the wall and the dashboard's who-owes-what strip. */
 export function householdBalances(
+  householdId: string,
   db: Db = getDb(),
 ): { member: Member; owed: number; unpaidCount: number }[] {
-  const members = db.select().from(member).all();
+  const members = db.select().from(member).where(eq(member.householdId, householdId)).all();
   const rows = db
     .select()
     .from(share)
+    .where(eq(share.householdId, householdId))
     .all()
     .filter((s) => !s.paidAt);
   return members.map((m) => {
@@ -254,12 +287,20 @@ export function householdBalances(
 }
 
 /** Cheap presence check used for empty states. */
-export function hasAnyBills(db: Db = getDb()): boolean {
-  return db.select({ id: bill.id }).from(bill).limit(1).get() !== undefined;
+export function hasAnyBills(householdId: string, db: Db = getDb()): boolean {
+  return (
+    db
+      .select({ id: bill.id })
+      .from(bill)
+      .where(eq(bill.householdId, householdId))
+      .limit(1)
+      .get() !== undefined
+  );
 }
 
 /** Share settlement for bills due in a month (or overdue into it): paid / all non-payer shares. */
 export function settlementRate(
+  householdId: string,
   month: string,
   db: Db = getDb(),
 ): { paid: number; total: number; pct: number | null } {
@@ -268,7 +309,9 @@ export function settlementRate(
     .select({ paidAt: share.paidAt, paidMethod: share.paidMethod })
     .from(share)
     .innerJoin(bill, eq(share.billId, bill.id))
-    .where(and(gte(bill.dueDate, start), lte(bill.dueDate, end)))
+    .where(
+      and(eq(share.householdId, householdId), gte(bill.dueDate, start), lte(bill.dueDate, end)),
+    )
     .all()
     .filter((r) => r.paidMethod !== 'payer');
   const paid = rows.filter((r) => r.paidAt).length;

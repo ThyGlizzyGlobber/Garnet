@@ -1,14 +1,14 @@
 import { getDb, type Db } from '@/db/client';
 import { hashPin } from '@/lib/auth/pin';
 import { createBill, listBills } from '@/lib/bills';
-import { eq, lt } from 'drizzle-orm';
+import { and, eq, lt } from 'drizzle-orm';
 import { bill, share } from '@/db/schema';
 import { todayIn } from '@/lib/dates';
-import { createHousehold, getHousehold } from '@/lib/households';
+import { createHousehold, isSetUp, listHouseholds } from '@/lib/households';
 import { createMember, listMembers } from '@/lib/members';
 import { createService, listServices } from '@/lib/services';
 import { PALETTE, TYPE_COLOUR } from '@/lib/palette';
-import { demoExited, markDemoSeeded } from '@/lib/demo';
+import { demoExited } from '@/lib/demo';
 
 /**
  * Real seed: the four Aussie Broadband invoices from sample-bills/ (values only,
@@ -16,7 +16,7 @@ import { demoExited, markDemoSeeded } from '@/lib/demo';
  * if none exists so `npm run db:seed` works on a fresh checkout.
  */
 export async function seedReal(db: Db = getDb()) {
-  let hh = getHousehold(db);
+  let hh = listHouseholds(db).find((h) => !h.isDemo);
   if (!hh) {
     hh = createHousehold(
       {
@@ -30,14 +30,19 @@ export async function seedReal(db: Db = getDb()) {
       db,
     );
     createMember(
+      hh.id,
       { name: 'Owner', pinHash: await hashPin('1234'), role: 'owner', activeFrom: '2025-01-01' },
       db,
     );
   }
-  const owner = listMembers(db).find((m) => m.role === 'owner') ?? listMembers(db)[0];
-  let internet = listServices(db, true).find((s) => s.provider === 'Aussie Broadband');
+  const members = listMembers(hh.id, db);
+  const owner = members.find((m) => m.role === 'owner') ?? members[0];
+  let internet = listServices(hh.id, { includeInactive: true }, db).find(
+    (s) => s.provider === 'Aussie Broadband',
+  );
   if (!internet) {
     internet = createService(
+      hh.id,
       {
         typeSlug: 'internet',
         name: 'Internet',
@@ -50,7 +55,9 @@ export async function seedReal(db: Db = getDb()) {
       db,
     );
   }
-  const existing = new Set(listBills(db, { serviceId: internet.id }).map((b) => b.externalRef));
+  const existing = new Set(
+    listBills(hh.id, { serviceId: internet.id }, db).map((b) => b.externalRef),
+  );
   const invoices = [
     {
       ref: '59259831',
@@ -85,6 +92,7 @@ export async function seedReal(db: Db = getDb()) {
   for (const inv of invoices) {
     if (existing.has(inv.ref)) continue;
     createBill(
+      hh.id,
       {
         serviceId: internet.id,
         amountMinor: 12900,
@@ -113,7 +121,7 @@ export async function seedReal(db: Db = getDb()) {
  * quarterly electricity $410–530, bi-monthly-ish gas peaking in winter, water ≈ $300/quarter.
  */
 export async function seedDemo(db: Db = getDb()) {
-  if (getHousehold(db) || demoExited()) return { skipped: true };
+  if (isSetUp(db) || demoExited()) return { skipped: true };
   const hh = createHousehold(
     {
       name: 'Riverside House',
@@ -122,11 +130,13 @@ export async function seedDemo(db: Db = getDb()) {
       timezone: 'Australia/Sydney',
       fiscalYearStartMonth: 7,
       splitMode: 'shared',
+      isDemo: true,
     },
     db,
   );
   const pin = await hashPin('1234');
   const alex = createMember(
+    hh.id,
     {
       name: 'Alex',
       pinHash: pin,
@@ -138,6 +148,7 @@ export async function seedDemo(db: Db = getDb()) {
     db,
   );
   const jordan = createMember(
+    hh.id,
     {
       name: 'Jordan',
       pinHash: pin,
@@ -148,10 +159,12 @@ export async function seedDemo(db: Db = getDb()) {
     db,
   );
   const sam = createMember(
+    hh.id,
     { name: 'Sam', pinHash: pin, activeFrom: '2026-08-01', colour: PALETTE[4]!.light },
     db,
   );
   const internet = createService(
+    hh.id,
     {
       typeSlug: 'internet',
       name: 'Internet',
@@ -163,6 +176,7 @@ export async function seedDemo(db: Db = getDb()) {
     db,
   );
   const power = createService(
+    hh.id,
     {
       typeSlug: 'electricity',
       name: 'Electricity',
@@ -175,6 +189,7 @@ export async function seedDemo(db: Db = getDb()) {
     db,
   );
   const gas = createService(
+    hh.id,
     {
       typeSlug: 'gas',
       name: 'Gas',
@@ -187,6 +202,7 @@ export async function seedDemo(db: Db = getDb()) {
     db,
   );
   const water = createService(
+    hh.id,
     {
       typeSlug: 'water',
       name: 'Water',
@@ -199,6 +215,7 @@ export async function seedDemo(db: Db = getDb()) {
     db,
   );
   const rent = createService(
+    hh.id,
     {
       typeSlug: 'rent',
       name: 'Rent',
@@ -228,6 +245,7 @@ export async function seedDemo(db: Db = getDb()) {
     const [y, mo] = m.split('-').map(Number) as [number, number];
     const end = new Date(Date.UTC(y, mo, 0)).toISOString().slice(0, 10);
     createBill(
+      hh.id,
       {
         serviceId: internet.id,
         amountMinor: 8900,
@@ -241,6 +259,7 @@ export async function seedDemo(db: Db = getDb()) {
       db,
     );
     createBill(
+      hh.id,
       {
         serviceId: rent.id,
         amountMinor: 230000,
@@ -302,6 +321,7 @@ export async function seedDemo(db: Db = getDb()) {
   ];
   quarters.forEach((q, i) => {
     createBill(
+      hh.id,
       {
         serviceId: power.id,
         amountMinor: q.amt,
@@ -319,6 +339,7 @@ export async function seedDemo(db: Db = getDb()) {
       db,
     );
     createBill(
+      hh.id,
       {
         serviceId: gas.id,
         amountMinor: q.gasAmt,
@@ -334,6 +355,7 @@ export async function seedDemo(db: Db = getDb()) {
       db,
     );
     createBill(
+      hh.id,
       {
         serviceId: water.id,
         amountMinor: q.waterAmt,
@@ -351,7 +373,11 @@ export async function seedDemo(db: Db = getDb()) {
   });
   void sam;
   // Settle everything before the current cycle so the demo shows a realistic "who owes what".
-  const settled = db.select({ id: bill.id }).from(bill).where(lt(bill.dueDate, '2026-09-01')).all();
+  const settled = db
+    .select({ id: bill.id })
+    .from(bill)
+    .where(and(eq(bill.householdId, hh.id), lt(bill.dueDate, '2026-09-01')))
+    .all();
   const paidAt = '2026-09-01T00:00:00Z';
   for (const b of settled) {
     db.update(share)
@@ -359,6 +385,5 @@ export async function seedDemo(db: Db = getDb()) {
       .where(eq(share.billId, b.id))
       .run();
   }
-  markDemoSeeded();
   return { household: hh.name, members: 3 };
 }

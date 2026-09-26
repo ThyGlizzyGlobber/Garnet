@@ -73,6 +73,7 @@ describe('nextBillGuess', () => {
 describe('projectMonth + reminders', () => {
   let dir: string;
   let db: Db;
+  let hid: string;
   let close: () => void;
   let a: string;
   let b: string;
@@ -82,7 +83,7 @@ describe('projectMonth + reminders', () => {
     const o = openDb(dir);
     db = o.db;
     close = () => o.sqlite.close();
-    createHousehold(
+    hid = createHousehold(
       {
         name: 'H',
         currency: 'AUD',
@@ -92,10 +93,10 @@ describe('projectMonth + reminders', () => {
         splitMode: 'shared',
       },
       db,
-    );
-    a = createMember({ name: 'A', pinHash: 'x', role: 'owner', activeFrom: '2025-01-01' }, db).id;
-    b = createMember({ name: 'B', pinHash: 'x', activeFrom: '2025-01-01' }, db).id;
-    const net = createService(
+    ).id;
+    a = createMember(hid, { name: 'A', pinHash: 'x', role: 'owner', activeFrom: '2025-01-01' }, db).id;
+    b = createMember(hid, { name: 'B', pinHash: 'x', activeFrom: '2025-01-01' }, db).id;
+    const net = createService(hid,
       {
         typeSlug: 'internet',
         name: 'Internet',
@@ -110,7 +111,7 @@ describe('projectMonth + reminders', () => {
       ['2026-08-01', '2026-08-31', '2026-08-15'],
       ['2026-09-01', '2026-09-30', '2026-09-15'],
     ]) {
-      createBill(
+      createBill(hid,
         {
           serviceId: net,
           amountMinor: 3100,
@@ -130,7 +131,7 @@ describe('projectMonth + reminders', () => {
   });
 
   it('projects October and splits the set-aside between members', () => {
-    const p = projectMonth('2026-10', db);
+    const p = projectMonth(hid, '2026-10', db);
     expect(p.services).toHaveLength(1);
     expect(p.services[0]?.method).toBe('recent');
     // Mean daily cost of the last three bills (100, 100, 103.3) × 31 days.
@@ -138,17 +139,17 @@ describe('projectMonth + reminders', () => {
     expect(p.setAside.map((s) => s.minor).sort()).toEqual([1567, 1567]);
     expect(p.setAsideEach).toBe(1567);
     // Cached row exists and is idempotent on re-run.
-    expect(projectMonth('2026-10', db).totalMinor).toBe(3134);
+    expect(projectMonth(hid, '2026-10', db).totalMinor).toBe(3134);
   });
 
   it('counts known accrual in a partly billed month', () => {
     // September is fully billed, so its "projection" is just the known cost.
-    const p = projectMonth('2026-09', db);
+    const p = projectMonth(hid, '2026-09', db);
     expect(p.totalMinor).toBe(3100);
   });
 
   it('ranks reminders by urgency', () => {
-    const rs = remindersFor(b, '2026-09-10', 7, db);
+    const rs = remindersFor(hid, b, '2026-09-10', 7, db);
     expect(rs.map((r) => r.level)).toEqual(['overdue', 'overdue', 'due_soon']);
     const sum = summariseReminders(rs);
     expect(sum.overdueCount).toBe(2);

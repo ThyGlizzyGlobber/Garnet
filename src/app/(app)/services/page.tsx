@@ -36,11 +36,13 @@ function tint(colour: string) {
 export default async function ServicesPage() {
   const { hh, money, date, today } = await pageContext();
   const t = await getTranslations('services');
-  const services = listServices(undefined, true);
-  const members = new Map(listMembers().map((m) => [m.id, m.name]));
+  const services = listServices(hh.id, { includeInactive: true });
+  const members = new Map(listMembers(hh.id).map((m) => [m.id, m.name]));
   const types = listServiceTypes();
-  const proj = new Map(projectMonth(nextMonth(today)).services.map((p) => [p.service.id, p]));
-  const history = monthlySeries(lastMonths(monthOf(today), 12));
+  const proj = new Map(
+    projectMonth(hh.id, nextMonth(today)).services.map((p) => [p.service.id, p]),
+  );
+  const history = monthlySeries(hh.id, lastMonths(monthOf(today), 12));
 
   return (
     <>

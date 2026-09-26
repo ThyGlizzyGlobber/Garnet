@@ -11,12 +11,12 @@ export default async function ReviewPage({
 }: {
   searchParams: Promise<{ all?: string }>;
 }) {
-  const { date, money } = await pageContext();
+  const { hh, date, money } = await pageContext();
   const t = await getTranslations('review');
   const { all } = await searchParams;
   const showAll = all === '1';
-  const docs = showAll ? listDocuments() : listDocuments(undefined, 'needs_review');
-  const counts = documentCounts();
+  const docs = showAll ? listDocuments(hh.id) : listDocuments(hh.id, { status: 'needs_review' });
+  const counts = documentCounts(hh.id);
   const tone = {
     needs_review: 'warning',
     extracted: 'success',

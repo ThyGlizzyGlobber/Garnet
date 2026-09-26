@@ -61,10 +61,10 @@ function periodLabel(periodStart: string, locale: string): string {
  * Insert a bill and, when the household is in shared mode, its member shares.
  * Everything happens in one transaction so a bill never exists without its shares.
  */
-export function createBill(input: BillInput, db: Db = getDb()): BillDetail {
-  const hh = getHousehold(db);
-  if (!hh) throw new Error('Household not set up');
-  const svc = getService(input.serviceId, db);
+export function createBill(householdId: string, input: BillInput, db: Db = getDb()): BillDetail {
+  const hh = getHousehold(householdId, db);
+  if (!hh) throw new Error('Household not found');
+  const svc = getService(householdId, input.serviceId, db);
   if (!svc) throw new Error('Service not found');
   if (input.periodEnd < input.periodStart)
     throw new Error('Billing period end is before its start');
@@ -83,12 +83,13 @@ export function createBill(input: BillInput, db: Db = getDb()): BillDetail {
   const now = new Date().toISOString();
   const id = ulid();
   const currency = input.currency ?? hh.currency;
-  const anomaly = anomalyFor(input.serviceId, input, null, db);
+  const anomaly = anomalyFor(householdId, input.serviceId, input, null, db);
 
   db.transaction((tx) => {
     tx.insert(bill)
       .values({
         id,
+        householdId,
         isAnomaly: anomaly.isAnomaly,
         anomalyNote: anomaly.note,
         serviceId: input.serviceId,
@@ -117,6 +118,7 @@ export function createBill(input: BillInput, db: Db = getDb()): BillDetail {
     if (hh.splitMode === 'shared')
       insertShares(
         tx,
+        householdId,
         id,
         svc,
         { ...input, currency },
@@ -126,11 +128,12 @@ export function createBill(input: BillInput, db: Db = getDb()): BillDetail {
       );
   });
 
-  return getBill(id, db)!;
+  return getBill(householdId, id, db)!;
 }
 
 function insertShares(
   tx: Db,
+  householdId: string,
   billId: string,
   svc: ServiceWithType,
   input: BillInput & { currency: string },
@@ -138,14 +141,15 @@ function insertShares(
   locale: string,
   now: string,
 ) {
-  const members = listMembers(tx);
+  const members = listMembers(householdId, tx);
   const results = computeShares({
     amountMinor: input.amountMinor,
     periodStart: input.periodStart,
     periodEnd: input.periodEnd,
     splitMode: svc.splitMode,
     members,
-    customWeights: svc.splitMode === 'custom' ? getCustomSplits(svc.id, tx) : undefined,
+    customWeights:
+      svc.splitMode === 'custom' ? getCustomSplits(householdId, svc.id, tx) : undefined,
     payerMemberId: svc.payerMemberId,
   });
   if (!results.length) return;
@@ -154,6 +158,7 @@ function insertShares(
     .values(
       results.map((r) => ({
         id: ulid(),
+        householdId,
         billId,
         memberId: r.memberId,
         amountMinor: r.amountMinor,
@@ -179,6 +184,7 @@ function insertShares(
 
 /** Compare against earlier bills of the same service (by period start). */
 function anomalyFor(
+  householdId: string,
   serviceId: string,
   b: { amountMinor: number; periodStart: string; periodEnd: string },
   excludeId: string | null,
@@ -192,7 +198,7 @@ function anomalyFor(
       periodEnd: bill.periodEnd,
     })
     .from(bill)
-    .where(eq(bill.serviceId, serviceId))
+    .where(and(eq(bill.householdId, householdId), eq(bill.serviceId, serviceId)))
     .all()
     .filter((p) => p.id !== excludeId && p.periodStart < b.periodStart);
   const r = detectAnomaly(b, priors);
@@ -202,10 +208,14 @@ function anomalyFor(
   };
 }
 
-export function getBill(id: string, db: Db = getDb()): BillDetail | null {
-  const b = db.select().from(bill).where(eq(bill.id, id)).get();
+export function getBill(householdId: string, id: string, db: Db = getDb()): BillDetail | null {
+  const b = db
+    .select()
+    .from(bill)
+    .where(and(eq(bill.householdId, householdId), eq(bill.id, id)))
+    .get();
   if (!b) return null;
-  const svc = getService(b.serviceId, db)!;
+  const svc = getService(householdId, b.serviceId, db)!;
   const shares = db
     .select()
     .from(share)
@@ -217,16 +227,22 @@ export function getBill(id: string, db: Db = getDb()): BillDetail | null {
 }
 
 export function listBills(
-  db: Db = getDb(),
+  householdId: string,
   opts: { serviceId?: string; limit?: number } = {},
+  db: Db = getDb(),
 ): BillListItem[] {
   let q = db
     .select()
     .from(bill)
     .innerJoin(service, eq(bill.serviceId, service.id))
+    .where(
+      and(
+        eq(bill.householdId, householdId),
+        opts.serviceId ? eq(bill.serviceId, opts.serviceId) : undefined,
+      ),
+    )
     .orderBy(desc(bill.periodStart), desc(bill.createdAt))
     .$dynamic();
-  if (opts.serviceId) q = q.where(eq(bill.serviceId, opts.serviceId));
   if (opts.limit) q = q.limit(opts.limit);
   const rows = q.all();
   if (!rows.length) return [];
@@ -236,7 +252,7 @@ export function listBills(
   return rows.map((r) => {
     let svc = services.get(r.service.id);
     if (!svc) {
-      svc = getService(r.service.id, db)!;
+      svc = getService(householdId, r.service.id, db)!;
       services.set(svc.id, svc);
     }
     const mine = shares.filter((s) => s.billId === r.bill.id);
@@ -250,10 +266,17 @@ export function listBills(
 }
 
 /** Update bill fields. Shares are recomputed unless any non-payer share is already paid. */
-export function updateBill(id: string, patch: Partial<BillInput>, db: Db = getDb()): BillDetail {
-  const existing = getBill(id, db);
+export function updateBill(
+  householdId: string,
+  id: string,
+  patch: Partial<BillInput>,
+  db: Db = getDb(),
+): BillDetail {
+  const existing = getBill(householdId, id, db);
   if (!existing) throw new Error('Bill not found');
-  const hh = getHousehold(db)!;
+  if (patch.serviceId && !getService(householdId, patch.serviceId, db))
+    throw new Error('Service not found');
+  const hh = getHousehold(householdId, db)!;
   const merged: BillInput = { ...existing, ...patch, source: existing.source };
   if (merged.periodEnd < merged.periodStart)
     throw new Error('Billing period end is before its start');
@@ -266,7 +289,7 @@ export function updateBill(id: string, patch: Partial<BillInput>, db: Db = getDb
   if (locked && affectsShares)
     throw new Error('Shares have been paid; amount and period are locked');
   const now = new Date().toISOString();
-  const anomaly = affectsShares ? anomalyFor(merged.serviceId, merged, id, db) : null;
+  const anomaly = affectsShares ? anomalyFor(householdId, merged.serviceId, merged, id, db) : null;
   db.transaction((tx) => {
     tx.update(bill)
       .set({
@@ -274,13 +297,16 @@ export function updateBill(id: string, patch: Partial<BillInput>, db: Db = getDb
         ...(anomaly ? { isAnomaly: anomaly.isAnomaly, anomalyNote: anomaly.note } : {}),
         updatedAt: now,
       })
-      .where(eq(bill.id, id))
+      .where(and(eq(bill.householdId, householdId), eq(bill.id, id)))
       .run();
     if (affectsShares && hh.splitMode === 'shared') {
-      tx.delete(share).where(eq(share.billId, id)).run();
-      const svc = getService(merged.serviceId, tx)!;
+      tx.delete(share)
+        .where(and(eq(share.householdId, householdId), eq(share.billId, id)))
+        .run();
+      const svc = getService(householdId, merged.serviceId, tx)!;
       insertShares(
         tx,
+        householdId,
         id,
         svc,
         { ...merged, currency: merged.currency ?? hh.currency },
@@ -290,14 +316,17 @@ export function updateBill(id: string, patch: Partial<BillInput>, db: Db = getDb
       );
     }
   });
-  return getBill(id, db)!;
+  return getBill(householdId, id, db)!;
 }
 
-export function deleteBill(id: string, db: Db = getDb()): void {
-  db.delete(bill).where(eq(bill.id, id)).run(); // shares cascade
+export function deleteBill(householdId: string, id: string, db: Db = getDb()): void {
+  db.delete(bill)
+    .where(and(eq(bill.householdId, householdId), eq(bill.id, id)))
+    .run(); // shares cascade
 }
 
 export function setSharePaid(
+  householdId: string,
   shareId: string,
   paid: boolean,
   opts: { method?: string; markedByMemberId?: string | null } = {},
@@ -320,15 +349,26 @@ export function setSharePaid(
             updatedAt: now,
           },
     )
-    .where(eq(share.id, shareId))
+    .where(and(eq(share.householdId, householdId), eq(share.id, shareId)))
     .run();
-  return db.select().from(share).where(eq(share.id, shareId)).get()!;
+  const row = db
+    .select()
+    .from(share)
+    .where(and(eq(share.householdId, householdId), eq(share.id, shareId)))
+    .get();
+  if (!row) throw new Error('Share not found');
+  return row;
 }
 
-export function setBillPaidToProvider(id: string, paid: boolean, db: Db = getDb()): void {
+export function setBillPaidToProvider(
+  householdId: string,
+  id: string,
+  paid: boolean,
+  db: Db = getDb(),
+): void {
   const now = new Date().toISOString();
   db.update(bill)
     .set({ paidToProviderAt: paid ? now : null, updatedAt: now })
-    .where(eq(bill.id, id))
+    .where(and(eq(bill.householdId, householdId), eq(bill.id, id)))
     .run();
 }

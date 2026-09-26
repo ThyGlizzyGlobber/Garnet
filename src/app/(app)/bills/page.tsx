@@ -20,8 +20,8 @@ export default async function BillsPage({
   const filter: Filter = (FILTERS as string[]).includes(f) ? (f as Filter) : 'all';
   const { hh, me, money, date, today } = await pageContext();
   const t = await getTranslations('bills');
-  const all = listBills();
-  const hasServices = listServices().length > 0;
+  const all = listBills(hh.id);
+  const hasServices = listServices(hh.id).length > 0;
   const isOverdue = (b: BillListItem) => !b.paidToProviderAt && b.dueDate < today;
   const bills = all.filter((b) => {
     if (

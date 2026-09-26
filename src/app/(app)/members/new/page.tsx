@@ -22,7 +22,7 @@ export default async function NewMemberPage() {
           splitWeight: '1',
           activeFrom: today,
           activeTo: '',
-          colour: nextPaletteColour(listMembers().map((m) => m.colour)),
+          colour: nextPaletteColour(listMembers(hh.id).map((m) => m.colour)),
           paymentDetails: [],
         }}
       />

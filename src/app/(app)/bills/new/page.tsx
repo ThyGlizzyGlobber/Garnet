@@ -14,7 +14,7 @@ export default async function NewBillPage({
 }) {
   const { hh, today } = await pageContext();
   const t = await getTranslations('bills');
-  const services = listServices();
+  const services = listServices(hh.id);
   if (services.length === 0) redirect('/services/new');
   const { service } = await searchParams;
   const first = services.find((s) => s.id === service) ?? services[0]!;

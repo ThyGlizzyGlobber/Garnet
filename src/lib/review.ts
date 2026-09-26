@@ -1,4 +1,4 @@
-import { desc, eq, isNotNull, sql } from 'drizzle-orm';
+import { and, desc, eq, isNotNull, sql } from 'drizzle-orm';
 import { getDb, type Db } from '@/db/client';
 import { bill, sourceDocument, type SourceDocument } from '@/db/schema';
 import type { StoredExtraction } from '@/ingest/pipeline';
@@ -24,25 +24,42 @@ function parse(json: string | null): StoredExtraction | null {
   }
 }
 
-export function listDocuments(db: Db = getDb(), status?: SourceDocument['status']): ReviewItem[] {
+export function listDocuments(
+  householdId: string,
+  opts: { status?: SourceDocument['status'] } = {},
+  db: Db = getDb(),
+): ReviewItem[] {
   const rows = db
     .select({ doc: sourceDocument, billId: bill.id })
     .from(sourceDocument)
     .leftJoin(bill, eq(bill.sourceDocumentId, sourceDocument.id))
-    .where(status ? eq(sourceDocument.status, status) : undefined)
+    .where(
+      and(
+        eq(sourceDocument.householdId, householdId),
+        opts.status ? eq(sourceDocument.status, opts.status) : undefined,
+      ),
+    )
     .orderBy(desc(sourceDocument.receivedAt))
     .all();
   return rows.map((r) => ({ ...r.doc, extraction: parse(r.doc.extractionJson), billId: r.billId }));
 }
 
-export function getReviewItem(id: string, db: Db = getDb()): ReviewItem | null {
-  return listDocuments(db).find((d) => d.id === id) ?? null;
+export function getReviewItem(
+  householdId: string,
+  id: string,
+  db: Db = getDb(),
+): ReviewItem | null {
+  return listDocuments(householdId, {}, db).find((d) => d.id === id) ?? null;
 }
 
-export function documentCounts(db: Db = getDb()): Record<SourceDocument['status'], number> {
+export function documentCounts(
+  householdId: string,
+  db: Db = getDb(),
+): Record<SourceDocument['status'], number> {
   const rows = db
     .select({ status: sourceDocument.status, n: sql<number>`count(*)` })
     .from(sourceDocument)
+    .where(eq(sourceDocument.householdId, householdId))
     .groupBy(sourceDocument.status)
     .all();
   const out: Record<SourceDocument['status'], number> = {
@@ -56,11 +73,14 @@ export function documentCounts(db: Db = getDb()): Record<SourceDocument['status'
 }
 
 /** How bills that came from documents were created: automatically (template/llm) or via the review form. */
-export function ingestionStats(db: Db = getDb()): { auto: number; reviewed: number } {
+export function ingestionStats(
+  householdId: string,
+  db: Db = getDb(),
+): { auto: number; reviewed: number } {
   const rows = db
     .select({ source: bill.source, n: sql<number>`count(*)` })
     .from(bill)
-    .where(isNotNull(bill.sourceDocumentId))
+    .where(and(eq(bill.householdId, householdId), isNotNull(bill.sourceDocumentId)))
     .groupBy(bill.source)
     .all();
   let auto = 0;

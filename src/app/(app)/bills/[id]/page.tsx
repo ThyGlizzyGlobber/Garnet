@@ -13,7 +13,7 @@ export default async function BillPage({ params }: { params: Promise<{ id: strin
   const { id } = await params;
   const { hh, me, money, date, today } = await pageContext();
   const t = await getTranslations('bills');
-  const b = getBill(id);
+  const b = getBill(hh.id, id);
   if (!b) notFound();
   const overdue = !b.paidToProviderAt && b.dueDate < today;
   const payer = b.shares.find((s) => s.paidMethod === 'payer')?.member;

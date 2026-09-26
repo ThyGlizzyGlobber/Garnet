@@ -11,6 +11,7 @@ import { createService, listServiceTypes } from '@/lib/services';
 
 let dir: string;
 let db: Db;
+let hid: string;
 let close: () => void;
 let bejay: string;
 let sam: string;
@@ -22,7 +23,7 @@ beforeAll(() => {
   const opened = openDb(dir);
   db = opened.db;
   close = () => opened.sqlite.close();
-  createHousehold(
+  hid = createHousehold(
     {
       name: 'Smith Household',
       currency: 'AUD',
@@ -32,13 +33,13 @@ beforeAll(() => {
       splitMode: 'shared',
     },
     db,
-  );
-  bejay = createMember(
+  ).id;
+  bejay = createMember(hid,
     { name: 'Bejay', pinHash: 'x', role: 'owner', activeFrom: '2025-01-01' },
     db,
   ).id;
-  sam = createMember({ name: 'Sam', pinHash: 'x', activeFrom: '2025-01-01' }, db).id;
-  internet = createService(
+  sam = createMember(hid, { name: 'Sam', pinHash: 'x', activeFrom: '2025-01-01' }, db).id;
+  internet = createService(hid,
     {
       typeSlug: 'internet',
       name: 'Internet',
@@ -70,7 +71,7 @@ describe('service type catalog', () => {
 
 describe('createBill', () => {
   it('creates shares, marks the payer paid, and renders a payment reference', () => {
-    const b = createBill(
+    const b = createBill(hid,
       {
         serviceId: internet,
         amountMinor: 12900,
@@ -98,7 +99,7 @@ describe('createBill', () => {
 
   it('rejects a duplicate invoice number for the same service', () => {
     expect(() =>
-      createBill(
+      createBill(hid,
         {
           serviceId: internet,
           amountMinor: 1,
@@ -114,7 +115,7 @@ describe('createBill', () => {
   });
 
   it('lists bills with share counts', () => {
-    const list = listBills(db);
+    const list = listBills(hid, {}, db);
     expect(list).toHaveLength(1);
     expect(list[0]?.shareCount).toBe(2);
     expect(list[0]?.paidShareCount).toBe(1);
@@ -122,17 +123,17 @@ describe('createBill', () => {
   });
 
   it('marks a share paid and then locks the amount', () => {
-    const b = listBills(db)[0]!;
-    const theirs = getBill(b.id, db)!.shares.find((s) => s.memberId === sam)!;
-    const updated = setSharePaid(theirs.id, true, { markedByMemberId: sam }, db);
+    const b = listBills(hid, {}, db)[0]!;
+    const theirs = getBill(hid, b.id, db)!.shares.find((s) => s.memberId === sam)!;
+    const updated = setSharePaid(hid, theirs.id, true, { markedByMemberId: sam }, db);
     expect(updated.paidAt).not.toBeNull();
-    expect(() => updateBill(b.id, { amountMinor: 1 }, db)).toThrow(/locked/);
+    expect(() => updateBill(hid, b.id, { amountMinor: 1 }, db)).toThrow(/locked/);
     // Non-share fields still editable.
-    expect(updateBill(b.id, { notes: 'hi' }, db).notes).toBe('hi');
+    expect(updateBill(hid, b.id, { notes: 'hi' }, db).notes).toBe('hi');
   });
 
   it('recomputes shares when the amount changes and nothing is paid', () => {
-    const b = createBill(
+    const b = createBill(hid,
       {
         serviceId: internet,
         amountMinor: 1000,
@@ -143,13 +144,13 @@ describe('createBill', () => {
       },
       db,
     );
-    const u = updateBill(b.id, { amountMinor: 2000 }, db);
+    const u = updateBill(hid, b.id, { amountMinor: 2000 }, db);
     expect(u.shares.reduce((t, s) => t + s.amountMinor, 0)).toBe(2000);
   });
 
   it('creates no shares in single mode', () => {
-    updateHousehold({ splitMode: 'single' }, db);
-    const b = createBill(
+    updateHousehold(hid, { splitMode: 'single' }, db);
+    const b = createBill(hid,
       {
         serviceId: internet,
         amountMinor: 500,
@@ -161,6 +162,6 @@ describe('createBill', () => {
       db,
     );
     expect(b.shares).toEqual([]);
-    updateHousehold({ splitMode: 'shared' }, db);
+    updateHousehold(hid, { splitMode: 'shared' }, db);
   });
 });

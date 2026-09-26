@@ -27,7 +27,7 @@ const schema = z.object({
 
 type ReadResult = { ok: true; input: ServiceInput } | { ok: false; state: ActionState };
 
-function read(fd: FormData): ReadResult {
+function read(householdId: string, fd: FormData): ReadResult {
   const parsed = schema.safeParse({
     typeSlug: str(fd, 'typeSlug'),
     name: str(fd, 'name'),
@@ -45,7 +45,7 @@ function read(fd: FormData): ReadResult {
   const v = parsed.data;
   const customSplits: Record<string, number> = {};
   if (v.splitMode === 'custom') {
-    for (const m of listMembers()) {
+    for (const m of listMembers(householdId)) {
       const w = Number(str(fd, `weight_${m.id}`) || '0');
       if (Number.isFinite(w) && w > 0) customSplits[m.id] = w;
     }
@@ -72,11 +72,11 @@ function read(fd: FormData): ReadResult {
 }
 
 export async function createServiceAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
-  await requireMember();
-  const r = read(fd);
+  const me = await requireMember();
+  const r = read(me.householdId, fd);
   if (!r.ok) return r.state;
   try {
-    createService({ ...r.input, isActive: true });
+    createService(me.householdId, { ...r.input, isActive: true });
   } catch (e) {
     return { error: (e as Error).message };
   }
@@ -85,12 +85,12 @@ export async function createServiceAction(_prev: ActionState, fd: FormData): Pro
 }
 
 export async function updateServiceAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
-  await requireMember();
+  const me = await requireMember();
   const id = str(fd, 'id');
-  const r = read(fd);
+  const r = read(me.householdId, fd);
   if (!r.ok) return r.state;
   try {
-    updateService(id, r.input);
+    updateService(me.householdId, id, r.input);
   } catch (e) {
     return { error: (e as Error).message };
   }

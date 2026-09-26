@@ -40,7 +40,7 @@ const approveSchema = z
 /** Confirm a reviewed extraction: create the bill from the (possibly edited) fields. */
 export async function approveReviewAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
   const me = await requireMember();
-  const hh = getHousehold()!;
+  const hh = getHousehold(me.householdId)!;
   const parsed = approveSchema.safeParse({
     documentId: str(fd, 'documentId'),
     serviceId: str(fd, 'serviceId'),
@@ -58,7 +58,7 @@ export async function approveReviewAction(_prev: ActionState, fd: FormData): Pro
   });
   if (!parsed.success) return zodToState(parsed.error);
   const v = parsed.data;
-  const doc = getDocument(v.documentId);
+  const doc = getDocument(hh.id, v.documentId);
   if (!doc) return { error: 'Document not found' };
   const amountMinor = parseMoneyToMinor(v.amount, hh.currency);
   if (amountMinor === null)
@@ -68,7 +68,7 @@ export async function approveReviewAction(_prev: ActionState, fd: FormData): Pro
     };
   let billId: string;
   try {
-    billId = createBill({
+    billId = createBill(hh.id, {
       serviceId: v.serviceId,
       sourceDocumentId: doc.id,
       amountMinor,
@@ -100,23 +100,24 @@ export async function approveReviewAction(_prev: ActionState, fd: FormData): Pro
   } catch {
     json = undefined;
   }
-  setDocumentStatus(doc.id, 'extracted', json);
+  setDocumentStatus(hh.id, doc.id, 'extracted', json);
   revalidatePath('/review');
   revalidatePath('/bills');
   redirect(`/bills/${billId}`);
 }
 
 export async function ignoreDocumentAction(fd: FormData): Promise<void> {
-  await requireMember();
-  setDocumentStatus(str(fd, 'documentId'), 'ignored', undefined);
+  const me = await requireMember();
+  setDocumentStatus(me.householdId, str(fd, 'documentId'), 'ignored', undefined);
   revalidatePath('/review');
   redirect('/review');
 }
 
 export async function reprocessDocumentAction(fd: FormData): Promise<void> {
-  await requireMember();
+  const me = await requireMember();
   const id = str(fd, 'documentId');
-  const outcome = await processDocument(id);
+  if (!getDocument(me.householdId, id)) redirect('/review');
+  const outcome = await processDocument(me.householdId, id);
   revalidatePath('/review');
   revalidatePath('/bills');
   redirect(
@@ -126,10 +127,10 @@ export async function reprocessDocumentAction(fd: FormData): Promise<void> {
 
 /** Re-run the pipeline over every document that isn't already a bill. */
 export async function reprocessAllAction(): Promise<void> {
-  await requireMember();
-  for (const d of listDocuments()) {
+  const me = await requireMember();
+  for (const d of listDocuments(me.householdId)) {
     if (d.billId || d.status === 'extracted' || d.kind === 'email') continue;
-    await processDocument(d.id);
+    await processDocument(me.householdId, d.id);
   }
   revalidatePath('/review');
   revalidatePath('/bills');
@@ -145,24 +146,24 @@ export async function pollNowAction(): Promise<void> {
 }
 
 export async function uploadBillAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
-  await requireMember();
+  const me = await requireMember();
   const file = fd.get('file');
   if (!(file instanceof File) || file.size === 0)
     return { error: 'Choose a PDF, HTML or text file.' };
   if (file.size > 25 * 1024 * 1024) return { error: 'File is larger than 25 MB.' };
   const buffer = Buffer.from(await file.arrayBuffer());
-  const { doc, duplicate } = archiveDocument({
+  const { doc, duplicate } = archiveDocument(me.householdId, {
     kind: 'upload',
     buffer,
     originalFilename: file.name,
     mimeType: file.type || null,
   });
   if (duplicate) {
-    const existing = listDocuments().find((d) => d.id === doc.id);
+    const existing = listDocuments(me.householdId).find((d) => d.id === doc.id);
     if (existing?.billId) redirect(`/bills/${existing.billId}`);
     redirect(`/review/${doc.id}`);
   }
-  const outcome = await processDocument(doc.id);
+  const outcome = await processDocument(me.householdId, doc.id);
   revalidatePath('/review');
   revalidatePath('/bills');
   redirect(

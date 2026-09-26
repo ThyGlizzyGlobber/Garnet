@@ -15,7 +15,7 @@ export default async function NewServicePage() {
   const t = await getTranslations('services');
   const types = listServiceTypes();
   const first = types[0]!;
-  const used = listServices(undefined, true).map((s) => s.colour);
+  const used = listServices(hh.id, { includeInactive: true }).map((s) => s.colour);
   const colour =
     TYPE_COLOUR[first.slug] && !used.includes(TYPE_COLOUR[first.slug]!)
       ? TYPE_COLOUR[first.slug]!
@@ -27,7 +27,7 @@ export default async function NewServicePage() {
         action={createServiceAction}
         types={types}
         units={listUnits()}
-        members={listMembers().map((m) => ({ id: m.id, name: m.name }))}
+        members={listMembers(hh.id).map((m) => ({ id: m.id, name: m.name }))}
         cadences={CADENCES}
         splitModes={SPLIT_MODES}
         sharedHousehold={hh.splitMode === 'shared'}

@@ -27,7 +27,7 @@ const schema = z.object({
 });
 
 export async function updateSettingsAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
-  await requireOwner();
+  const me = await requireOwner();
   const parsed = schema.safeParse({
     name: str(fd, 'name'),
     currency: str(fd, 'currency'),
@@ -40,7 +40,7 @@ export async function updateSettingsAction(_prev: ActionState, fd: FormData): Pr
   });
   if (!parsed.success) return zodToState(parsed.error);
   try {
-    updateHousehold(parsed.data);
+    updateHousehold(me.householdId, parsed.data);
   } catch (e) {
     return { error: (e as Error).message };
   }
@@ -61,8 +61,8 @@ export async function setThemeAction(fd: FormData): Promise<void> {
 
 /** Owner only: wipe the fictional household and start the real setup wizard. */
 export async function exitDemoAction(): Promise<void> {
-  await requireOwner();
-  exitDemo();
+  const me = await requireOwner();
+  exitDemo(me.householdId);
   await logout();
   redirect('/setup');
 }

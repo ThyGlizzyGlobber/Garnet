@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { getDb, type Db } from '@/db/client';
 import { sourceDocument, type SourceDocument } from '@/db/schema';
 import { ulid } from '@/lib/ids';
@@ -44,11 +44,16 @@ function extFor(mime: string | null | undefined, name: string | null | undefined
  * never deleted. Returns the existing record when the same bytes were seen before.
  */
 export function archiveDocument(
+  householdId: string,
   input: ArchiveInput,
   db: Db = getDb(),
 ): { doc: SourceDocument; duplicate: boolean } {
   const hash = sha256(input.buffer);
-  const existing = db.select().from(sourceDocument).where(eq(sourceDocument.sha256, hash)).get();
+  const existing = db
+    .select()
+    .from(sourceDocument)
+    .where(and(eq(sourceDocument.householdId, householdId), eq(sourceDocument.sha256, hash)))
+    .get();
   if (existing) return { doc: existing, duplicate: true };
 
   const receivedAt = input.receivedAt ?? new Date().toISOString();
@@ -65,6 +70,7 @@ export function archiveDocument(
 
   const row: SourceDocument = {
     id,
+    householdId,
     kind: input.kind,
     path: rel,
     originalFilename: input.originalFilename ?? null,
@@ -91,11 +97,22 @@ export function readDocument(doc: Pick<SourceDocument, 'path'>): Buffer {
   return fs.readFileSync(documentPath(doc));
 }
 
-export function getDocument(id: string, db: Db = getDb()): SourceDocument | null {
-  return db.select().from(sourceDocument).where(eq(sourceDocument.id, id)).get() ?? null;
+export function getDocument(
+  householdId: string,
+  id: string,
+  db: Db = getDb(),
+): SourceDocument | null {
+  return (
+    db
+      .select()
+      .from(sourceDocument)
+      .where(and(eq(sourceDocument.householdId, householdId), eq(sourceDocument.id, id)))
+      .get() ?? null
+  );
 }
 
 export function setDocumentStatus(
+  householdId: string,
   id: string,
   status: SourceDocument['status'],
   extractionJson: string | null | undefined,
@@ -103,6 +120,6 @@ export function setDocumentStatus(
 ): void {
   db.update(sourceDocument)
     .set({ status, ...(extractionJson !== undefined ? { extractionJson } : {}) })
-    .where(eq(sourceDocument.id, id))
+    .where(and(eq(sourceDocument.householdId, householdId), eq(sourceDocument.id, id)))
     .run();
 }

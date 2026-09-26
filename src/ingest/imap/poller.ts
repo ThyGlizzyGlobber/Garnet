@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { getEnv, isImapConfigured } from '@/lib/env';
 import { ensureDataDirs } from '@/lib/paths';
+import { primaryHousehold } from '@/lib/households';
 import { archiveDocument } from '../archive';
 import { processDocument, type PipelineOutcome } from '../pipeline';
 
@@ -58,6 +59,15 @@ export async function pollMailbox(): Promise<PollResult> {
     result.finishedAt = new Date().toISOString();
     return result;
   }
+  // The operator's mailbox delivers to the install's first household until
+  // households get their own bills addresses.
+  const target = primaryHousehold();
+  if (!target) {
+    result.error = 'No household set up yet';
+    result.finishedAt = new Date().toISOString();
+    return result;
+  }
+  const hid = target.id;
   const client = new ImapFlow({
     host: env.IMAP_HOST!,
     port: env.IMAP_PORT,
@@ -88,7 +98,7 @@ export async function pollMailbox(): Promise<PollResult> {
       const subject = parsed.subject ?? null;
       const messageId = parsed.messageId ?? null;
       // Always keep the raw email.
-      const { doc: emailDoc, duplicate } = archiveDocument({
+      const { doc: emailDoc, duplicate } = archiveDocument(hid, {
         kind: 'email',
         buffer: msg.source,
         originalFilename: `${subject ?? 'message'}.eml`,
@@ -105,7 +115,7 @@ export async function pollMailbox(): Promise<PollResult> {
       );
       if (pdfs.length) {
         for (const a of pdfs) {
-          const { doc, duplicate: dupPdf } = archiveDocument({
+          const { doc, duplicate: dupPdf } = archiveDocument(hid, {
             kind: 'pdf',
             buffer: a.content,
             originalFilename: a.filename ?? 'attachment.pdf',
@@ -117,20 +127,21 @@ export async function pollMailbox(): Promise<PollResult> {
           });
           if (!dupPdf) {
             result.documentsArchived++;
-            result.outcomes.push(await processDocument(doc.id));
+            result.outcomes.push(await processDocument(hid, doc.id));
           }
         }
         // The .eml itself is just the envelope; mark it so it doesn't sit in the queue.
         if (!duplicate) {
           const { setDocumentStatus } = await import('../archive');
           setDocumentStatus(
+            hid,
             emailDoc.id,
             'ignored',
             JSON.stringify({ reason: 'Envelope for PDF attachment(s)' }),
           );
         }
       } else if (!duplicate) {
-        result.outcomes.push(await processDocument(emailDoc.id));
+        result.outcomes.push(await processDocument(hid, emailDoc.id));
       }
       state.lastUid = uid;
       writeImapState(state);

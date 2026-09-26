@@ -13,7 +13,7 @@ export default async function EditBillPage({ params }: { params: Promise<{ id: s
   const { id } = await params;
   const { hh } = await pageContext();
   const t = await getTranslations('bills');
-  const b = getBill(id);
+  const b = getBill(hh.id, id);
   if (!b) notFound();
   const digits = minorUnitDigits(b.currency);
   const major = (minor: number | null) =>
@@ -24,7 +24,7 @@ export default async function EditBillPage({ params }: { params: Promise<{ id: s
       <PageHeader title={t('editTitle')} />
       <BillForm
         action={updateBillAction}
-        services={listServices(undefined, true).map((s) => ({
+        services={listServices(hh.id, { includeInactive: true }).map((s) => ({
           id: s.id,
           name: s.name,
           provider: s.provider,

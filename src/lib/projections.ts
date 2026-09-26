@@ -129,9 +129,13 @@ export function nextBillGuess(
 }
 
 /** Project a month for every active service and cache the per-service rows. */
-export function projectMonth(month: string, db: Db = getDb()): MonthProjection {
-  const services = listServices(db);
-  const members = listMembers(db);
+export function projectMonth(
+  householdId: string,
+  month: string,
+  db: Db = getDb(),
+): MonthProjection {
+  const services = listServices(householdId, {}, db);
+  const members = listMembers(householdId, db);
   const { start, end } = monthBounds(month);
   const days = daysInclusive(start, end);
   const now = new Date().toISOString();
@@ -140,7 +144,7 @@ export function projectMonth(month: string, db: Db = getDb()): MonthProjection {
     const history = db
       .select()
       .from(bill)
-      .where(eq(bill.serviceId, svc.id))
+      .where(and(eq(bill.householdId, householdId), eq(bill.serviceId, svc.id)))
       .orderBy(asc(bill.periodStart))
       .all();
     // A bill already covering part of the month counts as known cost, not an estimate.
@@ -164,6 +168,7 @@ export function projectMonth(month: string, db: Db = getDb()): MonthProjection {
     db.insert(projection)
       .values({
         id: ulid(),
+        householdId,
         serviceId: svc.id,
         periodMonth: month,
         estimatedMinor: monthMinor,
@@ -205,7 +210,9 @@ export function projectMonth(month: string, db: Db = getDb()): MonthProjection {
       splitMode: r.service.splitMode,
       members,
       customWeights:
-        r.service.splitMode === 'custom' ? getCustomSplits(r.service.id, db) : undefined,
+        r.service.splitMode === 'custom'
+          ? getCustomSplits(householdId, r.service.id, db)
+          : undefined,
       payerMemberId: r.service.payerMemberId,
     });
     for (const s of shares)
@@ -224,10 +231,21 @@ export function nextMonth(today: string): string {
 }
 
 /** Cached projections for a range of months (for the chart's estimate bars). */
-export function cachedProjections(fromMonth: string, toMonth: string, db: Db = getDb()) {
+export function cachedProjections(
+  householdId: string,
+  fromMonth: string,
+  toMonth: string,
+  db: Db = getDb(),
+) {
   return db
     .select()
     .from(projection)
-    .where(and(gte(projection.periodMonth, fromMonth), lte(projection.periodMonth, toMonth)))
+    .where(
+      and(
+        eq(projection.householdId, householdId),
+        gte(projection.periodMonth, fromMonth),
+        lte(projection.periodMonth, toMonth),
+      ),
+    )
     .all();
 }

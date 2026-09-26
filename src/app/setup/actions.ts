@@ -50,7 +50,9 @@ export async function completeSetup(_prev: ActionState, fd: FormData): Promise<A
   try {
     const pinHash = await hashPin(v.pin);
     ownerId = getDb().transaction((tx) => {
-      createHousehold(
+      // First-run only; re-checked inside the transaction so two tabs can't both create one.
+      if (isSetUp(tx)) throw new Error('This server is already set up.');
+      const hh = createHousehold(
         {
           name: v.householdName,
           currency: v.currency,
@@ -62,6 +64,7 @@ export async function completeSetup(_prev: ActionState, fd: FormData): Promise<A
         tx,
       );
       return createMember(
+        hh.id,
         { name: v.ownerName, pinHash, role: 'owner', activeFrom: v.activeFrom },
         tx,
       ).id;

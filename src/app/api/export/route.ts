@@ -36,8 +36,8 @@ function csv(rows: (string | number | null | undefined)[][]): string {
 export async function GET(req: Request) {
   const me = await currentMember();
   if (!me) return new NextResponse('Unauthorized', { status: 401 });
-  const hh = getHousehold();
-  if (!hh) return new NextResponse('Not set up', { status: 400 });
+  const hh = getHousehold(me.householdId);
+  if (!hh) return new NextResponse('Not found', { status: 404 });
   const url = new URL(req.url);
   const kind = url.searchParams.get('kind') ?? 'member';
   const today = todayIn(hh.timezone);
@@ -47,7 +47,7 @@ export async function GET(req: Request) {
 
   if (kind === 'bills') {
     if (me.role !== 'owner') return new NextResponse('Owner only', { status: 403 });
-    const rows = listBills().map((b) => [
+    const rows = listBills(hh.id).map((b) => [
       b.periodStart,
       b.periodEnd,
       b.service.name,
@@ -97,7 +97,7 @@ export async function GET(req: Request) {
   const memberId = url.searchParams.get('member') ?? me.id;
   if (memberId !== me.id && me.role !== 'owner')
     return new NextResponse('Forbidden', { status: 403 });
-  const ledger = memberLedger(memberId, today, hh.fiscalYearStartMonth);
+  const ledger = memberLedger(hh.id, memberId, today, hh.fiscalYearStartMonth);
   if (!ledger) return new NextResponse('Not found', { status: 404 });
   const fy = fiscalYearBounds(today, hh.fiscalYearStartMonth);
   const wanted = url.searchParams.get('fy');

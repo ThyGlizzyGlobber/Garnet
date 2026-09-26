@@ -10,6 +10,8 @@ export async function register() {
   const env = getEnv();
   const { runMigrations } = await import('./db/migrate');
   runMigrations(env.DATA_DIR);
+  const { adoptLegacyDemoFlag } = await import('./lib/demo');
+  adoptLegacyDemoFlag();
   if (env.DEMO_MODE) {
     const { seedDemo } = await import('./db/seed');
     const result = await seedDemo();

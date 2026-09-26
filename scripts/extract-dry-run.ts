@@ -68,7 +68,11 @@ function tryLoadServices() {
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { listServices } = require('@/lib/services') as typeof import('@/lib/services');
-    return listServices().map((s) => ({
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { primaryHousehold } = require('@/lib/households') as typeof import('@/lib/households');
+    const hh = primaryHousehold();
+    if (!hh) return [];
+    return listServices(hh.id).map((s) => ({
       id: s.id,
       name: s.name,
       provider: s.provider,

@@ -6,9 +6,10 @@ export const dynamic = 'force-dynamic';
 
 /** Serve an archived bill file to a logged-in member (inline, for the review viewer). */
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
-  if (!(await currentMember())) return new NextResponse('Unauthorized', { status: 401 });
+  const me = await currentMember();
+  if (!me) return new NextResponse('Unauthorized', { status: 401 });
   const { id } = await params;
-  const doc = getDocument(id);
+  const doc = getDocument(me.householdId, id);
   if (!doc) return new NextResponse('Not found', { status: 404 });
   const body = readDocument(doc);
   const type =
