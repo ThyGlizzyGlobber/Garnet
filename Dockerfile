@@ -25,22 +25,24 @@ ENV NODE_ENV=production \
     PORT=3000 \
     HOSTNAME=0.0.0.0 \
     DATA_DIR=/data
-# Unprivileged user; /data is the single host-path volume (DB, config, inbox/).
-RUN groupadd -g 1001 app && useradd -u 1001 -g app -m app \
-    && mkdir -p /data && chown app:app /data
-COPY --from=build --chown=app:app /app/.next/standalone ./
+# Unprivileged user; /data is the single volume (DB, config, inbox/).
+# UID/GID 568 is TrueNAS SCALE's built-in "apps" user, so the data dataset
+# carries the same owner as every other app on the NAS.
+RUN groupadd -g 568 apps && useradd -u 568 -g apps -m apps \
+    && mkdir -p /data && chown apps:apps /data
+COPY --from=build --chown=apps:apps /app/.next/standalone ./
 # pdf.js loads its worker and canvas polyfill dynamically, which Next's file
 # tracing cannot see, so copy those packages whole from the deps stage.
-COPY --from=deps --chown=app:app /app/node_modules/@napi-rs ./node_modules/@napi-rs
-COPY --from=deps --chown=app:app /app/node_modules/pdfjs-dist ./node_modules/pdfjs-dist
-COPY --from=deps --chown=app:app /app/node_modules/pdf-parse ./node_modules/pdf-parse
+COPY --from=deps --chown=apps:apps /app/node_modules/@napi-rs ./node_modules/@napi-rs
+COPY --from=deps --chown=apps:apps /app/node_modules/pdfjs-dist ./node_modules/pdfjs-dist
+COPY --from=deps --chown=apps:apps /app/node_modules/pdf-parse ./node_modules/pdf-parse
 # Stamped by the release workflow; Settings → Software update compares it with GitHub.
 # Declared last so a new commit doesn't invalidate the layers above.
 ARG APP_COMMIT=dev
 ARG APP_BUILT_AT=
 ENV APP_COMMIT=$APP_COMMIT \
     APP_BUILT_AT=$APP_BUILT_AT
-USER app
+USER apps
 EXPOSE 3000
 VOLUME ["/data"]
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \

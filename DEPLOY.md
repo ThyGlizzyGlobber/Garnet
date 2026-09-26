@@ -49,23 +49,23 @@ TrueNAS-managed storage the catalog apps use
 (`SSD/ix-apps/app_mounts/home-utilities/data`), so no dataset has to be made
 by hand. Fill in only these fields; leave everything else at its default.
 
-| Section                 | Field                  | Value                                                                            |
-| ----------------------- | ---------------------- | -------------------------------------------------------------------------------- |
-| Application Name        | Application Name       | `home-utilities` (the updater expects this name)                                 |
-| Image Configuration     | Repository             | `ghcr.io/thyglizzyglobber/home-utilities`                                        |
-|                         | Tag                    | `latest`                                                                         |
-| Container Configuration | Timezone               | `Australia/Melbourne`                                                            |
-|                         | Environment Variables  | `AUTH_SECRET` = output of `openssl rand -base64 48`                              |
-|                         |                        | `UPDATE_REPO` = `ThyGlizzyGlobber/Home-Utilities-Software--Prototype-1-`         |
-|                         |                        | `UPDATE_GITHUB_TOKEN` = the **fine-grained** token                               |
-|                         | Restart Policy         | Unless Stopped                                                                   |
-| Security Context        | Custom User            | leave **off** (the image runs as UID/GID 1001)                                   |
-| Network Configuration   | Ports                  | Container Port `3000`, Host Port `30080`, TCP                                    |
-| Portal Configuration    | Name / Protocol / Port | `Web UI` / HTTP / `30080`                                                        |
-| Storage Configuration   | Add → Type             | **ixVolume**                                                                     |
-|                         | Mount Path             | `/data`                                                                          |
-|                         | Dataset Name           | `data`                                                                           |
-|                         | Enable ACL             | on, then ACL Entries → Add: ID Type **USER**, ID `1001`, Access **FULL_CONTROL** |
+| Section                 | Field                  | Value                                                                           |
+| ----------------------- | ---------------------- | ------------------------------------------------------------------------------- |
+| Application Name        | Application Name       | `home-utilities` (the updater expects this name)                                |
+| Image Configuration     | Repository             | `ghcr.io/thyglizzyglobber/home-utilities`                                       |
+|                         | Tag                    | `latest`                                                                        |
+| Container Configuration | Timezone               | `Australia/Melbourne`                                                           |
+|                         | Environment Variables  | `AUTH_SECRET` = output of `openssl rand -base64 48`                             |
+|                         |                        | `UPDATE_REPO` = `ThyGlizzyGlobber/Home-Utilities-Software--Prototype-1-`        |
+|                         |                        | `UPDATE_GITHUB_TOKEN` = the **fine-grained** token                              |
+|                         | Restart Policy         | Unless Stopped                                                                  |
+| Security Context        | Custom User            | leave **off** (the image already runs as 568, TrueNAS's `apps` user)            |
+| Network Configuration   | Ports                  | Container Port `3000`, Host Port `30080`, TCP                                   |
+| Portal Configuration    | Name / Protocol / Port | `Web UI` / HTTP / `30080`                                                       |
+| Storage Configuration   | Add → Type             | **ixVolume**                                                                    |
+|                         | Mount Path             | `/data`                                                                         |
+|                         | Dataset Name           | `data`                                                                          |
+|                         | Enable ACL             | on, then ACL Entries → Add: ID Type **USER**, ID `568`, Access **FULL_CONTROL** |
 
 Everything else (currency, locale, bill mailbox, AI extraction) has working
 defaults; add `ANTHROPIC_API_KEY` etc. later with **Edit** on the app.
@@ -123,7 +123,7 @@ Do both together if an update ran a database migration you need to undo.
 To move a household from another machine: stop the app, copy that machine's
 `data/` folder contents into `/mnt/.ix-apps/app_mounts/home-utilities/data`
 (System → Shell, e.g. from an SMB share with `cp -a`), run
-`chown -R 1001:1001 /mnt/.ix-apps/app_mounts/home-utilities/data`, start the app.
+`chown -R 568:568 /mnt/.ix-apps/app_mounts/home-utilities/data`, start the app.
 
 ## 7. Remote access (Cloudflare Tunnel)
 
