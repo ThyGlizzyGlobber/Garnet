@@ -15,6 +15,22 @@ export function minorUnitDigits(currency: string): number {
   }
 }
 
+/**
+ * Minor units as a plain major-unit number string for machine-readable output
+ * (CSV): no symbol, no grouping, '.' decimal, digits from the currency.
+ * 12900 AUD → "129.00", 1290 JPY → "1290", 1234 KWD → "1.234".
+ */
+export function formatMinorPlain(minor: number, currency: string): string {
+  const digits = minorUnitDigits(currency);
+  const sign = minor < 0 ? '-' : '';
+  const abs = Math.abs(Math.round(minor));
+  if (digits === 0) return `${sign}${abs}`;
+  const scale = 10 ** digits;
+  const whole = Math.floor(abs / scale);
+  const frac = String(abs % scale).padStart(digits, '0');
+  return `${sign}${whole}.${frac}`;
+}
+
 /** Convert minor units (e.g. cents) to a display string in the given locale. */
 export function formatMoney(
   minor: number,

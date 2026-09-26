@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { currentMember } from '@/lib/auth/session';
 import { listBills } from '@/lib/bills';
-import { formatMoney } from '@/lib/format';
+import { formatMinorPlain, formatMoney } from '@/lib/format';
 import { getHousehold } from '@/lib/households';
 import { fiscalYearBounds } from '@/lib/periods';
 import { memberLedger } from '@/lib/stats';
@@ -53,9 +53,9 @@ export async function GET(req: Request) {
       b.service.name,
       b.service.provider,
       b.service.type.label,
-      (b.amountMinor / 100).toFixed(2),
+      formatMinorPlain(b.amountMinor, b.currency),
       b.currency,
-      b.taxMinor === null ? '' : (b.taxMinor / 100).toFixed(2),
+      b.taxMinor === null ? '' : formatMinorPlain(b.taxMinor, b.currency),
       b.taxLabel ?? '',
       b.dueDate,
       b.paidToProviderAt ? 'paid' : 'unpaid',
@@ -109,8 +109,8 @@ export async function GET(req: Request) {
     s.bill.periodEnd,
     s.service.name,
     s.service.provider,
-    (s.bill.amountMinor / 100).toFixed(2),
-    (s.amountMinor / 100).toFixed(2),
+    formatMinorPlain(s.bill.amountMinor, s.bill.currency),
+    formatMinorPlain(s.amountMinor, s.currency),
     s.currency,
     `${s.basisDays}/${s.periodDays}`,
     s.bill.dueDate,
