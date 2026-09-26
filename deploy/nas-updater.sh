@@ -2,8 +2,12 @@
 # Applies updates requested from Settings → Software update.
 #
 # Runs on the TrueNAS host as root, every minute, from a cron job
-# (System → Advanced Settings → Cron Jobs). Keep this file OUTSIDE the data
-# dataset: the container can write to the data dataset, and root runs this.
+# (System → Advanced Settings → Cron Jobs). Keep this file OUTSIDE the app's
+# storage: the container can write there, and root runs this.
+#
+# DATASET is the app's data dataset. For the Custom App with an ixVolume named
+# "data" that is SSD/ix-apps/app_mounts/home-utilities/data; its mountpoint is
+# looked up, so ixVolumes (under /mnt/.ix-apps) and host-path datasets both work.
 #
 # When DATA/config/update-request.json exists it:
 #   1. deletes the request (so a failing update isn't retried every minute),
@@ -15,10 +19,12 @@ set -u
 PATH=/usr/sbin:/usr/bin:/sbin:/bin
 
 APP_NAME="${APP_NAME:-home-utilities}"
-DATASET="${DATASET:-SSD/home-utilities/data}"
+DATASET="${DATASET:-SSD/ix-apps/app_mounts/home-utilities/data}"
 KEEP="${KEEP:-10}"
 LOG="${LOG:-$(dirname "$0")/update.log}"
-REQUEST="/mnt/$DATASET/config/update-request.json"
+MOUNT="$(zfs get -H -o value mountpoint "$DATASET" 2>/dev/null)" || exit 0
+[ -d "$MOUNT" ] || exit 0
+REQUEST="$MOUNT/config/update-request.json"
 
 [ -e "$REQUEST" ] || [ -L "$REQUEST" ] || exit 0
 rm -f "$REQUEST"

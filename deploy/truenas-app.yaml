@@ -1,3 +1,7 @@
+# ALTERNATIVE install. The primary path is the Custom App form with an
+# ixVolume (DEPLOY.md §3). Use this only if you prefer your own dataset; then
+# run the updater with DATASET=SSD/home-utilities/data.
+#
 # TrueNAS SCALE 25.10 · Apps → Discover Apps → ⋮ → Install via YAML
 # App name: home-utilities  (deploy/nas-updater.sh expects this name)
 #
@@ -5,7 +9,7 @@
 # applied from Settings → Software update (see DEPLOY.md, "Updates").
 #
 # Before pasting, fill in every <...> value. The image is private, so first sign
-# in to ghcr.io under Apps → Configuration → Docker registries (DEPLOY.md step 3).
+# in to ghcr.io under Apps → Configuration → Docker registries (DEPLOY.md §2).
 services:
   app:
     image: ghcr.io/thyglizzyglobber/home-utilities:latest

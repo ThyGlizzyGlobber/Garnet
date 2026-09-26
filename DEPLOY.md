@@ -1,12 +1,13 @@
 # Deploying Home Utilities Dashboard
 
 One container, one port, one data volume. The volume holds everything: the
-SQLite database, config, and every raw bill file under `inbox/`. Back it up by
-snapshotting its dataset; nothing else has state. The code lives in the image,
+SQLite database, config, and every raw bill file under `inbox/`. Nothing else
+has state. The code lives in the image,
 which GitHub builds for every push to `main`.
 
-Written for **TrueNAS SCALE 25.10 (Goldeye)**. Paths below use the pool `SSD`;
-change them if yours differ.
+Written for **TrueNAS SCALE 25.10 (Goldeye)** with the apps pool `SSD`.
+`deploy/truenas-app.yaml` is an alternative install (Install via YAML, host-path dataset)
+for setups that prefer their own dataset.
 
 ## How releases flow
 
@@ -23,102 +24,106 @@ Settings → Software update → Update now
 The app never holds credentials that can control the NAS. It can only leave a
 request file; the host decides what to do with it.
 
-## 1. Datasets
+## 1. GitHub tokens
 
-Datasets → select the pool `SSD` → **Add Dataset** (a dataset can only be created inside another dataset, not inside a plain folder):
-
-1. `home-utilities` (preset **Generic**). Parent for everything below. Stays root-owned.
-2. Inside it, `data` (preset **Generic**). Mounted into the container as `/data`.
-
-Then in **System → Shell**:
-
-```bash
-chown -R 1001:1001 /mnt/SSD/home-utilities/data
-mkdir -p /mnt/SSD/home-utilities/updater
-```
-
-The container runs as UID/GID **1001** and only ever sees the `data` dataset.
-The `updater` folder is a plain folder in the parent dataset, deliberately out
-of the container's reach, because root runs the script inside it.
-
-Resulting layout:
-
-```
-/mnt/SSD/home-utilities/
-  data/          dataset, owner 1001 → /data  (db/, inbox/, config/)
-  updater/       root only: nas-updater.sh + update.log
-```
-
-Data Protection → **Periodic Snapshot Tasks** → add one for
-`SSD/home-utilities/data` (e.g. daily, keep 2 weeks). The updater also
-takes its own `pre-update-…` snapshot before every update and keeps the last 10.
-
-Optional, to bring the existing household over from the Mac: stop the app,
-copy the Mac's `data/` folder contents into the `data` dataset (SMB or `rsync`),
-then run the `chown` above again.
-
-## 2. GitHub tokens
-
-Both are read-only. Create them at GitHub → Settings → Developer settings.
+Both are read-only. Create them at GitHub → Settings → Developer settings → Personal access tokens.
 
 | Token                                                                                   | Used by                                  | Scope                                   |
 | --------------------------------------------------------------------------------------- | ---------------------------------------- | --------------------------------------- |
 | **Classic** token (GHCR only accepts classic tokens)                                    | TrueNAS, to pull the private image       | `read:packages` only                    |
 | **Fine-grained** token, repository access: only `Home-Utilities-Software--Prototype-1-` | the app, to show what an update contains | Actions: Read-only, Contents: Read-only |
 
-## 3. Sign TrueNAS in to GitHub's registry
+## 2. Sign TrueNAS in to GitHub's registry
 
-Apps → **Configuration** → Docker registries → add a registry:
+Apps → **Configuration** → **Sign-in to a Docker registry** → **Add Registry**:
 
-- URI: Other registry, `https://ghcr.io`
+- URI: **Other Registry**, `https://ghcr.io`
 - Name: `ghcr`
 - Username: your GitHub username
 - Password: the **classic** token
 
-## 4. Install the app
+## 3. Install the app (Custom App form, ixVolume storage)
 
-Apps → Discover Apps → ⋮ → **Install via YAML**. Name it `home-utilities`
-(the updater expects that name) and paste `deploy/truenas-app.yaml` after
-filling in:
+Apps → Discover Apps → **Custom App**. Data goes in an **ixVolume**, the same
+TrueNAS-managed storage the catalog apps use
+(`SSD/ix-apps/app_mounts/home-utilities/data`), so no dataset has to be made
+by hand. Fill in only these fields; leave everything else at its default.
 
-- `AUTH_SECRET`: output of `openssl rand -base64 48`
-- `UPDATE_GITHUB_TOKEN`: the **fine-grained** token
-- optionally `ANTHROPIC_API_KEY` and the IMAP settings
+| Section                 | Field                  | Value                                                                            |
+| ----------------------- | ---------------------- | -------------------------------------------------------------------------------- |
+| Application Name        | Application Name       | `home-utilities` (the updater expects this name)                                 |
+| Image Configuration     | Repository             | `ghcr.io/thyglizzyglobber/home-utilities`                                        |
+|                         | Tag                    | `latest`                                                                         |
+| Container Configuration | Timezone               | `Australia/Melbourne`                                                            |
+|                         | Environment Variables  | `AUTH_SECRET` = output of `openssl rand -base64 48`                              |
+|                         |                        | `UPDATE_REPO` = `ThyGlizzyGlobber/Home-Utilities-Software--Prototype-1-`         |
+|                         |                        | `UPDATE_GITHUB_TOKEN` = the **fine-grained** token                               |
+|                         | Restart Policy         | Unless Stopped                                                                   |
+| Security Context        | Custom User            | leave **off** (the image runs as UID/GID 1001)                                   |
+| Network Configuration   | Ports                  | Container Port `3000`, Host Port `30080`, TCP                                    |
+| Portal Configuration    | Name / Protocol / Port | `Web UI` / HTTP / `30080`                                                        |
+| Storage Configuration   | Add → Type             | **ixVolume**                                                                     |
+|                         | Mount Path             | `/data`                                                                          |
+|                         | Dataset Name           | `data`                                                                           |
+|                         | Enable ACL             | on, then ACL Entries → Add: ID Type **USER**, ID `1001`, Access **FULL_CONTROL** |
+
+Everything else (currency, locale, bill mailbox, AI extraction) has working
+defaults; add `ANTHROPIC_API_KEY` etc. later with **Edit** on the app.
 
 Check it's up: `http://<nas-ip>:30080/api/health` shows `"status":"ok"` and the
 running commit.
 
-## 5. The updater cron job
+**Deleting the app:** TrueNAS asks whether to remove its ixVolumes. Leave that
+unticked unless you mean to delete the household's data.
 
-1. Copy `deploy/nas-updater.sh` to `/mnt/SSD/home-utilities/updater/nas-updater.sh`.
-   In System → Shell, run `cat > /mnt/SSD/home-utilities/updater/nas-updater.sh`,
-   paste the file's contents, then press Ctrl-D.
+## 4. The updater cron job
+
+The script must live outside the app's storage (root runs it; the container can
+write to its own storage). A plain folder such as `/mnt/SSD/AppData` works.
+
+1. System → Shell:
+   ```bash
+   mkdir -p /mnt/SSD/AppData/home-utilities-updater
+   cat > /mnt/SSD/AppData/home-utilities-updater/nas-updater.sh
+   ```
+   paste the contents of `deploy/nas-updater.sh`, press Ctrl-D, then
+   `chmod 700 /mnt/SSD/AppData/home-utilities-updater/nas-updater.sh`.
 2. System → Advanced Settings → **Cron Jobs** → Add:
    - Description: `Home Utilities updater`
-   - Command: `sh /mnt/SSD/home-utilities/updater/nas-updater.sh`
+   - Command: `sh /mnt/SSD/AppData/home-utilities-updater/nas-updater.sh`
    - Run As User: `root`
    - Schedule: Custom, every minute (`* * * * *`)
    - Hide Standard Output and Hide Standard Error: on
 
 The script defaults to app `home-utilities` and dataset
-`SSD/home-utilities/data`. Override with `APP_NAME=… DATASET=… sh …`
-in the command if you change either. Its log is `updater/update.log`.
+`SSD/ix-apps/app_mounts/home-utilities/data` and looks up where that dataset is
+mounted. Override with `APP_NAME=… DATASET=… sh …` in the command if you change
+either (e.g. a host-path install from `deploy/truenas-app.yaml`). Its log is
+`update.log` next to the script. It also snapshots the data before every update
+and keeps the last 10 `pre-update-…` snapshots.
 
 Test it: Settings → Software update → **Update now** (or "Install latest
 release"). Within a minute `update.log` shows the snapshot and the pull, and the
 page reloads on the new version.
 
-## 6. Rolling back
+## 5. Rolling back
 
 The data and the code roll back separately:
 
-1. **Data**: Storage → Datasets → `data` → Snapshots → roll back to the
-   `pre-update-…` snapshot (or `zfs rollback <snapshot>`; the log prints the name).
-2. **Code**: edit the app's YAML and change `:latest` to `:<previous commit sha>`
-   (every build is also tagged with its commit), then save. Switch back to
-   `:latest` once the fix is released.
+1. **Data**: `zfs rollback SSD/ix-apps/app_mounts/home-utilities/data@pre-update-…`
+   in System → Shell (the log prints the exact name). Stop the app first.
+2. **Code**: **Edit** the app and change the Tag from `latest` to the previous
+   commit's full SHA (every build is also tagged with its commit). Switch back to
+   `latest` once the fix is released.
 
 Do both together if an update ran a database migration you need to undo.
+
+## 6. Bringing existing data over (optional)
+
+To move a household from another machine: stop the app, copy that machine's
+`data/` folder contents into `/mnt/.ix-apps/app_mounts/home-utilities/data`
+(System → Shell, e.g. from an SMB share with `cp -a`), run
+`chown -R 1001:1001 /mnt/.ix-apps/app_mounts/home-utilities/data`, start the app.
 
 ## 7. Remote access (Cloudflare Tunnel)
 
