@@ -9,6 +9,24 @@ or a decision seems wrong, stop and ask the owner before building around it.
 §3 (provider inventory) may contain TODOs — providers are configurable data in the
 DB, never hardcoded.
 
+## Current status (handoff — keep this section up to date)
+
+_Last updated 2026-09-26._ Prototype 1 scope is fully built: Phases 0–4 plus the
+visual system v2 restyle. Latest commit is on `main` in both checkouts.
+
+- **Where the code lives.** Primary working copy: `/Users/bejaysmith/Desktop/Home Utilities Software (Prototype-1) 03.48.04`
+  (local SSD, fast). Mirror on the NAS share: `/Volumes/Bejay/BRJ Labs/Home Utilities Software (Prototype-1)`,
+  reachable as git remote `nas`; it accepts pushes into its working tree. Release flow: commit → `git push nas main`
+  → press Update on the TrueNAS app (see `deploy/` and DEPLOY.md). The NAS checkout's `node_modules` is stale; run `npm ci` there before using it directly.
+- **Running locally.** `npm run build && DATA_DIR="$PWD/data-demo" DEMO_MODE=true PORT=3462 node --env-file-if-exists=.env .next/standalone/server.js`
+  gives the fictional demo (log in as Alex, PIN 1234). `data/` holds the owner's real Smith Household with four Aussie Broadband invoices.
+  The desktop app's browser preview tool is bound to the NAS folder, so run the server yourself and `navigate` to it.
+- **Verified.** Unit tests (73), typecheck, lint, production build, Docker image (arm64 and amd64 build; runs with health, migrations, demo seed, in-container PDF parse), every screen in both themes at 1280 px, the paged setup wizard end to end, exit-demo, CSV export, review-queue approval, duplicate detection, template parser on all four real invoices.
+- **Not yet verified live.** The Anthropic extractor and the IMAP poller (no `ANTHROPIC_API_KEY` or IMAP credentials in `.env`); the actual TrueNAS deployment (YAML app not yet installed on the NAS).
+- **Design.** BRAND.md is the reference. Owner rejected the first restyle as boring; v2 (blob scene, frosted window, instrument tiles, single trend line charts) is approved direction. Owner prefers muted décor palettes, no green accent, no photo backdrops. Mockup canvas: https://claude.ai/artifact/BzeEmm3c16cbvCdTTtGmh4.
+- **Open questions for the owner.** Product name (BRAND.md lists Homebill / Housekeep / Tally); whether the display type should have more character than Outfit; brand mark.
+- **Likely next steps.** Install the YAML app on TrueNAS and run through DEPLOY.md; add mailbox + API key and exercise ingestion on real email; start the household alpha; Members and Settings pages have not had the v2 instrument treatment (they use the shared primitives, so they look consistent but plain); PDF statements and push reminders are roadmap.
+
 ## Hard constraints
 
 - Next.js (TypeScript) full-stack, single repo, single Docker container.
@@ -108,11 +126,14 @@ sample-bills/       real bills for seeding + extraction tests (gitignored)
 
 ## Dev environment notes
 
-- The repo lives on an SMB share mounted from the NAS. Installs and file watching
-  are slow; that is expected. Don't move it without asking.
-- Node 22 is installed via Homebrew (`node@22`, linked). Docker is not installed on
-  the dev Mac, so image builds are verified on the NAS or another machine.
-- Real bill PDFs live in `sample-bills/`; text extraction locally can use `pdftotext`.
+- Work in the Desktop copy (see Current status). The NAS share copy is an SMB mount:
+  installs there take ~35 min and builds ~8 min, and Turbopack's persistent cache is
+  disabled because SMB rejects fsync. Don't delete either checkout without asking.
+- Node 22 via Homebrew (`node@22`, linked). Docker Desktop is installed on the Mac
+  (`docker buildx` available); production images are built on the NAS from the repo.
+- Real bill PDFs live in `sample-bills/` (gitignored); `pdftotext` is available locally.
+- Local test servers: use port 3462 with an absolute `DATA_DIR`; the standalone
+  server chdirs into `.next/standalone`.
 
 ## Phases
 
