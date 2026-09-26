@@ -36,6 +36,18 @@ const envSchema = z.object({
   EXTRACTOR_CONFIDENCE_THRESHOLD: z.coerce.number().min(0).max(1).default(0.85),
 
   DEMO_MODE: boolish.default(false),
+
+  // Stamped into the image by the release workflow; 'dev' for local builds.
+  APP_COMMIT: z.string().default('dev'),
+  APP_BUILT_AT: z.string().optional(),
+  // Settings → Software update reads the latest released build from GitHub.
+  UPDATE_REPO: z
+    .string()
+    .regex(/^[\w.-]+\/[\w.-]+$/, 'UPDATE_REPO must look like owner/repo')
+    .optional(),
+  UPDATE_GITHUB_TOKEN: z.string().optional(),
+  UPDATE_WORKFLOW: z.string().default('release.yml'),
+  UPDATE_BRANCH: z.string().default('main'),
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
 });
 
@@ -69,6 +81,10 @@ export function resetEnvCache(): void {
 
 export function isImapConfigured(env: Env = getEnv()): boolean {
   return Boolean(env.IMAP_HOST && env.IMAP_USER && env.IMAP_PASSWORD);
+}
+
+export function isUpdateCheckConfigured(env: Env = getEnv()): boolean {
+  return Boolean(env.UPDATE_REPO && env.UPDATE_GITHUB_TOKEN);
 }
 
 export function isLlmConfigured(env: Env = getEnv()): boolean {

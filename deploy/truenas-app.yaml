@@ -1,23 +1,21 @@
-# TrueNAS SCALE (24.10+) · Apps → Discover Apps → Install via YAML
+# TrueNAS SCALE 25.10 · Apps → Discover Apps → ⋮ → Install via YAML
+# App name: home-utilities  (deploy/nas-updater.sh expects this name)
 #
-# Builds the image from the repo checkout on the NAS. Pressing the app's
-# Update (or Redeploy) button rebuilds from whatever commit is in that folder,
-# so the release flow is: push commits into the folder → press Update.
+# Runs the image GitHub Actions publishes for every push to main. Updates are
+# applied from Settings → Software update (see DEPLOY.md, "Updates").
 #
-# Replace the two <...> paths and the AUTH_SECRET before pasting.
+# Before pasting, fill in every <...> value. The image is private, so first sign
+# in to ghcr.io under Apps → Configuration → Docker registries (DEPLOY.md step 3).
 services:
   app:
-    build:
-      context: /mnt/<POOL>/<SHARE>/BRJ Labs/Home Utilities Software (Prototype-1)
-      dockerfile: Dockerfile
-    image: brjlabs/home-utilities:local
-    pull_policy: build
+    image: ghcr.io/thyglizzyglobber/home-utilities:latest
     container_name: home-utilities
     restart: unless-stopped
     ports:
       - '30080:3000'
     volumes:
-      - /mnt/<POOL>/apps/utilities-dashboard:/data
+      # Child dataset owned by UID/GID 1001. Holds db/, inbox/ and config/.
+      - /mnt/SSD/AppData/home-utilities/data:/data
     environment:
       DATA_DIR: /data
       AUTH_SECRET: '<openssl rand -base64 48>'
@@ -38,6 +36,10 @@ services:
       ANTHROPIC_API_KEY: ''
       ANTHROPIC_MODEL: claude-sonnet-5
       EXTRACTOR_CONFIDENCE_THRESHOLD: '0.85'
+      # Software update checks: fine-grained GitHub token, this repo only,
+      # read-only "Actions" + "Contents". Leave empty to skip the check.
+      UPDATE_REPO: ThyGlizzyGlobber/Home-Utilities-Software--Prototype-1-
+      UPDATE_GITHUB_TOKEN: ''
       DEMO_MODE: 'false'
       LOG_LEVEL: info
     healthcheck:

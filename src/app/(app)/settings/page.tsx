@@ -8,6 +8,7 @@ import { InlineAction } from '@/components/ui/form';
 import { isDemoData } from '@/lib/demo';
 import { getTheme, THEMES } from '@/lib/theme';
 import { exitDemoAction, setThemeAction } from './actions';
+import { UpdateCard } from './update-card';
 
 export default async function SettingsPage() {
   const { hh, me } = await pageContext();
@@ -68,6 +69,7 @@ export default async function SettingsPage() {
           />
         </Card>
       )}
+      {me.role === 'owner' && <UpdateCard hh={hh} />}
       <Card className="mt-4">
         <h2 className="font-semibold">
           <Link href="/status" className="text-accent">

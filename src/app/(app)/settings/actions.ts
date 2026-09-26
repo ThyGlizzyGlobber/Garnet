@@ -11,6 +11,7 @@ import { redirect } from 'next/navigation';
 import { logout } from '@/lib/auth/session';
 import { exitDemo } from '@/lib/demo';
 import { THEME_COOKIE, THEMES, type Theme } from '@/lib/theme';
+import { cancelUpdateRequest, checkForUpdate, requestUpdate } from '@/lib/updates';
 
 const schema = z.object({
   name: z.string().min(1, 'Required').max(60),
@@ -64,4 +65,24 @@ export async function exitDemoAction(): Promise<void> {
   exitDemo();
   await logout();
   redirect('/setup');
+}
+
+/** Owner only: queue an update for the NAS cron job to apply. */
+export async function requestUpdateAction(): Promise<void> {
+  const me = await requireOwner();
+  requestUpdate(me.name);
+  revalidatePath('/settings');
+}
+
+export async function cancelUpdateAction(): Promise<void> {
+  await requireOwner();
+  cancelUpdateRequest();
+  revalidatePath('/settings');
+}
+
+/** Skip the short cache and ask GitHub again. */
+export async function recheckUpdateAction(): Promise<void> {
+  await requireOwner();
+  await checkForUpdate({ fresh: true });
+  revalidatePath('/settings');
 }

@@ -34,6 +34,12 @@ COPY --from=build --chown=app:app /app/.next/standalone ./
 COPY --from=deps --chown=app:app /app/node_modules/@napi-rs ./node_modules/@napi-rs
 COPY --from=deps --chown=app:app /app/node_modules/pdfjs-dist ./node_modules/pdfjs-dist
 COPY --from=deps --chown=app:app /app/node_modules/pdf-parse ./node_modules/pdf-parse
+# Stamped by the release workflow; Settings → Software update compares it with GitHub.
+# Declared last so a new commit doesn't invalidate the layers above.
+ARG APP_COMMIT=dev
+ARG APP_BUILT_AT=
+ENV APP_COMMIT=$APP_COMMIT \
+    APP_BUILT_AT=$APP_BUILT_AT
 USER app
 EXPOSE 3000
 VOLUME ["/data"]

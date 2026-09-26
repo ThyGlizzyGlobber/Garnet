@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { sql } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import { getEnv, isImapConfigured, isLlmConfigured } from '@/lib/env';
-import { dataPaths } from '@/lib/paths';
 import pkg from '../../../../package.json';
 
 export const dynamic = 'force-dynamic';
@@ -15,7 +14,8 @@ export function GET() {
     return NextResponse.json({
       status: 'ok',
       version: pkg.version,
-      dataDir: dataPaths(env.DATA_DIR).root,
+      commit: env.APP_COMMIT,
+      builtAt: env.APP_BUILT_AT ?? null,
       database: 'ok',
       imapConfigured: isImapConfigured(env),
       llmConfigured: isLlmConfigured(env),

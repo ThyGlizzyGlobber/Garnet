@@ -1,56 +1,137 @@
 # Deploying Home Utilities Dashboard
 
-One container, one port, one host-path volume. The volume holds everything:
-the SQLite database, config, and every raw bill file under `inbox/`. Back it
-up by snapshotting the dataset; nothing else has state.
+One container, one port, one data volume. The volume holds everything: the
+SQLite database, config, and every raw bill file under `inbox/`. Back it up by
+snapshotting its dataset; nothing else has state. The code lives in the image,
+which GitHub builds for every push to `main`.
 
-## 1. Get the repo onto the NAS
+Written for **TrueNAS SCALE 25.10 (Goldeye)**. Paths below use the pool `SSD`;
+change them if yours differ.
 
-The git working copy lives on a share on the NAS (the Mac pushes into it with
-`git push nas main`). Any path works as long as the YAML's `build.context`
-points at it. Docker builds the image there, so the NAS needs nothing besides
-TrueNAS SCALE 24.10 or later.
+## How releases flow
 
-## 2. Prepare the data directory
-
-1. Create a dataset, e.g. `tank/apps/utilities-dashboard`.
-2. The container runs as UID/GID **1001**. Give that user ownership of the dataset:
-   ```bash
-   chown -R 1001:1001 /mnt/tank/apps/utilities-dashboard
-   ```
-   (Or set the dataset's ACL owner to 1001 in the UI.)
-3. Turn on periodic snapshots for the dataset. That is the entire backup plan;
-   the app never writes outside `/data`.
-
-## 3. Install the YAML app (builds from the repo on the NAS)
-
-If the repo checkout lives on the NAS (it does: the share holds the git working
-copy), skip images and registries entirely. Paste `deploy/truenas-app.yaml`
-into Apps → Discover Apps → **Install via YAML**, after replacing the two
-`<POOL>/<SHARE>` paths and `AUTH_SECRET`. TrueNAS builds the image from that
-folder and runs it.
-
-Release flow from then on:
-
-1. Get the new commits into the folder. From the Mac, `git push nas main`
-   updates the NAS working copy directly (the NAS repo has
-   `receive.denyCurrentBranch=updateInstead`). Or `git pull` on the NAS from
-   wherever you host the repo.
-2. Press **Update** (or Redeploy) on the app. `pull_policy: build` makes it
-   rebuild from the folder; migrations run on start; the volume is untouched.
-
-To script step 2, run `deploy/update.sh` on the NAS: it builds the image and
-calls `midclt call app.redeploy home-utilities`. Chain both steps from the Mac:
-
-```bash
-git push nas main && ssh root@nas 'sh "/mnt/<POOL>/<SHARE>/BRJ Labs/Home Utilities Software (Prototype-1)/deploy/update.sh"'
+```
+git push origin main
+  → GitHub Actions: lint + typecheck + tests, then builds the image
+  → ghcr.io/thyglizzyglobber/home-utilities:latest (and :<commit>)
+Settings → Software update → Update now
+  → app writes /data/config/update-request.json
+  → NAS cron job (every minute): snapshot data, pull image, redeploy
+  → app restarts on the new version (~2 min); the settings page reloads itself
 ```
 
-If your TrueNAS version rejects `build:` in YAML apps, keep the YAML but delete
-the `build`/`pull_policy` lines and run `deploy/update.sh` for each release;
-it produces the `brjlabs/home-utilities:local` tag the YAML references.
+The app never holds credentials that can control the NAS. It can only leave a
+request file; the host decides what to do with it.
 
-## 4. Wall display (iPad)
+## 1. Datasets
+
+Storage → Datasets → select `SSD/AppData` → **Add Dataset**:
+
+1. `home-utilities` (preset **Generic**). Parent for everything below. Stays root-owned.
+2. Inside it, `data` (preset **Generic**). Mounted into the container as `/data`.
+
+Then in **System → Shell**:
+
+```bash
+chown -R 1001:1001 /mnt/SSD/AppData/home-utilities/data
+mkdir -p /mnt/SSD/AppData/home-utilities/updater
+```
+
+The container runs as UID/GID **1001** and only ever sees the `data` dataset.
+The `updater` folder is a plain folder in the parent dataset, deliberately out
+of the container's reach, because root runs the script inside it.
+
+Resulting layout:
+
+```
+/mnt/SSD/AppData/home-utilities/
+  data/          dataset, owner 1001 → /data  (db/, inbox/, config/)
+  updater/       root only: nas-updater.sh + update.log
+```
+
+Data Protection → **Periodic Snapshot Tasks** → add one for
+`SSD/AppData/home-utilities/data` (e.g. daily, keep 2 weeks). The updater also
+takes its own `pre-update-…` snapshot before every update and keeps the last 10.
+
+Optional, to bring the existing household over from the Mac: stop the app,
+copy the Mac's `data/` folder contents into the `data` dataset (SMB or `rsync`),
+then run the `chown` above again.
+
+## 2. GitHub tokens
+
+Both are read-only. Create them at GitHub → Settings → Developer settings.
+
+| Token                                                                                   | Used by                                  | Scope                                   |
+| --------------------------------------------------------------------------------------- | ---------------------------------------- | --------------------------------------- |
+| **Classic** token (GHCR only accepts classic tokens)                                    | TrueNAS, to pull the private image       | `read:packages` only                    |
+| **Fine-grained** token, repository access: only `Home-Utilities-Software--Prototype-1-` | the app, to show what an update contains | Actions: Read-only, Contents: Read-only |
+
+## 3. Sign TrueNAS in to GitHub's registry
+
+Apps → **Configuration** → Docker registries → add a registry:
+
+- URI: Other registry, `https://ghcr.io`
+- Name: `ghcr`
+- Username: your GitHub username
+- Password: the **classic** token
+
+## 4. Install the app
+
+Apps → Discover Apps → ⋮ → **Install via YAML**. Name it `home-utilities`
+(the updater expects that name) and paste `deploy/truenas-app.yaml` after
+filling in:
+
+- `AUTH_SECRET`: output of `openssl rand -base64 48`
+- `UPDATE_GITHUB_TOKEN`: the **fine-grained** token
+- optionally `ANTHROPIC_API_KEY` and the IMAP settings
+
+Check it's up: `http://<nas-ip>:30080/api/health` shows `"status":"ok"` and the
+running commit.
+
+## 5. The updater cron job
+
+1. Copy `deploy/nas-updater.sh` to `/mnt/SSD/AppData/home-utilities/updater/nas-updater.sh`.
+   In System → Shell, run `cat > /mnt/SSD/AppData/home-utilities/updater/nas-updater.sh`,
+   paste the file's contents, then press Ctrl-D.
+2. System → Advanced Settings → **Cron Jobs** → Add:
+   - Description: `Home Utilities updater`
+   - Command: `sh /mnt/SSD/AppData/home-utilities/updater/nas-updater.sh`
+   - Run As User: `root`
+   - Schedule: Custom, every minute (`* * * * *`)
+   - Hide Standard Output and Hide Standard Error: on
+
+The script defaults to app `home-utilities` and dataset
+`SSD/AppData/home-utilities/data`. Override with `APP_NAME=… DATASET=… sh …`
+in the command if you change either. Its log is `updater/update.log`.
+
+Test it: Settings → Software update → **Update now** (or "Install latest
+release"). Within a minute `update.log` shows the snapshot and the pull, and the
+page reloads on the new version.
+
+## 6. Rolling back
+
+The data and the code roll back separately:
+
+1. **Data**: Storage → Datasets → `data` → Snapshots → roll back to the
+   `pre-update-…` snapshot (or `zfs rollback <snapshot>`; the log prints the name).
+2. **Code**: edit the app's YAML and change `:latest` to `:<previous commit sha>`
+   (every build is also tagged with its commit), then save. Switch back to
+   `:latest` once the fix is released.
+
+Do both together if an update ran a database migration you need to undo.
+
+## 7. Remote access (Cloudflare Tunnel)
+
+Install **Cloudflared** from Apps → Discover with your tunnel token, and in the
+Cloudflare dashboard point the public hostname (e.g. `nameplaceholder.brjlabs.com`) at
+`http://<nas-ip>:30080`.
+
+**Until accounts and invitations ship, don't leave the hostname open.** Login is
+still name + PIN and the login page lists members' names. In the meantime, put
+a Cloudflare Access application in front of the hostname (Zero Trust → Access →
+Applications) that only lets in the email addresses you list.
+
+## 8. Wall display (iPad)
 
 Open `http://<nas-ip>:30080/wall` in Safari, log in once (the session lasts
 `AUTH_SESSION_DAYS`, default 30), then Share → Add to Home Screen and open it
@@ -60,26 +141,15 @@ refreshes itself every minute.
 Phones: open the app in the browser and Add to Home Screen; it installs as an
 app with an icon and keeps the last-loaded pages available offline.
 
-## 5. Updating
-
-Push the new commits into the folder (`git push nas main` from the Mac) and
-press **Update** on the app, or run `deploy/update.sh` on the NAS. Migrations
-apply on first start; the volume is untouched. Snapshot the dataset first for a
-one-click rollback.
-
-## 6. Where things live on the volume
+## 9. Where things live on the volume
 
 ```
-/data/db/utilities.sqlite   the database (WAL files beside it)
-/data/inbox/YYYY/MM/…       raw emails, PDFs and uploads, never deleted
-/data/config/imap-state.json  last processed mailbox UID
+/data/db/utilities.sqlite          the database (WAL files beside it)
+/data/inbox/YYYY/MM/…              raw emails, PDFs and uploads, never deleted
+/data/config/imap-state.json       last processed mailbox UID
+/data/config/update-request.json   present only while an update is queued
+/data/config/update-last.json      the last update request (shown in Settings)
 ```
 
 Exports: Ledger → "Download statement" gives a per-member CSV; the owner can
 also download every bill from the same endpoint (`/api/export?kind=bills`).
-
-## 7. Security notes
-
-The app is meant for a LAN. It has no HTTPS of its own and PIN login is
-household-grade. For remote access, put it behind Tailscale or a reverse proxy
-with TLS rather than exposing the port to the internet.

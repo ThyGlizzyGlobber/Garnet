@@ -15,17 +15,19 @@ _Last updated 2026-09-26._ Prototype 1 scope is fully built: Phases 0–4 plus t
 visual system v2 restyle. Latest commit is on `main` in both checkouts.
 
 - **Where the code lives.** Primary working copy: `/Users/bejaysmith/Desktop/Home Utilities Software (Prototype-1) 03.48.04`
-  (local SSD, fast). Mirror on the NAS share: `/Volumes/Bejay/BRJ Labs/Home Utilities Software (Prototype-1)`,
-  reachable as git remote `nas`; it accepts pushes into its working tree. Release flow: commit → `git push nas main`
-  → press Update on the TrueNAS app (see `deploy/` and DEPLOY.md). The NAS checkout's `node_modules` is stale; run `npm ci` there before using it directly.
+  (local SSD, fast). GitHub (`origin`, private) is the release source: every push to `main` runs
+  `.github/workflows/release.yml` (check → image → `ghcr.io/thyglizzyglobber/home-utilities:latest` + `:<sha>`),
+  and Settings → Software update applies it on the NAS via `deploy/nas-updater.sh` (cron). See DEPLOY.md.
+  The old NAS-share checkout (`/Volumes/Bejay/BRJ Labs/…`, remote `nas`) is no longer part of the release flow.
 - **Running locally.** `npm run build && DATA_DIR="$PWD/data-demo" DEMO_MODE=true PORT=3462 node --env-file-if-exists=.env .next/standalone/server.js`
   gives the fictional demo (log in as Alex, PIN 1234). `data/` holds the owner's real Smith Household with four Aussie Broadband invoices.
   The desktop app's browser preview tool is bound to the NAS folder, so run the server yourself and `navigate` to it.
 - **Verified.** Unit tests (73), typecheck, lint, production build, Docker image (arm64 and amd64 build; runs with health, migrations, demo seed, in-container PDF parse), every screen in both themes at 1280 px, the paged setup wizard end to end, exit-demo, CSV export, review-queue approval, duplicate detection, template parser on all four real invoices.
-- **Not yet verified live.** The Anthropic extractor and the IMAP poller (no `ANTHROPIC_API_KEY` or IMAP credentials in `.env`); the actual TrueNAS deployment (YAML app not yet installed on the NAS).
+- **Not yet verified live.** The Anthropic extractor and the IMAP poller (no `ANTHROPIC_API_KEY` or IMAP credentials in `.env`); the actual TrueNAS deployment (YAML app not yet installed on the NAS; target TrueNAS 25.10.7, data at `/mnt/SSD/AppData/home-utilities/data`); the release workflow's first real run on GitHub. The self-update loop was verified locally with stubbed `zfs`/`midclt`.
 - **Design.** BRAND.md is the reference. Owner rejected the first restyle as boring; v2 (blob scene, frosted window, instrument tiles, single trend line charts) is approved direction. Owner prefers muted décor palettes, no green accent, no photo backdrops. Mockup canvas: https://claude.ai/artifact/BzeEmm3c16cbvCdTTtGmh4.
 - **Open questions for the owner.** Product name (BRAND.md lists Homebill / Housekeep / Tally); whether the display type should have more character than Outfit; brand mark.
-- **Likely next steps.** Install the YAML app on TrueNAS and run through DEPLOY.md; add mailbox + API key and exercise ingestion on real email; start the household alpha; Members and Settings pages have not had the v2 instrument treatment (they use the shared primitives, so they look consistent but plain); PDF statements and push reminders are roadmap.
+- **Agreed direction (2026-09-26, owner).** Hosted multi-household on the owner's NAS behind a Cloudflare Tunnel (`nameplaceholder.brjlabs.com`, name TBD). Open sign-up: a new account chooses Create a household or Join one (paste a code, or accept an emailed invite). Household admin invites members by email + copyable link; members sign in with Google or an emailed one-time code, then set their own PIN, which only they can change (PIN = quick unlock on an already-signed-in device). Invite/code email via a sending service on brjlabs.com (e.g. Resend). Bills: per-household forwarding address on the owner's domain via Cloudflare Email Routing + Email Worker, plus in-app PDF upload; provider APIs (CDR) stay roadmap. An operator role (owner of the install) is separate from household admins; Software update becomes operator-only. Per-household monthly cap on AI extraction. SCOPE.md §2/§7/§9 must be rewritten to match before building (owner approved).
+- **Likely next steps.** Push `main` to GitHub, install the YAML app on TrueNAS and run through DEPLOY.md; then stage 1 multi-household (household_id on every table, scoped queries), stage 2 accounts + invites + Google/email-code + PIN, stage 3 internet hardening (secure cookies, rate limits, no member list on login), stage 4 per-household bills address + upload; add mailbox + API key and exercise ingestion on real email; start the household alpha; Members and Settings pages have not had the v2 instrument treatment (they use the shared primitives, so they look consistent but plain); PDF statements and push reminders are roadmap.
 
 ## Hard constraints
 
@@ -75,7 +77,7 @@ visual system v2 restyle. Latest commit is on `main` in both checkouts.
 Next.js 16 (App Router, Turbopack) · TypeScript 5 strict · Tailwind v4 · Recharts ·
 Drizzle ORM + better-sqlite3 · next-intl · Vitest · ESLint 9 + Prettier ·
 iron-session + bcryptjs · imapflow + mailparser + pdf-parse · @anthropic-ai/sdk ·
-Docker multi-stage on node:22-bookworm-slim with Next standalone output, built on the NAS from the repo checkout (`deploy/`).
+Docker multi-stage on node:22-bookworm-slim with Next standalone output, built by GitHub Actions and published to GHCR (`deploy/`).
 
 ## Commands
 
@@ -88,7 +90,7 @@ Docker multi-stage on node:22-bookworm-slim with Next standalone output, built o
 - `npm run db:seed` — load the four real Aussie Broadband invoices into the existing household (creates a dev household + owner PIN 1234 if none)
 - `npm run db:seed:demo` — create the fictional "Riverside House" demo household (also runs automatically when `DEMO_MODE=true`)
 - `npm run extract:dry-run -- <file...>` — run the extractor pipeline on bill files, no DB writes (`--llm` forces the AI extractor, `--json` for machine output)
-- `docker build -t brjlabs/home-utilities:local .` — build the image locally; production builds happen on the NAS via `deploy/truenas-app.yaml`
+- `docker build -t brjlabs/home-utilities:local .` — build the image locally; production images come from `.github/workflows/release.yml` (GHCR)
 
 ## Layout
 
@@ -130,7 +132,7 @@ sample-bills/       real bills for seeding + extraction tests (gitignored)
   installs there take ~35 min and builds ~8 min, and Turbopack's persistent cache is
   disabled because SMB rejects fsync. Don't delete either checkout without asking.
 - Node 22 via Homebrew (`node@22`, linked). Docker Desktop is installed on the Mac
-  (`docker buildx` available); production images are built on the NAS from the repo.
+  (`docker buildx` available); production images are built by GitHub Actions.
 - Real bill PDFs live in `sample-bills/` (gitignored); `pdftotext` is available locally.
 - Local test servers: use port 3462 with an absolute `DATA_DIR`; the standalone
   server chdirs into `.next/standalone`.
@@ -207,3 +209,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - 2026-09-24 — Charts simplified to match the references: one smooth trend line per chart (`TrendLine`) with gradient area, glow, point dots, a callout on the latest value and a data-fitted axis; service breakdown lives in the ranking and tooltip, not stacked layers. Stacked bars/areas and the legend component removed. Sparklines gained a glow and end dot.
 - 2026-09-24 — Theme override: Settings → Appearance sets a per-browser cookie (`hud_theme` auto|light|dark) applied as `data-theme` on <html>; dark tokens apply via the media query unless light is forced. Exit demo: owner-only; wipes all household rows (catalog stays), writes `config/demo-off.json` so the seeder stays off, and opens the setup wizard. Demo data is flagged by `config/demo.json`.
 - 2026-09-24 — Setup wizard is paged (Household → Region → Your account) inside one form: only the active page renders visibly, Next runs native validation on that page, server field errors jump to the owning page. ActionForm gained `hideSubmit` for wizards.
+- 2026-09-26 — Release flow moves to GitHub: Actions runs `npm run check`, builds linux/amd64 and pushes `ghcr.io/thyglizzyglobber/home-utilities` `:latest` + `:<sha>` with `APP_COMMIT`/`APP_BUILT_AT` stamped in. Replaces building from the NAS checkout (`deploy/update.sh` removed) — the owner wants a Settings Update button driven by GitHub pushes, and a prebuilt image makes updates a pull instead of a rebuild.
+- 2026-09-26 — Self-update via a request file, not a NAS API key: Settings → Software update writes `config/update-request.json`; a root cron job on TrueNAS (`deploy/nas-updater.sh`) deletes it, snapshots the data dataset, runs `midclt call -j app.pull_images home-utilities '{"redeploy": true}'` and keeps the last 10 pre-update snapshots. The app will be internet-facing, so it must never hold credentials that can control the NAS. The script lives outside the container-writable dataset and never reads the request's contents.
+- 2026-09-26 — Update check reads the latest successful `release.yml` run on `main` (so it only offers commits whose image exists) and GitHub's compare API for the commit list, using a fine-grained read-only token (`UPDATE_GITHUB_TOKEN`); cached 2 minutes. Without a token the button still installs `:latest`.
+- 2026-09-26 — `/api/health` reports `commit` and `builtAt` and no longer returns the data directory path (it will be reachable from the internet).

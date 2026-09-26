@@ -325,6 +325,28 @@
       "body": "This household is the fictional demo. Exiting deletes every demo member, service and bill on this server and opens the setup wizard for your real household. Demo data will not be re-created, even with DEMO_MODE still set.",
       "exit": "Exit demo mode",
       "confirm": "Delete the demo household and start real setup? This cannot be undone."
+    },
+    "update": {
+      "title": "Software update",
+      "version": "Running version",
+      "devBuild": "Running a local development build.",
+      "current": "You're on the latest version.",
+      "available": "{count, plural, one {# update available} other {# updates available}}",
+      "availableUnknown": "Latest release: {sha}",
+      "more": "and {count} more",
+      "howItWorks": "The NAS snapshots your data, downloads the new version and restarts the app. It's back in about two minutes.",
+      "updateNow": "Update now",
+      "updateAnyway": "Install latest release",
+      "confirm": "Update now? The app restarts and is unavailable for about two minutes.",
+      "checkAgain": "Check again",
+      "unconfigured": "Update checks need UPDATE_REPO and UPDATE_GITHUB_TOKEN. You can still install the latest release.",
+      "error": "Couldn't check for updates: {message}",
+      "queued": "Update requested. Waiting for the NAS to pick it up (within a minute)…",
+      "applying": "The NAS is downloading and installing the update…",
+      "restarting": "Restarting…",
+      "slow": "This is taking longer than usual. Check the updater cron job and update.log on the NAS.",
+      "cancel": "Cancel request",
+      "done": "Updated from {from} ({date})."
     }
   },
   "health": {
