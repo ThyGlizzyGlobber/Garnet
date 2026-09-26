@@ -25,7 +25,7 @@ request file; the host decides what to do with it.
 
 ## 1. Datasets
 
-Storage → Datasets → select `SSD/AppData` → **Add Dataset**:
+Datasets → select the pool `SSD` → **Add Dataset** (a dataset can only be created inside another dataset, not inside a plain folder):
 
 1. `home-utilities` (preset **Generic**). Parent for everything below. Stays root-owned.
 2. Inside it, `data` (preset **Generic**). Mounted into the container as `/data`.
@@ -33,8 +33,8 @@ Storage → Datasets → select `SSD/AppData` → **Add Dataset**:
 Then in **System → Shell**:
 
 ```bash
-chown -R 1001:1001 /mnt/SSD/AppData/home-utilities/data
-mkdir -p /mnt/SSD/AppData/home-utilities/updater
+chown -R 1001:1001 /mnt/SSD/home-utilities/data
+mkdir -p /mnt/SSD/home-utilities/updater
 ```
 
 The container runs as UID/GID **1001** and only ever sees the `data` dataset.
@@ -44,13 +44,13 @@ of the container's reach, because root runs the script inside it.
 Resulting layout:
 
 ```
-/mnt/SSD/AppData/home-utilities/
+/mnt/SSD/home-utilities/
   data/          dataset, owner 1001 → /data  (db/, inbox/, config/)
   updater/       root only: nas-updater.sh + update.log
 ```
 
 Data Protection → **Periodic Snapshot Tasks** → add one for
-`SSD/AppData/home-utilities/data` (e.g. daily, keep 2 weeks). The updater also
+`SSD/home-utilities/data` (e.g. daily, keep 2 weeks). The updater also
 takes its own `pre-update-…` snapshot before every update and keeps the last 10.
 
 Optional, to bring the existing household over from the Mac: stop the app,
@@ -90,18 +90,18 @@ running commit.
 
 ## 5. The updater cron job
 
-1. Copy `deploy/nas-updater.sh` to `/mnt/SSD/AppData/home-utilities/updater/nas-updater.sh`.
-   In System → Shell, run `cat > /mnt/SSD/AppData/home-utilities/updater/nas-updater.sh`,
+1. Copy `deploy/nas-updater.sh` to `/mnt/SSD/home-utilities/updater/nas-updater.sh`.
+   In System → Shell, run `cat > /mnt/SSD/home-utilities/updater/nas-updater.sh`,
    paste the file's contents, then press Ctrl-D.
 2. System → Advanced Settings → **Cron Jobs** → Add:
    - Description: `Home Utilities updater`
-   - Command: `sh /mnt/SSD/AppData/home-utilities/updater/nas-updater.sh`
+   - Command: `sh /mnt/SSD/home-utilities/updater/nas-updater.sh`
    - Run As User: `root`
    - Schedule: Custom, every minute (`* * * * *`)
    - Hide Standard Output and Hide Standard Error: on
 
 The script defaults to app `home-utilities` and dataset
-`SSD/AppData/home-utilities/data`. Override with `APP_NAME=… DATASET=… sh …`
+`SSD/home-utilities/data`. Override with `APP_NAME=… DATASET=… sh …`
 in the command if you change either. Its log is `updater/update.log`.
 
 Test it: Settings → Software update → **Update now** (or "Install latest

@@ -15,7 +15,7 @@ services:
       - '30080:3000'
     volumes:
       # Child dataset owned by UID/GID 1001. Holds db/, inbox/ and config/.
-      - /mnt/SSD/AppData/home-utilities/data:/data
+      - /mnt/SSD/home-utilities/data:/data
     environment:
       DATA_DIR: /data
       AUTH_SECRET: '<openssl rand -base64 48>'

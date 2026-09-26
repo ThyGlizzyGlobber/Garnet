@@ -15,7 +15,7 @@ set -u
 PATH=/usr/sbin:/usr/bin:/sbin:/bin
 
 APP_NAME="${APP_NAME:-home-utilities}"
-DATASET="${DATASET:-SSD/AppData/home-utilities/data}"
+DATASET="${DATASET:-SSD/home-utilities/data}"
 KEEP="${KEEP:-10}"
 LOG="${LOG:-$(dirname "$0")/update.log}"
 REQUEST="/mnt/$DATASET/config/update-request.json"
