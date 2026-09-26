@@ -42,7 +42,10 @@ visual system v2 restyle. Latest commit is on `main` in both checkouts.
   It sits behind `SettlementAdapter` so a pooling service can plug in later.
 - Raw bill emails/PDFs are stored permanently as an audit trail. Every extracted
   Bill links back to its source file.
-- LAN-only alpha: member auth is name + PIN/password. No public exposure.
+- Internet-facing through a Cloudflare Tunnel. Several households on one install;
+  every household-owned row carries `household_id` and every query is scoped to it.
+  Sign-in is Google OAuth or an emailed one-time code; a member's own PIN only
+  unlocks an already-signed-in device. Admins never set or see members' PINs.
 - Never commit secrets. `.env` is gitignored; `.env.example` documents every var.
 - `sample-bills/` contains real personal data: gitignored and dockerignored.
 - UI: Tailwind + Recharts, clean Apple-like design, fully responsive (phone + iPad).
@@ -51,7 +54,7 @@ visual system v2 restyle. Latest commit is on `main` in both checkouts.
 
 ## International-ready (applies from Phase 0)
 
-- One `household` settings row: currency (ISO 4217), locale (BCP 47), IANA timezone,
+- Each `household` row holds its settings: currency (ISO 4217), locale (BCP 47), IANA timezone,
   fiscal-year start month, week start. All formatting and period math reads from it.
 - Money is integer minor units + currency code on every monetary record. Display
   only via `Intl.NumberFormat` (`src/lib/format.ts`). Tax amount/label is optional
@@ -216,3 +219,5 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - 2026-09-26 — `/api/health` reports `commit` and `builtAt` and no longer returns the data directory path (it will be reachable from the internet).
 - 2026-09-26 — NAS install uses the guided Custom App form with an ixVolume for `/data` (ACL entry for the container user), not a hand-made dataset — owner wants the app's data stored with the other apps' data. `nas-updater.sh` looks up the dataset's mountpoint (ixVolumes mount under `/mnt/.ix-apps`) and lives in the plain folder `/mnt/SSD/AppData`, outside anything the container can write. The YAML/host-path install stays as the documented alternative.
 - 2026-09-26 — Container user is UID/GID 568 (`apps`), replacing 1001 — 568 is TrueNAS SCALE's built-in apps user, so the ixVolume carries the same owner as the NAS's other apps. Changed before the first NAS install, so no data needed re-owning.
+- 2026-09-26 — SCOPE.md rewritten (owner approved): several households on one install, open sign-up (Create or Join a household), invites by email + link/code, Google or email-code sign-in then a member-set PIN, roles member / household admin / operator, per-household bills address via Cloudflare Email Routing, PDF upload, per-household AI cap, internet access via Cloudflare Tunnel. Supersedes the LAN-only + name/PIN auth + single-household constraints. Build order: stage 1 multi-household data model, stage 2 accounts + invites, stage 3 internet hardening, stage 4 bills address + upload.
+- 2026-09-26 — Accounts and members are separate records: an invited member exists (and gets shares) before anyone accepts; accepting links an account to that member. Keeps splits independent of sign-up, and leaves room for one account in several households later.
