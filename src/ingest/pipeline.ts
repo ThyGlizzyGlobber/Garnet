@@ -1,9 +1,10 @@
 import { and, eq } from 'drizzle-orm';
 import { getDb, type Db } from '@/db/client';
-import { bill, type SourceDocument } from '@/db/schema';
+import { account, bill, type SourceDocument } from '@/db/schema';
 import { createBill, type BillDetail } from '@/lib/bills';
 import { getEnv } from '@/lib/env';
 import { getHousehold } from '@/lib/households';
+import { listMembers } from '@/lib/members';
 import { getService, listServices, listServiceTypes, updateService } from '@/lib/services';
 import { getDocument, readDocument, setDocumentStatus } from './archive';
 import { fallbackExtractors, templateExtractors } from './extractors';
@@ -22,7 +23,13 @@ import { classifyNotice, classifySubject, looksLikeBill, type NoticeKind } from 
 import { senderMatchesProvider } from '@/lib/provider-match';
 import { billForNotice, setBillAlert, clearBillAlert, setBillPaidToProvider } from '@/lib/bills';
 import { todayIn } from '@/lib/dates';
-import { notifyBillAlert, notifyBillCreated, notifyInBackground } from '@/lib/notifications';
+import {
+  notifyBillAlert,
+  notifyBillCreated,
+  notifyInBackground,
+  notifyServiceCreated,
+} from '@/lib/notifications';
+import { serviceForNewProvider } from '@/lib/auto-service';
 
 export interface PipelineOutcome {
   documentId: string;
@@ -213,10 +220,20 @@ export async function processDocument(
     );
     return { documentId: doc.id, status: 'needs_review', reason: 'low-confidence', result: best };
   }
-  const serviceId =
+  let serviceId =
     best.bill.serviceId && getService(householdId, best.bill.serviceId, db)
       ? best.bill.serviceId
       : matchService(householdId, best, db);
+  let newService: string | null = null;
+  if (!serviceId) {
+    // No service for this provider yet: set one up from the bill, when the
+    // document may (an upload, a member's forward, or the provider's own signed mail).
+    const setup = autoServiceFor(householdId, doc, best.bill, db);
+    if (setup) {
+      serviceId = setup.service.id;
+      if (setup.created) newService = setup.service.id;
+    }
+  }
   if (!serviceId) {
     store('needs_review', `No service matches provider "${best.bill.provider}"`, best, attempts);
     return { documentId: doc.id, status: 'needs_review', reason: 'no-service', result: best };
@@ -299,6 +316,7 @@ export async function processDocument(
   const created = createBillFromExtraction(householdId, best, serviceId, doc.id, db);
   store('extracted', `Created bill via ${best.extractor}`, best, attempts);
   applyPaymentHints(householdId, serviceId, best.bill, db);
+  if (newService) notifyInBackground(notifyServiceCreated(householdId, newService, { db }));
   try {
     await notifyBillCreated(householdId, created.id, { db });
   } catch (e) {
@@ -328,6 +346,15 @@ export function matchService(
       s.provider.toLowerCase().includes(p),
   );
   if (byProvider.length === 1) return byProvider[0]!.id;
+  if (byProvider.length > 1) {
+    // One provider, several services (gas and electricity): tell them apart by type.
+    const both = byProvider.filter((s) => s.typeSlug === result.bill.serviceType);
+    return both.length === 1 ? both[0]!.id : null;
+  }
+  // A named provider with no service is a new provider (set up automatically),
+  // not the household's other service of the same type: after switching
+  // retailers, the new one's bills must not land on the old service.
+  if (p.trim()) return null;
   const byType = services.filter((s) => s.typeSlug === result.bill.serviceType);
   return byType.length === 1 ? byType[0]!.id : null;
 }
@@ -632,4 +659,38 @@ function applyDocument(
   }
   const kind = DOCUMENT_NOTICE[info.kind] ?? 'payment_received';
   return applyNotice(householdId, doc, kind, text, store, db, provider);
+}
+
+/**
+ * Who may set up a new service from a bill, and with what: uploads (the payer
+ * defaults to the admin), a member's forward (they're the payer), or signed
+ * mail from a domain that plainly is the provider's (remembered as trusted).
+ * A stranger's mail never creates a service.
+ */
+function autoServiceFor(
+  householdId: string,
+  doc: SourceDocument,
+  bill: ExtractionResult['bill'],
+  db: Db,
+) {
+  if (doc.senderVerified === null) return serviceForNewProvider(householdId, bill, {}, db);
+  if (!doc.senderVerified) return null;
+  const address = addressOf(doc.emailFrom);
+  if (address && householdEmails(householdId, db).has(address)) {
+    const payer = listMembers(householdId, db).find(
+      (m) => m.email === address || memberAccountEmail(m.accountId, db) === address,
+    );
+    return serviceForNewProvider(householdId, bill, { payerMemberId: payer?.id ?? null }, db);
+  }
+  if (!isFreemail(doc.senderDomain) && senderMatchesProvider(doc.senderDomain, bill.provider))
+    return serviceForNewProvider(householdId, bill, { trustedDomain: doc.senderDomain }, db);
+  return null;
+}
+
+function memberAccountEmail(accountId: string | null, db: Db): string | null {
+  if (!accountId) return null;
+  return (
+    db.select({ email: account.email }).from(account).where(eq(account.id, accountId)).get()
+      ?.email ?? null
+  );
 }

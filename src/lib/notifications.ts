@@ -22,6 +22,7 @@ import { formatDate, formatMoney } from '@/lib/format';
 import { getHousehold, listHouseholds } from '@/lib/households';
 import { ulid } from '@/lib/ids';
 import { getMember, listMembers } from '@/lib/members';
+import { getService } from '@/lib/services';
 import { daysUntil } from '@/lib/periods';
 
 /**
@@ -258,6 +259,50 @@ export async function notifyBillCreated(
   for (const r of recipients) {
     if (r.m.id === opts.except) continue;
     if (await sendOnce(hh, r.m, 'bills', 'new_bill', b.id, r.build, db)) sent++;
+  }
+  return sent;
+}
+
+/** A service was set up automatically from its first bill: ask the admins to check it. */
+export async function notifyServiceCreated(
+  householdId: string,
+  serviceId: string,
+  opts: { db?: Db } = {},
+): Promise<number> {
+  const db = opts.db ?? getDb();
+  const hh = getHousehold(householdId, db);
+  const svc = hh ? getService(householdId, serviceId, db) : null;
+  if (!hh || !svc) return 0;
+  const payer = svc.payerMemberId ? getMember(householdId, svc.payerMemberId, db) : null;
+  const vars = {
+    service: svc.name,
+    provider: svc.provider,
+    payer: payer?.name ?? t('serviceCreated.nobody'),
+  };
+  let sent = 0;
+  for (const m of listMembers(householdId, db).filter((x) => x.role === 'owner')) {
+    const ok = await sendOnce(
+      hh,
+      m,
+      'bills',
+      'service_created',
+      svc.id,
+      () => ({
+        subject: t('serviceCreated.subject', vars),
+        blocks: [
+          { p: t('serviceCreated.intro', vars) },
+          { p: t('serviceCreated.check', vars) },
+          {
+            button: {
+              label: t('serviceCreated.open'),
+              href: `${appUrl()}/services/${svc.id}/edit`,
+            },
+          },
+        ],
+      }),
+      db,
+    );
+    if (ok) sent++;
   }
   return sent;
 }

@@ -212,6 +212,16 @@ readings change nothing. Built-in readers (Aussie Broadband) still run first
 because they're free and instant. Model: `ANTHROPIC_MODEL` (default
 `claude-opus-5`); reads count toward `AI_MONTHLY_LIMIT`.
 
+**New providers set themselves up.** When a readable bill arrives from a
+provider the household has no service for, the service is created from the
+bill (type, name, billing frequency, account number, auto-pay), paid by the
+member who forwarded it or otherwise the admin, split equally, and the admins
+get a "New service" email asking them to check the payer and split. This only
+happens for uploads, member forwards, and signed mail from the provider's own
+domain (which is then trusted for that service); a stranger's mail still goes
+to review. A cancelled service for the same provider is switched back on
+instead of duplicated.
+
 **Paid to the provider, without anyone ticking it.** A payment receipt (Aussie
 Broadband's "PAYMENT RECEIPT" PDF) marks the invoices it names as paid on the
 receipt's date and clears any flag. Each new invoice's "Last Month … Payment

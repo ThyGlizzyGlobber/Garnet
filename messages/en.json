@@ -898,6 +898,13 @@
       "problems": "Payment problems (failed or overdue)",
       "save": "Save",
       "noEmail": "You'll need to join with an account before emails can be sent to you."
+    },
+    "serviceCreated": {
+      "subject": "New service: {service} ({provider})",
+      "intro": "A bill from {provider} arrived, so {service} was set up as a new service and the bill was added.",
+      "check": "Please check who pays it (currently {payer}) and how it's split between everyone.",
+      "open": "Check the service",
+      "nobody": "nobody"
     }
   }
 }
