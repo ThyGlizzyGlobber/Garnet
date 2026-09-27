@@ -247,7 +247,9 @@
         "equal": "Equal",
         "weighted": "By member weight",
         "custom": "Custom weights"
-      }
+      },
+      "trustedSenders": "Trusted bill senders",
+      "trustedSendersHint": "Email domains whose signed bills are added automatically, e.g. provider.com.au. Bills from anyone else wait in the review queue."
     },
     "nextBill": "Next bill about {amount} · due {date}",
     "noHistory": "No bills yet",
@@ -643,7 +645,9 @@
       "dueDate": "Due date",
       "usageQuantity": "Usage",
       "usageUnit": "Unit",
-      "notes": "Notes"
+      "notes": "Notes",
+      "trustSender": "Trust future bills from {domain} for this service",
+      "trustSenderHint": "The email was signed by {domain}, so its next bills can be added without asking."
     }
   },
   "upload": {
@@ -790,7 +794,8 @@
     "replace": "Get a new address",
     "replaceConfirm": "Replace the address? The current one stops working immediately, so update any provider that uses it.",
     "short": "Bills can also be emailed to {address}",
-    "howForwardToMe": "Want provider emails (like password resets) in your own inbox too? Turn on forwarding on your member page."
+    "howForwardToMe": "Want provider emails (like password resets) in your own inbox too? Turn on forwarding on your member page.",
+    "howTrust": "The first bill from each provider waits in the review queue once. Tick \"Trust future bills\" when you add it, and that provider's next bills arrive by themselves."
   },
   "forward": {
     "title": "Forward emails to me",

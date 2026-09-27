@@ -156,6 +156,11 @@ export const service = sqliteTable(
     payerMemberId: text('payer_member_id').references(() => member.id, { onDelete: 'set null' }),
     colour: text('colour').notNull().default('#0a84ff'),
     isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
+    /**
+     * Email domains whose signed bills may become bills automatically, e.g.
+     * ["aussiebroadband.com.au"]. Learned from the review queue; editable.
+     */
+    trustedSenders: text('trusted_senders', { mode: 'json' }).$type<string[]>().notNull().default([]),
     notes: text('notes'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
@@ -201,6 +206,10 @@ export const sourceDocument = sqliteTable(
     emailFrom: text('email_from'),
     emailSubject: text('email_subject'),
     emailMessageId: text('email_message_id'),
+    /** From-address domain for mail that arrived at a household bills address; null otherwise. */
+    senderDomain: text('sender_domain'),
+    /** A valid DKIM signature aligned with the From domain (checked by the app). */
+    senderVerified: integer('sender_verified', { mode: 'boolean' }),
     status: text('status', { enum: DOCUMENT_STATUSES }).notNull().default('unprocessed'),
     /** Raw extractor output kept for the review queue and re-parse. */
     extractionJson: text('extraction_json'),

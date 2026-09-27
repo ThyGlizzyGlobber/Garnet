@@ -18,6 +18,7 @@ export interface ServiceFormValues {
   colour: string;
   isActive: boolean;
   notes: string;
+  trustedSenders: string;
   customSplits: Record<string, number>;
 }
 
@@ -138,6 +139,14 @@ export function ServiceForm({
             </div>
             <Field label={t('notes')}>
               <Textarea name="notes" defaultValue={initial.notes} />
+            </Field>
+            <Field label={t('trustedSenders')} hint={t('trustedSendersHint')}>
+              <Input
+                name="trustedSenders"
+                defaultValue={initial.trustedSenders}
+                placeholder="provider.com.au"
+                autoComplete="off"
+              />
             </Field>
             {initial.id && (
               <label className="flex items-center gap-3 text-sm font-medium">

@@ -42,19 +42,26 @@ beforeAll(() => {
     },
     db,
   ).id;
-  a = createMember(hid, { name: 'A', pinHash: 'x', role: 'owner', activeFrom: '2025-01-01' }, db).id;
+  a = createMember(
+    hid,
+    { name: 'A', pinHash: 'x', role: 'owner', activeFrom: '2025-01-01' },
+    db,
+  ).id;
   b = createMember(hid, { name: 'B', pinHash: 'x', activeFrom: '2025-01-01' }, db).id;
-  net = createService(hid,
+  net = createService(
+    hid,
     { typeSlug: 'internet', name: 'Internet', provider: 'P', payerMemberId: a },
     db,
   ).id;
-  power = createService(hid,
+  power = createService(
+    hid,
     { typeSlug: 'electricity', name: 'Power', provider: 'Q', payerMemberId: b, usageUnit: 'kWh' },
     db,
   ).id;
   // Monthly internet, $100 each, Jul–Sep 2026.
   for (const m of ['2026-07', '2026-08', '2026-09']) {
-    createBill(hid,
+    createBill(
+      hid,
       {
         serviceId: net,
         amountMinor: 10000,
@@ -69,7 +76,8 @@ beforeAll(() => {
     );
   }
   // Quarterly power Jul–Sep 2026 $300 → $100/month accrued.
-  createBill(hid,
+  createBill(
+    hid,
     {
       serviceId: power,
       amountMinor: 30000,
@@ -132,7 +140,8 @@ describe('ledger', () => {
 
 describe('anomaly flag on create', () => {
   it('flags a bill far above the prior median', () => {
-    const big = createBill(hid,
+    const big = createBill(
+      hid,
       {
         serviceId: net,
         amountMinor: 20000,
@@ -146,7 +155,8 @@ describe('anomaly flag on create', () => {
     );
     expect(big.isAnomaly).toBe(true);
     expect(getBill(hid, big.id, db)?.anomalyNote).toMatch(/100% above/);
-    const normal = createBill(hid,
+    const normal = createBill(
+      hid,
       {
         serviceId: net,
         amountMinor: 10000,

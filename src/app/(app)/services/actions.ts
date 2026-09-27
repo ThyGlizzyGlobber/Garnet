@@ -1,5 +1,6 @@
 'use server';
 
+import { parseSenderList } from '@/lib/sender-auth';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
@@ -66,6 +67,7 @@ function read(householdId: string, fd: FormData): ReadResult {
       colour: v.colour,
       isActive: v.isActive,
       notes: v.notes || null,
+      trustedSenders: parseSenderList(str(fd, 'trustedSenders')),
       customSplits,
     },
   };

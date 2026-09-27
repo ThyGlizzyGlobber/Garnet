@@ -24,6 +24,7 @@ import { createHousehold } from '@/lib/households';
 import { createMember } from '@/lib/members';
 import { resetRateLimits } from '@/lib/rate-limit';
 import { createService } from '@/lib/services';
+import { dkimKeys } from './helpers/dkim';
 
 const SECRET = 'f'.repeat(40);
 let dir: string;
@@ -101,6 +102,8 @@ function email(opts: { subject: string; body: string; extraHeaders?: string[]; p
   );
 }
 
+const keys = dkimKeys(['aussiebroadband.com.au']);
+
 async function deliver(to: string, body: Buffer) {
   const ts = String(Math.floor(Date.now() / 1000));
   return handleInboundEmail(
@@ -112,7 +115,7 @@ async function deliver(to: string, body: Buffer) {
       }),
       body,
     },
-    { db, waitForProcessing: true },
+    { db, waitForProcessing: true, resolver: keys.resolver },
   );
 }
 
@@ -231,7 +234,13 @@ describe('inbound mail is forwarded', () => {
     const { hh, m, address } = setup('Non Bills');
     createService(
       hh.id,
-      { typeSlug: 'internet', name: 'Internet', provider: 'Aussie Broadband', payerMemberId: m.id },
+      {
+        typeSlug: 'internet',
+        name: 'Internet',
+        provider: 'Aussie Broadband',
+        payerMemberId: m.id,
+        trustedSenders: ['aussiebroadband.com.au'],
+      },
       db,
     );
     setForward(
@@ -243,7 +252,15 @@ describe('inbound mail is forwarded', () => {
     const invoice = fs
       .readFileSync(path.join(process.cwd(), 'tests/fixtures/aussie-broadband.txt'), 'utf8')
       .replaceAll('59259831', '64444444');
-    await deliver(address, email({ subject: 'Your invoice', body: invoice }));
+    const signed = await keys.sign(
+      Buffer.from(
+        email({ subject: 'Your invoice', body: invoice })
+          .toString()
+          .replace('accounts@provider.example', 'billing@aussiebroadband.com.au'),
+      ),
+      'aussiebroadband.com.au',
+    );
+    await deliver(address, signed);
     await deliver(
       address,
       email({ subject: 'Your plan is changing', body: 'We are changing your plan next month.' }),

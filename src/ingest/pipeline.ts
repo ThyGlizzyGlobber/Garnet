@@ -10,6 +10,7 @@ import { fallbackExtractors, templateExtractors } from './extractors';
 import type { ExtractionInput, ExtractionResult, Extractor } from './extractors/types';
 import { extractText } from './text';
 import { aiAllowance, AI_READ, recordUsage } from '@/lib/usage';
+import { isTrustedSender } from '@/lib/sender-auth';
 
 export interface PipelineOutcome {
   documentId: string;
@@ -184,6 +185,31 @@ export async function processDocument(
         result: best,
         billId: dup.id,
       };
+    }
+  }
+  // Mail to a household bills address can come from anyone who learns it. Only a
+  // signed message from a sender trusted for this service becomes a bill by
+  // itself; everything else waits for one click in the review queue.
+  if (doc.senderVerified !== null) {
+    const svc = getService(householdId, serviceId, db)!;
+    const domain = doc.senderDomain ?? 'an unknown sender';
+    if (!doc.senderVerified) {
+      store(
+        'needs_review',
+        `Not added automatically: the email from ${domain} isn't signed in a way that proves it came from there`,
+        best,
+        attempts,
+      );
+      return { documentId: doc.id, status: 'needs_review', reason: 'unverified-sender', result: best };
+    }
+    if (!isTrustedSender(doc.senderDomain, svc.trustedSenders)) {
+      store(
+        'needs_review',
+        `First bill from ${domain} for ${svc.name}: check it once and trust the sender to read future bills automatically`,
+        best,
+        attempts,
+      );
+      return { documentId: doc.id, status: 'needs_review', reason: 'untrusted-sender', result: best };
     }
   }
   const created = createBillFromExtraction(householdId, best, serviceId, doc.id, db);

@@ -45,6 +45,7 @@ export default async function NewServicePage() {
           colour,
           isActive: true,
           notes: '',
+          trustedSenders: '',
           customSplits: {},
         }}
       />

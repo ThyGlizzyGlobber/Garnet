@@ -2,7 +2,7 @@
   "name": "home-utilities-dashboard",
   "version": "0.4.0",
   "private": true,
-  "description": "Self-hosted household utilities dashboard \u2014 BRJ Labs Prototype 1",
+  "description": "Self-hosted household utilities dashboard — BRJ Labs Prototype 1",
   "engines": {
     "node": ">=20.9.0"
   },
@@ -32,6 +32,7 @@
     "drizzle-orm": "^0.45.3",
     "imapflow": "^2.0.6",
     "iron-session": "^9.0.1",
+    "mailauth": "^7.1.0",
     "mailparser": "^3.9.28",
     "next": "^16.3.6",
     "next-intl": "^4.14.6",

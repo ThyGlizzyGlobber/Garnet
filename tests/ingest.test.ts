@@ -77,7 +77,8 @@ describe('archive + pipeline', () => {
       db,
     ).id;
     createMember(hid, { name: 'A', pinHash: 'x', role: 'owner', activeFrom: '2025-01-01' }, db);
-    net = createService(hid,
+    net = createService(
+      hid,
       { typeSlug: 'internet', name: 'Internet', provider: 'Aussie Broadband' },
       db,
     ).id;
@@ -89,7 +90,8 @@ describe('archive + pipeline', () => {
 
   it('archives a file under inbox/YYYY/MM and dedupes by content hash', () => {
     const buf = Buffer.from('hello bill');
-    const a = archiveDocument(hid,
+    const a = archiveDocument(
+      hid,
       {
         kind: 'upload',
         buffer: buf,
@@ -102,7 +104,8 @@ describe('archive + pipeline', () => {
     expect(a.duplicate).toBe(false);
     expect(a.doc.path.startsWith('2026/09/')).toBe(true);
     expect(readDocument(a.doc).toString()).toBe('hello bill');
-    const b = archiveDocument(hid,
+    const b = archiveDocument(
+      hid,
       { kind: 'upload', buffer: buf, originalFilename: 'again.txt', mimeType: 'text/plain' },
       db,
     );
@@ -112,7 +115,8 @@ describe('archive + pipeline', () => {
 
   it('routes a confident template result to a bill and blocks duplicates', async () => {
     const text = fs.readFileSync(path.join(__dirname, 'fixtures', 'aussie-broadband.txt'), 'utf8');
-    const doc = archiveDocument(hid,
+    const doc = archiveDocument(
+      hid,
       {
         kind: 'upload',
         buffer: Buffer.from(text),
@@ -130,7 +134,8 @@ describe('archive + pipeline', () => {
     expect(outcome.result?.bill.issueDate).toBe('2026-06-14');
     expect(getDocument(hid, doc.id, db)?.status).toBe('extracted');
     // Same invoice, different bytes → duplicate detection by invoice number.
-    const doc2 = archiveDocument(hid,
+    const doc2 = archiveDocument(
+      hid,
       {
         kind: 'upload',
         buffer: Buffer.from(text + '\n'),
@@ -145,7 +150,8 @@ describe('archive + pipeline', () => {
   });
 
   it('sends unreadable and unknown documents to review without the LLM configured', async () => {
-    const empty = archiveDocument(hid,
+    const empty = archiveDocument(
+      hid,
       {
         kind: 'upload',
         buffer: Buffer.from('x'),
@@ -155,7 +161,8 @@ describe('archive + pipeline', () => {
       db,
     ).doc;
     expect((await processDocument(hid, empty.id, db)).reason).toBe('no-text');
-    const unknown = archiveDocument(hid,
+    const unknown = archiveDocument(
+      hid,
       {
         kind: 'upload',
         buffer: Buffer.from(
@@ -192,10 +199,13 @@ describe('archive + pipeline', () => {
         },
       }),
     };
-    const { best, attempts } = await runExtractors(buildInput(hid, 'any text at all here', {}, db), {
-      extractors: [shaky],
-      threshold: 0.85,
-    });
+    const { best, attempts } = await runExtractors(
+      buildInput(hid, 'any text at all here', {}, db),
+      {
+        extractors: [shaky],
+        threshold: 0.85,
+      },
+    );
     expect(best?.confidence).toBe(0.5);
     expect(attempts).toHaveLength(1);
   });

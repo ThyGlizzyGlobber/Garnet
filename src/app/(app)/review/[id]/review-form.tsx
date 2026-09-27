@@ -14,6 +14,7 @@ export function ReviewForm({
   initial,
   noServiceMatch,
   providerHint,
+  trustSender,
 }: {
   documentId: string;
   services: { id: string; name: string; provider: string; usageUnit: string | null }[];
@@ -36,6 +37,8 @@ export function ReviewForm({
   >;
   noServiceMatch: boolean;
   providerHint: string | null;
+  /** Verified sender domain this bill came from, offered as "trust for this service". */
+  trustSender?: string | null;
 }) {
   const t = useTranslations('review.form');
   const [serviceId, setServiceId] = useState(initial.serviceId);
@@ -109,6 +112,22 @@ export function ReviewForm({
           <Field label={t('notes')}>
             <Textarea name="notes" defaultValue={initial.notes} />
           </Field>
+          {trustSender && (
+            <label className="flex items-start gap-3 text-sm font-medium">
+              <input
+                type="checkbox"
+                name="trustSender"
+                defaultChecked
+                className="mt-0.5 size-5 accent-accent"
+              />
+              <span>
+                {t('trustSender', { domain: trustSender })}
+                <span className="block text-xs font-normal text-fg-muted">
+                  {t('trustSenderHint', { domain: trustSender })}
+                </span>
+              </span>
+            </label>
+          )}
         </Card>
       )}
     </ActionForm>

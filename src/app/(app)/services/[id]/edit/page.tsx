@@ -49,6 +49,7 @@ export default async function EditServicePage({ params }: { params: Promise<{ id
           colour: s.colour,
           isActive: s.isActive,
           notes: s.notes ?? '',
+          trustedSenders: s.trustedSenders.join(', '),
           customSplits: getCustomSplits(hh.id, s.id),
         }}
       />

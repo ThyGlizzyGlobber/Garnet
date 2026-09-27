@@ -97,6 +97,8 @@ export interface ServiceInput {
   colour?: string;
   isActive?: boolean;
   notes?: string | null;
+  /** Email domains whose signed bills may be created automatically. */
+  trustedSenders?: string[];
   /** memberId → weight; replaces existing custom splits when provided. */
   customSplits?: Record<string, number>;
 }
@@ -135,6 +137,7 @@ export function createService(
       colour: rest.colour ?? '#0a84ff',
       isActive: rest.isActive ?? true,
       notes: rest.notes ?? null,
+      trustedSenders: rest.trustedSenders ?? [],
       createdAt: now,
       updatedAt: now,
     })

@@ -19,6 +19,10 @@ import {
 import { parseEnv, resetEnvCache } from '@/lib/env';
 import { createHousehold, getHousehold } from '@/lib/households';
 import { resetRateLimits } from '@/lib/rate-limit';
+import { listBills } from '@/lib/bills';
+import { createMember } from '@/lib/members';
+import { createService, updateService } from '@/lib/services';
+import { dkimKeys } from './helpers/dkim';
 import { listDocuments } from '@/lib/review';
 
 const SECRET = 's'.repeat(40);
@@ -305,5 +309,78 @@ describe('inbound deliveries', () => {
     expect(statuses).toEqual([202, 202, 429]);
     delete process.env.INBOUND_MAX_PER_HOUR;
     resetEnvCache();
+  });
+});
+
+describe('automatic bills from a bills address', () => {
+  const { resolver, sign } = dkimKeys(['aussiebroadband.com.au', 'attacker.example']);
+  const invoice = (ref: string, from = 'Aussie Broadband <billing@aussiebroadband.com.au>') =>
+    Buffer.from(
+      [
+        `From: ${from}`,
+        'To: x@bills.example.com',
+        'Subject: Your invoice',
+        `Message-ID: <${ref}@aussiebroadband.com.au>`,
+        'Content-Type: text/plain; charset=utf-8',
+        '',
+        fs
+          .readFileSync(path.join(process.cwd(), 'tests/fixtures/aussie-broadband.txt'), 'utf8')
+          .replaceAll('59259831', ref),
+      ].join('\r\n'),
+    );
+
+  function setup(name: string) {
+    const hh = household(name);
+    const owner = createMember(hh.id, { name: 'Jo', role: 'owner', activeFrom: '2026-01-01' }, db);
+    const svc = createService(
+      hh.id,
+      {
+        typeSlug: 'internet',
+        name: 'Internet',
+        provider: 'Aussie Broadband',
+        payerMemberId: owner.id,
+      },
+      db,
+    );
+    return { hh, svc, to: billsAddress(hh, db)! };
+  }
+  const reason = (hid: string, id: string) =>
+    (JSON.parse(getDocument(hid, id, db)!.extractionJson!) as { reason: string }).reason;
+
+  it('wait for review the first time, then arrive automatically once the sender is trusted', async () => {
+    const { hh, svc, to } = setup('Trust House');
+    const first = await sign(invoice('71111111'), 'aussiebroadband.com.au');
+    await handleInboundEmail(delivery(to, first), { db, waitForProcessing: true, resolver });
+    const [doc] = listDocuments(hh.id, {}, db);
+    expect(doc?.status).toBe('needs_review');
+    expect(doc?.senderDomain).toBe('aussiebroadband.com.au');
+    expect(doc?.senderVerified).toBe(true);
+    expect(reason(hh.id, doc!.id)).toMatch(/First bill from aussiebroadband\.com\.au/);
+    expect(listBills(hh.id, {}, db)).toHaveLength(0);
+
+    updateService(hh.id, svc.id, { trustedSenders: ['aussiebroadband.com.au'] }, db);
+    const next = await sign(invoice('72222222'), 'aussiebroadband.com.au');
+    const res = await handleInboundEmail(delivery(to, next), {
+      db,
+      waitForProcessing: true,
+      resolver,
+    });
+    expect(res.status).toBe(202);
+    expect(listBills(hh.id, {}, db).map((b) => b.externalRef)).toEqual(['72222222']);
+  });
+
+  it('never trust unsigned or spoofed mail, even from a trusted domain', async () => {
+    const { hh, svc, to } = setup('Spoof House');
+    updateService(hh.id, svc.id, { trustedSenders: ['aussiebroadband.com.au'] }, db);
+    await handleInboundEmail(delivery(to, invoice('73333333')), {
+      db,
+      waitForProcessing: true,
+      resolver,
+    });
+    const spoof = await sign(invoice('74444444'), 'attacker.example');
+    await handleInboundEmail(delivery(to, spoof), { db, waitForProcessing: true, resolver });
+    expect(listBills(hh.id, {}, db)).toHaveLength(0);
+    const reasons = listDocuments(hh.id, {}, db).map((d) => reason(hh.id, d.id));
+    expect(reasons.every((r) => /isn't signed/.test(r))).toBe(true);
   });
 });

@@ -119,6 +119,7 @@ export default async function ReviewItemPage({ params }: { params: Promise<{ id:
               }}
               noServiceMatch={!!r && !suggested}
               providerHint={r?.bill.provider ?? null}
+              trustSender={d.senderVerified ? d.senderDomain : null}
             />
           ) : (
             <Card className="text-sm text-fg-muted">{t('detail.alreadyBill')}</Card>

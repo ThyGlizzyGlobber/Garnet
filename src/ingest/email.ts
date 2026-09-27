@@ -20,12 +20,19 @@ export async function archiveEmail(
   source: Buffer,
   receivedAt: string,
   db: Db = getDb(),
+  sender?: { domain: string | null; verified: boolean },
 ): Promise<ArchivedEmail> {
   const parsed = await simpleParser(source);
   const from = parsed.from?.text ?? null;
   const subject = parsed.subject ?? null;
   const messageId = parsed.messageId ?? null;
-  const meta = { receivedAt, emailFrom: from, emailSubject: subject, emailMessageId: messageId };
+  const meta = {
+    receivedAt,
+    emailFrom: from,
+    emailSubject: subject,
+    emailMessageId: messageId,
+    ...(sender ? { senderDomain: sender.domain, senderVerified: sender.verified } : {}),
+  };
   const { doc: emailDoc, duplicate } = archiveDocument(
     householdId,
     {

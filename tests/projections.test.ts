@@ -94,9 +94,14 @@ describe('projectMonth + reminders', () => {
       },
       db,
     ).id;
-    a = createMember(hid, { name: 'A', pinHash: 'x', role: 'owner', activeFrom: '2025-01-01' }, db).id;
+    a = createMember(
+      hid,
+      { name: 'A', pinHash: 'x', role: 'owner', activeFrom: '2025-01-01' },
+      db,
+    ).id;
     b = createMember(hid, { name: 'B', pinHash: 'x', activeFrom: '2025-01-01' }, db).id;
-    const net = createService(hid,
+    const net = createService(
+      hid,
       {
         typeSlug: 'internet',
         name: 'Internet',
@@ -111,7 +116,8 @@ describe('projectMonth + reminders', () => {
       ['2026-08-01', '2026-08-31', '2026-08-15'],
       ['2026-09-01', '2026-09-30', '2026-09-15'],
     ]) {
-      createBill(hid,
+      createBill(
+        hid,
         {
           serviceId: net,
           amountMinor: 3100,

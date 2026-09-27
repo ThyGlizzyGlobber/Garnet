@@ -170,6 +170,8 @@ Email Routing hands mail for those addresses to a small Email Worker
 (`deploy/email-worker/worker.js`), which signs each message and posts it to
 `<APP_URL>/api/inbound/email`. The app archives it and reads it like any other bill.
 
+**Chosen for this install (2026-09-28): the apex catch-all, `BILLS_ADDRESS_TEMPLATE={alias}@brjlabs.com`.**
+
 Pick one address style. Cloudflare catch-alls only work on a zone's apex, so:
 
 | Style                       | `BILLS_ADDRESS_TEMPLATE`          | Email Routing setup                                                                                                              | Trade-off                                                                                                        |
@@ -188,6 +190,15 @@ Steps:
 7. On TrueNAS add `BILLS_ADDRESS_TEMPLATE` and `INBOUND_EMAIL_SECRET` (same value) to the app and save.
 8. Send a test: forward any bill to the address shown in Settings. It appears under Bills (or in the review queue) within a minute.
 
+**Who can create bills by email.** Anyone who learns a household's address can
+send to it, so a message only becomes a bill by itself when it carries a valid
+DKIM signature from the domain in its From address (checked by the app — Cloudflare
+doesn't pass its own verdicts to Workers) **and** that domain is in the matched
+service's **Trusted bill senders**. The first bill from each provider therefore
+waits in the review queue once; approving it with "Trust future bills from …"
+ticked adds the domain. Unsigned or spoofed mail always waits for review.
+Uploads by signed-in members are not affected.
+
 Members can get copies of everything sent to the bills address (password
 resets, account notices, bills) on their own member page → **Forward emails to
 me**: every email, or only the ones that aren't read as bills. The app re-sends
@@ -201,7 +212,21 @@ the message to `FALLBACK_TO` so no bill is lost. Each household can receive
 `INBOUND_MAX_PER_HOUR` messages (default 60). If Cloudflare Access protects the
 hostname, add a bypass for `/api/inbound/email` (the Worker authenticates by signature).
 
-## 10. Wall display (iPad)
+## 10. DMARC for brjlabs.com
+
+DMARC tells other mail servers what to do with mail that claims to be from
+`brjlabs.com` but fails authentication, which stops others spoofing the domain
+and helps invites, sign-in codes and forwarded copies avoid spam folders. The
+only legitimate sender is Resend (`mail.brjlabs.com`, DKIM-signed and aligned).
+
+1. Cloudflare → `brjlabs.com` → **Email → DMARC Management** → enable it. Cloudflare
+   adds a `_dmarc` TXT record with a reporting address and shows the reports.
+2. In **DNS → Records**, edit the `_dmarc` TXT record to:
+   `v=DMARC1; p=quarantine; adkim=r; aspf=r; rua=mailto:<the address Cloudflare added>`
+3. After a few weeks of reports showing only Resend passing, change `p=quarantine`
+   to `p=reject`.
+
+## 11. Wall display (iPad)
 
 Open `http://<nas-ip>:30080/wall` in Safari and sign in once (the device stays
 trusted for `AUTH_DEVICE_DAYS`, default 180; the PIN is asked every
@@ -212,7 +237,7 @@ refreshes itself every minute.
 Phones: open the app in the browser and Add to Home Screen; it installs as an
 app with an icon and keeps the last-loaded pages available offline.
 
-## 11. Where things live on the volume
+## 12. Where things live on the volume
 
 ```
 /data/db/utilities.sqlite          the database (WAL files beside it)

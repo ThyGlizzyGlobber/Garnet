@@ -5,7 +5,9 @@ import {
   householdByAlias,
   verifyDelivery,
 } from '@/lib/bills-address';
+import type { DNSResolver } from 'mailauth';
 import { forwardInbound } from '@/lib/forwarding';
+import { checkSender } from '@/lib/sender-auth';
 import { getEnv, isInboundEmailConfigured } from '@/lib/env';
 import { rateLimit } from '@/lib/rate-limit';
 import { archiveEmail } from './email';
@@ -32,6 +34,8 @@ export async function handleInboundEmail(
     waitForProcessing?: boolean;
     /** Banner on forwarded copies (translated by the route). */
     forwardBanner?: (sender: string, address: string) => string;
+    /** DNS lookups for DKIM keys (tests). */
+    resolver?: DNSResolver;
   } = {},
 ): Promise<InboundResult> {
   const env = getEnv();
@@ -54,7 +58,11 @@ export async function handleInboundEmail(
   if (req.body.length === 0) return { status: 400, body: { error: 'empty message' } };
 
   const receivedAt = new Date((opts.nowS ?? Date.now() / 1000) * 1000).toISOString();
-  const { archived, toProcess } = await archiveEmail(hh.id, req.body, receivedAt, db);
+  const sender = await checkSender(req.body, { resolver: opts.resolver });
+  const { archived, toProcess } = await archiveEmail(hh.id, req.body, receivedAt, db, {
+    domain: sender.fromDomain,
+    verified: sender.verified,
+  });
   const address = billsAddress(hh, db) ?? '';
   const banner =
     opts.forwardBanner ??

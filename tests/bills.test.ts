@@ -34,12 +34,14 @@ beforeAll(() => {
     },
     db,
   ).id;
-  bejay = createMember(hid,
+  bejay = createMember(
+    hid,
     { name: 'Bejay', pinHash: 'x', role: 'owner', activeFrom: '2025-01-01' },
     db,
   ).id;
   sam = createMember(hid, { name: 'Sam', pinHash: 'x', activeFrom: '2025-01-01' }, db).id;
-  internet = createService(hid,
+  internet = createService(
+    hid,
     {
       typeSlug: 'internet',
       name: 'Internet',
@@ -71,7 +73,8 @@ describe('service type catalog', () => {
 
 describe('createBill', () => {
   it('creates shares, marks the payer paid, and renders a payment reference', () => {
-    const b = createBill(hid,
+    const b = createBill(
+      hid,
       {
         serviceId: internet,
         amountMinor: 12900,
@@ -99,7 +102,8 @@ describe('createBill', () => {
 
   it('rejects a duplicate invoice number for the same service', () => {
     expect(() =>
-      createBill(hid,
+      createBill(
+        hid,
         {
           serviceId: internet,
           amountMinor: 1,
@@ -133,7 +137,8 @@ describe('createBill', () => {
   });
 
   it('recomputes shares when the amount changes and nothing is paid', () => {
-    const b = createBill(hid,
+    const b = createBill(
+      hid,
       {
         serviceId: internet,
         amountMinor: 1000,
@@ -150,7 +155,8 @@ describe('createBill', () => {
 
   it('creates no shares in single mode', () => {
     updateHousehold(hid, { splitMode: 'single' }, db);
-    const b = createBill(hid,
+    const b = createBill(
+      hid,
       {
         serviceId: internet,
         amountMinor: 500,
