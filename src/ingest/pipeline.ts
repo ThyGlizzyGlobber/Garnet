@@ -7,7 +7,12 @@ import { getHousehold } from '@/lib/households';
 import { getService, listServices, listServiceTypes, updateService } from '@/lib/services';
 import { getDocument, readDocument, setDocumentStatus } from './archive';
 import { fallbackExtractors, templateExtractors } from './extractors';
-import type { ExtractionInput, ExtractionResult, Extractor } from './extractors/types';
+import type {
+  DocumentKind,
+  ExtractionInput,
+  ExtractionResult,
+  Extractor,
+} from './extractors/types';
 import { extractText } from './text';
 import { parseReceipt, type PaymentReceipt } from './receipts';
 import { aiAllowance, AI_READ, recordUsage } from '@/lib/usage';
@@ -169,6 +174,19 @@ export async function processDocument(
     extractors: aiLeft ? [...templateExtractors, ...fallbackExtractors] : templateExtractors,
   });
   if (attempts.some((a) => a.extractor.startsWith('llm:'))) recordUsage(householdId, AI_READ, db);
+  // The AI reader says what a document is; anything but a bill never becomes one.
+  if (best?.document && best.document.kind !== 'bill') {
+    const routed = applyDocument(
+      householdId,
+      doc,
+      best,
+      text,
+      store,
+      db,
+      env.EXTRACTOR_CONFIDENCE_THRESHOLD,
+    );
+    if (routed) return routed;
+  }
   if (!best) {
     const notice = notABill(attempts);
     if (notice) return notice;
@@ -365,19 +383,29 @@ function applyNotice(
   text: string,
   store: (status: PipelineOutcome['status'], reason: string, result: null, attempts: []) => void,
   db: Db,
+  providerHint?: string | null,
 ): PipelineOutcome {
   const label = NOTICE_LABEL[kind];
   const address = addressOf(doc.emailFrom);
   const services = listServices(householdId, { includeInactive: true }, db);
+  // By name (the AI's provider, or the provider named in the text) only when the
+  // household itself brought the document in: an upload, or a member's forward.
+  // Otherwise the sender's own domain must belong to the provider.
+  const byName = () =>
+    (providerHint
+      ? services.find((s) => providerNameMatches(s.provider, providerHint))
+      : undefined) ??
+    services.find((s) =>
+      new RegExp(`\\b${s.provider.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(
+        `${doc.emailSubject ?? ''}\n${text.slice(0, 4000)}`,
+      ),
+    );
   let svc: (typeof services)[number] | undefined;
-  if (doc.senderVerified) {
+  if (doc.senderVerified === null) svc = byName();
+  else if (doc.senderVerified) {
     const fromMember = !!address && householdEmails(householdId, db).has(address);
     svc = fromMember
-      ? services.find((s) =>
-          new RegExp(`\\b${s.provider.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(
-            `${doc.emailSubject ?? ''}\n${text.slice(0, 4000)}`,
-          ),
-        )
+      ? byName()
       : services.find(
           (s) =>
             isTrustedSender(doc.senderDomain, s.trustedSenders, address) ||
@@ -434,6 +462,18 @@ function mayActFor(
 
 const compactName = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
 
+/** "Aussie Broadband" vs "Aussie Broadband Limited": same provider. */
+function providerNameMatches(service: string, named: string): boolean {
+  const a = compactName(service);
+  const b = compactName(named);
+  if (!a || !b) return false;
+  if (a === b) return true;
+  const [short, long] = a.length <= b.length ? [a, b] : [b, a];
+  return (
+    (short.length >= 4 && long.includes(short)) || (short.length >= 3 && long.startsWith(short))
+  );
+}
+
 /** A receipt: mark each invoice it lists as paid to the provider on the receipt's date. */
 function applyReceipt(
   householdId: string,
@@ -442,8 +482,8 @@ function applyReceipt(
   store: (status: PipelineOutcome['status'], reason: string, result: null, attempts: []) => void,
   db: Db,
 ): PipelineOutcome {
-  const services = listServices(householdId, { includeInactive: true }, db).filter(
-    (s) => compactName(s.provider) === compactName(receipt.provider),
+  const services = listServices(householdId, { includeInactive: true }, db).filter((s) =>
+    providerNameMatches(s.provider, receipt.provider),
   );
   const allowed = services.filter((s) => mayActFor(householdId, doc, s, db));
   const refs = receipt.invoices.map((i) => `#${i.ref}`).join(', ');
@@ -529,4 +569,67 @@ function applyPaymentHints(
     setBillAlert(householdId, target.id, 'overdue', null, db);
     notifyInBackground(notifyBillAlert(householdId, target.id, { db }));
   }
+}
+
+const DOCUMENT_NOTICE: Partial<Record<DocumentKind, NoticeKind>> = {
+  payment_failed: 'payment_failed',
+  overdue_notice: 'overdue',
+  payment_received: 'payment_received',
+};
+
+/**
+ * A non-bill document as classified by the AI reader: receipts mark the named
+ * invoices paid; payment notices flag or settle a bill; anything else is kept
+ * as a notice. Unsure readings change nothing. Returns null to fall through
+ * (an unsure "other" that still looks like a bill goes to review).
+ */
+function applyDocument(
+  householdId: string,
+  doc: SourceDocument,
+  best: ExtractionResult,
+  text: string,
+  store: (
+    status: PipelineOutcome['status'],
+    reason: string,
+    result: ExtractionResult | null,
+    attempts: StoredExtraction['attempts'],
+  ) => void,
+  db: Db,
+  threshold: number,
+): PipelineOutcome | null {
+  const info = best.document!;
+  const provider = info.provider ?? best.bill.provider;
+  const sure = best.confidence >= threshold;
+  if (info.kind === 'other') {
+    if (!sure && looksLikeBill(doc.emailSubject, text)) return null;
+    store('notice', 'Not a bill (kept, and forwarded to anyone who asked for copies)', null, []);
+    return { documentId: doc.id, status: 'notice', reason: 'not-a-bill', result: null };
+  }
+  if (!sure) {
+    store(
+      'notice',
+      `Looks like a ${info.kind.replace(/_/g, ' ')} from ${provider || 'a provider'}, but the reading wasn't certain enough to change any bill`,
+      null,
+      [],
+    );
+    return { documentId: doc.id, status: 'notice', reason: 'unsure', result: null };
+  }
+  const refs = info.payment?.invoiceRefs.filter(Boolean) ?? [];
+  if (info.kind === 'payment_receipt' && refs.length && provider) {
+    return applyReceipt(
+      householdId,
+      doc,
+      {
+        provider,
+        paidDate: info.payment?.date ?? doc.receivedAt.slice(0, 10),
+        totalMinor: info.payment?.amountMinor ?? 0,
+        method: null,
+        invoices: refs.map((ref) => ({ ref, amountMinor: 0 })),
+      },
+      store,
+      db,
+    );
+  }
+  const kind = DOCUMENT_NOTICE[info.kind] ?? 'payment_received';
+  return applyNotice(householdId, doc, kind, text, store, db, provider);
 }

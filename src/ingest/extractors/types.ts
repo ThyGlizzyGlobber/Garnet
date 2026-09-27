@@ -46,9 +46,31 @@ export interface ExtractedBill {
   autoPay?: boolean;
 }
 
+/** What a document is, when an extractor can tell (the AI reader can; templates only read bills). */
+export type DocumentKind =
+  'bill' | 'payment_receipt' | 'payment_failed' | 'overdue_notice' | 'payment_received' | 'other';
+
+export interface DocumentInfo {
+  kind: DocumentKind;
+  provider: string | null;
+  /** For receipts and payment notices: what was (or wasn't) paid. */
+  payment: {
+    date: string | null;
+    amountMinor: number | null;
+    currency: string | null;
+    invoiceRefs: string[];
+  } | null;
+}
+
 export interface ExtractionResult {
   extractor: string;
   bill: ExtractedBill;
+  /**
+   * Set when the document isn't a bill (receipt, payment notice, other). The
+   * pipeline routes on it before any bill logic; `bill` then only carries the
+   * provider and whatever amounts were printed.
+   */
+  document?: DocumentInfo;
   /** Overall confidence in [0,1]. Below the household threshold → review queue. */
   confidence: number;
   /** Per-field confidence when the extractor can tell. */

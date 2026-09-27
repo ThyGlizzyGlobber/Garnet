@@ -38,7 +38,7 @@ services:
       IMAP_POLL_INTERVAL_SECONDS: '300'
       # AI extraction (leave empty to send unknown providers to the review queue)
       ANTHROPIC_API_KEY: ''
-      ANTHROPIC_MODEL: claude-sonnet-5
+      ANTHROPIC_MODEL: claude-opus-5
       EXTRACTOR_CONFIDENCE_THRESHOLD: '0.85'
       # Software update checks: fine-grained GitHub token, this repo only,
       # read-only "Actions" + "Contents". Leave empty to skip the check.

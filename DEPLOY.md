@@ -203,6 +203,15 @@ are only ever trusted as an exact address.
 **Provider notices.** "Payment failed / declined / dishonoured" and "overdue"
 emails flag that service's latest bill (a failed payment also un-marks it as
 paid to the provider); "payment received" marks it paid and clears the flag.
+**With `ANTHROPIC_API_KEY` set, no per-provider readers are needed.** The AI
+reader decides what each document is — a bill, a payment receipt, a payment
+problem, an overdue reminder, a payment confirmation, or something else — and
+extracts the matching details (for bills also auto-pay and "last month
+received"). Receipts, notices and other documents never become bills; unsure
+readings change nothing. Built-in readers (Aussie Broadband) still run first
+because they're free and instant. Model: `ANTHROPIC_MODEL` (default
+`claude-opus-5`); reads count toward `AI_MONTHLY_LIMIT`.
+
 **Paid to the provider, without anyone ticking it.** A payment receipt (Aussie
 Broadband's "PAYMENT RECEIPT" PDF) marks the invoices it names as paid on the
 receipt's date and clears any flag. Each new invoice's "Last Month … Payment
