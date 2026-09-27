@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { checkSender, isTrustedSender, parseSenderList } from '@/lib/sender-auth';
+import {
+  addressOf,
+  checkSender,
+  isFreemail,
+  isTrustedSender,
+  parseSenderList,
+  trustTarget,
+} from '@/lib/sender-auth';
 import { dkimKeys } from './helpers/dkim';
 
 const { resolver, sign } = dkimKeys([
@@ -73,5 +80,29 @@ describe('trusted sender lists', () => {
       'aussiebroadband.com.au',
       'agl.com.au',
     ]);
+  });
+});
+
+describe('personal mailboxes', () => {
+  it('are never trusted as a whole domain, only as an exact address', () => {
+    expect(isTrustedSender('gmail.com', ['gmail.com'], 'anyone@gmail.com')).toBe(false);
+    expect(isTrustedSender('gmail.com', ['me@gmail.com'], 'me@gmail.com')).toBe(true);
+    expect(isTrustedSender('gmail.com', ['me@gmail.com'], 'you@gmail.com')).toBe(false);
+    expect(trustTarget('gmail.com', 'me@gmail.com')).toBe('me@gmail.com');
+    expect(trustTarget('agl.com.au', 'billing@agl.com.au')).toBe('agl.com.au');
+    expect(isFreemail('bigpond.com')).toBe(true);
+  });
+
+  it('can be typed as addresses but not as domains', () => {
+    expect(parseSenderList('gmail.com, Me@Gmail.com, agl.com.au')).toEqual([
+      'me@gmail.com',
+      'agl.com.au',
+    ]);
+  });
+
+  it('parse the bare address from a From header', () => {
+    expect(addressOf('"Jo Smith" <Jo@Example.com>')).toBe('jo@example.com');
+    expect(addressOf('jo@example.com')).toBe('jo@example.com');
+    expect(addressOf(null)).toBeNull();
   });
 });

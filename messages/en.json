@@ -249,7 +249,7 @@
         "custom": "Custom weights"
       },
       "trustedSenders": "Trusted bill senders",
-      "trustedSendersHint": "Email domains whose signed bills are added automatically, e.g. provider.com.au. Bills from anyone else wait in the review queue."
+      "trustedSendersHint": "Email domains (provider.com.au) or exact addresses whose signed bills are added automatically. Personal mailbox domains like gmail.com can only be added as a full address. Bills forwarded by household members are always accepted."
     },
     "nextBill": "Next bill about {amount} · due {date}",
     "noHistory": "No bills yet",
@@ -647,7 +647,7 @@
       "usageUnit": "Unit",
       "notes": "Notes",
       "trustSender": "Trust future bills from {domain} for this service",
-      "trustSenderHint": "The email was signed by {domain}, so its next bills can be added without asking."
+      "trustSenderHint": "The email was signed by its sender, so future bills from {domain} can be added without asking."
     }
   },
   "upload": {

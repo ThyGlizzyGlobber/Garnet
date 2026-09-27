@@ -7,7 +7,7 @@ import type { ActionState } from '@/components/ui/form';
 import { archiveDocument, getDocument, setDocumentStatus } from '@/ingest/archive';
 import { processDocument } from '@/ingest/pipeline';
 import { getService, updateService } from '@/lib/services';
-import { isTrustedSender } from '@/lib/sender-auth';
+import { addressOf, isTrustedSender, trustTarget } from '@/lib/sender-auth';
 import { str, zodToState } from '@/lib/actions';
 import { requireMember, requireOperator } from '@/lib/auth/session';
 import { createBill } from '@/lib/bills';
@@ -93,10 +93,13 @@ export async function approveReviewAction(_prev: ActionState, fd: FormData): Pro
     return { error: (e as Error).message };
   }
   // "Trust future bills from this sender": only for signed mail from that domain.
-  if (fd.get('trustSender') === 'on' && doc.senderVerified && doc.senderDomain) {
+  // Personal mailboxes (gmail.com, …) are only ever trusted as the exact address.
+  const address = addressOf(doc.emailFrom);
+  const target = doc.senderVerified ? trustTarget(doc.senderDomain, address) : null;
+  if (fd.get('trustSender') === 'on' && target) {
     const svc = getService(hh.id, v.serviceId);
-    if (svc && !isTrustedSender(doc.senderDomain, svc.trustedSenders))
-      updateService(hh.id, svc.id, { trustedSenders: [...svc.trustedSenders, doc.senderDomain] });
+    if (svc && !isTrustedSender(doc.senderDomain, svc.trustedSenders, address))
+      updateService(hh.id, svc.id, { trustedSenders: [...svc.trustedSenders, target] });
   }
   // Keep the extraction record but note that a person confirmed it.
   let json: string | undefined;

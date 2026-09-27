@@ -313,7 +313,7 @@ describe('inbound deliveries', () => {
 });
 
 describe('automatic bills from a bills address', () => {
-  const { resolver, sign } = dkimKeys(['aussiebroadband.com.au', 'attacker.example']);
+  const { resolver, sign } = dkimKeys(['aussiebroadband.com.au', 'attacker.example', 'gmail.com']);
   const invoice = (ref: string, from = 'Aussie Broadband <billing@aussiebroadband.com.au>') =>
     Buffer.from(
       [
@@ -367,6 +367,27 @@ describe('automatic bills from a bills address', () => {
     });
     expect(res.status).toBe(202);
     expect(listBills(hh.id, {}, db).map((b) => b.externalRef)).toEqual(['72222222']);
+  });
+
+  it('accept a bill a member forwards from their own mailbox', async () => {
+    const { hh, to } = setup('Forwarded House');
+    createMember(
+      hh.id,
+      { name: 'Kim', email: 'kim.member@gmail.com', activeFrom: '2026-01-01' },
+      db,
+    );
+    const fwd = await sign(invoice('75555555', 'Kim <kim.member@gmail.com>'), 'gmail.com');
+    await handleInboundEmail(delivery(to, fwd), { db, waitForProcessing: true, resolver });
+    expect(listBills(hh.id, {}, db).map((b) => b.externalRef)).toEqual(['75555555']);
+  });
+
+  it('offer only the exact address, never gmail.com, for a stranger forwarding a bill', async () => {
+    const { hh, to } = setup('Stranger House');
+    const fwd = await sign(invoice('76666666', 'Someone <someone.else@gmail.com>'), 'gmail.com');
+    await handleInboundEmail(delivery(to, fwd), { db, waitForProcessing: true, resolver });
+    expect(listBills(hh.id, {}, db)).toHaveLength(0);
+    const [doc] = listDocuments(hh.id, {}, db);
+    expect(reason(hh.id, doc!.id)).toMatch(/First bill from someone\.else@gmail\.com/);
   });
 
   it('never trust unsigned or spoofed mail, even from a trusted domain', async () => {

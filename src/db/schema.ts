@@ -160,7 +160,10 @@ export const service = sqliteTable(
      * Email domains whose signed bills may become bills automatically, e.g.
      * ["aussiebroadband.com.au"]. Learned from the review queue; editable.
      */
-    trustedSenders: text('trusted_senders', { mode: 'json' }).$type<string[]>().notNull().default([]),
+    trustedSenders: text('trusted_senders', { mode: 'json' })
+      .$type<string[]>()
+      .notNull()
+      .default([]),
     notes: text('notes'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),

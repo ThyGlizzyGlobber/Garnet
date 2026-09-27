@@ -10,7 +10,8 @@ import { fallbackExtractors, templateExtractors } from './extractors';
 import type { ExtractionInput, ExtractionResult, Extractor } from './extractors/types';
 import { extractText } from './text';
 import { aiAllowance, AI_READ, recordUsage } from '@/lib/usage';
-import { isTrustedSender } from '@/lib/sender-auth';
+import { householdEmails } from '@/lib/accounts';
+import { addressOf, isTrustedSender, trustTarget } from '@/lib/sender-auth';
 
 export interface PipelineOutcome {
   documentId: string;
@@ -193,6 +194,7 @@ export async function processDocument(
   if (doc.senderVerified !== null) {
     const svc = getService(householdId, serviceId, db)!;
     const domain = doc.senderDomain ?? 'an unknown sender';
+    const address = addressOf(doc.emailFrom);
     if (!doc.senderVerified) {
       store(
         'needs_review',
@@ -200,16 +202,29 @@ export async function processDocument(
         best,
         attempts,
       );
-      return { documentId: doc.id, status: 'needs_review', reason: 'unverified-sender', result: best };
+      return {
+        documentId: doc.id,
+        status: 'needs_review',
+        reason: 'unverified-sender',
+        result: best,
+      };
     }
-    if (!isTrustedSender(doc.senderDomain, svc.trustedSenders)) {
+    // A member forwarding a bill from their own inbox is the household acting.
+    const fromMember = !!address && householdEmails(householdId, db).has(address);
+    if (!fromMember && !isTrustedSender(doc.senderDomain, svc.trustedSenders, address)) {
+      const who = trustTarget(doc.senderDomain, address) ?? domain;
       store(
         'needs_review',
-        `First bill from ${domain} for ${svc.name}: check it once and trust the sender to read future bills automatically`,
+        `First bill from ${who} for ${svc.name}: check it once and trust the sender to read future bills automatically`,
         best,
         attempts,
       );
-      return { documentId: doc.id, status: 'needs_review', reason: 'untrusted-sender', result: best };
+      return {
+        documentId: doc.id,
+        status: 'needs_review',
+        reason: 'untrusted-sender',
+        result: best,
+      };
     }
   }
   const created = createBillFromExtraction(householdId, best, serviceId, doc.id, db);

@@ -10,6 +10,7 @@ import { listUnits } from '@/lib/units';
 import { matchService } from '@/ingest/pipeline';
 import { ignoreDocumentAction, reprocessDocumentAction } from '../actions';
 import { ReviewForm } from './review-form';
+import { addressOf, trustTarget } from '@/lib/sender-auth';
 
 export default async function ReviewItemPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -119,7 +120,9 @@ export default async function ReviewItemPage({ params }: { params: Promise<{ id:
               }}
               noServiceMatch={!!r && !suggested}
               providerHint={r?.bill.provider ?? null}
-              trustSender={d.senderVerified ? d.senderDomain : null}
+              trustSender={
+                d.senderVerified ? trustTarget(d.senderDomain, addressOf(d.emailFrom)) : null
+              }
             />
           ) : (
             <Card className="text-sm text-fg-muted">{t('detail.alreadyBill')}</Card>

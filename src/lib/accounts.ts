@@ -108,3 +108,20 @@ export function linkMember(
     .where(and(eq(member.id, memberId), isNull(member.accountId)))
     .run();
 }
+
+/**
+ * Every address a household's members use: their sign-in emails and the
+ * addresses their invitations went to. A signed bill forwarded from one of
+ * these is the household's own doing, so it needs no per-service trust.
+ */
+export function householdEmails(householdId: string, db: Db = getDb()): Set<string> {
+  const rows = db
+    .select({ memberEmail: member.email, accountEmail: account.email })
+    .from(member)
+    .leftJoin(account, eq(member.accountId, account.id))
+    .where(eq(member.householdId, householdId))
+    .all();
+  return new Set(
+    rows.flatMap((r) => [r.memberEmail, r.accountEmail]).filter((e): e is string => !!e),
+  );
+}
