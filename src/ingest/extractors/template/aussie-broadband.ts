@@ -39,6 +39,14 @@ export const aussieBroadbandExtractor: Extractor = {
     const total = t.match(/\$([\d,]+\.\d{2})\s*\+\s*\$[\d,]+\.\d{2}\s*=\s*\$([\d,]+\.\d{2})/);
     const amountDue = t.match(/Amount Due[\s\S]{0,80}?\$([\d,]+\.\d{2})/i);
 
+    // "Last Month / Amount Due Payment Received Due Date / $129.00 $129.00 28 May 2026"
+    const last = t.match(
+      /Amount Due\s+Payment Received\s+Due Date\s+\$([\d,]+\.\d{2})\s+\$([\d,]+\.\d{2})\s+(\d{1,2}\s+\w{3,9}\s+\d{4})/i,
+    );
+    const method = t.match(/Payment Method\s*\n\s*([^\n]+)/i)?.[1] ?? '';
+    const autoPay =
+      /Debit Date/i.test(t) && /credit card|debit card|direct debit|bank account/i.test(method);
+
     const amountMinor = parseAmount(total?.[1] ?? amountDue?.[1]);
     const periodStart = parseDate(period?.[1], input.locale);
     const periodEnd = parseDate(period?.[2], input.locale);
@@ -68,6 +76,15 @@ export const aussieBroadbandExtractor: Extractor = {
       externalRef: invoice?.[1] ?? null,
       accountRef: customer?.[1] ?? null,
       serviceId: service?.id ?? null,
+      autoPay,
+      previousPayment: (() => {
+        const dueDate = parseDate(last?.[3], input.locale);
+        const amountDueMinor = parseAmount(last?.[1]);
+        const receivedMinor = parseAmount(last?.[2]);
+        return dueDate && amountDueMinor !== null && receivedMinor !== null
+          ? { dueDate, amountDueMinor, receivedMinor }
+          : null;
+      })(),
     };
     if (!bill.externalRef) warnings.push('Invoice number not found');
     const confidence = bill.externalRef ? 0.98 : 0.85;

@@ -396,6 +396,8 @@ export async function sendDueReminders(now = new Date(), db: Db = getDb()): Prom
         and(
           eq(bill.householdId, hh.id),
           isNull(bill.paidToProviderAt),
+          // Paid automatically: nothing for the payer to remember.
+          eq(service.autoPay, false),
           gte(bill.dueDate, today),
           lte(bill.dueDate, addDays(today, 2)),
         ),

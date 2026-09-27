@@ -257,7 +257,9 @@
         "custom": "Custom weights"
       },
       "trustedSenders": "Trusted bill senders",
-      "trustedSendersHint": "Email domains (provider.com.au) or exact addresses whose signed bills are added automatically. Personal mailbox domains like gmail.com can only be added as a full address. Bills forwarded by household members are always accepted."
+      "trustedSendersHint": "Email domains (provider.com.au) or exact addresses whose signed bills are added automatically. Personal mailbox domains like gmail.com can only be added as a full address. Bills forwarded by household members are always accepted.",
+      "autoPay": "Paid automatically (card on file or direct debit)",
+      "autoPayHint": "Bills count as paid to the provider once their due date passes, unless the provider says a payment failed. Turned on by itself when an invoice shows automatic payment."
     },
     "nextBill": "Next bill about {amount} · due {date}",
     "noHistory": "No bills yet",

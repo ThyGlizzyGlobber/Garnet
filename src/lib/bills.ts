@@ -365,10 +365,12 @@ export function setBillPaidToProvider(
   id: string,
   paid: boolean,
   db: Db = getDb(),
+  /** When it was paid (a receipt's date); defaults to now. */
+  at?: string,
 ): void {
   const now = new Date().toISOString();
   db.update(bill)
-    .set({ paidToProviderAt: paid ? now : null, updatedAt: now })
+    .set({ paidToProviderAt: paid ? (at ?? now) : null, updatedAt: now })
     .where(and(eq(bill.householdId, householdId), eq(bill.id, id)))
     .run();
 }

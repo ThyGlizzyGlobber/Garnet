@@ -37,6 +37,13 @@ export interface ExtractedBill {
   accountRef?: string | null;
   /** Service id when the extractor is confident which existing service this is. */
   serviceId?: string | null;
+  /**
+   * What the provider says about the previous bill ("Last month: $129 due,
+   * $129 received, due 28 May") — used to mark that bill paid to the provider.
+   */
+  previousPayment?: { dueDate: string; amountDueMinor: number; receivedMinor: number } | null;
+  /** The provider takes payment automatically (card on file / direct debit). */
+  autoPay?: boolean;
 }
 
 export interface ExtractionResult {

@@ -1,0 +1,1 @@
+ALTER TABLE `service` ADD `auto_pay` integer DEFAULT false NOT NULL;

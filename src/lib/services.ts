@@ -99,6 +99,8 @@ export interface ServiceInput {
   notes?: string | null;
   /** Email domains whose signed bills may be created automatically. */
   trustedSenders?: string[];
+  /** Provider charges automatically (card on file / direct debit). */
+  autoPay?: boolean;
   /** memberId → weight; replaces existing custom splits when provided. */
   customSplits?: Record<string, number>;
 }
@@ -138,6 +140,7 @@ export function createService(
       isActive: rest.isActive ?? true,
       notes: rest.notes ?? null,
       trustedSenders: rest.trustedSenders ?? [],
+      autoPay: rest.autoPay ?? false,
       createdAt: now,
       updatedAt: now,
     })

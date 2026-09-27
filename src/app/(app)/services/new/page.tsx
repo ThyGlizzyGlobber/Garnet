@@ -46,6 +46,7 @@ export default async function NewServicePage() {
           isActive: true,
           notes: '',
           trustedSenders: '',
+          autoPay: false,
           customSplits: {},
         }}
       />

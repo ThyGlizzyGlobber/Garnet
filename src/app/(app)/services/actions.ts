@@ -68,6 +68,7 @@ function read(householdId: string, fd: FormData): ReadResult {
       isActive: v.isActive,
       notes: v.notes || null,
       trustedSenders: parseSenderList(str(fd, 'trustedSenders')),
+      autoPay: fd.get('autoPay') === 'on',
       customSplits,
     },
   };

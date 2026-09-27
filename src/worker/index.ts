@@ -1,5 +1,6 @@
 import { getEnv, isImapConfigured } from '@/lib/env';
 import { pollMailbox, type PollResult } from '@/ingest/imap/poller';
+import { settleAutoPaidBills } from '@/lib/autopay';
 import { sendDueReminders } from '@/lib/notifications';
 
 export interface WorkerStatus {
@@ -26,7 +27,12 @@ export function startReminders(): void {
   const tick = () => {
     if (busy) return;
     busy = true;
-    sendDueReminders()
+    Promise.resolve()
+      .then(() => {
+        const settled = settleAutoPaidBills();
+        if (settled) console.log(`[autopay] marked ${settled} bill(s) paid to the provider`);
+        return sendDueReminders();
+      })
       .then((n) => n && console.log(`[reminders] sent ${n}`))
       .catch((e) => console.error('[reminders]', (e as Error).message))
       .finally(() => {

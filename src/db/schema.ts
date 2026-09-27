@@ -161,6 +161,12 @@ export const service = sqliteTable(
     colour: text('colour').notNull().default('#0a84ff'),
     isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
     /**
+     * The provider takes payment automatically (card on file, direct debit):
+     * bills count as paid to the provider once the due date passes, unless a
+     * payment problem is reported. Learned from invoices; editable.
+     */
+    autoPay: integer('auto_pay', { mode: 'boolean' }).notNull().default(false),
+    /**
      * Email domains whose signed bills may become bills automatically, e.g.
      * ["aussiebroadband.com.au"]. Learned from the review queue; editable.
      */

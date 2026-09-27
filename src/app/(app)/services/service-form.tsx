@@ -19,6 +19,7 @@ export interface ServiceFormValues {
   isActive: boolean;
   notes: string;
   trustedSenders: string;
+  autoPay: boolean;
   customSplits: Record<string, number>;
 }
 
@@ -140,6 +141,18 @@ export function ServiceForm({
             <Field label={t('notes')}>
               <Textarea name="notes" defaultValue={initial.notes} />
             </Field>
+            <label className="flex items-start gap-3 text-sm font-medium">
+              <input
+                type="checkbox"
+                name="autoPay"
+                defaultChecked={initial.autoPay}
+                className="mt-0.5 size-5 accent-accent"
+              />
+              <span>
+                {t('autoPay')}
+                <span className="block text-xs font-normal text-fg-muted">{t('autoPayHint')}</span>
+              </span>
+            </label>
             <Field label={t('trustedSenders')} hint={t('trustedSendersHint')}>
               <Input
                 name="trustedSenders"

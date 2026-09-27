@@ -203,6 +203,15 @@ are only ever trusted as an exact address.
 **Provider notices.** "Payment failed / declined / dishonoured" and "overdue"
 emails flag that service's latest bill (a failed payment also un-marks it as
 paid to the provider); "payment received" marks it paid and clears the flag.
+**Paid to the provider, without anyone ticking it.** A payment receipt (Aussie
+Broadband's "PAYMENT RECEIPT" PDF) marks the invoices it names as paid on the
+receipt's date and clears any flag. Each new invoice's "Last Month … Payment
+Received" line also confirms the previous bill (or flags it overdue if nothing
+was received). Services whose invoices show automatic payment (card on file /
+direct debit) are marked **Paid automatically**: their bills count as paid the
+day after the due date unless a payment problem is reported, and the payer gets
+no "pay the provider" reminder.
+
 Other non-bill emails (password resets, plan changes) are kept as notices,
 out of the review queue. Only signed notices change a bill.
 

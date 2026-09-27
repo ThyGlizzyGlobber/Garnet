@@ -9,6 +9,7 @@ import { getDocument, readDocument, setDocumentStatus } from './archive';
 import { fallbackExtractors, templateExtractors } from './extractors';
 import type { ExtractionInput, ExtractionResult, Extractor } from './extractors/types';
 import { extractText } from './text';
+import { parseReceipt, type PaymentReceipt } from './receipts';
 import { aiAllowance, AI_READ, recordUsage } from '@/lib/usage';
 import { householdEmails } from '@/lib/accounts';
 import { addressOf, isFreemail, isTrustedSender, trustTarget } from '@/lib/sender-auth';
@@ -137,6 +138,11 @@ export async function processDocument(
   // payment received) update the matching bill instead of being read as a bill.
   const fromBillsAddress = doc.senderVerified !== null;
   const emailBody = fromBillsAddress && doc.kind === 'email';
+  // A payment receipt names the invoices it paid: mark those bills paid.
+  const hhForLocale = getHousehold(householdId, db);
+  const receipt = parseReceipt(text, hhForLocale?.locale ?? 'en-AU');
+  if (receipt) return applyReceipt(householdId, doc, receipt, store, db);
+
   // The subject decides first; the body only once no bill could be read.
   if (emailBody) {
     const kind = classifySubject(doc.emailSubject);
@@ -210,6 +216,8 @@ export async function processDocument(
       )
       .get();
     if (dup) {
+      if (mayActFor(householdId, doc, getService(householdId, serviceId, db)!, db))
+        applyPaymentHints(householdId, serviceId, best.bill, db);
       store('ignored', `Duplicate of an existing bill (${best.bill.externalRef})`, best, attempts);
       return {
         documentId: doc.id,
@@ -272,6 +280,7 @@ export async function processDocument(
   }
   const created = createBillFromExtraction(householdId, best, serviceId, doc.id, db);
   store('extracted', `Created bill via ${best.extractor}`, best, attempts);
+  applyPaymentHints(householdId, serviceId, best.bill, db);
   try {
     await notifyBillCreated(householdId, created.id, { db });
   } catch (e) {
@@ -400,4 +409,124 @@ function applyNotice(
     [],
   );
   return { documentId: doc.id, status: 'notice', reason: kind, result: null, billId: target.id };
+}
+
+/**
+ * May this document change the household's bills for a service? Uploads (by a
+ * member) and the operator's own mailbox: yes. Mail to a bills address: only
+ * when signed, and from a member, a trusted sender, or the provider's own domain.
+ */
+function mayActFor(
+  householdId: string,
+  doc: SourceDocument,
+  svc: { provider: string; trustedSenders: string[] },
+  db: Db,
+): boolean {
+  if (doc.senderVerified === null) return true;
+  if (!doc.senderVerified) return false;
+  const address = addressOf(doc.emailFrom);
+  if (address && householdEmails(householdId, db).has(address)) return true;
+  return (
+    isTrustedSender(doc.senderDomain, svc.trustedSenders, address) ||
+    (!isFreemail(doc.senderDomain) && senderMatchesProvider(doc.senderDomain, svc.provider))
+  );
+}
+
+const compactName = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+/** A receipt: mark each invoice it lists as paid to the provider on the receipt's date. */
+function applyReceipt(
+  householdId: string,
+  doc: SourceDocument,
+  receipt: PaymentReceipt,
+  store: (status: PipelineOutcome['status'], reason: string, result: null, attempts: []) => void,
+  db: Db,
+): PipelineOutcome {
+  const services = listServices(householdId, { includeInactive: true }, db).filter(
+    (s) => compactName(s.provider) === compactName(receipt.provider),
+  );
+  const allowed = services.filter((s) => mayActFor(householdId, doc, s, db));
+  const refs = receipt.invoices.map((i) => `#${i.ref}`).join(', ');
+  if (!allowed.length) {
+    store(
+      'notice',
+      `Payment receipt from ${receipt.provider} (${refs}). ${services.length ? "Its sender couldn't be verified" : 'No matching service'}, so no bill was changed`,
+      null,
+      [],
+    );
+    return { documentId: doc.id, status: 'notice', reason: 'receipt', result: null };
+  }
+  const paid: string[] = [];
+  let firstBill: string | undefined;
+  for (const inv of receipt.invoices) {
+    const b = db
+      .select()
+      .from(bill)
+      .where(and(eq(bill.householdId, householdId), eq(bill.externalRef, inv.ref)))
+      .all()
+      .find((x) => allowed.some((s) => s.id === x.serviceId));
+    if (!b) continue;
+    setBillPaidToProvider(householdId, b.id, true, db, `${receipt.paidDate}T00:00:00Z`);
+    clearBillAlert(householdId, b.id, db);
+    paid.push(`#${inv.ref}`);
+    firstBill ??= b.id;
+  }
+  store(
+    'notice',
+    paid.length
+      ? `Payment receipt from ${receipt.provider}: ${paid.join(', ')} marked paid on ${receipt.paidDate}`
+      : `Payment receipt from ${receipt.provider} for ${refs}, which isn't in the app yet`,
+    null,
+    [],
+  );
+  return {
+    documentId: doc.id,
+    status: 'notice',
+    reason: 'receipt',
+    result: null,
+    billId: firstBill,
+  };
+}
+
+/**
+ * Hints on an invoice: the provider charges automatically (remember it on the
+ * service), and what it says about last month's bill (paid → mark it paid;
+ * nothing received → flag it overdue).
+ */
+function applyPaymentHints(
+  householdId: string,
+  serviceId: string,
+  extracted: ExtractionResult['bill'],
+  db: Db,
+): void {
+  const svc = getService(householdId, serviceId, db);
+  if (!svc) return;
+  if (extracted.autoPay && !svc.autoPay) updateService(householdId, svc.id, { autoPay: true }, db);
+  const prev = extracted.previousPayment;
+  if (!prev) return;
+  const candidates = db
+    .select()
+    .from(bill)
+    .where(and(eq(bill.householdId, householdId), eq(bill.serviceId, serviceId)))
+    .all()
+    .filter(
+      (b) =>
+        b.amountMinor === prev.amountDueMinor &&
+        Math.abs(Date.parse(b.dueDate) - Date.parse(prev.dueDate)) <= 3 * 86_400_000,
+    )
+    .sort(
+      (a, b) =>
+        Math.abs(Date.parse(a.dueDate) - Date.parse(prev.dueDate)) -
+        Math.abs(Date.parse(b.dueDate) - Date.parse(prev.dueDate)),
+    );
+  const target = candidates[0];
+  if (!target) return;
+  if (prev.receivedMinor >= prev.amountDueMinor) {
+    if (!target.paidToProviderAt)
+      setBillPaidToProvider(householdId, target.id, true, db, `${prev.dueDate}T00:00:00Z`);
+    if (target.alertKind) clearBillAlert(householdId, target.id, db);
+  } else if (prev.receivedMinor === 0 && target.alertKind !== 'overdue') {
+    setBillAlert(householdId, target.id, 'overdue', null, db);
+    notifyInBackground(notifyBillAlert(householdId, target.id, { db }));
+  }
 }
