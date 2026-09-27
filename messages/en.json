@@ -9,7 +9,7 @@
     "services": "Services",
     "members": "Members",
     "settings": "Settings",
-    "logout": "Log out",
+    "logout": "Sign out",
     "ledger": "Ledger",
     "wall": "Wall display",
     "review": "Review queue",
@@ -63,10 +63,29 @@
     "progress": "Setup steps"
   },
   "login": {
-    "title": "Who's this?",
-    "who": "Member",
-    "pin": "PIN",
-    "submit": "Log in"
+    "title": "Sign in",
+    "subtitle": "Use Google or get a one-time code by email. No password to remember.",
+    "google": "Continue with Google",
+    "or": "or",
+    "email": "Email address",
+    "sendCode": "Email me a code",
+    "inviteContext": "Sign in to join {household}.",
+    "errors": {
+      "google": "Google sign-in didn't work. Try again, or use a code by email.",
+      "googleOff": "Google sign-in isn't set up on this server yet. Use a code by email.",
+      "lockedOut": "Too many wrong PINs, so this device was signed out. Sign in again to continue.",
+      "email": "Enter a valid email address.",
+      "rateLimited": "A code was sent a moment ago. Wait a minute before asking for another.",
+      "emailFailed": "The code email couldn't be sent: {reason}"
+    },
+    "demo": {
+      "title": "Try the demo household",
+      "body": "Fictional data for showing the app. Pick a person; the PIN is on the demo sheet.",
+      "who": "Member",
+      "pin": "PIN",
+      "submit": "Open demo",
+      "wrong": "Wrong PIN. Try again."
+    }
   },
   "bills": {
     "title": "Bills",
@@ -275,7 +294,37 @@
       "paymentDetails": "How to pay this member back",
       "paymentDetailsHint": "Shown to housemates on bills this member pays. PayID, BSB and account, IBAN, Venmo, anything.",
       "pdLabel": "Label (e.g. PayID)",
-      "pdValue": "Value"
+      "pdValue": "Value",
+      "email": "Email",
+      "emailHint": "Optional. An invitation is sent here so they can sign in and choose their own PIN."
+    },
+    "status": {
+      "joined": "Joined",
+      "pending": "Invited",
+      "expired": "Invite expired",
+      "none": "Not joined yet"
+    },
+    "invite": {
+      "title": "Invite {name}",
+      "body": "{name} signs in with Google or an emailed code, then sets their own PIN. The link and code work once, for 7 days.",
+      "email": "Email",
+      "emailHint": "We'll email the invitation. You can also copy the link or code below and send it any way you like.",
+      "send": "Send invitation",
+      "sendNew": "Send a new invitation",
+      "link": "Invitation link",
+      "code": "Code",
+      "copy": "Copy",
+      "copied": "Copied",
+      "emailed": "Emailed to {email}.",
+      "emailFailed": "The email couldn't be sent ({reason}). Copy the link instead.",
+      "notShown": "The link and code are only shown right after an invitation is created. Send a new invitation to get fresh ones; the old ones stop working.",
+      "joined": "{name} has joined.",
+      "cta": "Invite"
+    },
+    "removeAccess": {
+      "cta": "Remove access",
+      "confirm": "Remove {name}'s access? Their bills and shares stay; they can no longer sign in to this household.",
+      "done": "Access removed."
     }
   },
   "settings": {
@@ -634,5 +683,93 @@
       "threshold": "Results below {pct}% confidence go to the review queue."
     },
     "demoOn": "Demo data"
+  },
+  "code": {
+    "title": "Check your email",
+    "body": "We sent a 6-digit code to {email}. It works for 10 minutes.",
+    "code": "Code",
+    "submit": "Sign in",
+    "resend": "Send a new code",
+    "otherEmail": "Use a different email",
+    "errors": {
+      "invalid": "That code isn't right. Check the latest email and try again.",
+      "expired": "That code has expired. Send a new one.",
+      "too-many-attempts": "Too many wrong tries. Send a new code.",
+      "noEmail": "Start again with your email address."
+    }
+  },
+  "welcome": {
+    "title": "Welcome, {name}",
+    "subtitle": "Are you starting a household, or joining one?",
+    "create": {
+      "title": "Create a household",
+      "body": "You'll be its admin: add the bills, invite everyone else.",
+      "cta": "Create a household"
+    },
+    "join": {
+      "title": "Join a household",
+      "body": "Enter the code from your invitation, or open the link in the invitation email.",
+      "code": "Invitation code",
+      "placeholder": "ABCD-1234",
+      "cta": "Join",
+      "invalid": "That code doesn't match an open invitation. Check it, or ask for a new one.",
+      "rateLimited": "Too many tries. Wait a while and try again."
+    },
+    "claim": {
+      "title": "Link your existing household",
+      "body": "This server has a household from before accounts existed. Confirm with its old PIN to link it to {email}.",
+      "pin": "Old PIN",
+      "cta": "Link",
+      "wrong": "Wrong PIN."
+    },
+    "signOut": "Sign out"
+  },
+  "pin": {
+    "setTitle": "Choose your PIN",
+    "setBody": "Your PIN unlocks the app on devices where you've already signed in. Only you know it; nobody in the household can see or change it.",
+    "pin": "PIN",
+    "pinConfirm": "Confirm PIN",
+    "pinHint": "4–8 digits.",
+    "mismatch": "PINs do not match",
+    "invalid": "PIN must be 4–8 digits",
+    "save": "Save PIN",
+    "unlockTitle": "Welcome back, {name}",
+    "unlockBody": "Enter your PIN to unlock.",
+    "unlock": "Unlock",
+    "wrong": "Wrong PIN. {left, plural, one {# try} other {# tries}} left on this device.",
+    "notYou": "Not you? Sign in as someone else",
+    "changeTitle": "Change your PIN",
+    "current": "Current PIN",
+    "newPin": "New PIN",
+    "change": "Change PIN",
+    "changed": "PIN changed.",
+    "wrongCurrent": "Current PIN is wrong."
+  },
+  "invite": {
+    "title": "Join {household}",
+    "body": "{inviter} invited you to {household} as {member}.",
+    "bodyNoInviter": "You've been invited to {household} as {member}.",
+    "accept": "Accept and join",
+    "signInToAccept": "Sign in to accept",
+    "invalid": {
+      "title": "This invitation can't be used",
+      "body": "It has expired, was replaced by a newer one, or has already been accepted. Ask the household admin to send a new one."
+    },
+    "already": "You're already in a household on this server. Joining a second one isn't supported yet.",
+    "signedInAs": "Signed in as {email}"
+  },
+  "email": {
+    "code": {
+      "subject": "Your sign-in code: {code}",
+      "intro": "Here's your code to sign in to {app}:",
+      "expiry": "It works for 10 minutes. If you didn't ask for it, you can ignore this email."
+    },
+    "invite": {
+      "subject": "{inviter} invited you to {household}",
+      "intro": "{inviter} invited you to join {household} on {app}, where the household's bills are tracked and split.",
+      "button": "Accept the invitation",
+      "codeLine": "Or open {url} and enter this code:",
+      "expiry": "The invitation works for 7 days."
+    }
   }
 }

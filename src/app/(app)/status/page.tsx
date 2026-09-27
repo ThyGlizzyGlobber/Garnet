@@ -3,6 +3,7 @@ import { Badge, Card, PageHeader } from '@/components/ui';
 import { InlineAction } from '@/components/ui/form';
 import { allExtractors } from '@/ingest/extractors';
 import { readImapState } from '@/ingest/imap/poller';
+import { viewerIsOperator } from '@/lib/auth/session';
 import { pageContext } from '@/lib/context';
 import { getEnv, isImapConfigured, isLlmConfigured } from '@/lib/env';
 import { documentCounts, ingestionStats } from '@/lib/review';
@@ -11,6 +12,7 @@ import { pollNowAction } from '../review/actions';
 
 export default async function StatusPage() {
   const { hh, date } = await pageContext();
+  const operator = await viewerIsOperator();
   const t = await getTranslations('status');
   const env = getEnv();
   const w = workerStatus();
@@ -108,7 +110,7 @@ export default async function StatusPage() {
           <dt className="text-fg-muted">{t('mailbox.lastUid')}</dt>
           <dd>{imap.lastUid}</dd>
         </dl>
-        {isImapConfigured(env) && (
+        {isImapConfigured(env) && operator && (
           <div className="mt-4">
             <InlineAction action={pollNowAction} label={t('mailbox.pollNow')} />
           </div>

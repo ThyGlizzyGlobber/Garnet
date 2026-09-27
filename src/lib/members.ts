@@ -53,7 +53,9 @@ export function countMembers(householdId: string, db: Db = getDb()): number {
 
 export interface MemberInput {
   name: string;
-  pinHash: string;
+  pinHash?: string | null;
+  accountId?: string | null;
+  email?: string | null;
   role?: 'owner' | 'member';
   splitWeight?: number;
   activeFrom: string;
@@ -69,8 +71,10 @@ export function createMember(householdId: string, input: MemberInput, db: Db = g
   const row = {
     id: ulid(),
     householdId,
+    accountId: input.accountId ?? null,
+    email: input.email?.trim().toLowerCase() || null,
     name: input.name.trim(),
-    pinHash: input.pinHash,
+    pinHash: input.pinHash ?? null,
     role: input.role ?? 'member',
     splitWeight: input.splitWeight ?? 1,
     activeFrom: input.activeFrom,
@@ -87,7 +91,7 @@ export function createMember(householdId: string, input: MemberInput, db: Db = g
 export function updateMember(
   householdId: string,
   id: string,
-  patch: Partial<Omit<MemberInput, 'pinHash'>> & { pinHash?: string },
+  patch: Partial<MemberInput>,
   db: Db = getDb(),
 ): Member {
   const existing = getMember(householdId, id, db);

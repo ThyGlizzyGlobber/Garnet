@@ -3,12 +3,12 @@
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import type { ActionState } from '@/components/ui/form';
-import { hashPin, PIN_PATTERN } from '@/lib/auth/pin';
-import { loginAs } from '@/lib/auth/session';
+import { membershipsFor } from '@/lib/accounts';
+import { requireAccount, setActiveMember } from '@/lib/auth/session';
 import { str, zodToState } from '@/lib/actions';
 import { getDb } from '@/db/client';
 import { isIsoDate } from '@/lib/dates';
-import { createHousehold, isSetUp } from '@/lib/households';
+import { createHousehold } from '@/lib/households';
 import { createMember } from '@/lib/members';
 
 const schema = z
@@ -21,17 +21,15 @@ const schema = z
     splitMode: z.enum(['shared', 'single']),
     ownerName: z.string().min(1, 'Your name is required').max(40),
     activeFrom: z.string().refine(isIsoDate, 'Use a valid date'),
-    pin: z.string().regex(PIN_PATTERN, 'PIN must be 4–8 digits'),
-    pinConfirm: z.string(),
   })
-  .refine((v) => v.pin === v.pinConfirm, { path: ['pinConfirm'], message: 'PINs do not match' })
   .refine((v) => Intl.supportedValuesOf('timeZone').includes(v.timezone), {
     path: ['timezone'],
     message: 'Unknown timezone',
   });
 
 export async function completeSetup(_prev: ActionState, fd: FormData): Promise<ActionState> {
-  if (isSetUp()) redirect('/');
+  const account = await requireAccount();
+  if (membershipsFor(account.id).length) redirect('/');
   const parsed = schema.safeParse({
     householdName: str(fd, 'householdName'),
     currency: str(fd, 'currency'),
@@ -41,17 +39,14 @@ export async function completeSetup(_prev: ActionState, fd: FormData): Promise<A
     splitMode: str(fd, 'splitMode'),
     ownerName: str(fd, 'ownerName'),
     activeFrom: str(fd, 'activeFrom'),
-    pin: str(fd, 'pin'),
-    pinConfirm: str(fd, 'pinConfirm'),
   });
   if (!parsed.success) return zodToState(parsed.error);
   const v = parsed.data;
   let ownerId: string;
   try {
-    const pinHash = await hashPin(v.pin);
     ownerId = getDb().transaction((tx) => {
-      // First-run only; re-checked inside the transaction so two tabs can't both create one.
-      if (isSetUp(tx)) throw new Error('This server is already set up.');
+      // Re-checked inside the transaction so two tabs can't create two households.
+      if (membershipsFor(account.id, tx).length) throw new Error('You already have a household.');
       const hh = createHousehold(
         {
           name: v.householdName,
@@ -65,13 +60,19 @@ export async function completeSetup(_prev: ActionState, fd: FormData): Promise<A
       );
       return createMember(
         hh.id,
-        { name: v.ownerName, pinHash, role: 'owner', activeFrom: v.activeFrom },
+        {
+          name: v.ownerName,
+          role: 'owner',
+          activeFrom: v.activeFrom,
+          accountId: account.id,
+          email: account.email,
+        },
         tx,
       ).id;
     });
   } catch (e) {
     return { error: (e as Error).message };
   }
-  await loginAs(ownerId);
-  redirect('/');
+  await setActiveMember(ownerId);
+  redirect('/set-pin');
 }

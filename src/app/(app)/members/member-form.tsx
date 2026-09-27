@@ -12,6 +12,9 @@ export interface MemberFormValues {
   activeTo: string;
   colour: string;
   paymentDetails: { label: string; value: string }[];
+  email: string;
+  /** Joined members sign in with their account; their email isn't edited here. */
+  joined: boolean;
 }
 
 export function MemberForm({
@@ -56,32 +59,17 @@ export function MemberForm({
                 />
               </Field>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <Field
-                label={initial.id ? t('newPin') : t('pin')}
-                error={errors.pin}
-                hint={initial.id ? t('newPinHint') : t('pinHint')}
-              >
+            {!initial.joined && (
+              <Field label={t('email')} error={errors.email} hint={t('emailHint')}>
                 <Input
-                  name="pin"
-                  type="password"
-                  inputMode="numeric"
-                  pattern="\d{4,8}"
-                  autoComplete="new-password"
-                  required={!initial.id}
+                  name="email"
+                  type="email"
+                  inputMode="email"
+                  autoComplete="off"
+                  defaultValue={initial.email}
                 />
               </Field>
-              <Field label={t('pinConfirm')} error={errors.pinConfirm}>
-                <Input
-                  name="pinConfirm"
-                  type="password"
-                  inputMode="numeric"
-                  pattern="\d{4,8}"
-                  autoComplete="new-password"
-                  required={!initial.id}
-                />
-              </Field>
-            </div>
+            )}
           </Card>
           <Card className="flex flex-col gap-4">
             <h2 className="font-semibold">{t('residency')}</h2>

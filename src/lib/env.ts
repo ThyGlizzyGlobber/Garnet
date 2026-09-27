@@ -16,7 +16,21 @@ const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(3000),
 
   AUTH_SECRET: z.string().min(32, 'AUTH_SECRET must be at least 32 characters'),
-  AUTH_SESSION_DAYS: z.coerce.number().int().positive().default(30),
+  /** How long a PIN unlock (or a fresh sign-in) lasts before the PIN is asked again. */
+  AUTH_SESSION_DAYS: z.coerce.number().positive().default(7),
+  /** How long a browser stays trusted after a full sign-in (Google or emailed code). */
+  AUTH_DEVICE_DAYS: z.coerce.number().int().positive().default(180),
+  /** Public base URL, e.g. https://home.example.com. Used in emails and the Google redirect. */
+  APP_URL: z.string().url().optional(),
+  /** Comma-separated emails that get operator rights (software updates, mailbox polling). */
+  OPERATOR_EMAILS: z.string().default(''),
+
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  GOOGLE_CLIENT_SECRET: z.string().optional(),
+  RESEND_API_KEY: z.string().optional(),
+  EMAIL_FROM: z.string().default('Home Utilities <no-reply@localhost>'),
+  /** Write emails to the server log instead of sending (local testing, or before email is set up). */
+  EMAIL_LOG_ONLY: boolish.default(false),
 
   DEFAULT_CURRENCY: z.string().length(3).toUpperCase().default('AUD'),
   DEFAULT_LOCALE: z.string().min(2).default('en-AU'),
@@ -85,6 +99,26 @@ export function isImapConfigured(env: Env = getEnv()): boolean {
 
 export function isUpdateCheckConfigured(env: Env = getEnv()): boolean {
   return Boolean(env.UPDATE_REPO && env.UPDATE_GITHUB_TOKEN);
+}
+
+export function isGoogleConfigured(env: Env = getEnv()): boolean {
+  return Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
+}
+
+/** Email can be delivered for real. Without it, development builds log emails instead. */
+export function isEmailConfigured(env: Env = getEnv()): boolean {
+  return Boolean(env.RESEND_API_KEY);
+}
+
+/** Base URL for links in emails and OAuth redirects. */
+export function appUrl(env: Env = getEnv()): string {
+  return (env.APP_URL ?? `http://localhost:${env.PORT}`).replace(/\/+$/, '');
+}
+
+export function operatorEmails(env: Env = getEnv()): string[] {
+  return env.OPERATOR_EMAILS.split(',')
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
 }
 
 export function isLlmConfigured(env: Env = getEnv()): boolean {

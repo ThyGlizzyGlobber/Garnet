@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import { isSetUp } from '@/lib/households';
+import { membershipsFor } from '@/lib/accounts';
+import { requireAccount } from '@/lib/auth/session';
 import { getEnv } from '@/lib/env';
 import { addDays, todayIn } from '@/lib/dates';
 import { SetupWizard } from './wizard';
@@ -8,7 +9,8 @@ import { SetupWizard } from './wizard';
 export const dynamic = 'force-dynamic';
 
 export default async function SetupPage() {
-  if (isSetUp()) redirect('/');
+  const account = await requireAccount();
+  if (membershipsFor(account.id).length) redirect('/');
   const env = getEnv();
   const t = await getTranslations('setup');
   return (
@@ -26,6 +28,7 @@ export default async function SetupPage() {
               timezone: env.DEFAULT_TIMEZONE,
               fiscalYearStartMonth: env.DEFAULT_FISCAL_YEAR_START_MONTH,
               activeFrom: addDays(todayIn(env.DEFAULT_TIMEZONE), -365),
+              ownerName: account.name,
             }}
             timezones={Intl.supportedValuesOf('timeZone')}
           />

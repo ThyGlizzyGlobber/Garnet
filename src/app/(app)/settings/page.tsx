@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { Card, PageHeader } from '@/components/ui';
+import { viewerIsOperator } from '@/lib/auth/session';
 import { pageContext } from '@/lib/context';
 import { getEnv, isImapConfigured, isLlmConfigured } from '@/lib/env';
 import { SettingsForm } from './settings-form';
@@ -11,6 +12,7 @@ import { UpdateCard } from './update-card';
 
 export default async function SettingsPage() {
   const { hh, me } = await pageContext();
+  const operator = await viewerIsOperator();
   const t = await getTranslations('settings');
   const env = getEnv();
   const theme = await getTheme();
@@ -68,7 +70,7 @@ export default async function SettingsPage() {
           />
         </Card>
       )}
-      {me.role === 'owner' && <UpdateCard hh={hh} />}
+      {operator && <UpdateCard hh={hh} />}
       <Card className="mt-4">
         <h2 className="font-semibold">
           <Link href="/status" className="text-accent">

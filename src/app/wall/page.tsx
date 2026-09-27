@@ -4,10 +4,10 @@ import { getTranslations } from 'next-intl/server';
 import { Icon } from '@/components/app/icons';
 import { TrendLine } from '@/components/charts/trend-line';
 import { Ring } from '@/components/ui/ring';
-import { currentMember } from '@/lib/auth/session';
+import { authState, pathFor } from '@/lib/auth/session';
 import { todayIn } from '@/lib/dates';
 import { formatDate, formatMoney } from '@/lib/format';
-import { getHousehold, isSetUp } from '@/lib/households';
+import { getHousehold } from '@/lib/households';
 import { darkVariant } from '@/lib/palette';
 import { nextMonth, projectMonth } from '@/lib/projections';
 import { dashboardSummary, hasAnyBills, householdBalances, settlementRate } from '@/lib/stats';
@@ -25,9 +25,9 @@ const avatar = (colour: string) => ({
  * lasts AUTH_SESSION_DAYS. Refreshes every minute.
  */
 export default async function WallPage() {
-  if (!isSetUp()) redirect('/setup');
-  const me = await currentMember();
-  if (!me) redirect('/login?next=/wall');
+  const state = await authState();
+  if (state.kind !== 'ok') redirect(pathFor(state, '/wall')!);
+  const me = state.member;
   const hh = getHousehold(me.householdId);
   if (!hh) redirect('/login?next=/wall');
   const t = await getTranslations('wall');

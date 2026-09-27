@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { PageHeader } from '@/components/ui';
 import { pageContext } from '@/lib/context';
@@ -7,7 +8,8 @@ import { nextPaletteColour } from '@/lib/palette';
 import { MemberForm } from '../member-form';
 
 export default async function NewMemberPage() {
-  const { hh, today } = await pageContext();
+  const { hh, me, today } = await pageContext();
+  if (me.role !== 'owner') redirect('/members');
   const t = await getTranslations('members');
   return (
     <div className="mx-auto max-w-xl">
@@ -24,6 +26,8 @@ export default async function NewMemberPage() {
           activeTo: '',
           colour: nextPaletteColour(listMembers(hh.id).map((m) => m.colour)),
           paymentDetails: [],
+          email: '',
+          joined: false,
         }}
       />
     </div>

@@ -11,7 +11,7 @@ type Step = (typeof STEPS)[number];
 const FIELDS: Record<Step, string[]> = {
   household: ['householdName', 'splitMode'],
   region: ['currency', 'locale', 'timezone', 'fiscalYearStartMonth'],
-  owner: ['ownerName', 'activeFrom', 'pin', 'pinConfirm'],
+  owner: ['ownerName', 'activeFrom'],
 };
 
 /**
@@ -29,6 +29,7 @@ export function SetupWizard({
     timezone: string;
     fiscalYearStartMonth: number;
     activeFrom: string;
+    ownerName: string;
   };
   timezones: string[];
 }) {
@@ -192,7 +193,12 @@ export function SetupWizard({
               <h2 className="font-display text-lg font-semibold">{t('sections.owner')}</h2>
               <div className="grid grid-cols-2 gap-3">
                 <Field label={t('fields.ownerName')} error={errors.ownerName}>
-                  <Input name="ownerName" autoComplete="name" required />
+                  <Input
+                    name="ownerName"
+                    autoComplete="name"
+                    defaultValue={defaults.ownerName}
+                    required
+                  />
                 </Field>
                 <Field
                   label={t('fields.activeFrom')}
@@ -203,28 +209,6 @@ export function SetupWizard({
                     name="activeFrom"
                     type="date"
                     defaultValue={defaults.activeFrom}
-                    required
-                  />
-                </Field>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label={t('fields.pin')} error={errors.pin} hint={t('hints.pin')}>
-                  <Input
-                    name="pin"
-                    type="password"
-                    inputMode="numeric"
-                    pattern="\d{4,8}"
-                    autoComplete="new-password"
-                    required
-                  />
-                </Field>
-                <Field label={t('fields.pinConfirm')} error={errors.pinConfirm}>
-                  <Input
-                    name="pinConfirm"
-                    type="password"
-                    inputMode="numeric"
-                    pattern="\d{4,8}"
-                    autoComplete="new-password"
                     required
                   />
                 </Field>

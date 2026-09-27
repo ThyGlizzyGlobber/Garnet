@@ -37,6 +37,29 @@ export const household = sqliteTable('household', {
   updatedAt: text('updated_at').notNull(),
 });
 
+/**
+ * A person who can sign in (Google or an emailed one-time code). Accounts are
+ * install-wide; a member row links an account into a household.
+ */
+export const account = sqliteTable(
+  'account',
+  {
+    id: text('id').primaryKey(),
+    /** Lower-cased. */
+    email: text('email').notNull(),
+    name: text('name').notNull(),
+    /** Google's stable subject id, once the account has signed in with Google. */
+    googleSub: text('google_sub'),
+    lastSignInAt: text('last_sign_in_at'),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (t) => [
+    uniqueIndex('account_email_unique').on(t.email),
+    uniqueIndex('account_google_sub_unique').on(t.googleSub),
+  ],
+);
+
 /** FK used by every household-owned table; deleting a household deletes its rows. */
 const householdId = () =>
   text('household_id')
@@ -48,8 +71,13 @@ export const member = sqliteTable(
   {
     id: text('id').primaryKey(),
     householdId: householdId(),
+    /** The signed-in person behind this member; null until an invite is accepted. */
+    accountId: text('account_id').references(() => account.id, { onDelete: 'set null' }),
+    /** Where the invite went. Contact only; sign-in identity lives on the account. */
+    email: text('email'),
     name: text('name').notNull(),
-    pinHash: text('pin_hash').notNull(),
+    /** Set by the member themselves after accepting; nobody else can set or see it. */
+    pinHash: text('pin_hash'),
     role: text('role', { enum: ['owner', 'member'] })
       .notNull()
       .default('member'),
@@ -68,7 +96,11 @@ export const member = sqliteTable(
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
-  (t) => [uniqueIndex('member_household_name_unique').on(t.householdId, t.name)],
+  (t) => [
+    uniqueIndex('member_household_name_unique').on(t.householdId, t.name),
+    uniqueIndex('member_household_account_unique').on(t.householdId, t.accountId),
+    index('member_account_idx').on(t.accountId),
+  ],
 );
 
 /** Catalog of service types, shared by every household (built-ins seeded by migration). */
@@ -269,7 +301,82 @@ export const projection = sqliteTable(
   (t) => [uniqueIndex('projection_service_month_unique').on(t.serviceId, t.periodMonth)],
 );
 
+/**
+ * An invitation for one member row. The link token and the short typed code are
+ * both stored hashed; either one accepts the invite, once, before it expires.
+ */
+export const invite = sqliteTable(
+  'invite',
+  {
+    id: text('id').primaryKey(),
+    householdId: householdId(),
+    memberId: text('member_id')
+      .notNull()
+      .references(() => member.id, { onDelete: 'cascade' }),
+    email: text('email'),
+    tokenHash: text('token_hash').notNull(),
+    codeHash: text('code_hash').notNull(),
+    createdByMemberId: text('created_by_member_id').references(() => member.id, {
+      onDelete: 'set null',
+    }),
+    expiresAt: text('expires_at').notNull(),
+    acceptedAt: text('accepted_at'),
+    acceptedByAccountId: text('accepted_by_account_id').references(() => account.id, {
+      onDelete: 'set null',
+    }),
+    revokedAt: text('revoked_at'),
+    createdAt: text('created_at').notNull(),
+  },
+  (t) => [
+    uniqueIndex('invite_token_unique').on(t.tokenHash),
+    uniqueIndex('invite_code_unique').on(t.codeHash),
+    index('invite_member_idx').on(t.memberId),
+  ],
+);
+
+/** Emailed one-time sign-in codes (hashed). */
+export const loginCode = sqliteTable(
+  'login_code',
+  {
+    id: text('id').primaryKey(),
+    email: text('email').notNull(),
+    codeHash: text('code_hash').notNull(),
+    attempts: integer('attempts').notNull().default(0),
+    expiresAt: text('expires_at').notNull(),
+    consumedAt: text('consumed_at'),
+    createdAt: text('created_at').notNull(),
+  },
+  (t) => [index('login_code_email_idx').on(t.email)],
+);
+
+/**
+ * A browser an account has fully signed in on. The member's PIN only unlocks a
+ * trusted device; too many wrong PINs deletes the row and forces a full sign-in.
+ */
+export const device = sqliteTable(
+  'device',
+  {
+    id: text('id').primaryKey(),
+    accountId: text('account_id')
+      .notNull()
+      .references(() => account.id, { onDelete: 'cascade' }),
+    tokenHash: text('token_hash').notNull(),
+    label: text('label'),
+    pinFailures: integer('pin_failures').notNull().default(0),
+    createdAt: text('created_at').notNull(),
+    lastSeenAt: text('last_seen_at').notNull(),
+    expiresAt: text('expires_at').notNull(),
+  },
+  (t) => [
+    uniqueIndex('device_token_unique').on(t.tokenHash),
+    index('device_account_idx').on(t.accountId),
+  ],
+);
+
 export type Household = typeof household.$inferSelect;
+export type Account = typeof account.$inferSelect;
+export type Invite = typeof invite.$inferSelect;
+export type Device = typeof device.$inferSelect;
 export type Member = typeof member.$inferSelect;
 export type NewMember = typeof member.$inferInsert;
 export type ServiceType = typeof serviceType.$inferSelect;

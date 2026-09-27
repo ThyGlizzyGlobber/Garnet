@@ -2,17 +2,17 @@ import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
 import { AppShell } from '@/components/app/shell';
-import { currentMember } from '@/lib/auth/session';
-import { getHousehold, isSetUp } from '@/lib/households';
+import { authState, pathFor } from '@/lib/auth/session';
+import { getHousehold } from '@/lib/households';
 import { logout } from '@/app/login/actions';
 import { documentCounts } from '@/lib/review';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
-  if (!isSetUp()) redirect('/setup');
-  const me = await currentMember();
-  if (!me) redirect('/login');
+  const state = await authState();
+  if (state.kind !== 'ok') redirect(pathFor(state)!);
+  const me = state.member;
   const hh = getHousehold(me.householdId);
   if (!hh) redirect('/login');
   const t = await getTranslations('nav');

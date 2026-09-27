@@ -7,7 +7,7 @@ import type { ActionState } from '@/components/ui/form';
 import { archiveDocument, getDocument, setDocumentStatus } from '@/ingest/archive';
 import { processDocument } from '@/ingest/pipeline';
 import { str, zodToState } from '@/lib/actions';
-import { requireMember } from '@/lib/auth/session';
+import { requireMember, requireOperator } from '@/lib/auth/session';
 import { createBill } from '@/lib/bills';
 import { isIsoDate } from '@/lib/dates';
 import { parseMoneyToMinor } from '@/lib/format';
@@ -138,7 +138,7 @@ export async function reprocessAllAction(): Promise<void> {
 }
 
 export async function pollNowAction(): Promise<void> {
-  await requireMember();
+  await requireOperator();
   await pollNow();
   revalidatePath('/status');
   revalidatePath('/review');

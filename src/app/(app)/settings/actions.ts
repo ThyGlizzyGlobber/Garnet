@@ -4,11 +4,10 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import type { ActionState } from '@/components/ui/form';
 import { str, zodToState } from '@/lib/actions';
-import { requireMember, requireOwner } from '@/lib/auth/session';
+import { requireMember, requireOperator, requireOwner, signOut } from '@/lib/auth/session';
 import { updateHousehold } from '@/lib/households';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { logout } from '@/lib/auth/session';
 import { exitDemo } from '@/lib/demo';
 import { THEME_COOKIE, THEMES, type Theme } from '@/lib/theme';
 import { cancelUpdateRequest, checkForUpdate, requestUpdate } from '@/lib/updates';
@@ -63,26 +62,26 @@ export async function setThemeAction(fd: FormData): Promise<void> {
 export async function exitDemoAction(): Promise<void> {
   const me = await requireOwner();
   exitDemo(me.householdId);
-  await logout();
-  redirect('/setup');
+  await signOut();
+  redirect('/login');
 }
 
 /** Owner only: queue an update for the NAS cron job to apply. */
 export async function requestUpdateAction(): Promise<void> {
-  const me = await requireOwner();
+  const me = await requireOperator();
   requestUpdate(me.name);
   revalidatePath('/settings');
 }
 
 export async function cancelUpdateAction(): Promise<void> {
-  await requireOwner();
+  await requireOperator();
   cancelUpdateRequest();
   revalidatePath('/settings');
 }
 
 /** Skip the short cache and ask GitHub again. */
 export async function recheckUpdateAction(): Promise<void> {
-  await requireOwner();
+  await requireOperator();
   await checkForUpdate({ fresh: true });
   revalidatePath('/settings');
 }

@@ -131,22 +131,46 @@ Install **Cloudflared** from Apps → Discover with your tunnel token, and in th
 Cloudflare dashboard point the public hostname (e.g. `nameplaceholder.brjlabs.com`) at
 `http://<nas-ip>:30080`.
 
-**Until accounts and invitations ship, don't leave the hostname open.** Login is
-still name + PIN and the login page lists members' names. In the meantime, put
-a Cloudflare Access application in front of the hostname (Zero Trust → Access →
-Applications) that only lets in the email addresses you list.
+Sign-in needs Google or an emailed code, and the login page shows no member
+names. A Cloudflare Access application in front of the hostname (Zero Trust →
+Access → Applications, allow listed emails) is still a good extra gate while
+stage 3 hardening (HTTPS-only cookies, stricter rate limits) is pending.
 
-## 8. Wall display (iPad)
+## 8. Accounts and sign-in
 
-Open `http://<nas-ip>:30080/wall` in Safari, log in once (the session lasts
-`AUTH_SESSION_DAYS`, default 30), then Share → Add to Home Screen and open it
+People sign in with Google or a one-time code sent by email, join a household
+by invitation, and then choose their own PIN. The PIN only unlocks the app on
+a browser that has already fully signed in (for `AUTH_SESSION_DAYS`, default 7);
+five wrong PINs sign that browser out.
+
+Add these to the app (**Edit → Container Configuration → Environment Variables**):
+
+| Variable                                    | Value                                                                                                                                                      |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `APP_URL`                                   | the public address, e.g. `https://home.brjlabs.com`                                                                                                        |
+| `OPERATOR_EMAILS`                           | your email (comma-separate several). Operators get Software update and Poll now, and can link a household that existed before accounts                     |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google Cloud → Google Auth Platform → Clients (Web application). Redirect URI: `<APP_URL>/api/auth/google/callback`. Leave empty to hide the Google button |
+| `RESEND_API_KEY`                            | Resend API key with sending access to your verified domain                                                                                                 |
+| `EMAIL_FROM`                                | e.g. `Home Utilities <no-reply@mail.brjlabs.com>`                                                                                                          |
+| `EMAIL_LOG_ONLY`                            | `true` writes emails to the app log instead of sending (only for trying things out)                                                                        |
+
+**First sign-in after upgrading from a version without accounts:** sign in with
+the email in `OPERATOR_EMAILS`. The Welcome screen offers to link your existing
+household; confirm with your old PIN, which stays your PIN. Everyone else in the
+household gets an invitation from **Members → (name) → Invite**.
+
+## 9. Wall display (iPad)
+
+Open `http://<nas-ip>:30080/wall` in Safari and sign in once (the device stays
+trusted for `AUTH_DEVICE_DAYS`, default 180; the PIN is asked every
+`AUTH_SESSION_DAYS`), then Share → Add to Home Screen and open it
 from there for a full-screen kiosk. Use Guided Access to lock it. The page
 refreshes itself every minute.
 
 Phones: open the app in the browser and Add to Home Screen; it installs as an
 app with an icon and keeps the last-loaded pages available offline.
 
-## 9. Where things live on the volume
+## 10. Where things live on the volume
 
 ```
 /data/db/utilities.sqlite          the database (WAL files beside it)
