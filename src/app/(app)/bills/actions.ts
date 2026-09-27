@@ -7,6 +7,7 @@ import type { ActionState } from '@/components/ui/form';
 import { optStr, str, zodToState } from '@/lib/actions';
 import { requireMember } from '@/lib/auth/session';
 import {
+  clearBillAlert,
   createBill,
   deleteBill,
   getBill,
@@ -161,4 +162,14 @@ export async function toggleBillPaidAction(fd: FormData): Promise<void> {
   setBillPaidToProvider(me.householdId, id, str(fd, 'paid') === 'true');
   revalidatePath(`/bills/${id}`);
   revalidatePath('/bills');
+}
+
+/** "Sorted": the household has dealt with a provider's payment-failed or overdue notice. */
+export async function clearBillAlertAction(fd: FormData): Promise<void> {
+  const me = await requireMember();
+  const id = str(fd, 'id');
+  clearBillAlert(me.householdId, id);
+  revalidatePath(`/bills/${id}`);
+  revalidatePath('/bills');
+  revalidatePath('/');
 }

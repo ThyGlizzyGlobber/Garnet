@@ -194,6 +194,14 @@
       "count": "{count, plural, one {# bill} other {# bills}}",
       "total": "{amount} total",
       "unpaid": "{amount} unpaid"
+    },
+    "alert": {
+      "payment_failed": "Payment failed",
+      "overdue": "Overdue",
+      "payment_failedBody": "{provider} emailed on {date} to say the payment for this bill didn't go through. It's no longer marked as paid to them.",
+      "overdueBody": "{provider} emailed on {date} to say this bill is overdue.",
+      "viewEmail": "See their email",
+      "resolve": "Mark as sorted"
     }
   },
   "services": {
@@ -535,6 +543,11 @@
     "chips": {
       "services": "{count, plural, one {# service} other {# services}}",
       "members": "{count, plural, one {# member} other {# members}}"
+    },
+    "alertBanner": {
+      "payment_failed": "{provider}: the payment for the bill due {due} failed",
+      "overdue": "{provider}: the bill due {due} is overdue",
+      "open": "Open bill"
     }
   },
   "ledger": {
@@ -612,7 +625,8 @@
       "unprocessed": "Queued",
       "extracted": "Bill created",
       "needs_review": "Needs review",
-      "ignored": "Ignored"
+      "ignored": "Ignored",
+      "notice": "Notice"
     },
     "footnote": "Every file is kept permanently under the data directory's inbox folder, so a bill can always be re-read later.",
     "detail": {
@@ -786,16 +800,16 @@
   },
   "billsAddress": {
     "title": "Bills email address",
-    "body": "Bills sent to this address are read automatically and land in Bills, or in the review queue when something needs checking.",
+    "body": "Bills sent to this address are added automatically. If a provider says a payment failed or a bill is overdue, the bill is flagged.",
     "label": "Your household's address",
     "howProvider": "Easiest: in each provider's online account, change the email address bills are sent to.",
     "howForward": "Or forward a bill here from your own inbox whenever one arrives.",
-    "howReview": "Messages that aren't bills (like a forwarding confirmation) show up in the review queue, where you can read them.",
+    "howReview": "Emails that aren't bills (password resets, plan changes) are kept and, if you turn it on, forwarded to you — they don't need anything from you.",
     "replace": "Get a new address",
     "replaceConfirm": "Replace the address? The current one stops working immediately, so update any provider that uses it.",
     "short": "Bills can also be emailed to {address}",
     "howForwardToMe": "Want provider emails (like password resets) in your own inbox too? Turn on forwarding on your member page.",
-    "howTrust": "The first bill from each provider waits in the review queue once. Tick \"Trust future bills\" when you add it, and that provider's next bills arrive by themselves."
+    "howTrust": "Bills from your providers are added the moment they arrive. Only an email that can't be proven to come from the provider waits for a quick look."
   },
   "forward": {
     "title": "Forward emails to me",

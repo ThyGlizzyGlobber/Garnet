@@ -57,6 +57,13 @@
       "when": 1790518031620,
       "tag": "0007_sender_trust",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1790521157074,
+      "tag": "0008_payment_alerts",
+      "breakpoints": true
     }
   ]
 }

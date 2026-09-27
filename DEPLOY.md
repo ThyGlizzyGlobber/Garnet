@@ -191,13 +191,20 @@ Steps:
 8. Send a test: forward any bill to the address shown in Settings. It appears under Bills (or in the review queue) within a minute.
 
 **Who can create bills by email.** Anyone who learns a household's address can
-send to it, so a message only becomes a bill by itself when it carries a valid
-DKIM signature from the domain in its From address (checked by the app — Cloudflare
-doesn't pass its own verdicts to Workers) **and** that domain is in the matched
-service's **Trusted bill senders**. The first bill from each provider therefore
-waits in the review queue once; approving it with "Trust future bills from …"
-ticked adds the domain. Unsigned or spoofed mail always waits for review.
-Uploads by signed-in members are not affected.
+send to it, so the app checks each message's DKIM signature itself (Cloudflare
+doesn't pass its verdicts to Workers). A signed bill is added straight away when
+it comes from a household member, from a sender already trusted for that
+service, or from a domain that is plainly the provider's (`agl.com.au` for
+AGL, `yvw.com.au` for Yarra Valley Water) — that domain is then remembered.
+Unsigned mail, and signed mail from a domain that doesn't look like the
+provider, waits in the review queue. Personal mailbox domains (gmail.com, …)
+are only ever trusted as an exact address.
+
+**Provider notices.** "Payment failed / declined / dishonoured" and "overdue"
+emails flag that service's latest bill (a failed payment also un-marks it as
+paid to the provider); "payment received" marks it paid and clears the flag.
+Other non-bill emails (password resets, plan changes) are kept as notices,
+out of the review queue. Only signed notices change a bill.
 
 Members can get copies of everything sent to the bills address (password
 resets, account notices, bills) on their own member page → **Forward emails to

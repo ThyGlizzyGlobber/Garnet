@@ -190,7 +190,17 @@ export const serviceSplit = sqliteTable(
   (t) => [uniqueIndex('service_split_unique').on(t.serviceId, t.memberId)],
 );
 
-export const DOCUMENT_STATUSES = ['unprocessed', 'extracted', 'needs_review', 'ignored'] as const;
+/**
+ * notice = a provider email that isn't a bill (payment failed/received, password
+ * reset, plan change…): kept and forwarded, but not in the review queue.
+ */
+export const DOCUMENT_STATUSES = [
+  'unprocessed',
+  'extracted',
+  'needs_review',
+  'ignored',
+  'notice',
+] as const;
 
 /** A raw bill file archived under DATA_DIR/inbox — the permanent audit trail. */
 export const sourceDocument = sqliteTable(
@@ -253,6 +263,13 @@ export const bill = sqliteTable(
     externalRef: text('external_ref'),
     paidToProviderAt: text('paid_to_provider_at'),
     isAnomaly: integer('is_anomaly', { mode: 'boolean' }).notNull().default(false),
+    /** Set from a provider email: the payment for this bill failed or it's overdue. */
+    alertKind: text('alert_kind', { enum: ['payment_failed', 'overdue'] }),
+    alertAt: text('alert_at'),
+    /** The provider email that raised the alert. */
+    alertDocumentId: text('alert_document_id').references(() => sourceDocument.id, {
+      onDelete: 'set null',
+    }),
     anomalyNote: text('anomaly_note'),
     notes: text('notes'),
     createdByMemberId: text('created_by_member_id').references(() => member.id, {

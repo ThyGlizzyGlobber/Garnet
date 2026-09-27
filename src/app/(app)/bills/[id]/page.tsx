@@ -7,7 +7,12 @@ import { getBill } from '@/lib/bills';
 import { pageContext } from '@/lib/context';
 import { formatMoney } from '@/lib/format';
 import { unitLabel } from '@/lib/units';
-import { deleteBillAction, toggleBillPaidAction, toggleSharePaidAction } from '../actions';
+import {
+  clearBillAlertAction,
+  deleteBillAction,
+  toggleBillPaidAction,
+  toggleSharePaidAction,
+} from '../actions';
 
 export default async function BillPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -29,6 +34,33 @@ export default async function BillPage({ params }: { params: Promise<{ id: strin
           </LinkButton>
         }
       />
+      {b.alertKind && (
+        <Card className="mb-4 flex flex-col gap-3 border-danger/40 bg-danger-soft">
+          <p className="font-semibold text-danger">{t(`alert.${b.alertKind}`)}</p>
+          <p className="text-sm">
+            {t(`alert.${b.alertKind}Body`, {
+              provider: b.service.provider,
+              date: b.alertAt ? date(b.alertAt) : '',
+            })}
+          </p>
+          <div className="flex flex-wrap items-center gap-3">
+            {b.alertDocumentId && (
+              <Link
+                href={`/review/${b.alertDocumentId}`}
+                className="text-sm font-semibold text-accent"
+              >
+                {t('alert.viewEmail')} →
+              </Link>
+            )}
+            <InlineAction
+              action={clearBillAlertAction}
+              hidden={{ id: b.id }}
+              label={t('alert.resolve')}
+              variant="secondary"
+            />
+          </div>
+        </Card>
+      )}
       <Card>
         <div className="flex items-start justify-between gap-4">
           <div>

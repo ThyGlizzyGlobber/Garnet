@@ -25,6 +25,7 @@ export default async function ReviewPage({
     extracted: 'success',
     ignored: 'neutral',
     unprocessed: 'accent',
+    notice: 'neutral',
   } as const;
 
   return (

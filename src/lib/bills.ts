@@ -372,3 +372,68 @@ export function setBillPaidToProvider(
     .where(and(eq(bill.householdId, householdId), eq(bill.id, id)))
     .run();
 }
+
+export type BillAlertKind = 'payment_failed' | 'overdue';
+
+/** Flag a bill from a provider notice. A failed payment also un-marks it as paid to the provider. */
+export function setBillAlert(
+  householdId: string,
+  billId: string,
+  kind: BillAlertKind,
+  documentId: string | null,
+  db: Db = getDb(),
+): void {
+  const now = new Date().toISOString();
+  db.update(bill)
+    .set({
+      alertKind: kind,
+      alertAt: now,
+      alertDocumentId: documentId,
+      ...(kind === 'payment_failed' ? { paidToProviderAt: null } : {}),
+      updatedAt: now,
+    })
+    .where(and(eq(bill.householdId, householdId), eq(bill.id, billId)))
+    .run();
+}
+
+export function clearBillAlert(householdId: string, billId: string, db: Db = getDb()): void {
+  db.update(bill)
+    .set({
+      alertKind: null,
+      alertAt: null,
+      alertDocumentId: null,
+      updatedAt: new Date().toISOString(),
+    })
+    .where(and(eq(bill.householdId, householdId), eq(bill.id, billId)))
+    .run();
+}
+
+/**
+ * The bill a provider notice is about: the most recent one already due (or due
+ * within a fortnight); for "payment received", the most recent one not yet paid
+ * to the provider.
+ */
+export function billForNotice(
+  householdId: string,
+  serviceId: string,
+  kind: BillAlertKind | 'payment_received',
+  today: string,
+  db: Db = getDb(),
+): Bill | null {
+  const bills = db
+    .select()
+    .from(bill)
+    .where(and(eq(bill.householdId, householdId), eq(bill.serviceId, serviceId)))
+    .orderBy(desc(bill.dueDate))
+    .all();
+  if (kind === 'payment_received') return bills.find((b) => !b.paidToProviderAt) ?? null;
+  const horizon = new Date(Date.parse(`${today}T00:00:00Z`) + 14 * 86_400_000)
+    .toISOString()
+    .slice(0, 10);
+  return bills.find((b) => b.dueDate <= horizon) ?? bills[bills.length - 1] ?? null;
+}
+
+/** Bills with an unresolved provider alert, newest first. */
+export function billsWithAlerts(householdId: string, db: Db = getDb()): BillListItem[] {
+  return listBills(householdId, {}, db).filter((b) => b.alertKind);
+}

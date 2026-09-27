@@ -197,6 +197,7 @@ export default async function BillsPage({
                         {sourceLabel}
                       </span>
                       <span className="flex items-center gap-2">
+                        {b.alertKind && <Badge tone="danger">{t(`alert.${b.alertKind}`)}</Badge>}
                         {b.isAnomaly && <Badge tone="warning">{t('anomaly')}</Badge>}
                         {b.externalRef && (
                           <span className="font-mono text-fg-muted">#{b.externalRef}</span>

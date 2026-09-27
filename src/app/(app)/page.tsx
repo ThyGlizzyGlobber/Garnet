@@ -5,7 +5,7 @@ import { TrendLine } from '@/components/charts/trend-line';
 import { Badge, Card, EmptyState, LinkButton, PageHeader } from '@/components/ui';
 import { InlineAction } from '@/components/ui/form';
 import { Arc, Ring } from '@/components/ui/ring';
-import { getBill } from '@/lib/bills';
+import { billsWithAlerts, getBill } from '@/lib/bills';
 import { pageContext } from '@/lib/context';
 import { darkVariant } from '@/lib/palette';
 import { addMonths } from '@/lib/periods';
@@ -60,6 +60,7 @@ export default async function HomePage() {
   const mineSum = summariseReminders(mine);
   const settled = shared ? settlementRate(hh.id, s.thisMonth.month) : null;
   const reviewCount = documentCounts(hh.id).needs_review;
+  const alerts = billsWithAlerts(hh.id);
 
   const monthName = (m: string, style: 'short' | 'long' = 'short') =>
     new Intl.DateTimeFormat(hh.locale, { month: style, timeZone: 'UTC' }).format(
@@ -163,6 +164,21 @@ export default async function HomePage() {
         </div>
       </header>
 
+      {alerts.map((b) => (
+        <Link
+          key={b.id}
+          href={`/bills/${b.id}`}
+          className="mb-4 flex items-center justify-between gap-3 rounded-card bg-danger-soft px-5 py-3 text-sm font-semibold text-danger"
+        >
+          <span>
+            {t(`alertBanner.${b.alertKind}`, {
+              provider: b.service.provider,
+              due: date(b.dueDate),
+            })}
+          </span>
+          <span>{t('alertBanner.open')} →</span>
+        </Link>
+      ))}
       {reviewCount > 0 && (
         <Link
           href="/review"

@@ -67,6 +67,7 @@ export function documentCounts(
     extracted: 0,
     needs_review: 0,
     ignored: 0,
+    notice: 0,
   };
   for (const r of rows) out[r.status] = r.n;
   return out;

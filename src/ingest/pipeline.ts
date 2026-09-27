@@ -4,18 +4,22 @@ import { bill, type SourceDocument } from '@/db/schema';
 import { createBill, type BillDetail } from '@/lib/bills';
 import { getEnv } from '@/lib/env';
 import { getHousehold } from '@/lib/households';
-import { getService, listServices, listServiceTypes } from '@/lib/services';
+import { getService, listServices, listServiceTypes, updateService } from '@/lib/services';
 import { getDocument, readDocument, setDocumentStatus } from './archive';
 import { fallbackExtractors, templateExtractors } from './extractors';
 import type { ExtractionInput, ExtractionResult, Extractor } from './extractors/types';
 import { extractText } from './text';
 import { aiAllowance, AI_READ, recordUsage } from '@/lib/usage';
 import { householdEmails } from '@/lib/accounts';
-import { addressOf, isTrustedSender, trustTarget } from '@/lib/sender-auth';
+import { addressOf, isFreemail, isTrustedSender, trustTarget } from '@/lib/sender-auth';
+import { classifyNotice, classifySubject, looksLikeBill, type NoticeKind } from '@/lib/notices';
+import { senderMatchesProvider } from '@/lib/provider-match';
+import { billForNotice, setBillAlert, clearBillAlert, setBillPaidToProvider } from '@/lib/bills';
+import { todayIn } from '@/lib/dates';
 
 export interface PipelineOutcome {
   documentId: string;
-  status: 'extracted' | 'needs_review' | 'ignored';
+  status: 'extracted' | 'needs_review' | 'ignored' | 'notice';
   reason: string;
   result: ExtractionResult | null;
   billId?: string;
@@ -128,6 +132,29 @@ export async function processDocument(
     return { documentId: doc.id, status: 'needs_review', reason: 'no-text', result: null };
   }
 
+  // Mail to a household bills address: provider notices (payment failed, overdue,
+  // payment received) update the matching bill instead of being read as a bill.
+  const fromBillsAddress = doc.senderVerified !== null;
+  const emailBody = fromBillsAddress && doc.kind === 'email';
+  // The subject decides first; the body only once no bill could be read.
+  if (emailBody) {
+    const kind = classifySubject(doc.emailSubject);
+    if (kind) return applyNotice(householdId, doc, kind, text, store, db);
+  }
+  const notABill = (attempts: StoredExtraction['attempts']): PipelineOutcome | null => {
+    if (!emailBody) return null;
+    const kind = classifyNotice(doc.emailSubject, text);
+    if (kind) return applyNotice(householdId, doc, kind, text, store, db);
+    if (looksLikeBill(doc.emailSubject, text)) return null;
+    store(
+      'notice',
+      'Not a bill (kept, and forwarded to anyone who asked for copies)',
+      null,
+      attempts,
+    );
+    return { documentId: doc.id, status: 'notice', reason: 'not-a-bill', result: null };
+  };
+
   const input = buildInput(householdId, text, doc, db);
   // AI reads are capped per household per month (AI_MONTHLY_LIMIT); templates never are.
   const aiLeft = aiAllowance(householdId, db).left > 0;
@@ -136,6 +163,8 @@ export async function processDocument(
   });
   if (attempts.some((a) => a.extractor.startsWith('llm:'))) recordUsage(householdId, AI_READ, db);
   if (!best) {
+    const notice = notABill(attempts);
+    if (notice) return notice;
     store(
       'needs_review',
       attempts.length
@@ -149,6 +178,8 @@ export async function processDocument(
     return { documentId: doc.id, status: 'needs_review', reason: 'no-result', result: null };
   }
   if (best.confidence < env.EXTRACTOR_CONFIDENCE_THRESHOLD) {
+    const notice = notABill(attempts);
+    if (notice) return notice;
     store(
       'needs_review',
       `Confidence ${Math.round(best.confidence * 100)}% is below the ${Math.round(env.EXTRACTOR_CONFIDENCE_THRESHOLD * 100)}% threshold`,
@@ -198,7 +229,7 @@ export async function processDocument(
     if (!doc.senderVerified) {
       store(
         'needs_review',
-        `Not added automatically: the email from ${domain} isn't signed in a way that proves it came from there`,
+        `This email isn't signed by ${domain}, so it can't be proven to come from ${svc.provider}. If it's genuine, add it`,
         best,
         attempts,
       );
@@ -212,19 +243,30 @@ export async function processDocument(
     // A member forwarding a bill from their own inbox is the household acting.
     const fromMember = !!address && householdEmails(householdId, db).has(address);
     if (!fromMember && !isTrustedSender(doc.senderDomain, svc.trustedSenders, address)) {
-      const who = trustTarget(doc.senderDomain, address) ?? domain;
-      store(
-        'needs_review',
-        `First bill from ${who} for ${svc.name}: check it once and trust the sender to read future bills automatically`,
-        best,
-        attempts,
-      );
-      return {
-        documentId: doc.id,
-        status: 'needs_review',
-        reason: 'untrusted-sender',
-        result: best,
-      };
+      // A signed email from a domain that is plainly the provider's (agl.com.au for
+      // AGL) is trusted on its first bill, with no one asked. Anything else waits.
+      if (!isFreemail(doc.senderDomain) && senderMatchesProvider(doc.senderDomain, svc.provider)) {
+        updateService(
+          householdId,
+          svc.id,
+          { trustedSenders: [...svc.trustedSenders, doc.senderDomain!] },
+          db,
+        );
+      } else {
+        const who = trustTarget(doc.senderDomain, address) ?? domain;
+        store(
+          'needs_review',
+          `This bill came from ${who}, which doesn't look like ${svc.provider}. If it's genuine, add it and tick "Trust future bills"`,
+          best,
+          attempts,
+        );
+        return {
+          documentId: doc.id,
+          status: 'needs_review',
+          reason: 'untrusted-sender',
+          result: best,
+        };
+      }
     }
   }
   const created = createBillFromExtraction(householdId, best, serviceId, doc.id, db);
@@ -288,4 +330,67 @@ export function createBillFromExtraction(
     },
     db,
   );
+}
+
+const NOTICE_LABEL: Record<NoticeKind, string> = {
+  payment_failed: 'Payment failed',
+  overdue: 'Overdue reminder',
+  payment_received: 'Payment received',
+};
+
+/**
+ * A provider notice: find the service it's about (by a verified, trusted or
+ * provider-looking sender; for bills a member forwarded, by the provider's name
+ * in the text) and update that service's bill. Unverified notices change nothing.
+ */
+function applyNotice(
+  householdId: string,
+  doc: SourceDocument,
+  kind: NoticeKind,
+  text: string,
+  store: (status: PipelineOutcome['status'], reason: string, result: null, attempts: []) => void,
+  db: Db,
+): PipelineOutcome {
+  const label = NOTICE_LABEL[kind];
+  const address = addressOf(doc.emailFrom);
+  const services = listServices(householdId, { includeInactive: true }, db);
+  let svc: (typeof services)[number] | undefined;
+  if (doc.senderVerified) {
+    const fromMember = !!address && householdEmails(householdId, db).has(address);
+    svc = fromMember
+      ? services.find((s) =>
+          new RegExp(`\\b${s.provider.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(
+            `${doc.emailSubject ?? ''}\n${text.slice(0, 4000)}`,
+          ),
+        )
+      : services.find(
+          (s) =>
+            isTrustedSender(doc.senderDomain, s.trustedSenders, address) ||
+            (!isFreemail(doc.senderDomain) && senderMatchesProvider(doc.senderDomain, s.provider)),
+        );
+  }
+  const hh = getHousehold(householdId, db)!;
+  const target = svc ? billForNotice(householdId, svc.id, kind, todayIn(hh.timezone), db) : null;
+  if (!svc || !target) {
+    store(
+      'notice',
+      `${label} notice. ${doc.senderVerified ? "It couldn't be matched to one of your bills" : "Its sender couldn't be verified"}, so no bill was changed`,
+      null,
+      [],
+    );
+    return { documentId: doc.id, status: 'notice', reason: kind, result: null };
+  }
+  if (kind === 'payment_received') {
+    setBillPaidToProvider(householdId, target.id, true, db);
+    clearBillAlert(householdId, target.id, db);
+  } else {
+    setBillAlert(householdId, target.id, kind, doc.id, db);
+  }
+  store(
+    'notice',
+    `${label} notice from ${svc.provider}: updated the bill due ${target.dueDate}`,
+    null,
+    [],
+  );
+  return { documentId: doc.id, status: 'notice', reason: kind, result: null, billId: target.id };
 }

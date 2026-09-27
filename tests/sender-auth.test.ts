@@ -8,6 +8,8 @@ import {
   trustTarget,
 } from '@/lib/sender-auth';
 import { dkimKeys } from './helpers/dkim';
+import { classifyNotice, classifySubject } from '@/lib/notices';
+import { senderMatchesProvider } from '@/lib/provider-match';
 
 const { resolver, sign } = dkimKeys([
   'provider.com.au',
@@ -104,5 +106,47 @@ describe('personal mailboxes', () => {
     expect(addressOf('"Jo Smith" <Jo@Example.com>')).toBe('jo@example.com');
     expect(addressOf('jo@example.com')).toBe('jo@example.com');
     expect(addressOf(null)).toBeNull();
+  });
+});
+
+describe('provider-looking senders', () => {
+  it.each([
+    ['aussiebroadband.com.au', 'Aussie Broadband', true],
+    ['mail.aussiebroadband.com.au', 'Aussie Broadband', true],
+    ['agl.com.au', 'AGL', true],
+    ['yvw.com.au', 'Yarra Valley Water', true],
+    ['originenergy.com.au', 'Origin Energy', true],
+    ['origin.com.au', 'Origin Energy', true],
+    ['redenergy.com.au', 'Red Energy', true],
+    ['aussie-broadband-billing.xyz', 'Aussie Broadband', false],
+    ['broadband.com.au', 'Aussie Broadband', false],
+    ['energy.com.au', 'Red Energy', false],
+    ['ab.com.au', 'Aussie Broadband', false],
+    ['gmail.com', 'Aussie Broadband', false],
+  ])('%s for %s → %s', (domain, provider, expected) => {
+    expect(senderMatchesProvider(domain, provider)).toBe(expected);
+  });
+});
+
+describe('notice classification', () => {
+  it.each([
+    ['Your payment was unsuccessful', '', 'payment_failed'],
+    ['Direct debit dishonoured', '', 'payment_failed'],
+    ['Reminder: your bill is overdue', '', 'overdue'],
+    ['Thanks for your payment', '', 'payment_received'],
+    ['Your October invoice', 'Amount Due Payment Received Due Date', null],
+    ['Your October invoice', 'If your payment is unsuccessful a dishonour fee applies.', null],
+    ['Reset your password', 'Click the link to reset it.', null],
+    [
+      'Account update',
+      'We were unable to process your direct debit this month, sorry.',
+      'payment_failed',
+    ],
+  ])('"%s" → %s', (subject, body, expected) => {
+    expect(classifyNotice(subject, body)).toBe(expected);
+  });
+
+  it('never decides an invoice is a notice from its subject', () => {
+    expect(classifySubject('Your Aussie Broadband invoice')).toBeNull();
   });
 });
