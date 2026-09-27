@@ -46,6 +46,8 @@ export interface StoredExtraction {
   reason: string;
   textPreview: string;
   processedAt: string;
+  /** For notices: the bill it changed (marked paid or flagged). */
+  billId?: string;
 }
 
 export function buildInput(
@@ -126,7 +128,7 @@ export async function processDocument(
     result: ExtractionResult | null,
     attempts: StoredExtraction['attempts'],
   ) => {
-    const stored: StoredExtraction = {
+    stored = {
       result,
       attempts,
       reason,
@@ -134,6 +136,15 @@ export async function processDocument(
       processedAt: new Date().toISOString(),
     };
     setDocumentStatus(householdId, doc.id, status, JSON.stringify(stored), db);
+  };
+  let stored: StoredExtraction | null = null;
+  // A notice that changed a bill remembers which, so the review page can link to it.
+  const noted = (o: PipelineOutcome): PipelineOutcome => {
+    if (o.status === 'notice' && o.billId && stored) {
+      stored.billId = o.billId;
+      setDocumentStatus(householdId, doc.id, 'notice', JSON.stringify(stored), db);
+    }
+    return o;
   };
 
   if (readError) {
@@ -153,17 +164,17 @@ export async function processDocument(
   // A payment receipt names the invoices it paid: mark those bills paid.
   const hhForLocale = getHousehold(householdId, db);
   const receipt = parseReceipt(text, hhForLocale?.locale ?? 'en-AU');
-  if (receipt) return applyReceipt(householdId, doc, receipt, store, db);
+  if (receipt) return noted(applyReceipt(householdId, doc, receipt, store, db));
 
   // The subject decides first; the body only once no bill could be read.
   if (emailBody) {
     const kind = classifySubject(doc.emailSubject);
-    if (kind) return applyNotice(householdId, doc, kind, text, store, db);
+    if (kind) return noted(applyNotice(householdId, doc, kind, text, store, db));
   }
   const notABill = (attempts: StoredExtraction['attempts']): PipelineOutcome | null => {
     if (!emailBody) return null;
     const kind = classifyNotice(doc.emailSubject, text);
-    if (kind) return applyNotice(householdId, doc, kind, text, store, db);
+    if (kind) return noted(applyNotice(householdId, doc, kind, text, store, db));
     if (looksLikeBill(doc.emailSubject, text)) return null;
     store(
       'notice',
@@ -192,7 +203,7 @@ export async function processDocument(
       db,
       env.EXTRACTOR_CONFIDENCE_THRESHOLD,
     );
-    if (routed) return routed;
+    if (routed) return noted(routed);
   }
   if (!best) {
     const notice = notABill(attempts);

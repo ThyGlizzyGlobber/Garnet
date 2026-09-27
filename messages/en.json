@@ -644,7 +644,11 @@
       "openFile": "Open file",
       "attempts": "Extractors tried",
       "attemptError": "error: {error}",
-      "attemptNone": "no result"
+      "attemptNone": "no result",
+      "noticeTitle": "This isn't a bill",
+      "noticeBody": "It was read as a receipt or notice from the provider and filed away, so there's nothing to fill in.",
+      "noticeBill": "See the bill it updated",
+      "addAnyway": "It is a bill? Add it by hand"
     },
     "form": {
       "approve": "Create bill",

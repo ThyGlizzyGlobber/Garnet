@@ -18,6 +18,7 @@ function parse(json: string | null): StoredExtraction | null {
       reason: v.reason ?? '',
       textPreview: v.textPreview ?? '',
       processedAt: v.processedAt ?? '',
+      ...(v.billId ? { billId: v.billId } : {}),
     };
   } catch {
     return null;

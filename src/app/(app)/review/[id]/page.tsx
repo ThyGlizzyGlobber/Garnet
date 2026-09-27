@@ -26,6 +26,40 @@ export default async function ReviewItemPage({ params }: { params: Promise<{ id:
   const suggested = r ? (r.bill.serviceId ?? matchService(hh.id, r)) : null;
   const isPdf = (d.mimeType ?? '').includes('pdf') || d.path.endsWith('.pdf');
   const canReview = d.status !== 'extracted';
+  // A receipt or provider notice: nothing to fill in, so say what happened instead.
+  const isNotice = d.status === 'notice';
+  const relatedBill = d.billId ?? d.extraction?.billId ?? null;
+
+  const form = (
+    <ReviewForm
+      documentId={d.id}
+      services={services.map((s) => ({
+        id: s.id,
+        name: s.name,
+        provider: s.provider,
+        usageUnit: s.usageUnit,
+      }))}
+      units={listUnits().map((u) => ({ key: u.key, label: u.label }))}
+      currency={r?.bill.currency ?? hh.currency}
+      initial={{
+        serviceId: suggested ?? services[0]?.id ?? '',
+        amount: major(r?.bill.amountMinor),
+        tax: major(r?.bill.taxMinor),
+        taxLabel: r?.bill.taxLabel ?? '',
+        periodStart: r?.bill.periodStart ?? '',
+        periodEnd: r?.bill.periodEnd ?? '',
+        issueDate: r?.bill.issueDate ?? '',
+        dueDate: r?.bill.dueDate ?? '',
+        usageQuantity: r?.bill.usageQuantity?.toString() ?? '',
+        usageUnit: r?.bill.usageUnit ?? '',
+        externalRef: r?.bill.externalRef ?? '',
+        notes: '',
+      }}
+      noServiceMatch={!!r && !suggested}
+      providerHint={r?.bill.provider ?? null}
+      trustSender={d.senderVerified ? trustTarget(d.senderDomain, addressOf(d.emailFrom)) : null}
+    />
+  );
 
   return (
     <>
@@ -37,8 +71,8 @@ export default async function ReviewItemPage({ params }: { params: Promise<{ id:
         }
         subtitle={`${t(`kind.${d.kind}`)} · ${date(d.receivedAt)}${d.emailFrom ? ` · ${d.emailFrom}` : ''}`}
         action={
-          d.billId ? (
-            <LinkButton href={`/bills/${d.billId}`} variant="secondary">
+          relatedBill && !isNotice ? (
+            <LinkButton href={`/bills/${relatedBill}`} variant="secondary">
               {t('detail.viewBill')}
             </LinkButton>
           ) : undefined
@@ -56,7 +90,7 @@ export default async function ReviewItemPage({ params }: { params: Promise<{ id:
         >
           {t(`status.${d.status}`)}
         </Badge>
-        {d.extraction?.reason && (
+        {d.extraction?.reason && !isNotice && (
           <span className="text-sm text-fg-muted">{d.extraction.reason}</span>
         )}
         {r && (
@@ -69,7 +103,9 @@ export default async function ReviewItemPage({ params }: { params: Promise<{ id:
         )}
       </div>
       <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="min-h-[60vh] overflow-hidden p-0">
+        <Card
+          className={`min-h-[60vh] overflow-hidden p-0 ${isNotice ? 'order-2 lg:order-none' : ''}`}
+        >
           {isPdf ? (
             <iframe
               src={`/api/documents/${d.id}/file`}
@@ -82,7 +118,7 @@ export default async function ReviewItemPage({ params }: { params: Promise<{ id:
             </pre>
           )}
         </Card>
-        <div className="flex flex-col gap-4">
+        <div className={`flex flex-col gap-4 ${isNotice ? 'order-1 lg:order-none' : ''}`}>
           {r && r.warnings.length > 0 && (
             <Card className="text-sm">
               <p className="font-semibold">{t('detail.warnings')}</p>
@@ -93,37 +129,27 @@ export default async function ReviewItemPage({ params }: { params: Promise<{ id:
               </ul>
             </Card>
           )}
-          {canReview ? (
-            <ReviewForm
-              documentId={d.id}
-              services={services.map((s) => ({
-                id: s.id,
-                name: s.name,
-                provider: s.provider,
-                usageUnit: s.usageUnit,
-              }))}
-              units={listUnits().map((u) => ({ key: u.key, label: u.label }))}
-              currency={r?.bill.currency ?? hh.currency}
-              initial={{
-                serviceId: suggested ?? services[0]?.id ?? '',
-                amount: major(r?.bill.amountMinor),
-                tax: major(r?.bill.taxMinor),
-                taxLabel: r?.bill.taxLabel ?? '',
-                periodStart: r?.bill.periodStart ?? '',
-                periodEnd: r?.bill.periodEnd ?? '',
-                issueDate: r?.bill.issueDate ?? '',
-                dueDate: r?.bill.dueDate ?? '',
-                usageQuantity: r?.bill.usageQuantity?.toString() ?? '',
-                usageUnit: r?.bill.usageUnit ?? '',
-                externalRef: r?.bill.externalRef ?? '',
-                notes: '',
-              }}
-              noServiceMatch={!!r && !suggested}
-              providerHint={r?.bill.provider ?? null}
-              trustSender={
-                d.senderVerified ? trustTarget(d.senderDomain, addressOf(d.emailFrom)) : null
-              }
-            />
+          {isNotice ? (
+            <>
+              <Card className="flex flex-col gap-3">
+                <p className="font-display text-lg font-semibold">{t('detail.noticeTitle')}</p>
+                {d.extraction?.reason && <p className="text-sm">{d.extraction.reason}.</p>}
+                <p className="text-sm text-fg-muted">{t('detail.noticeBody')}</p>
+                {relatedBill && (
+                  <div>
+                    <LinkButton href={`/bills/${relatedBill}`}>{t('detail.noticeBill')}</LinkButton>
+                  </div>
+                )}
+              </Card>
+              <details className="group">
+                <summary className="cursor-pointer text-sm font-semibold text-accent">
+                  {t('detail.addAnyway')}
+                </summary>
+                <div className="mt-3">{form}</div>
+              </details>
+            </>
+          ) : canReview ? (
+            form
           ) : (
             <Card className="text-sm text-fg-muted">{t('detail.alreadyBill')}</Card>
           )}

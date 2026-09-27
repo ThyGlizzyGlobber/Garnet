@@ -108,6 +108,8 @@ describe('payment receipts', () => {
     const after = getBill(hh.id, july.id, db)!;
     expect(after.paidToProviderAt).toBe('2026-07-28T00:00:00Z');
     expect(after.alertKind).toBeNull();
+    // The review page links the receipt to the bill it paid.
+    expect(JSON.parse(getDocument(hh.id, doc.id, db)!.extractionJson!).billId).toBe(july.id);
   });
 
   it('say so, and change nothing, when the invoice is not in the app', async () => {
