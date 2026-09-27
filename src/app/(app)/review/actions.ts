@@ -14,6 +14,7 @@ import { createBill } from '@/lib/bills';
 import { isIsoDate } from '@/lib/dates';
 import { parseMoneyToMinor } from '@/lib/format';
 import { getHousehold } from '@/lib/households';
+import { notifyBillCreated, notifyInBackground } from '@/lib/notifications';
 import { listDocuments } from '@/lib/review';
 import { pollNow } from '@/worker';
 
@@ -112,6 +113,7 @@ export async function approveReviewAction(_prev: ActionState, fd: FormData): Pro
     json = undefined;
   }
   setDocumentStatus(hh.id, doc.id, 'extracted', json);
+  notifyInBackground(notifyBillCreated(hh.id, billId, { except: me.id }));
   revalidatePath('/review');
   revalidatePath('/bills');
   redirect(`/bills/${billId}`);

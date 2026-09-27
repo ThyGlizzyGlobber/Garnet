@@ -11,10 +11,12 @@ import {
   deleteMemberAction,
   removeAccessAction,
   saveForwardAction,
+  saveNotifyPrefsAction,
   signOutOtherDevicesAction,
   updateMemberAction,
 } from '../../actions';
 import { ForwardForm } from '../../forward-form';
+import { NotifyForm } from '../../notify-form';
 import { billsAddress } from '@/lib/bills-address';
 import { getForward } from '@/lib/forwarding';
 import { countDevices } from '@/lib/auth/devices';
@@ -32,6 +34,7 @@ export default async function EditMemberPage({ params }: { params: Promise<{ id:
   const state = await authState();
   const account = state.kind === 'ok' ? state.account : null;
   const tf = await getTranslations('forward');
+  const tn = await getTranslations('notify.prefs');
   const address = billsAddress(hh);
   const self = me.id === m.id;
   const forward = self ? getForward(hh.id, m.id) : null;
@@ -91,6 +94,23 @@ export default async function EditMemberPage({ params }: { params: Promise<{ id:
           joined: !!m.accountId,
         }}
       />
+      {self && (
+        <Card className="mt-4 flex flex-col gap-3">
+          <h2 className="font-display font-semibold">{tn('title')}</h2>
+          {account ? (
+            <NotifyForm
+              action={saveNotifyPrefsAction}
+              initial={{
+                bills: me.notifyBills,
+                reminders: me.notifyReminders,
+                problems: me.notifyProblems,
+              }}
+            />
+          ) : (
+            <p className="text-sm text-fg-muted">{tn('noEmail')}</p>
+          )}
+        </Card>
+      )}
       {self && account && address && (
         <Card className="mt-4 flex flex-col gap-3">
           <h2 className="font-display font-semibold">{tf('title')}</h2>

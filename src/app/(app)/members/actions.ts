@@ -22,6 +22,7 @@ import { inviteLink, sendInviteEmail } from '@/lib/invite-email';
 import { composeEmail, sendEmail } from '@/lib/email';
 import { appUrl } from '@/lib/env';
 import { disableForward, setForward } from '@/lib/forwarding';
+import { setNotifyPref } from '@/lib/notifications';
 import { createInvite, revokeInvites } from '@/lib/invites';
 import { createMember, deleteMember, getMember, updateMember } from '@/lib/members';
 
@@ -245,6 +246,21 @@ export async function saveForwardAction(_prev: ActionState, fd: FormData): Promi
     );
     if (!sent.sent) return { error: sent.reason };
   }
+  revalidatePath(`/members/${me.id}/edit`);
+  return { ok: true };
+}
+
+/** Your own email preferences. */
+export async function saveNotifyPrefsAction(
+  _prev: ActionState,
+  fd: FormData,
+): Promise<ActionState> {
+  const me = await requireMember();
+  setNotifyPref(me.householdId, me.id, {
+    bills: fd.get('bills') === 'on',
+    reminders: fd.get('reminders') === 'on',
+    problems: fd.get('problems') === 'on',
+  });
   revalidatePath(`/members/${me.id}/edit`);
   return { ok: true };
 }

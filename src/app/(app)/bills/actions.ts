@@ -19,6 +19,7 @@ import {
 import { isIsoDate } from '@/lib/dates';
 import { parseMoneyToMinor } from '@/lib/format';
 import { getHousehold } from '@/lib/households';
+import { notifyBillCreated, notifyInBackground } from '@/lib/notifications';
 
 const isoDate = z.string().refine(isIsoDate, 'Use a valid date');
 
@@ -106,6 +107,7 @@ export async function createBillAction(_prev: ActionState, fd: FormData): Promis
   let id: string;
   try {
     id = createBill(hh.id, { ...input, source: 'manual', createdByMemberId: me.id }).id;
+    notifyInBackground(notifyBillCreated(hh.id, id, { except: me.id }));
   } catch (e) {
     return { error: (e as Error).message };
   }

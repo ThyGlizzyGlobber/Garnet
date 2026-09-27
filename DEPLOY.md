@@ -219,6 +219,23 @@ the message to `FALLBACK_TO` so no bill is lost. Each household can receive
 `INBOUND_MAX_PER_HOUR` messages (default 60). If Cloudflare Access protects the
 hostname, add a bypass for `/api/inbound/email` (the Worker authenticates by signature).
 
+### Household emails
+
+With `RESEND_API_KEY` set, members who have joined (signed in) get:
+
+- **New bill**: their share, due date, payment reference and the payer's payment
+  details; the payer gets what's due to the provider and what the others owe.
+- **Reminders**: three days before a share is due, then on the first day
+  overdue and weekly up to three times; the payer is reminded two days before a
+  bill is due to the provider if it isn't marked paid. Sent 8am–8pm household
+  time, checked every 15 minutes; bills overdue by more than four weeks are left alone.
+- **Payment problems**: when a provider says a payment failed or a bill is
+  overdue, the household admin and the payer are emailed straight away.
+
+Each email is sent once (`notification_log`). Members switch each kind off on
+their member page (**Email me about**), or from the link at the bottom of
+every email; Gmail's one-click Unsubscribe works too (RFC 8058).
+
 ## 10. DMARC for brjlabs.com
 
 DMARC tells other mail servers what to do with mail that claims to be from

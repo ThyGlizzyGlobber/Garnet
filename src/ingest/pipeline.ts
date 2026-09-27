@@ -16,6 +16,7 @@ import { classifyNotice, classifySubject, looksLikeBill, type NoticeKind } from 
 import { senderMatchesProvider } from '@/lib/provider-match';
 import { billForNotice, setBillAlert, clearBillAlert, setBillPaidToProvider } from '@/lib/bills';
 import { todayIn } from '@/lib/dates';
+import { notifyBillAlert, notifyBillCreated, notifyInBackground } from '@/lib/notifications';
 
 export interface PipelineOutcome {
   documentId: string;
@@ -271,6 +272,11 @@ export async function processDocument(
   }
   const created = createBillFromExtraction(householdId, best, serviceId, doc.id, db);
   store('extracted', `Created bill via ${best.extractor}`, best, attempts);
+  try {
+    await notifyBillCreated(householdId, created.id, { db });
+  } catch (e) {
+    console.error('[notify] new bill:', (e as Error).message);
+  }
   return {
     documentId: doc.id,
     status: 'extracted',
@@ -385,6 +391,7 @@ function applyNotice(
     clearBillAlert(householdId, target.id, db);
   } else {
     setBillAlert(householdId, target.id, kind, doc.id, db);
+    notifyInBackground(notifyBillAlert(householdId, target.id, { db }));
   }
   store(
     'notice',

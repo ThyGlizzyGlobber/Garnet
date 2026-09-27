@@ -97,6 +97,10 @@ export const member = sqliteTable(
     /** YYYY-MM-DD, null = still living here. */
     activeTo: text('active_to'),
     colour: text('colour').notNull().default('#0a84ff'),
+    /** Email me: new bills, due-date reminders, payment problems. */
+    notifyBills: integer('notify_bills', { mode: 'boolean' }).notNull().default(true),
+    notifyReminders: integer('notify_reminders', { mode: 'boolean' }).notNull().default(true),
+    notifyProblems: integer('notify_problems', { mode: 'boolean' }).notNull().default(true),
     /** JSON array of {label, value}: PayID, BSB/account, IBAN, Venmo… */
     paymentDetails: text('payment_details', { mode: 'json' })
       .$type<{ label: string; value: string }[]>()
@@ -445,6 +449,24 @@ export const emailForward = sqliteTable('email_forward', {
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });
+
+/** One row per email sent about something, so nothing is sent twice. */
+export const notificationLog = sqliteTable(
+  'notification_log',
+  {
+    id: text('id').primaryKey(),
+    householdId: householdId(),
+    memberId: text('member_id')
+      .notNull()
+      .references(() => member.id, { onDelete: 'cascade' }),
+    /** e.g. new_bill, share_due, share_overdue:1, provider_due, payment_failed. */
+    kind: text('kind').notNull(),
+    /** The bill or share it was about. */
+    refId: text('ref_id').notNull(),
+    sentAt: text('sent_at').notNull(),
+  },
+  (t) => [uniqueIndex('notification_once').on(t.memberId, t.kind, t.refId)],
+);
 
 export type Household = typeof household.$inferSelect;
 export type EmailForward = typeof emailForward.$inferSelect;

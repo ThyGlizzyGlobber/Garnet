@@ -1,5 +1,6 @@
 import { getEnv, isImapConfigured } from '@/lib/env';
 import { pollMailbox, type PollResult } from '@/ingest/imap/poller';
+import { sendDueReminders } from '@/lib/notifications';
 
 export interface WorkerStatus {
   enabled: boolean;
@@ -16,7 +17,26 @@ interface WorkerState extends WorkerStatus {
 }
 
 // Survives Next.js hot reloads in dev; one poller per process.
-const g = globalThis as unknown as { __hudWorker?: WorkerState };
+const g = globalThis as unknown as { __hudWorker?: WorkerState; __hudReminders?: NodeJS.Timeout };
+
+/** Due-date reminders: checked every 15 minutes; each reminder is sent once (notification_log). */
+export function startReminders(): void {
+  if (g.__hudReminders) return;
+  let busy = false;
+  const tick = () => {
+    if (busy) return;
+    busy = true;
+    sendDueReminders()
+      .then((n) => n && console.log(`[reminders] sent ${n}`))
+      .catch((e) => console.error('[reminders]', (e as Error).message))
+      .finally(() => {
+        busy = false;
+      });
+  };
+  setTimeout(tick, 60_000).unref();
+  g.__hudReminders = setInterval(tick, 15 * 60_000);
+  g.__hudReminders.unref();
+}
 
 function state(): WorkerState {
   g.__hudWorker ??= {
@@ -56,6 +76,7 @@ export async function pollNow(): Promise<PollResult> {
 }
 
 export function startWorker(): void {
+  startReminders();
   const env = getEnv();
   const s = state();
   if (s.timer) return;

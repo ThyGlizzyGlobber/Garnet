@@ -839,5 +839,63 @@
       "invalid": "This confirmation link has expired or was already used. Set forwarding up again from your member page."
     },
     "banner": "Forwarded from your household's bills address {address}. Sent by {sender}."
+  },
+  "notify": {
+    "footer": "You get these because you're in {household}. Stop {category}: {url}",
+    "categories": {
+      "bills": "new bill emails",
+      "reminders": "reminder emails",
+      "problems": "payment problem emails"
+    },
+    "open": "Open the bill",
+    "newBill": {
+      "subject": "New {service} bill: your share is {share}",
+      "subjectPayer": "New {service} bill: {amount} due {due}",
+      "subjectNoShare": "New {service} bill: {amount} due {due}",
+      "intro": "A new {service} bill from {provider} has arrived: {amount} for {period}.",
+      "share": "Your share is {share}. Please pay {payer} by {due}.",
+      "shareNoPayer": "Your share is {share}, due {due}.",
+      "reference": "Payment reference: {reference}",
+      "payDetails": "Pay {payer}: {details}",
+      "payer": "You pay {provider} {amount} by {due}. The others owe you {owed} between them.",
+      "total": "It's due {due}."
+    },
+    "due": {
+      "subject": "Reminder: your {service} share of {share} is due {when}",
+      "intro": "Your share of the {service} bill ({share}) is due {when}. Please pay {payer}.",
+      "introNoPayer": "Your share of the {service} bill ({share}) is due {when}.",
+      "today": "today",
+      "inDays": "{days, plural, one {tomorrow} other {in # days}}"
+    },
+    "overdue": {
+      "subject": "Overdue: your {service} share of {share}",
+      "intro": "Your share of the {service} bill ({share}) was due {due} and hasn't been marked paid. Please pay {payer}, then mark it paid in the app.",
+      "introNoPayer": "Your share of the {service} bill ({share}) was due {due} and hasn't been marked paid."
+    },
+    "providerDue": {
+      "subject": "Reminder: pay {provider} {amount} by {due}",
+      "intro": "The {service} bill ({amount}) is due to {provider} on {due} and isn't marked as paid yet. Once it's paid, mark it paid to the provider in the app."
+    },
+    "alert": {
+      "subject_payment_failed": "Payment failed: {provider} {service} bill",
+      "subject_overdue": "Overdue: {provider} says the {service} bill is unpaid",
+      "intro_payment_failed": "{provider} says the payment for the {service} bill ({amount}, due {due}) didn't go through. Please check the payment method and pay it.",
+      "intro_overdue": "{provider} says the {service} bill ({amount}, due {due}) is overdue."
+    },
+    "unsubscribe": {
+      "title": "Stop these emails?",
+      "body": "{member} will stop getting {category} from {household}. You can turn them back on from your member page.",
+      "cta": "Stop them",
+      "done": "Done. You won't get these emails any more.",
+      "invalid": "This link isn't valid any more."
+    },
+    "prefs": {
+      "title": "Email me about",
+      "bills": "New bills and my share",
+      "reminders": "Reminders before and after my share is due",
+      "problems": "Payment problems (failed or overdue)",
+      "save": "Save",
+      "noEmail": "You'll need to join with an account before emails can be sent to you."
+    }
   }
 }
