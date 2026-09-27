@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { Badge, Card, EmptyState, LinkButton, List, ListRow, PageHeader } from '@/components/ui';
 import { InlineAction } from '@/components/ui/form';
+import { billsAddress } from '@/lib/bills-address';
 import { pageContext } from '@/lib/context';
 import { documentCounts, listDocuments } from '@/lib/review';
 import { reprocessAllAction } from './actions';
@@ -13,6 +14,8 @@ export default async function ReviewPage({
 }) {
   const { hh, date, money } = await pageContext();
   const t = await getTranslations('review');
+  const tb = await getTranslations('billsAddress');
+  const address = billsAddress(hh);
   const { all } = await searchParams;
   const showAll = all === '1';
   const docs = showAll ? listDocuments(hh.id) : listDocuments(hh.id, { status: 'needs_review' });
@@ -38,6 +41,14 @@ export default async function ReviewPage({
           </LinkButton>
         }
       />
+      {address && (
+        <p className="mb-4 text-sm text-fg-muted">
+          {tb('short', { address: '' })}
+          <Link href="/settings" className="font-mono text-xs text-accent">
+            {address}
+          </Link>
+        </p>
+      )}
       <div className="mb-4 flex flex-wrap items-center gap-2 text-sm">
         <Link
           href="/review"

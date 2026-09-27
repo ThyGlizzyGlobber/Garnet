@@ -5,7 +5,8 @@ import { z } from 'zod';
 import type { ActionState } from '@/components/ui/form';
 import { str, zodToState } from '@/lib/actions';
 import { requireMember, requireOperator, requireOwner, signOut } from '@/lib/auth/session';
-import { updateHousehold } from '@/lib/households';
+import { replaceAlias } from '@/lib/bills-address';
+import { getHousehold, updateHousehold } from '@/lib/households';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { exitDemo } from '@/lib/demo';
@@ -90,5 +91,13 @@ export async function cancelUpdateAction(): Promise<void> {
 export async function recheckUpdateAction(): Promise<void> {
   await requireOperator();
   await checkForUpdate({ fresh: true });
+  revalidatePath('/settings');
+}
+
+/** Admin: give the household a new bills address; the old one stops working. */
+export async function replaceBillsAddressAction(): Promise<void> {
+  const me = await requireOwner();
+  const hh = getHousehold(me.householdId);
+  if (hh) replaceAlias(hh);
   revalidatePath('/settings');
 }

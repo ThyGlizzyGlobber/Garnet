@@ -1,12 +1,11 @@
 import { ImapFlow } from 'imapflow';
-import { simpleParser } from 'mailparser';
 import fs from 'node:fs';
 import path from 'node:path';
 import { getEnv, isImapConfigured } from '@/lib/env';
 import { ensureDataDirs } from '@/lib/paths';
 import { primaryHousehold } from '@/lib/households';
-import { archiveDocument } from '../archive';
-import { processDocument, type PipelineOutcome } from '../pipeline';
+import { ingestEmail } from '../email';
+import type { PipelineOutcome } from '../pipeline';
 
 export interface PollResult {
   startedAt: string;
@@ -93,56 +92,9 @@ export async function pollMailbox(): Promise<PollResult> {
       if (!msg || !msg.source) continue;
       result.messagesSeen++;
       const receivedAt = new Date(msg.internalDate ?? Date.now()).toISOString();
-      const parsed = await simpleParser(msg.source);
-      const from = parsed.from?.text ?? null;
-      const subject = parsed.subject ?? null;
-      const messageId = parsed.messageId ?? null;
-      // Always keep the raw email.
-      const { doc: emailDoc, duplicate } = archiveDocument(hid, {
-        kind: 'email',
-        buffer: msg.source,
-        originalFilename: `${subject ?? 'message'}.eml`,
-        mimeType: 'message/rfc822',
-        receivedAt,
-        emailFrom: from,
-        emailSubject: subject,
-        emailMessageId: messageId,
-      });
-      if (!duplicate) result.documentsArchived++;
-      const pdfs = (parsed.attachments ?? []).filter(
-        (a) =>
-          a.contentType === 'application/pdf' || (a.filename ?? '').toLowerCase().endsWith('.pdf'),
-      );
-      if (pdfs.length) {
-        for (const a of pdfs) {
-          const { doc, duplicate: dupPdf } = archiveDocument(hid, {
-            kind: 'pdf',
-            buffer: a.content,
-            originalFilename: a.filename ?? 'attachment.pdf',
-            mimeType: 'application/pdf',
-            receivedAt,
-            emailFrom: from,
-            emailSubject: subject,
-            emailMessageId: messageId,
-          });
-          if (!dupPdf) {
-            result.documentsArchived++;
-            result.outcomes.push(await processDocument(hid, doc.id));
-          }
-        }
-        // The .eml itself is just the envelope; mark it so it doesn't sit in the queue.
-        if (!duplicate) {
-          const { setDocumentStatus } = await import('../archive');
-          setDocumentStatus(
-            hid,
-            emailDoc.id,
-            'ignored',
-            JSON.stringify({ reason: 'Envelope for PDF attachment(s)' }),
-          );
-        }
-      } else if (!duplicate) {
-        result.outcomes.push(await processDocument(hid, emailDoc.id));
-      }
+      const ingested = await ingestEmail(hid, msg.source, receivedAt);
+      result.documentsArchived += ingested.archived;
+      result.outcomes.push(...ingested.outcomes);
       state.lastUid = uid;
       writeImapState(state);
     }

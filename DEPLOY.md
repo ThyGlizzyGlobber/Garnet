@@ -163,7 +163,37 @@ the email in `OPERATOR_EMAILS`. The Welcome screen offers to link your existing
 household; confirm with your old PIN, which stays your PIN. Everyone else in the
 household gets an invitation from **Members → (name) → Invite**.
 
-## 9. Wall display (iPad)
+## 9. Household bills addresses (Cloudflare Email Routing)
+
+Each household gets its own address (Settings → **Bills email address**).
+Email Routing hands mail for those addresses to a small Email Worker
+(`deploy/email-worker/worker.js`), which signs each message and posts it to
+`<APP_URL>/api/inbound/email`. The app archives it and reads it like any other bill.
+
+Pick one address style. Cloudflare catch-alls only work on a zone's apex, so:
+
+| Style                       | `BILLS_ADDRESS_TEMPLATE`          | Email Routing setup                                                                                                              | Trade-off                                                                                                        |
+| --------------------------- | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Apex catch-all              | `{alias}@brjlabs.com`             | Enable Email Routing on `brjlabs.com`; **Catch-all → Send to a Worker**                                                          | Cleanest addresses; all `@brjlabs.com` mail goes through the Worker (set `FORWARD_OTHER_TO` to receive the rest) |
+| Plus address on a subdomain | `bills+{alias}@bills.brjlabs.com` | Email Routing → **Settings → Subdomains** → add `bills.brjlabs.com`; custom address `bills@bills.brjlabs.com` → Send to a Worker | Leaves `brjlabs.com` mail alone; a few provider forms reject `+`                                                 |
+
+Steps:
+
+1. Make a shared secret on the Mac: `openssl rand -hex 32`.
+2. Cloudflare → `brjlabs.com` → **Email → Email Routing**: enable it (Cloudflare adds the MX/SPF records). For the subdomain style, add the subdomain under Settings.
+3. **Destination addresses**: add and verify your own email (used as `FALLBACK_TO`, and `FORWARD_OTHER_TO` for the apex style).
+4. **Email Workers → Create**: start from any template, replace the code with `deploy/email-worker/worker.js`, **Deploy**.
+5. The Worker's **Settings → Variables and Secrets**: `APP_INBOUND_URL` = `https://home.brjlabs.com/api/inbound/email`, `INBOUND_EMAIL_SECRET` (type **Secret**) = the value from step 1, `FALLBACK_TO` = your verified email, and for the apex style `FORWARD_OTHER_TO` = your verified email.
+6. **Routing rules**: the catch-all (apex style) or the `bills@` custom address (subdomain style) → action **Send to a Worker** → this Worker.
+7. On TrueNAS add `BILLS_ADDRESS_TEMPLATE` and `INBOUND_EMAIL_SECRET` (same value) to the app and save.
+8. Send a test: forward any bill to the address shown in Settings. It appears under Bills (or in the review queue) within a minute.
+
+Unknown addresses are rejected; if the app can't be reached, the Worker forwards
+the message to `FALLBACK_TO` so no bill is lost. Each household can receive
+`INBOUND_MAX_PER_HOUR` messages (default 60). If Cloudflare Access protects the
+hostname, add a bypass for `/api/inbound/email` (the Worker authenticates by signature).
+
+## 10. Wall display (iPad)
 
 Open `http://<nas-ip>:30080/wall` in Safari and sign in once (the device stays
 trusted for `AUTH_DEVICE_DAYS`, default 180; the PIN is asked every
@@ -174,7 +204,7 @@ refreshes itself every minute.
 Phones: open the app in the browser and Add to Home Screen; it installs as an
 app with an icon and keeps the last-loaded pages available offline.
 
-## 10. Where things live on the volume
+## 11. Where things live on the volume
 
 ```
 /data/db/utilities.sqlite          the database (WAL files beside it)

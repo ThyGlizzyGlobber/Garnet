@@ -49,6 +49,7 @@ export function createHousehold(input: HouseholdInput, db: Db = getDb()): Househ
     splitMode: input.splitMode,
     paymentReferenceTemplate: input.paymentReferenceTemplate ?? '{service} {period} {member}',
     isDemo: input.isDemo ?? false,
+    billsAlias: null,
     createdAt: now,
     updatedAt: now,
   };

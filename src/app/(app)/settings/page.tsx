@@ -1,18 +1,21 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { Card, PageHeader } from '@/components/ui';
+import { BillsAddressCard } from '@/components/app/bills-address';
 import { viewerIsOperator } from '@/lib/auth/session';
+import { billsAddress } from '@/lib/bills-address';
 import { pageContext } from '@/lib/context';
 import { getEnv, isImapConfigured, isLlmConfigured } from '@/lib/env';
 import { SettingsForm } from './settings-form';
 import { InlineAction } from '@/components/ui/form';
 import { getTheme, THEMES } from '@/lib/theme';
-import { exitDemoAction, setThemeAction } from './actions';
+import { exitDemoAction, replaceBillsAddressAction, setThemeAction } from './actions';
 import { UpdateCard } from './update-card';
 
 export default async function SettingsPage() {
   const { hh, me } = await pageContext();
   const operator = await viewerIsOperator();
+  const address = billsAddress(hh);
   const t = await getTranslations('settings');
   const env = getEnv();
   const theme = await getTheme();
@@ -69,6 +72,14 @@ export default async function SettingsPage() {
             confirm={t('demo.confirm')}
           />
         </Card>
+      )}
+      {address && (
+        <div className="mt-4">
+          <BillsAddressCard
+            address={address}
+            replaceAction={me.role === 'owner' ? replaceBillsAddressAction : undefined}
+          />
+        </div>
       )}
       {operator && <UpdateCard hh={hh} />}
       <Card className="mt-4">

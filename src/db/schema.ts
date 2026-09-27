@@ -10,32 +10,41 @@ import { index, integer, real, sqliteTable, text, uniqueIndex } from 'drizzle-or
  *    scoped to the signed-in member's household (src/lib/*)
  */
 
-export const household = sqliteTable('household', {
-  id: text('id').primaryKey(),
-  name: text('name').notNull(),
-  /** ISO 4217, e.g. AUD, USD, EUR, GBP. */
-  currency: text('currency').notNull(),
-  /** BCP 47, e.g. en-AU, en-US, de-DE. Drives number/date formatting. */
-  locale: text('locale').notNull(),
-  /** IANA timezone, e.g. Australia/Melbourne. Drives "today", due dates, wall view. */
-  timezone: text('timezone').notNull(),
-  /** 1–12. Annual totals run from this month (7 = July–June financial year). */
-  fiscalYearStartMonth: integer('fiscal_year_start_month').notNull().default(1),
-  /** 0 = Sunday … 6 = Saturday. */
-  weekStartsOn: integer('week_starts_on').notNull().default(1),
-  /** shared = split bills between members; single = one household total, no shares. */
-  splitMode: text('split_mode', { enum: ['shared', 'single'] })
-    .notNull()
-    .default('shared'),
-  /** Template for payment references, e.g. "{service} {period} {member}". */
-  paymentReferenceTemplate: text('payment_reference_template')
-    .notNull()
-    .default('{service} {period} {member}'),
-  /** The fictional demo household; "Exit demo" deletes it. */
-  isDemo: integer('is_demo', { mode: 'boolean' }).notNull().default(false),
-  createdAt: text('created_at').notNull(),
-  updatedAt: text('updated_at').notNull(),
-});
+export const household = sqliteTable(
+  'household',
+  {
+    id: text('id').primaryKey(),
+    name: text('name').notNull(),
+    /** ISO 4217, e.g. AUD, USD, EUR, GBP. */
+    currency: text('currency').notNull(),
+    /** BCP 47, e.g. en-AU, en-US, de-DE. Drives number/date formatting. */
+    locale: text('locale').notNull(),
+    /** IANA timezone, e.g. Australia/Melbourne. Drives "today", due dates, wall view. */
+    timezone: text('timezone').notNull(),
+    /** 1–12. Annual totals run from this month (7 = July–June financial year). */
+    fiscalYearStartMonth: integer('fiscal_year_start_month').notNull().default(1),
+    /** 0 = Sunday … 6 = Saturday. */
+    weekStartsOn: integer('week_starts_on').notNull().default(1),
+    /** shared = split bills between members; single = one household total, no shares. */
+    splitMode: text('split_mode', { enum: ['shared', 'single'] })
+      .notNull()
+      .default('shared'),
+    /** Template for payment references, e.g. "{service} {period} {member}". */
+    paymentReferenceTemplate: text('payment_reference_template')
+      .notNull()
+      .default('{service} {period} {member}'),
+    /** The fictional demo household; "Exit demo" deletes it. */
+    isDemo: integer('is_demo', { mode: 'boolean' }).notNull().default(false),
+    /**
+     * The household's part of its bills email address (e.g. "smith-7k2f"), filled
+     * in BILLS_ADDRESS_TEMPLATE. Created on first use; an admin can replace it.
+     */
+    billsAlias: text('bills_alias'),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (t) => [uniqueIndex('household_bills_alias_unique').on(t.billsAlias)],
+);
 
 /**
  * A person who can sign in (Google or an emailed one-time code). Accounts are

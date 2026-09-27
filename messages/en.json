@@ -779,5 +779,16 @@
       "codeLine": "Or open {url} and enter this code:",
       "expiry": "The invitation works for 7 days."
     }
+  },
+  "billsAddress": {
+    "title": "Bills email address",
+    "body": "Bills sent to this address are read automatically and land in Bills, or in the review queue when something needs checking.",
+    "label": "Your household's address",
+    "howProvider": "Easiest: in each provider's online account, change the email address bills are sent to.",
+    "howForward": "Or forward a bill here from your own inbox whenever one arrives.",
+    "howReview": "Messages that aren't bills (like a forwarding confirmation) show up in the review queue, where you can read them.",
+    "replace": "Get a new address",
+    "replaceConfirm": "Replace the address? The current one stops working immediately, so update any provider that uses it.",
+    "short": "Bills can also be emailed to {address}"
   }
 }

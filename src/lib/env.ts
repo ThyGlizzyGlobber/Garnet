@@ -37,6 +37,25 @@ const envSchema = z.object({
   DEFAULT_TIMEZONE: z.string().min(1).default('Australia/Melbourne'),
   DEFAULT_FISCAL_YEAR_START_MONTH: z.coerce.number().int().min(1).max(12).default(7),
 
+  /**
+   * Household bills addresses, with {alias} standing for the household's part,
+   * e.g. "{alias}@brjlabs.com" or "bills+{alias}@bills.brjlabs.com". Empty = off.
+   */
+  BILLS_ADDRESS_TEMPLATE: z
+    .string()
+    .regex(
+      /^[^@\s{}]*\{alias\}[^@\s{}]*@[a-z0-9.-]+\.[a-z]{2,}$/i,
+      'BILLS_ADDRESS_TEMPLATE must look like {alias}@example.com',
+    )
+    .optional(),
+  /** Shared with the Cloudflare Email Worker; signs every delivered message. */
+  INBOUND_EMAIL_SECRET: z
+    .string()
+    .min(32, 'INBOUND_EMAIL_SECRET must be at least 32 characters')
+    .optional(),
+  /** Messages accepted per household per hour on its bills address. */
+  INBOUND_MAX_PER_HOUR: z.coerce.number().int().positive().default(60),
+
   IMAP_HOST: z.string().optional(),
   IMAP_PORT: z.coerce.number().int().positive().default(993),
   IMAP_SECURE: boolish.default(true),
@@ -121,6 +140,10 @@ export function operatorEmails(env: Env = getEnv()): string[] {
   return env.OPERATOR_EMAILS.split(',')
     .map((e) => e.trim().toLowerCase())
     .filter(Boolean);
+}
+
+export function isInboundEmailConfigured(env: Env = getEnv()): boolean {
+  return Boolean(env.BILLS_ADDRESS_TEMPLATE && env.INBOUND_EMAIL_SECRET);
 }
 
 export function isLlmConfigured(env: Env = getEnv()): boolean {
