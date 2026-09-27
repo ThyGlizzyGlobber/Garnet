@@ -1,5 +1,11 @@
 import { getDb, type Db } from '@/db/client';
-import { aliasFromRecipient, householdByAlias, verifyDelivery } from '@/lib/bills-address';
+import {
+  aliasFromRecipient,
+  billsAddress,
+  householdByAlias,
+  verifyDelivery,
+} from '@/lib/bills-address';
+import { forwardInbound } from '@/lib/forwarding';
 import { getEnv, isInboundEmailConfigured } from '@/lib/env';
 import { rateLimit } from '@/lib/rate-limit';
 import { archiveEmail } from './email';
@@ -20,7 +26,13 @@ export interface InboundResult {
  */
 export async function handleInboundEmail(
   req: { headers: Headers; body: Buffer },
-  opts: { db?: Db; nowS?: number; waitForProcessing?: boolean } = {},
+  opts: {
+    db?: Db;
+    nowS?: number;
+    waitForProcessing?: boolean;
+    /** Banner on forwarded copies (translated by the route). */
+    forwardBanner?: (sender: string, address: string) => string;
+  } = {},
 ): Promise<InboundResult> {
   const env = getEnv();
   const db = opts.db ?? getDb();
@@ -43,12 +55,32 @@ export async function handleInboundEmail(
 
   const receivedAt = new Date((opts.nowS ?? Date.now() / 1000) * 1000).toISOString();
   const { archived, toProcess } = await archiveEmail(hh.id, req.body, receivedAt, db);
+  const address = billsAddress(hh, db) ?? '';
+  const banner =
+    opts.forwardBanner ??
+    ((sender: string, to: string) =>
+      `Forwarded from your household's bills address ${to}. Sent by ${sender}.`);
   const work = (async () => {
+    let readAsBill = false;
     for (const id of toProcess) {
       try {
-        await processDocument(hh.id, id, db);
+        const outcome = await processDocument(hh.id, id, db);
+        if (outcome.status === 'extracted' || outcome.reason === 'duplicate') readAsBill = true;
       } catch (e) {
         console.error(`[inbound] processing ${id} failed:`, (e as Error).message);
+      }
+    }
+    // Copies go out once per new message, after reading so "only non-bills" can decide.
+    if (archived > 0) {
+      try {
+        await forwardInbound(hh.id, req.body, {
+          billsAddress: address,
+          readAsBill,
+          banner: (sender) => banner(sender, address),
+          db,
+        });
+      } catch (e) {
+        console.error('[inbound] forwarding failed:', (e as Error).message);
       }
     }
   })();

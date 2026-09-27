@@ -5,6 +5,9 @@ export interface OutgoingEmail {
   subject: string;
   text: string;
   html: string;
+  replyTo?: string;
+  headers?: Record<string, string>;
+  attachments?: { filename: string; content: Buffer; contentType?: string }[];
 }
 
 export type SendResult = { sent: true } | { sent: false; reason: string };
@@ -27,7 +30,10 @@ export async function sendEmail(
     if (!env.EMAIL_LOG_ONLY && env.NODE_ENV === 'production')
       return { sent: false, reason: 'Email is not configured' };
     devOutbox.push(email);
-    console.log(`[email:dev] to=${email.to} subject="${email.subject}"\n${email.text}`);
+    const files = email.attachments?.length
+      ? `\n[attachments: ${email.attachments.map((a) => a.filename).join(', ')}]`
+      : '';
+    console.log(`[email:dev] to=${email.to} subject="${email.subject}"\n${email.text}${files}`);
     return { sent: true };
   }
   try {
@@ -43,6 +49,17 @@ export async function sendEmail(
         subject: email.subject,
         text: email.text,
         html: email.html,
+        ...(email.replyTo ? { reply_to: email.replyTo } : {}),
+        ...(email.headers ? { headers: email.headers } : {}),
+        ...(email.attachments?.length
+          ? {
+              attachments: email.attachments.map((a) => ({
+                filename: a.filename,
+                content: a.content.toString('base64'),
+                ...(a.contentType ? { content_type: a.contentType } : {}),
+              })),
+            }
+          : {}),
       }),
       signal: AbortSignal.timeout(15_000),
     });
@@ -53,7 +70,7 @@ export async function sendEmail(
   }
 }
 
-function escapeHtml(s: string): string {
+export function escapeHtml(s: string): string {
   return s.replace(
     /[&<>"']/g,
     (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!,

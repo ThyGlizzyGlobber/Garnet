@@ -188,6 +188,14 @@ Steps:
 7. On TrueNAS add `BILLS_ADDRESS_TEMPLATE` and `INBOUND_EMAIL_SECRET` (same value) to the app and save.
 8. Send a test: forward any bill to the address shown in Settings. It appears under Bills (or in the review queue) within a minute.
 
+Members can get copies of everything sent to the bills address (password
+resets, account notices, bills) on their own member page → **Forward emails to
+me**: every email, or only the ones that aren't read as bills. The app re-sends
+them through Resend from `EMAIL_FROM`, with Reply-To set to the original
+sender; an address other than the member's sign-in email must be confirmed
+from a link first. Forwarded copies carry an `X-Home-Utilities-Forwarded`
+header so a copy that comes back is never forwarded again.
+
 Unknown addresses are rejected; if the app can't be reached, the Worker forwards
 the message to `FALLBACK_TO` so no bill is lost. Each household can receive
 `INBOUND_MAX_PER_HOUR` messages (default 60). If Cloudflare Access protects the

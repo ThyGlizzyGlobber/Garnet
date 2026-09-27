@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getTranslations } from 'next-intl/server';
 import { handleInboundEmail, INBOUND_MAX_BYTES } from '@/ingest/inbound';
 
 export const dynamic = 'force-dynamic';
@@ -13,6 +14,10 @@ export async function POST(req: Request) {
   const length = Number(req.headers.get('content-length') ?? 0);
   if (length > INBOUND_MAX_BYTES) return NextResponse.json({ error: 'too large' }, { status: 413 });
   const body = Buffer.from(await req.arrayBuffer());
-  const result = await handleInboundEmail({ headers: req.headers, body });
+  const t = await getTranslations('forward');
+  const result = await handleInboundEmail(
+    { headers: req.headers, body },
+    { forwardBanner: (sender, address) => t('banner', { sender, address }) },
+  );
   return NextResponse.json(result.body, { status: result.status });
 }

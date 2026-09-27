@@ -22,6 +22,7 @@ export async function BillsAddressCard({
         <li>{t('howProvider')}</li>
         <li>{t('howForward')}</li>
         <li>{t('howReview')}</li>
+        <li>{t('howForwardToMe')}</li>
       </ul>
       {replaceAction && (
         <div>
