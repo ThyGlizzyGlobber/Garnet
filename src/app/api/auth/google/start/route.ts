@@ -4,6 +4,8 @@ import { sealData } from 'iron-session';
 import { authorizationUrl, newAttempt } from '@/lib/auth/google';
 import { getSession } from '@/lib/auth/session';
 import { appUrl, getEnv, isGoogleConfigured } from '@/lib/env';
+import { ipAllowed } from '@/lib/rate-limit';
+import { clientIp, requestIsHttps, safeNext } from '@/lib/request';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,8 +14,10 @@ const OAUTH_COOKIE = 'hud_oauth';
 /** Begin Google sign-in: remember the attempt in a sealed 10-minute cookie, then go to Google. */
 export async function GET(req: Request) {
   if (!isGoogleConfigured()) return NextResponse.redirect(`${appUrl()}/login?reason=google-off`);
-  const next = new URL(req.url).searchParams.get('next');
-  if (next && next.startsWith('/') && !next.startsWith('//')) {
+  if (!ipAllowed('googleStart', await clientIp()))
+    return NextResponse.redirect(`${appUrl()}/login?reason=rate-limited`);
+  const next = safeNext(new URL(req.url).searchParams.get('next'));
+  if (next) {
     const session = await getSession();
     session.next = next;
     await session.save();
@@ -23,7 +27,7 @@ export async function GET(req: Request) {
   jar.set(OAUTH_COOKIE, await sealData(attempt, { password: getEnv().AUTH_SECRET, ttl: 600 }), {
     httpOnly: true,
     sameSite: 'lax',
-    secure: false,
+    secure: await requestIsHttps(),
     path: '/api/auth/google',
     maxAge: 600,
   });

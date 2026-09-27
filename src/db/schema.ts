@@ -373,6 +373,19 @@ export const device = sqliteTable(
   ],
 );
 
+/** Metered actions per household per calendar month (UTC), e.g. AI bill reads. */
+export const usage = sqliteTable(
+  'usage',
+  {
+    householdId: householdId(),
+    /** YYYY-MM, UTC. */
+    month: text('month').notNull(),
+    kind: text('kind').notNull(),
+    count: integer('count').notNull().default(0),
+  },
+  (t) => [uniqueIndex('usage_household_month_kind_unique').on(t.householdId, t.month, t.kind)],
+);
+
 export type Household = typeof household.$inferSelect;
 export type Account = typeof account.$inferSelect;
 export type Invite = typeof invite.$inferSelect;

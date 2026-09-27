@@ -76,7 +76,8 @@
       "lockedOut": "Too many wrong PINs, so this device was signed out. Sign in again to continue.",
       "email": "Enter a valid email address.",
       "rateLimited": "A code was sent a moment ago. Wait a minute before asking for another.",
-      "emailFailed": "The code email couldn't be sent: {reason}"
+      "emailFailed": "The code email couldn't be sent: {reason}",
+      "tooMany": "Too many attempts from your network. Wait a while and try again."
     },
     "demo": {
       "title": "Try the demo household",
@@ -325,6 +326,12 @@
       "cta": "Remove access",
       "confirm": "Remove {name}'s access? Their bills and shares stay; they can no longer sign in to this household.",
       "done": "Access removed."
+    },
+    "devices": {
+      "title": "Signed-in devices",
+      "body": "{count, plural, one {# browser is} other {# browsers are}} signed in as {email}.",
+      "signOutOthers": "Sign out other devices",
+      "confirm": "Sign out every other browser? They'll need Google or an emailed code to get back in."
     }
   },
   "settings": {
@@ -680,7 +687,8 @@
       "title": "Extractors (in order)",
       "ready": "Ready",
       "needsKey": "Needs ANTHROPIC_API_KEY",
-      "threshold": "Results below {pct}% confidence go to the review queue."
+      "threshold": "Results below {pct}% confidence go to the review queue.",
+      "aiUsage": "AI reads this month: {used} of {limit}. After that, bills no template recognises wait in the review queue until next month."
     },
     "demoOn": "Demo data"
   },

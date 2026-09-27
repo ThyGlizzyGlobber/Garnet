@@ -8,13 +8,15 @@ import { isOperator, linkMember, membershipsFor, unclaimedOwners } from '@/lib/a
 import { verifyPin } from '@/lib/auth/pin';
 import { getSession, markUnlocked, requireAccount, setActiveMember } from '@/lib/auth/session';
 import { acceptInvite, findInviteByCode, findInviteByToken } from '@/lib/invites';
-import { rateLimit } from '@/lib/rate-limit';
+import { ipAllowed, rateLimit } from '@/lib/rate-limit';
+import { clientIp } from '@/lib/request';
 
 /** Join with the short code from an invitation. */
 export async function joinWithCodeAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
   const account = await requireAccount();
   const t = await getTranslations('welcome.join');
-  if (!rateLimit(`join:${account.id}`, 10, 3_600_000)) return { error: t('rateLimited') };
+  if (!rateLimit(`join:${account.id}`, 10, 3_600_000) || !ipAllowed('joinCode', await clientIp()))
+    return { error: t('rateLimited') };
   const found = findInviteByCode(str(fd, 'code'));
   if (!found) return { fieldErrors: { code: t('invalid') } };
   let memberId: string;
@@ -55,7 +57,11 @@ export async function claimOwnerAction(_prev: ActionState, fd: FormData): Promis
   const t = await getTranslations('welcome.claim');
   if (!isOperator(account) || membershipsFor(account.id).length) redirect('/');
   const target = unclaimedOwners().find((m) => m.id === str(fd, 'memberId'));
-  if (!target?.pinHash || !rateLimit(`claim:${account.id}`, 5, 3_600_000))
+  if (
+    !target?.pinHash ||
+    !rateLimit(`claim:${account.id}`, 5, 3_600_000) ||
+    !ipAllowed('claim', await clientIp())
+  )
     return { error: t('wrong') };
   if (!(await verifyPin(str(fd, 'pin'), target.pinHash))) {
     await new Promise((r) => setTimeout(r, 400));

@@ -9,6 +9,7 @@ import { updateHousehold } from '@/lib/households';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { exitDemo } from '@/lib/demo';
+import { requestIsHttps } from '@/lib/request';
 import { THEME_COOKIE, THEMES, type Theme } from '@/lib/theme';
 import { cancelUpdateRequest, checkForUpdate, requestUpdate } from '@/lib/updates';
 
@@ -54,7 +55,13 @@ export async function setThemeAction(fd: FormData): Promise<void> {
   const theme: Theme = (THEMES as readonly string[]).includes(v) ? (v as Theme) : 'auto';
   const jar = await cookies();
   if (theme === 'auto') jar.delete(THEME_COOKIE);
-  else jar.set(THEME_COOKIE, theme, { path: '/', maxAge: 60 * 60 * 24 * 365, sameSite: 'lax' });
+  else
+    jar.set(THEME_COOKIE, theme, {
+      path: '/',
+      maxAge: 60 * 60 * 24 * 365,
+      sameSite: 'lax',
+      secure: await requestIsHttps(),
+    });
   revalidatePath('/', 'layout');
 }
 

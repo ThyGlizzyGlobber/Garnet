@@ -7,6 +7,7 @@ import { isGoogleConfigured } from '@/lib/env';
 import { listHouseholds } from '@/lib/households';
 import { findInviteByToken } from '@/lib/invites';
 import { listMembers } from '@/lib/members';
+import { safeNext } from '@/lib/request';
 import { demoLoginAction, sendCodeAction } from './actions';
 
 export const dynamic = 'force-dynamic';
@@ -15,6 +16,7 @@ const REASONS: Record<string, string> = {
   google: 'google',
   'google-off': 'googleOff',
   'locked-out': 'lockedOut',
+  'rate-limited': 'tooMany',
 };
 
 export default async function LoginPage({
@@ -22,7 +24,8 @@ export default async function LoginPage({
 }: {
   searchParams: Promise<{ next?: string; reason?: string }>;
 }) {
-  const { next, reason } = await searchParams;
+  const { next: rawNext, reason } = await searchParams;
+  const next = safeNext(rawNext) ?? undefined;
   const state = await authState();
   if (state.kind !== 'anonymous') redirect(pathFor(state, next) ?? next ?? '/');
   const t = await getTranslations('login');

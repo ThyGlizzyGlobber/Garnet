@@ -4,6 +4,7 @@ import { InlineAction } from '@/components/ui/form';
 import { allExtractors } from '@/ingest/extractors';
 import { readImapState } from '@/ingest/imap/poller';
 import { viewerIsOperator } from '@/lib/auth/session';
+import { aiAllowance } from '@/lib/usage';
 import { pageContext } from '@/lib/context';
 import { getEnv, isImapConfigured, isLlmConfigured } from '@/lib/env';
 import { documentCounts, ingestionStats } from '@/lib/review';
@@ -13,6 +14,7 @@ import { pollNowAction } from '../review/actions';
 export default async function StatusPage() {
   const { hh, date } = await pageContext();
   const operator = await viewerIsOperator();
+  const ai = aiAllowance(hh.id);
   const t = await getTranslations('status');
   const env = getEnv();
   const w = workerStatus();
@@ -137,7 +139,8 @@ export default async function StatusPage() {
           })}
         </ul>
         <p className="mt-3 text-xs text-fg-muted">
-          {t('extractors.threshold', { pct: Math.round(env.EXTRACTOR_CONFIDENCE_THRESHOLD * 100) })}
+          {t('extractors.threshold', { pct: Math.round(env.EXTRACTOR_CONFIDENCE_THRESHOLD * 100) })}{' '}
+          {t('extractors.aiUsage', ai)}
         </p>
       </Card>
     </div>

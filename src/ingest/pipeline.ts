@@ -9,6 +9,7 @@ import { getDocument, readDocument, setDocumentStatus } from './archive';
 import { fallbackExtractors, templateExtractors } from './extractors';
 import type { ExtractionInput, ExtractionResult, Extractor } from './extractors/types';
 import { extractText } from './text';
+import { aiAllowance, AI_READ, recordUsage } from '@/lib/usage';
 
 export interface PipelineOutcome {
   documentId: string;
@@ -91,7 +92,14 @@ export async function processDocument(
   const doc = getDocument(householdId, documentId, db);
   if (!doc) throw new Error('Document not found');
   const env = getEnv();
-  const text = await extractText(readDocument(doc), doc.mimeType, doc.originalFilename);
+  // A damaged or unsupported file must still land in the review queue, never vanish.
+  let text = '';
+  let readError: string | null = null;
+  try {
+    text = await extractText(readDocument(doc), doc.mimeType, doc.originalFilename);
+  } catch (e) {
+    readError = (e as Error).message;
+  }
   const store = (
     status: PipelineOutcome['status'],
     reason: string,
@@ -108,19 +116,31 @@ export async function processDocument(
     setDocumentStatus(householdId, doc.id, status, JSON.stringify(stored), db);
   };
 
+  if (readError) {
+    console.warn(`[ingest] could not read ${doc.id}: ${readError}`);
+    store('needs_review', 'This file could not be read (damaged or unsupported)', null, []);
+    return { documentId: doc.id, status: 'needs_review', reason: 'unreadable', result: null };
+  }
   if (text.trim().length < 20) {
     store('needs_review', 'No readable text (scanned image or unsupported file)', null, []);
     return { documentId: doc.id, status: 'needs_review', reason: 'no-text', result: null };
   }
 
   const input = buildInput(householdId, text, doc, db);
-  const { best, attempts } = await runExtractors(input);
+  // AI reads are capped per household per month (AI_MONTHLY_LIMIT); templates never are.
+  const aiLeft = aiAllowance(householdId, db).left > 0;
+  const { best, attempts } = await runExtractors(input, {
+    extractors: aiLeft ? [...templateExtractors, ...fallbackExtractors] : templateExtractors,
+  });
+  if (attempts.some((a) => a.extractor.startsWith('llm:'))) recordUsage(householdId, AI_READ, db);
   if (!best) {
     store(
       'needs_review',
       attempts.length
         ? 'No extractor could read this bill'
-        : 'No extractor applies and AI extraction is not configured',
+        : aiLeft
+          ? 'No extractor applies and AI extraction is not configured'
+          : 'No template applies and this month’s AI reading limit is used up',
       null,
       attempts,
     );

@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { and, eq, ne } from 'drizzle-orm';
 import { getDb, type Db } from '@/db/client';
 import { device, type Device } from '@/db/schema';
 import { getEnv } from '@/lib/env';
@@ -73,4 +73,16 @@ export function resetPinFailures(id: string, db: Db = getDb()): void {
 
 export function forgetDevice(id: string, db: Db = getDb()): void {
   db.delete(device).where(eq(device.id, id)).run();
+}
+
+export function countDevices(accountId: string, db: Db = getDb()): number {
+  return db.select().from(device).where(eq(device.accountId, accountId)).all().length;
+}
+
+/** Sign out everywhere except this browser (lost phone, shared computer). */
+export function forgetOtherDevices(accountId: string, keepId: string, db: Db = getDb()): number {
+  return db
+    .delete(device)
+    .where(and(eq(device.accountId, accountId), ne(device.id, keepId)))
+    .run().changes;
 }

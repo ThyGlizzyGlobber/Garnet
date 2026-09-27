@@ -29,6 +29,13 @@
       "when": 1790514209597,
       "tag": "0003_accounts",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1790516046146,
+      "tag": "0004_usage_limits",
+      "breakpoints": true
     }
   ]
 }

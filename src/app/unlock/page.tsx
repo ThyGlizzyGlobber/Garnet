@@ -3,6 +3,7 @@ import { getTranslations } from 'next-intl/server';
 import { AuthShell } from '@/components/app/auth-shell';
 import { PinForm } from '@/components/app/auth-forms';
 import { authState, pathFor } from '@/lib/auth/session';
+import { safeNext } from '@/lib/request';
 import { logout, rememberNext, unlockAction } from '../login/actions';
 
 export const dynamic = 'force-dynamic';
@@ -12,7 +13,7 @@ export default async function UnlockPage({
 }: {
   searchParams: Promise<{ next?: string }>;
 }) {
-  const { next } = await searchParams;
+  const next = safeNext((await searchParams).next) ?? undefined;
   const state = await authState();
   if (state.kind !== 'locked') redirect(pathFor(state, next) ?? next ?? '/');
   const t = await getTranslations('pin');

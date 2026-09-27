@@ -132,9 +132,12 @@ Cloudflare dashboard point the public hostname (e.g. `nameplaceholder.brjlabs.co
 `http://<nas-ip>:30080`.
 
 Sign-in needs Google or an emailed code, and the login page shows no member
-names. A Cloudflare Access application in front of the hostname (Zero Trust →
-Access → Applications, allow listed emails) is still a good extra gate while
-stage 3 hardening (HTTPS-only cookies, stricter rate limits) is pending.
+names. Through the tunnel, cookies are marked Secure (cloudflared sends
+`X-Forwarded-Proto: https`); on the LAN (`http://<nas-ip>:30080`, the wall
+iPad) they aren't, so both keep working. Sign-in steps are rate-limited per
+network (Cloudflare's `CF-Connecting-IP`), pages refuse to be framed, and
+archived HTML bills are shown sandboxed. A Cloudflare Access policy in front
+of the hostname remains an optional extra gate.
 
 ## 8. Accounts and sign-in
 
@@ -153,6 +156,7 @@ Add these to the app (**Edit → Container Configuration → Environment Variabl
 | `RESEND_API_KEY`                            | Resend API key with sending access to your verified domain                                                                                                 |
 | `EMAIL_FROM`                                | e.g. `Home Utilities <no-reply@mail.brjlabs.com>`                                                                                                          |
 | `EMAIL_LOG_ONLY`                            | `true` writes emails to the app log instead of sending (only for trying things out)                                                                        |
+| `AI_MONTHLY_LIMIT`                          | AI bill reads per household per month (default 60). Beyond it, bills no template recognises wait in the review queue                                       |
 
 **First sign-in after upgrading from a version without accounts:** sign in with
 the email in `OPERATOR_EMAILS`. The Welcome screen offers to link your existing

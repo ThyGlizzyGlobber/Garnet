@@ -24,6 +24,8 @@ import { EMAIL_PATTERN, normaliseEmail } from '@/lib/auth/tokens';
 import { composeEmail, sendEmail } from '@/lib/email';
 import { getHousehold } from '@/lib/households';
 import { getMemberForSession, updateMember } from '@/lib/members';
+import { ipAllowed } from '@/lib/rate-limit';
+import { clientIp, safeNext } from '@/lib/request';
 
 async function userAgent(): Promise<string | null> {
   return (await headers()).get('user-agent');
@@ -31,9 +33,10 @@ async function userAgent(): Promise<string | null> {
 
 /** Remember where to land after signing in (only same-site paths). */
 export async function rememberNext(next: string): Promise<void> {
-  if (!next.startsWith('/') || next.startsWith('//')) return;
+  const safe = safeNext(next);
+  if (!safe) return;
   const session = await getSession();
-  session.next = next;
+  session.next = safe;
   await session.save();
 }
 
@@ -42,6 +45,7 @@ export async function sendCodeAction(_prev: ActionState, fd: FormData): Promise<
   const t = await getTranslations('login.errors');
   const email = normaliseEmail(str(fd, 'email'));
   if (!EMAIL_PATTERN.test(email)) return { fieldErrors: { email: t('email') } };
+  if (!ipAllowed('sendCode', await clientIp())) return { error: t('tooMany') };
   await rememberNext(str(fd, 'next'));
   const issued = issueLoginCode(email);
   if (!issued.ok) return { error: t('rateLimited') };
@@ -68,6 +72,8 @@ export async function verifyCodeAction(_prev: ActionState, fd: FormData): Promis
   const session = await getSession();
   const email = session.pendingEmail;
   if (!email) return { error: t('noEmail') };
+  if (!ipAllowed('verifyCode', await clientIp()))
+    return { error: (await getTranslations('login.errors'))('tooMany') };
   const result = verifyLoginCode(email, str(fd, 'code'));
   if (!result.ok) return { fieldErrors: { code: t(result.reason) } };
   const account = signInAccount({ email });
@@ -100,6 +106,8 @@ export async function afterSignIn(): Promise<string> {
 /** Demo households keep pick-a-name + PIN (fictional data only). */
 export async function demoLoginAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
   const t = await getTranslations('login.demo');
+  if (!ipAllowed('demoLogin', await clientIp()))
+    return { error: (await getTranslations('login.errors'))('tooMany') };
   const m = getMemberForSession(str(fd, 'memberId'));
   const demo = m ? getHousehold(m.householdId)?.isDemo : false;
   if (!m || !demo || !m.pinHash || !(await verifyPin(str(fd, 'pin'), m.pinHash))) {
@@ -117,6 +125,8 @@ export async function unlockAction(_prev: ActionState, fd: FormData): Promise<Ac
   const t = await getTranslations('pin');
   const deviceId = await currentDeviceId(s.account.id);
   if (!deviceId) redirect('/login');
+  if (!ipAllowed('unlock', await clientIp()))
+    return { error: (await getTranslations('login.errors'))('tooMany') };
   if (!s.member.pinHash || !(await verifyPin(str(fd, 'pin'), s.member.pinHash))) {
     await new Promise((r) => setTimeout(r, 400));
     const failure = recordPinFailure(deviceId);

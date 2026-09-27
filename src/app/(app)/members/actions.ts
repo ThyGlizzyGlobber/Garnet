@@ -7,7 +7,14 @@ import type { ActionState } from '@/components/ui/form';
 import { str, zodToState } from '@/lib/actions';
 import { getTranslations } from 'next-intl/server';
 import { hashPin, PIN_PATTERN, verifyPin } from '@/lib/auth/pin';
-import { getSession, requireMember, requireOwner } from '@/lib/auth/session';
+import { forgetOtherDevices } from '@/lib/auth/devices';
+import {
+  authState,
+  currentDeviceId,
+  getSession,
+  requireMember,
+  requireOwner,
+} from '@/lib/auth/session';
 import { EMAIL_PATTERN } from '@/lib/auth/tokens';
 import { isIsoDate } from '@/lib/dates';
 import { getHousehold } from '@/lib/households';
@@ -186,4 +193,13 @@ export async function changePinAction(_prev: ActionState, fd: FormData): Promise
   if (pin !== str(fd, 'pinConfirm')) return { fieldErrors: { pinConfirm: t('mismatch') } };
   updateMember(me.householdId, me.id, { pinHash: await hashPin(pin) });
   return { ok: true };
+}
+
+/** Sign this account out of every other browser. */
+export async function signOutOtherDevicesAction(): Promise<void> {
+  const s = await authState();
+  if (s.kind !== 'ok' || !s.account) redirect('/');
+  const keep = await currentDeviceId(s.account.id);
+  if (keep) forgetOtherDevices(s.account.id, keep);
+  revalidatePath(`/members/${s.member.id}/edit`);
 }

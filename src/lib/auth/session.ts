@@ -6,6 +6,7 @@ import { getAccount, isOperator, membershipsFor } from '@/lib/accounts';
 import { getEnv } from '@/lib/env';
 import { getHousehold } from '@/lib/households';
 import { getMemberForSession } from '@/lib/members';
+import { requestIsHttps, safeNext } from '@/lib/request';
 import { findDevice, forgetDevice, touchDevice, trustDevice } from './devices';
 
 /**
@@ -39,23 +40,23 @@ export interface SessionData {
 
 const DEVICE_COOKIE = 'hud_device';
 
-function options(): SessionOptions {
+/**
+ * Cookies are Secure when the request came in over HTTPS (the Cloudflare
+ * Tunnel) and not otherwise, so the wall iPad on plain http://<nas-ip> keeps
+ * working. A browser only ever sends each cookie back to the host that set it.
+ */
+async function options(): Promise<SessionOptions> {
   const env = getEnv();
   return {
     cookieName: 'hud_session',
     password: env.AUTH_SECRET,
     ttl: env.AUTH_DEVICE_DAYS * 86_400,
-    cookieOptions: {
-      httpOnly: true,
-      sameSite: 'lax',
-      // The wall iPad still uses plain http on the LAN; stage 3 revisits this.
-      secure: false,
-    },
+    cookieOptions: { httpOnly: true, sameSite: 'lax', secure: await requestIsHttps() },
   };
 }
 
 export async function getSession() {
-  return getIronSession<SessionData>(await cookies(), options());
+  return getIronSession<SessionData>(await cookies(), await options());
 }
 
 export type AuthState =
@@ -164,7 +165,7 @@ export async function startSession(accountId: string, userAgent: string | null):
   jar.set(DEVICE_COOKIE, token, {
     httpOnly: true,
     sameSite: 'lax',
-    secure: false,
+    secure: await requestIsHttps(),
     path: '/',
     maxAge: env.AUTH_DEVICE_DAYS * 86_400,
   });
@@ -230,5 +231,5 @@ export async function consumeNext(): Promise<string> {
   const next = session.next;
   delete session.next;
   await session.save();
-  return next && next.startsWith('/') && !next.startsWith('//') ? next : '/';
+  return safeNext(next) ?? '/';
 }

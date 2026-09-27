@@ -10,8 +10,11 @@ import {
   changePinAction,
   deleteMemberAction,
   removeAccessAction,
+  signOutOtherDevicesAction,
   updateMemberAction,
 } from '../../actions';
+import { countDevices } from '@/lib/auth/devices';
+import { authState } from '@/lib/auth/session';
 import { MemberForm } from '../../member-form';
 
 export default async function EditMemberPage({ params }: { params: Promise<{ id: string }> }) {
@@ -22,6 +25,8 @@ export default async function EditMemberPage({ params }: { params: Promise<{ id:
   const m = getMember(hh.id, id);
   if (!m) notFound();
   const admin = me.role === 'owner';
+  const state = await authState();
+  const account = state.kind === 'ok' ? state.account : null;
   const self = me.id === m.id;
   if (!admin && !self) redirect('/members');
   return (
@@ -79,6 +84,22 @@ export default async function EditMemberPage({ params }: { params: Promise<{ id:
           joined: !!m.accountId,
         }}
       />
+      {self && account && (
+        <Card className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="font-display font-semibold">{t('devices.title')}</h2>
+            <p className="text-xs text-fg-muted">
+              {t('devices.body', { count: countDevices(account.id), email: account.email })}
+            </p>
+          </div>
+          <InlineAction
+            action={signOutOtherDevicesAction}
+            label={t('devices.signOutOthers')}
+            variant="secondary"
+            confirm={t('devices.confirm')}
+          />
+        </Card>
+      )}
       {self && me.pinHash && (
         <Card className="mt-4 flex flex-col gap-3">
           <h2 className="font-display font-semibold">{tp('changeTitle')}</h2>
