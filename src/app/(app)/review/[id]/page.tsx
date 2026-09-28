@@ -4,6 +4,7 @@ import { Badge, Card, LinkButton, PageHeader } from '@/components/ui';
 import { InlineAction } from '@/components/ui/form';
 import { pageContext } from '@/lib/context';
 import { minorUnitDigits } from '@/lib/format';
+import { getBill } from '@/lib/bills';
 import { getReviewItem } from '@/lib/review';
 import { listServices } from '@/lib/services';
 import { listUnits } from '@/lib/units';
@@ -30,7 +31,9 @@ export default async function ReviewItemPage({ params }: { params: Promise<{ id:
   const canReview = d.status !== 'extracted';
   // A receipt or provider notice: nothing to fill in, so say what happened instead.
   const isNotice = d.status === 'notice';
-  const relatedBill = d.billId ?? d.extraction?.billId ?? null;
+  const linked = d.billId ?? d.extraction?.billId ?? null;
+  // A receipt or notice may point at a bill that has since been deleted.
+  const relatedBill = linked && getBill(hh.id, linked) ? linked : null;
 
   const form = (
     <ReviewForm

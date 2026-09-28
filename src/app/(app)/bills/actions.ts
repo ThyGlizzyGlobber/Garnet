@@ -9,13 +9,13 @@ import { requireMember } from '@/lib/auth/session';
 import {
   clearBillAlert,
   createBill,
-  deleteBill,
   getBill,
   setBillPaidToProvider,
   setSharePaid,
   updateBill,
   type BillInput,
 } from '@/lib/bills';
+import { deleteBillWithDocument } from '@/ingest/archive';
 import { isIsoDate } from '@/lib/dates';
 import { parseMoneyToMinor } from '@/lib/format';
 import { getHousehold } from '@/lib/households';
@@ -141,8 +141,9 @@ export async function updateBillAction(_prev: ActionState, fd: FormData): Promis
 
 export async function deleteBillAction(fd: FormData): Promise<void> {
   const me = await requireMember();
-  deleteBill(me.householdId, str(fd, 'id'));
+  deleteBillWithDocument(me.householdId, str(fd, 'id'));
   revalidatePath('/bills');
+  revalidatePath('/review');
   redirect('/bills');
 }
 

@@ -95,7 +95,7 @@
     "editTitle": "Edit bill",
     "edit": "Edit",
     "delete": "Delete bill",
-    "deleteConfirm": "Delete this bill and its shares? This cannot be undone.",
+    "deleteConfirm": "Delete this bill completely? Its shares, its figures and the PDF or email it came from are removed too. This cannot be undone.",
     "due": "due",
     "overdue": "Overdue",
     "sharesPaid": "{paid}/{total} paid",

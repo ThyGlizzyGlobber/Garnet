@@ -162,3 +162,62 @@ export function purgeEmailEnvelopes(db: Db = getDb()): number {
   }
   return removed;
 }
+
+/** Is any bill still made from, or flagged by, this document? */
+function billUses(docId: string, db: Db): boolean {
+  return !!db
+    .select({ id: bill.id })
+    .from(bill)
+    .where(or(eq(bill.sourceDocumentId, docId), eq(bill.alertDocumentId, docId)))
+    .get();
+}
+
+/** Remove a document for good, row and file, unless a bill still uses it. */
+export function deleteDocument(householdId: string, id: string, db: Db = getDb()): boolean {
+  const doc = getDocument(householdId, id, db);
+  if (!doc || billUses(doc.id, db)) return false;
+  db.delete(sourceDocument)
+    .where(and(eq(sourceDocument.householdId, householdId), eq(sourceDocument.id, id)))
+    .run();
+  fs.rmSync(documentPath(doc), { force: true });
+  return true;
+}
+
+/**
+ * Deleting a bill deletes it fully (owner): the bill, its shares and figures,
+ * and the PDF or email it was read from, so nothing is left behind in the
+ * Inbox. Forwarding the same file again later reads it afresh.
+ */
+export function deleteBillWithDocument(
+  householdId: string,
+  billId: string,
+  db: Db = getDb(),
+): void {
+  const row = db
+    .select({ sourceDocumentId: bill.sourceDocumentId })
+    .from(bill)
+    .where(and(eq(bill.householdId, householdId), eq(bill.id, billId)))
+    .get();
+  if (!row) return;
+  // Shares and figures go with the bill (ON DELETE CASCADE).
+  db.delete(bill)
+    .where(and(eq(bill.householdId, householdId), eq(bill.id, billId)))
+    .run();
+  if (row.sourceDocumentId) deleteDocument(householdId, row.sourceDocumentId, db);
+}
+
+/**
+ * Documents left behind by bills deleted before deleting a bill removed its
+ * document too: marked "Bill created" but no bill uses them. Safe on every start.
+ */
+export function purgeOrphanedBillDocuments(db: Db = getDb()): number {
+  const created = db
+    .select()
+    .from(sourceDocument)
+    .where(eq(sourceDocument.status, 'extracted'))
+    .all();
+  let removed = 0;
+  for (const doc of created)
+    if (!billUses(doc.id, db) && deleteDocument(doc.householdId, doc.id, db)) removed++;
+  return removed;
+}

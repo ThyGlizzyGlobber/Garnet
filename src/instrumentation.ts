@@ -12,10 +12,12 @@ export async function register() {
   runMigrations(env.DATA_DIR);
   const { adoptLegacyDemoFlag } = await import('./lib/demo');
   adoptLegacyDemoFlag();
-  const { purgeEmailEnvelopes } = await import('./ingest/archive');
+  const { purgeEmailEnvelopes, purgeOrphanedBillDocuments } = await import('./ingest/archive');
   const purged = purgeEmailEnvelopes();
   if (purged)
     console.log(`[ingest] removed ${purged} stored forward email(s); their PDFs are kept`);
+  const orphans = purgeOrphanedBillDocuments();
+  if (orphans) console.log(`[ingest] removed ${orphans} document(s) left behind by deleted bills`);
   if (env.DEMO_MODE) {
     const { seedDemo } = await import('./db/seed');
     const result = await seedDemo();
