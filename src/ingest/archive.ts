@@ -39,6 +39,8 @@ function extFor(mime: string | null | undefined, name: string | null | undefined
   if ((mime ?? '').includes('pdf')) return '.pdf';
   if ((mime ?? '').includes('html')) return '.html';
   if ((mime ?? '').includes('rfc822')) return '.eml';
+  const image = (mime ?? '').match(/^image\/(jpeg|png|webp|gif|heic|heif)$/i)?.[1]?.toLowerCase();
+  if (image) return image === 'jpeg' ? '.jpg' : `.${image}`;
   return '.bin';
 }
 

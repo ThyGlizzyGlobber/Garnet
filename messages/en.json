@@ -178,7 +178,7 @@
       },
       "document": "View file",
       "shares": "{paid}/{total} shares paid",
-      "upload": "Upload PDF",
+      "upload": "Upload bill",
       "sharesBar": "{paid} of {total} shares paid"
     },
     "searchResults": "{count, plural, =0 {No bills match} one {# bill matches} other {# bills match}} “{q}”",
@@ -623,7 +623,7 @@
     },
     "kind": {
       "email": "Email",
-      "pdf": "PDF attachment",
+      "pdf": "Email attachment",
       "upload": "Upload"
     },
     "status": {
@@ -633,7 +633,7 @@
       "ignored": "Ignored",
       "notice": "Notice"
     },
-    "footnote": "Every bill file is kept permanently in the data directory's inbox folder, so a bill can always be re-read later. From a forwarded email only its PDFs are kept; an email with no PDF is kept as the bill itself.",
+    "footnote": "Every bill file is kept permanently in the data directory's inbox folder, so a bill can always be re-read later. From a forwarded email only its PDFs (or photos) are kept; an email without them is kept as the bill itself.",
     "detail": {
       "untitled": "Document",
       "viewBill": "View bill",
@@ -675,8 +675,8 @@
   },
   "upload": {
     "title": "Upload a bill",
-    "subtitleLlm": "PDF, HTML or text. Known providers are read instantly; anything else goes through AI extraction.",
-    "subtitleNoLlm": "PDF, HTML or text. Known providers are read instantly; others land in the review queue because AI extraction is not configured.",
+    "subtitleLlm": "A PDF, a scan, or a photo of a paper bill (also HTML or text). The AI reader works out what it is.",
+    "subtitleNoLlm": "A PDF, a scan, or a photo of a paper bill (also HTML or text). AI reading isn't set up, so it waits in the Inbox to be entered by hand.",
     "submit": "Upload and read",
     "file": "Bill file",
     "fileHint": "Up to 25 MB. The file is archived permanently."
@@ -811,8 +811,8 @@
     "title": "Household bills address",
     "body": "Forward bills to this address and they're added automatically. Forward a provider's “payment failed” or “overdue” email and the bill is flagged.",
     "label": "Forward bills to",
-    "howForward": "When a bill arrives in your own inbox, forward it here as it is: the PDF attachment or the bill email itself. No need to change anything with your providers.",
-    "howReview": "Only the PDFs from a forwarded email are kept; the email itself isn't stored. Receipts mark the bill they paid.",
+    "howForward": "When a bill arrives in your own inbox, forward it here as it is: the PDF, the bill email itself, or a photo of a paper bill. No need to change anything with your providers.",
+    "howReview": "Only the attachments from a forwarded email are kept; the email itself isn't stored. Receipts mark the bill they paid.",
     "replace": "Get a new address",
     "replaceConfirm": "Replace the address? The current one stops working immediately, so let everyone in the household know the new one.",
     "short": "Forward bills to ",

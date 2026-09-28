@@ -221,6 +221,12 @@ per-provider readers. Without a key (or once the month's limit is used up)
 bills wait for entry by hand, and emails are sorted by simple subject-line
 rules ("payment failed", "payment received"). Model: `ANTHROPIC_MODEL` (default
 `claude-opus-5`); reads count toward `AI_MONTHLY_LIMIT`.
+**Scans and photos.** A PDF with no text layer (a scan) or a photo of a paper
+bill (JPEG/PNG; upload it, or forward it) is sent to the AI as the file itself,
+since there is no text to send. Everything else is sent as text only. iPhone
+HEIC photos aren't supported yet: send them as JPEG (iPhone Mail and Safari
+uploads usually convert automatically).
+
 Create the key inside a workspace (Console → Settings → Workspaces → pick one →
 API keys). An organisation-wide key is refused with "This API key is not
 scoped to a workspace"; either make a workspace key or set

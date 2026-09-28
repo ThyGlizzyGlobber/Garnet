@@ -1,10 +1,14 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
+import type {
+  DocumentBlockParam,
+  ImageBlockParam,
+} from '@anthropic-ai/sdk/resources/messages/messages';
 import { z } from 'zod';
 import { getEnv } from '@/lib/env';
 import { minorUnitDigits } from '@/lib/format';
 import { listUnits } from '@/lib/units';
-import type { DocumentKind, ExtractedBill, ExtractionResult, Extractor } from '../types';
+import type { DocumentKind, ExtractedBill, ExtractionResult, Extractor, ScanFile } from '../types';
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
@@ -111,6 +115,14 @@ async function oneAtATime<T>(fn: () => Promise<T>): Promise<T> {
   }
 }
 
+/** A scan or photo as a content block (the file itself goes before the instructions). */
+function fileBlock(file: ScanFile): DocumentBlockParam | ImageBlockParam {
+  const data = file.data.toString('base64');
+  return file.mediaType === 'application/pdf'
+    ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data } }
+    : { type: 'image', source: { type: 'base64', media_type: file.mediaType, data } };
+}
+
 /** A failure worth trying again later: the API was busy, rate-limited or unreachable. */
 export function isTransientAiError(error: string): boolean {
   return /^(408|409|429|5\d\d)\b|overloaded|rate_limit|timed out|timeout|connection error|ECONNRESET|socket hang up/i.test(
@@ -127,7 +139,7 @@ export const anthropicExtractor: Extractor = {
   name: 'llm:anthropic',
 
   canHandle(input) {
-    return Boolean(getEnv().ANTHROPIC_API_KEY) && input.text.trim().length > 40;
+    return Boolean(getEnv().ANTHROPIC_API_KEY) && (input.text.trim().length > 40 || !!input.file);
   },
 
   async extract(input): Promise<ExtractionResult | null> {
@@ -156,8 +168,11 @@ export const anthropicExtractor: Extractor = {
       input.email?.from ? `Email from: ${input.email.from}` : null,
       input.email?.subject ? `Email subject: ${input.email.subject}` : null,
       '',
-      'DOCUMENT TEXT:',
-      input.text.slice(0, 60_000),
+      ...(input.file
+        ? [
+            'The document is attached as a scan or photo with no text layer. Read it from the image; if part of it is unreadable, lower your confidence and say which part in notes.',
+          ]
+        : ['DOCUMENT TEXT:', input.text.slice(0, 60_000)]),
     ]
       .filter((l) => l !== null)
       .join('\n');
@@ -168,7 +183,14 @@ export const anthropicExtractor: Extractor = {
         // Room for adaptive thinking (on by default on current models) plus the record.
         max_tokens: 16_000,
         system: [{ type: 'text', text: SYSTEM, cache_control: { type: 'ephemeral' } }],
-        messages: [{ role: 'user', content: userText }],
+        messages: [
+          {
+            role: 'user',
+            content: input.file
+              ? [fileBlock(input.file), { type: 'text', text: userText }]
+              : userText,
+          },
+        ],
         output_config: { format: zodOutputFormat(outputSchema) },
       }),
     );

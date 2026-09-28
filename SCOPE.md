@@ -63,7 +63,8 @@ Provider email ──▶ Household's own bills address (e.g. smith-7k2f@bills.br
                         │  saves raw email/PDF to NAS (audit trail)
                         ▼
                   Extractor (pluggable)
-                   ├─ 1. AI reader (Anthropic API → what the document is + structured JSON)
+                   ├─ 1. AI reader (Anthropic API → what the document is + structured JSON;
+                   │     text only, or the file itself for scans and photos)
                    └─ 2. Low confidence or no AI? → Manual-review queue in the UI
                         ▼
                   Bill record in database

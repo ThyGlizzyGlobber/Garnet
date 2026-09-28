@@ -9,9 +9,9 @@ vi.mock('@/ingest/extractors/llm/anthropic', async (importOriginal) => {
     ...actual,
     anthropicExtractor: {
       name: 'llm:anthropic',
-      canHandle: (input: ExtractionInput) => input.text.trim().length > 40,
+      canHandle: (input: ExtractionInput) => input.text.trim().length > 40 || !!input.file,
       extract: async (input: ExtractionInput): Promise<ExtractionResult | null> => {
-        const answer = fakeAiAnswer(input.text);
+        const answer = fakeAiAnswer(input.text, input);
         return answer ? actual.toResult(answer, input) : null;
       },
     },

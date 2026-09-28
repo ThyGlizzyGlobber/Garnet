@@ -36,6 +36,12 @@ COPY --from=build --chown=apps:apps /app/.next/standalone ./
 COPY --from=deps --chown=apps:apps /app/node_modules/@napi-rs ./node_modules/@napi-rs
 COPY --from=deps --chown=apps:apps /app/node_modules/pdfjs-dist ./node_modules/pdfjs-dist
 COPY --from=deps --chown=apps:apps /app/node_modules/pdf-parse ./node_modules/pdf-parse
+# sharp (photos of paper bills) loads its native binary for the platform at
+# runtime; copy it and its @img binaries whole so the Linux build is always there.
+COPY --from=deps --chown=apps:apps /app/node_modules/sharp ./node_modules/sharp
+COPY --from=deps --chown=apps:apps /app/node_modules/@img ./node_modules/@img
+# Fail the build, not a bill, if photo support can't load on this platform.
+RUN node -e "require('sharp')"
 # Stamped by the release workflow; Settings → Software update compares it with GitHub.
 # Declared last so a new commit doesn't invalidate the layers above.
 ARG APP_COMMIT=dev

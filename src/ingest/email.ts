@@ -1,6 +1,7 @@
 import { simpleParser } from 'mailparser';
 import { getDb, type Db } from '@/db/client';
 import { archiveDocument } from './archive';
+import { isImageFile } from './scan';
 import { processDocument, type PipelineOutcome } from './pipeline';
 
 export interface ArchivedEmail {
@@ -11,8 +12,8 @@ export interface ArchivedEmail {
 }
 
 /**
- * Keep what a household's email brought in. With PDF attachments, only the PDFs
- * are kept, each as its own document carrying the email's sender and subject;
+ * Keep what a household's email brought in. With PDF attachments (or, failing
+ * those, photos of a paper bill), only the attachments are kept, each as its own document carrying the email's sender and subject;
  * the email itself isn't stored (owner decision: forwards are just envelopes).
  * Without PDFs the email is the bill (or notice) and is kept. Same bytes twice → no-op.
  */
@@ -36,6 +37,14 @@ export async function archiveEmail(
   const pdfs = (parsed.attachments ?? []).filter(
     (a) => a.contentType === 'application/pdf' || (a.filename ?? '').toLowerCase().endsWith('.pdf'),
   );
+  // A photo of a paper bill: an attached picture, not a logo or signature
+  // (those are embedded in the HTML, or tiny).
+  const photos = pdfs.length
+    ? []
+    : (parsed.attachments ?? []).filter(
+        (a) =>
+          isImageFile(a.contentType, a.filename) && !a.related && a.content.length >= 30 * 1024,
+      );
   const files = pdfs.length
     ? pdfs.map((a) => ({
         kind: 'pdf' as const,
@@ -43,14 +52,21 @@ export async function archiveEmail(
         originalFilename: a.filename ?? 'attachment.pdf',
         mimeType: 'application/pdf',
       }))
-    : [
-        {
-          kind: 'email' as const,
-          buffer: source,
-          originalFilename: `${subject ?? 'message'}.eml`,
-          mimeType: 'message/rfc822',
-        },
-      ];
+    : photos.length
+      ? photos.map((a) => ({
+          kind: 'pdf' as const,
+          buffer: a.content,
+          originalFilename: a.filename ?? 'photo.jpg',
+          mimeType: a.contentType,
+        }))
+      : [
+          {
+            kind: 'email' as const,
+            buffer: source,
+            originalFilename: `${subject ?? 'message'}.eml`,
+            mimeType: 'message/rfc822',
+          },
+        ];
   for (const f of files) {
     const { doc, duplicate } = archiveDocument(householdId, { ...f, ...meta }, db);
     if (!duplicate) {

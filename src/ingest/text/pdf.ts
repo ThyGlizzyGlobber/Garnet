@@ -8,7 +8,8 @@ export async function pdfToText(buffer: Buffer): Promise<string> {
   const parser = new PDFParse({ data: new Uint8Array(buffer) });
   try {
     const result = await parser.getText();
-    return normaliseText(result.text ?? '');
+    // pdf-parse separates pages with "-- 1 of 3 --"; without them a scan reads as empty.
+    return normaliseText((result.text ?? '').replace(/^-- \d+ of \d+ --$/gm, ''));
   } finally {
     await parser.destroy();
   }

@@ -86,7 +86,8 @@ visual system v2 restyle. Latest commit is on `main` in both checkouts.
 
 - `DEMO_MODE=true` seeds a fictional household for demos. Real data never ships in
   the image, the repo, or screenshots.
-- Only extracted bill _text_ is sent to the LLM API, never the raw file.
+- Only extracted bill _text_ is sent to the LLM API, except documents with no text
+  layer (scans, photos of paper bills), which are sent as the file itself (owner, 2026-09-28).
 
 ## Tech stack
 
@@ -262,3 +263,4 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - 2026-09-28 — Inbox (was "Review queue") filters: Needs review · Bills · Receipts · Other emails · All. The pipeline stores its outcome code on each document (`extraction_json.code`); older receipts are recognised by their reason text.
 - 2026-09-28 — Removed "Forward emails to me" (owner): with forward-only bills, provider emails already live in members' own inboxes, so re-sending bills-address mail back to them was dead weight. Deleted `src/lib/forwarding.ts`, the member-page card, the confirm route and its tests; migration 0011 drops `email_forward`. The Worker's own `FALLBACK_TO` / `FORWARD_OTHER_TO` forwarding is unrelated and stays.
 - 2026-09-28 — Busy AI (529 overloaded / 429 / timeouts): SDK `maxRetries` 5, at most two AI reads in flight per process, and documents that still failed only because the service was busy are re-read by the worker tick with backoff (15 min doubling, 6 tries, `busyRetries` in extraction_json) before a person needs to look. "Re-read everything waiting" now covers only needs_review/unprocessed documents (emails included); re-reading notices would re-flag bills someone had sorted.
+- 2026-09-28 — Scans and photos are read by sending the file to the AI (owner chose this over on-NAS OCR: far more accurate on scans and phone photos). Only when a document has under 20 characters of text: a PDF goes as a `document` block (≤20 MB), a photo as an `image` block after `sharp` straightens it (EXIF) and shrinks it to 1568 px JPEG. HEIC can't be decoded by sharp's prebuilt binaries, so it goes to review asking for a JPEG. Forwards with no PDF keep attached photos (not embedded/`related` images, ≥30 KB) instead of the email. pdf-parse's "-- n of m --" page markers are stripped, otherwise a multi-page scan looked like text. Dockerfile copies `sharp` + `@img` whole and fails the build if sharp can't load.

@@ -15,7 +15,7 @@ export function UploadForm() {
             <Input
               name="file"
               type="file"
-              accept=".pdf,.html,.htm,.txt,.eml,application/pdf,text/html,text/plain"
+              accept=".pdf,.jpg,.jpeg,.png,.webp,.heic,.html,.htm,.txt,.eml,application/pdf,image/*,text/html,text/plain"
               required
               className="file:mr-3 file:rounded-full file:border-0 file:bg-accent file:px-3 file:py-1 file:text-sm file:font-semibold file:text-accent-fg"
             />

@@ -8,6 +8,8 @@ import { listMembers } from '@/lib/members';
 import { getService, listServices, listServiceTypes, updateService } from '@/lib/services';
 import { getDocument, readDocument, setDocumentStatus } from './archive';
 import { fallbackExtractors, templateExtractors } from './extractors';
+import type { ScanFile } from './extractors/types';
+import { scanFor } from './scan';
 import { isTransientAiError } from './extractors/llm/anthropic';
 import type {
   DocumentKind,
@@ -169,16 +171,26 @@ async function readAndRoute(
     store('needs_review', 'This file could not be read (damaged or unsupported)', null, []);
     return { documentId: doc.id, status: 'needs_review', reason: 'unreadable', result: null };
   }
+  // No text layer: a scan or photo is read from the file itself by the AI reader.
+  let scan: ScanFile | null = null;
   if (text.trim().length < 20) {
-    store('needs_review', 'No readable text (scanned image or unsupported file)', null, []);
-    return { documentId: doc.id, status: 'needs_review', reason: 'no-text', result: null };
+    const found = await scanFor(doc);
+    if (found && 'problem' in found) {
+      store('needs_review', found.problem, null, []);
+      return { documentId: doc.id, status: 'needs_review', reason: 'no-text', result: null };
+    }
+    if (!found) {
+      store('needs_review', 'No readable text in this file', null, []);
+      return { documentId: doc.id, status: 'needs_review', reason: 'no-text', result: null };
+    }
+    scan = found.file;
   }
 
   // Mail to a household bills address: provider notices (payment failed, overdue,
   // payment received) update the matching bill instead of being read as a bill.
   const fromBillsAddress = doc.senderVerified !== null;
   const emailBody = fromBillsAddress && doc.kind === 'email';
-  const input = buildInput(householdId, text, doc, db);
+  const input = { ...buildInput(householdId, text, doc, db), file: scan };
   // AI reads are capped per household per month (AI_MONTHLY_LIMIT).
   const aiLeft = aiAllowance(householdId, db).left > 0;
   const aiReads = aiLeft && fallbackExtractors.some((e) => e.canHandle(input));

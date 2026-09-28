@@ -7,14 +7,15 @@
  */
 export type AiOutput = Parameters<typeof import('@/ingest/extractors/llm/anthropic').toResult>[0];
 
-let script: AiOutput | ((text: string) => AiOutput | null) | null = null;
+type Input = import('@/ingest/extractors/types').ExtractionInput;
+let script: AiOutput | ((text: string, input: Input) => AiOutput | null) | null = null;
 
 export function scriptAi(answer: typeof script): void {
   script = answer;
 }
 
-export function fakeAiAnswer(text: string): AiOutput | null {
-  if (typeof script === 'function') return script(text);
+export function fakeAiAnswer(text: string, input: Input): AiOutput | null {
+  if (typeof script === 'function') return script(text, input);
   return script ?? readFixture(text);
 }
 

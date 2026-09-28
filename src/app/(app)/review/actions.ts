@@ -163,7 +163,7 @@ export async function uploadBillAction(_prev: ActionState, fd: FormData): Promis
   const me = await requireMember();
   const file = fd.get('file');
   if (!(file instanceof File) || file.size === 0)
-    return { error: 'Choose a PDF, HTML or text file.' };
+    return { error: 'Choose a PDF, a photo, or an HTML or text file.' };
   if (file.size > 25 * 1024 * 1024) return { error: 'File is larger than 25 MB.' };
   const buffer = Buffer.from(await file.arrayBuffer());
   const { doc, duplicate } = archiveDocument(me.householdId, {

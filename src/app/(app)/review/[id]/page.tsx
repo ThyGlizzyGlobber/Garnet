@@ -10,6 +10,7 @@ import { listUnits } from '@/lib/units';
 import { matchService } from '@/ingest/pipeline';
 import { ignoreDocumentAction, reprocessDocumentAction } from '../actions';
 import { ReviewForm } from './review-form';
+import { isImageFile } from '@/ingest/scan';
 import { addressOf, trustTarget } from '@/lib/sender-auth';
 
 export default async function ReviewItemPage({ params }: { params: Promise<{ id: string }> }) {
@@ -25,6 +26,7 @@ export default async function ReviewItemPage({ params }: { params: Promise<{ id:
     m === null || m === undefined ? '' : (m / 10 ** digits).toFixed(digits);
   const suggested = r ? (r.bill.serviceId ?? matchService(hh.id, r)) : null;
   const isPdf = (d.mimeType ?? '').includes('pdf') || d.path.endsWith('.pdf');
+  const isPhoto = isImageFile(d.mimeType, d.path);
   const canReview = d.status !== 'extracted';
   // A receipt or provider notice: nothing to fill in, so say what happened instead.
   const isNotice = d.status === 'notice';
@@ -111,6 +113,13 @@ export default async function ReviewItemPage({ params }: { params: Promise<{ id:
               src={`/api/documents/${d.id}/file`}
               title={d.originalFilename ?? 'document'}
               className="h-[75vh] w-full"
+            />
+          ) : isPhoto ? (
+            // eslint-disable-next-line @next/next/no-img-element -- archived file, served as-is
+            <img
+              src={`/api/documents/${d.id}/file`}
+              alt={d.originalFilename ?? 'photo'}
+              className="max-h-[75vh] w-full object-contain"
             />
           ) : (
             <pre className="max-h-[75vh] overflow-auto p-4 text-xs whitespace-pre-wrap">

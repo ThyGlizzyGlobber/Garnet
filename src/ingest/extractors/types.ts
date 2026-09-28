@@ -3,9 +3,17 @@
  * any future method (local model, CDR API) all implement `Extractor`.
  */
 
+/** A scan or photo with no text layer, sent to the AI reader as the file itself. */
+export interface ScanFile {
+  mediaType: 'application/pdf' | 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif';
+  data: Buffer;
+}
+
 export interface ExtractionInput {
   /** Plain text of the bill (PDF text, HTML→text, or email body). */
   text: string;
+  /** Set only when the document has no text (a scan or photo). */
+  file?: ScanFile | null;
   /** Original filename, when known. */
   filename?: string | null;
   /** Email metadata, when the document arrived by mail. */
