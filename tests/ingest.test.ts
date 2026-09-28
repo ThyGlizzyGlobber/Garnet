@@ -8,6 +8,7 @@ import { archiveDocument, getDocument, readDocument } from '@/ingest/archive';
 import type { ExtractionInput, Extractor } from '@/ingest/extractors/types';
 import { buildInput, processDocument, runExtractors } from '@/ingest/pipeline';
 import { htmlToText } from '@/ingest/text/html';
+import { extractText } from '@/ingest/text';
 import { createHousehold } from '@/lib/households';
 import { createMember } from '@/lib/members';
 import { createService } from '@/lib/services';
@@ -19,6 +20,56 @@ describe('html to text', () => {
       '<html><body><h1>Bill</h1><p>Amount due: <b>$10.00</b></p><table><tr><td>Due</td><td>1 Jul 2026</td></tr></table></body></html>',
     );
     expect(t).toBe('Bill\nAmount due: $10.00\nDue 1 Jul 2026');
+  });
+});
+
+describe('email text', () => {
+  const raw = (inner = '') =>
+    Buffer.from(
+      [
+        'DKIM-Signature: v=1; a=rsa-sha256; d=gmail.com; b=AbCdEf0123456789==',
+        'From: Lisa <lisa@example.com>',
+        'To: bills@example.com',
+        'Subject: Fwd: Your AGL gas bill',
+        'Date: Mon, 28 Sep 2026 04:31:13 +0000',
+        'MIME-Version: 1.0',
+        'Content-Type: multipart/mixed; boundary="b1"',
+        '',
+        '--b1',
+        'Content-Type: text/html; charset=utf-8',
+        'Content-Transfer-Encoding: quoted-printable',
+        '',
+        '<p>Amount due: <b>$212.40</b></p><table><tr><td>Due date</td><td>14 Oct =',
+        '2026</td></tr></table>',
+        ...(inner
+          ? ['--b1', 'Content-Type: message/rfc822', 'Content-Disposition: attachment', '', inner]
+          : []),
+        '--b1--',
+        '',
+      ].join('\r\n'),
+    );
+
+  it('is the readable message, not the raw source', async () => {
+    const t = await extractText(raw(), 'message/rfc822', 'Fwd: Your AGL gas bill.eml');
+    expect(t).toContain('Subject: Fwd: Your AGL gas bill');
+    expect(t).toContain('Amount due: $212.40');
+    expect(t).toContain('Due date 14 Oct 2026');
+    expect(t).not.toContain('DKIM');
+    expect(t).not.toContain('quoted-printable');
+  });
+
+  it('includes an email forwarded as an attachment', async () => {
+    const inner = [
+      'From: AGL <billing@agl.com.au>',
+      'Subject: Your AGL gas bill',
+      'Content-Type: text/plain; charset=utf-8',
+      '',
+      'Gas account 1234. Total due $212.40.',
+    ].join('\r\n');
+    const t = await extractText(raw(inner), 'message/rfc822', 'x.eml');
+    expect(t).toContain('--- Attached email ---');
+    expect(t).toContain('<billing@agl.com.au>');
+    expect(t).toContain('Total due $212.40.');
   });
 });
 

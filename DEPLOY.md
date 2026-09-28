@@ -213,6 +213,12 @@ per-provider readers. Without a key (or once the month's limit is used up)
 bills wait for entry by hand, and emails are sorted by simple subject-line
 rules ("payment failed", "payment received"). Model: `ANTHROPIC_MODEL` (default
 `claude-opus-5`); reads count toward `AI_MONTHLY_LIMIT`.
+Create the key inside a workspace (Console → Settings → Workspaces → pick one →
+API keys). An organisation-wide key is refused with "This API key is not
+scoped to a workspace"; either make a workspace key or set
+`ANTHROPIC_WORKSPACE_ID` to the workspace's ID. If the AI reader fails for
+any reason, documents wait in the review queue with the error, and failed
+calls don't count toward the limit.
 
 **New providers set themselves up.** When a readable bill arrives from a
 provider the household has no service for, the service is created from the

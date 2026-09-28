@@ -177,6 +177,8 @@ export async function processDocument(
     const kind = classifyNotice(doc.emailSubject, text);
     if (kind) return noted(applyNotice(householdId, doc, kind, text, store, db));
     if (looksLikeBill(doc.emailSubject, text)) return null;
+    // The AI failed (bad key, outage): nobody has really read it, so a person should.
+    if (attempts.some((a) => a.error)) return null;
     store(
       'notice',
       'Not a bill (kept, and forwarded to anyone who asked for copies)',
@@ -189,7 +191,10 @@ export async function processDocument(
   const { best, attempts } = await runExtractors(input, {
     extractors: aiLeft ? [...templateExtractors, ...fallbackExtractors] : templateExtractors,
   });
-  if (attempts.some((a) => a.extractor.startsWith('llm:'))) recordUsage(householdId, AI_READ, db);
+  // Failed calls (bad key, outage) aren't charged, so they don't count either.
+  if (attempts.some((a) => a.extractor.startsWith('llm:') && !a.error))
+    recordUsage(householdId, AI_READ, db);
+  const aiError = attempts.find((a) => a.error)?.error;
   // The AI reader says what a document is; anything but a bill never becomes one.
   if (best?.document && best.document.kind !== 'bill') {
     const routed = applyDocument(
@@ -208,11 +213,13 @@ export async function processDocument(
     if (notice) return notice;
     store(
       'needs_review',
-      attempts.length
-        ? 'The AI reader could not read this document'
-        : aiLeft
-          ? 'AI reading is not set up (no API key), so this needs entering by hand'
-          : 'This month’s AI reading limit is used up, so this needs entering by hand',
+      aiError
+        ? `The AI reader failed, so this needs checking by hand (${aiProblem(aiError)})`
+        : attempts.length
+          ? 'The AI reader could not read this document'
+          : aiLeft
+            ? 'AI reading is not set up (no API key), so this needs entering by hand'
+            : 'This month’s AI reading limit is used up, so this needs entering by hand',
       null,
       attempts,
     );
@@ -711,4 +718,10 @@ function memberAccountEmail(accountId: string | null, db: Db): string | null {
     db.select({ email: account.email }).from(account).where(eq(account.id, accountId)).get()
       ?.email ?? null
   );
+}
+
+/** A short, readable version of an Anthropic API error for the review queue. */
+export function aiProblem(error: string): string {
+  const message = error.match(/"message":\s*"((?:[^"\\]|\\.)*)"/)?.[1] ?? error;
+  return message.length > 200 ? `${message.slice(0, 197)}…` : message;
 }

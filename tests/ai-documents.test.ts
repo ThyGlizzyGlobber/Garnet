@@ -15,6 +15,7 @@ const { createBill, getBill, listBills } = await import('@/lib/bills');
 const { createHousehold } = await import('@/lib/households');
 const { createMember } = await import('@/lib/members');
 const { createService, getService } = await import('@/lib/services');
+const { AI_READ, usageCount } = await import('@/lib/usage');
 
 type Db = ReturnType<typeof openDb>['db'];
 let dir: string;
@@ -257,5 +258,37 @@ describe('the pipeline acting on what the AI says a document is', () => {
     ).toEqual(['INV-7', 'INV-8']);
     expect(getBill(hh.id, bill.id, db)?.paidToProviderAt).toBe('2026-09-15T00:00:00Z');
     expect(getService(hh.id, svc.id, db)?.autoPay).toBe(true);
+  });
+});
+
+describe('when the AI reader fails', () => {
+  it('sends email to review with the reason, never files it as "not a bill", and charges nothing', async () => {
+    const { hh } = setup();
+    scriptAi(() => {
+      throw new Error(
+        '400 {"type":"error","error":{"type":"invalid_request_error","message":"This API key is not scoped to a workspace."}}',
+      );
+    });
+    try {
+      const d = doc(
+        hh.id,
+        'Hi, forwarding this on. Cheers, Lisa. Thanks for everything this week.',
+        {
+          kind: 'email',
+          emailSubject: 'Fwd: Your gas',
+          senderDomain: 'example.com',
+          senderVerified: true,
+        },
+      );
+      const outcome = await processDocument(hh.id, d.id, db);
+      expect(outcome.status).toBe('needs_review');
+      const reason = JSON.parse(getDocument(hh.id, d.id, db)!.extractionJson!).reason as string;
+      expect(reason).toBe(
+        'The AI reader failed, so this needs checking by hand (This API key is not scoped to a workspace.)',
+      );
+      expect(usageCount(hh.id, AI_READ, db)).toBe(0);
+    } finally {
+      scriptAi(null);
+    }
   });
 });

@@ -108,7 +108,12 @@ export const anthropicExtractor: Extractor = {
   async extract(input): Promise<ExtractionResult | null> {
     const env = getEnv();
     if (!env.ANTHROPIC_API_KEY) return null;
-    client ??= new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
+    client ??= new Anthropic({
+      apiKey: env.ANTHROPIC_API_KEY,
+      ...(env.ANTHROPIC_WORKSPACE_ID
+        ? { defaultHeaders: { 'anthropic-workspace-id': env.ANTHROPIC_WORKSPACE_ID } }
+        : {}),
+    });
     const units = listUnits()
       .map((u) => u.key)
       .join(', ');

@@ -1,3 +1,4 @@
+import { emailToText } from './email';
 import { htmlToText } from './html';
 import { normaliseText, pdfToText } from './pdf';
 
@@ -12,9 +13,10 @@ export async function extractText(
   if (mime.includes('pdf') || name.endsWith('.pdf')) return pdfToText(buffer);
   if (mime.includes('html') || name.endsWith('.html') || name.endsWith('.htm'))
     return htmlToText(buffer.toString('utf8'));
-  if (mime.startsWith('text/') || name.endsWith('.txt') || name.endsWith('.eml'))
+  if (mime.includes('rfc822') || name.endsWith('.eml')) return emailToText(buffer);
+  if (mime.startsWith('text/') || name.endsWith('.txt'))
     return normaliseText(buffer.toString('utf8'));
   return '';
 }
 
-export { htmlToText, normaliseText, pdfToText };
+export { emailToText, htmlToText, normaliseText, pdfToText };

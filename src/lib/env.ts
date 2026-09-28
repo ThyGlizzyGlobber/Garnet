@@ -66,6 +66,8 @@ const envSchema = z.object({
 
   ANTHROPIC_API_KEY: z.string().optional(),
   ANTHROPIC_MODEL: z.string().default('claude-opus-5'),
+  /** Only for an organisation-wide key: the workspace to bill (sent as anthropic-workspace-id). */
+  ANTHROPIC_WORKSPACE_ID: z.string().optional(),
   EXTRACTOR_CONFIDENCE_THRESHOLD: z.coerce.number().min(0).max(1).default(0.85),
   /** AI bill reads per household per month; beyond it, unknown bills go to the review queue. */
   AI_MONTHLY_LIMIT: z.coerce.number().int().min(0).default(60),
