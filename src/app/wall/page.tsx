@@ -11,6 +11,7 @@ import { getHousehold } from '@/lib/households';
 import { darkVariant } from '@/lib/palette';
 import { nextMonth, projectMonth } from '@/lib/projections';
 import { dashboardSummary, hasAnyBills, householdBalances, settlementRate } from '@/lib/stats';
+import { weatherCodeKey, weatherWeek } from '@/lib/weather-week';
 import { AutoRefresh } from './auto-refresh';
 
 export const dynamic = 'force-dynamic';
@@ -49,6 +50,11 @@ export default async function WallPage() {
     s && projNow && projNow.totalMinor > 0
       ? Math.round((s.thisMonth.total / projNow.totalMinor) * 100)
       : 0;
+  // Weather strip (scope S3): only for households with a postcode and a forecast.
+  const week = weatherWeek(hh.id, today);
+  const tw = await getTranslations('weather');
+  const dayName = new Intl.DateTimeFormat(hh.locale, { weekday: 'short', timeZone: 'UTC' });
+  const deg = (v: number | null) => (v === null ? '–' : `${Math.round(v)}°`);
   const points = s
     ? s.series.map((r) => ({
         key: r.month,
@@ -124,7 +130,7 @@ export default async function WallPage() {
               <section className="glass flex flex-grow flex-col rounded-[2.2vw] p-[2vw]">
                 <span className="mb-[0.6vw] text-[1.3vw] text-fg-muted">{t('chart')}</span>
                 <div className="flex-grow">
-                  <TrendLine points={points} height={230} id="wall" />
+                  <TrendLine points={points} height={week ? 190 : 230} id="wall" />
                 </div>
               </section>
             </div>
@@ -238,6 +244,56 @@ export default async function WallPage() {
               </section>
             </div>
           </div>
+        )}
+
+        {week && (
+          <section
+            className="glass flex items-center gap-[1.6vw] rounded-[1.6vw] px-[1.6vw] py-[0.9vw]"
+            aria-label={tw('title')}
+          >
+            <div className="flex min-w-[15vw] flex-col leading-tight">
+              <span className="truncate text-[0.95vw] text-fg-muted">
+                {week.place ?? tw('title')}
+              </span>
+              <span className="text-[1.3vw] tabular-nums">
+                <span className="font-display text-[1.9vw] font-semibold">
+                  {deg(week.days[0]!.tempMax)}
+                </span>{' '}
+                <span className="text-fg-muted">
+                  {deg(week.days[0]!.tempMin)} · {tw(`code.${weatherCodeKey(week.days[0]!.code)}`)}
+                </span>
+              </span>
+            </div>
+            <ol className="grid flex-grow grid-cols-6 gap-[0.6vw] text-center leading-tight">
+              {week.days.slice(1, 7).map((d) => (
+                <li
+                  key={d.date}
+                  className={`rounded-[0.8vw] py-[0.4vw] ${d.heating ? 'bg-accent/10' : d.cooling ? 'bg-warning/10' : ''}`}
+                >
+                  <span className="block text-[1vw] tabular-nums">
+                    <span className="font-semibold">
+                      {dayName.format(new Date(`${d.date}T00:00:00Z`))}
+                    </span>{' '}
+                    {deg(d.tempMax)} <span className="text-fg-muted">{deg(d.tempMin)}</span>
+                  </span>
+                  <span className="block text-[0.85vw] text-fg-muted">
+                    {tw(`code.${weatherCodeKey(d.code)}`)}
+                  </span>
+                </li>
+              ))}
+            </ol>
+            <div className="flex max-w-[20vw] flex-col text-right leading-tight">
+              {week.impact && (
+                <span className="text-[1vw]">
+                  {tw(
+                    `impact.${week.impact.kind}.${week.impact.vsNormal ? (week.impact.minor > 0 ? 'more' : 'less') : 'total'}`,
+                    { amount: money(Math.abs(week.impact.minor)) },
+                  )}
+                </span>
+              )}
+              <span className="text-[0.7vw] text-fg-muted">{tw('attribution')}</span>
+            </div>
+          </section>
         )}
       </div>
     </main>
