@@ -1,7 +1,7 @@
 import { and, eq, sql } from 'drizzle-orm';
 import { getDb, type Db } from '@/db/client';
-import { usage } from '@/db/schema';
-import { getEnv } from '@/lib/env';
+import { account, member, usage } from '@/db/schema';
+import { getEnv, operatorEmails } from '@/lib/env';
 
 export const AI_READ = 'ai_read';
 
@@ -45,9 +45,31 @@ export function recordUsage(
     .run();
 }
 
-/** AI reads used and allowed this month for a household. */
-export function aiAllowance(householdId: string, db: Db = getDb(), now = Date.now()) {
-  const limit = getEnv().AI_MONTHLY_LIMIT;
+/**
+ * The install's operator (OPERATOR_EMAILS) reads without a monthly cap in any
+ * household they belong to: it's their own API key, and they test with a
+ * year of bills at a time. Everyone else keeps AI_MONTHLY_LIMIT.
+ */
+export function isUncapped(householdId: string, db: Db = getDb()): boolean {
+  const operators = operatorEmails();
+  if (!operators.length) return false;
+  return db
+    .select({ email: account.email })
+    .from(member)
+    .innerJoin(account, eq(member.accountId, account.id))
+    .where(eq(member.householdId, householdId))
+    .all()
+    .some((r) => operators.includes(r.email.toLowerCase()));
+}
+
+/** AI reads used and allowed this month for a household (limit null = no cap). */
+export function aiAllowance(
+  householdId: string,
+  db: Db = getDb(),
+  now = Date.now(),
+): { used: number; limit: number | null; left: number } {
   const used = usageCount(householdId, AI_READ, db, now);
+  if (isUncapped(householdId, db)) return { used, limit: null, left: Number.POSITIVE_INFINITY };
+  const limit = getEnv().AI_MONTHLY_LIMIT;
   return { used, limit, left: Math.max(0, limit - used) };
 }

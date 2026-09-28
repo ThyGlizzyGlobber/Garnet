@@ -761,7 +761,8 @@
       "ready": "Ready",
       "needsKey": "Needs ANTHROPIC_API_KEY",
       "threshold": "Results below {pct}% confidence go to the review queue.",
-      "aiUsage": "AI reads this month: {used} of {limit}. After that, new documents wait in the review queue until next month."
+      "aiUsage": "AI reads this month: {used} of {limit}. After that, new documents wait in the review queue until next month.",
+      "aiUsageUncapped": "AI reads this month: {used} (no monthly cap for the operator's household)."
     },
     "demoOn": "Demo data"
   },

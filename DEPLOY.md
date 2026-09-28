@@ -220,7 +220,7 @@ readings change nothing. The AI reads every document; there are no built-in
 per-provider readers. Without a key (or once the month's limit is used up)
 bills wait for entry by hand, and emails are sorted by simple subject-line
 rules ("payment failed", "payment received"). Model: `ANTHROPIC_MODEL` (default
-`claude-opus-5`); reads count toward `AI_MONTHLY_LIMIT`.
+`claude-opus-5`); reads count toward `AI_MONTHLY_LIMIT` (households the operator belongs to have no cap).
 **Every figure is kept.** Besides the amount due, the AI lists every figure on a
 bill (usage by tariff, meter readings, charges and credits, rates, daily
 averages, comparisons, data used…) and they're stored with the bill for later

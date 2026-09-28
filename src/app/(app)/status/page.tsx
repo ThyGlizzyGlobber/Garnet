@@ -140,7 +140,9 @@ export default async function StatusPage() {
         </ul>
         <p className="mt-3 text-xs text-fg-muted">
           {t('extractors.threshold', { pct: Math.round(env.EXTRACTOR_CONFIDENCE_THRESHOLD * 100) })}{' '}
-          {t('extractors.aiUsage', ai)}
+          {ai.limit === null
+            ? t('extractors.aiUsageUncapped', { used: ai.used })
+            : t('extractors.aiUsage', { used: ai.used, limit: ai.limit })}
         </p>
       </Card>
     </div>

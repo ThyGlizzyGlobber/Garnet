@@ -7,7 +7,8 @@ import { openDb, type Db } from '@/db/client';
 import { runMigrations } from '@/db/migrate';
 import { archiveDocument, getDocument } from '@/ingest/archive';
 import { processDocument } from '@/ingest/pipeline';
-import { signInAccount } from '@/lib/accounts';
+import { linkMember, signInAccount } from '@/lib/accounts';
+import { createMember } from '@/lib/members';
 import { countDevices, findDevice, forgetOtherDevices, trustDevice } from '@/lib/auth/devices';
 import { resetEnvCache } from '@/lib/env';
 import { createHousehold } from '@/lib/households';
@@ -123,6 +124,37 @@ describe('AI reading cap', () => {
     };
     expect(stored.reason).toMatch(/limit is used up/);
     expect(usageCount(hh.id, AI_READ, db)).toBe(0);
+  });
+
+  it('never caps a household the operator belongs to, and still counts its reads', () => {
+    process.env.AI_MONTHLY_LIMIT = '0';
+    process.env.OPERATOR_EMAILS = 'Owner@Example.com';
+    resetEnvCache();
+    try {
+      const mine = household('Operator home');
+      const theirs = household('Family home');
+      const put = (hid: string, email: string) => {
+        const m = createMember(
+          hid,
+          { name: 'Someone', role: 'owner', activeFrom: '2026-01-01' },
+          db,
+        );
+        const a = signInAccount({ email }, db);
+        linkMember(m.id, a.id, a.email, db);
+      };
+      put(mine.id, 'owner@example.com');
+      put(theirs.id, 'aunt@example.com');
+      recordUsage(mine.id, AI_READ, db);
+      expect(aiAllowance(mine.id, db)).toEqual({
+        used: 1,
+        limit: null,
+        left: Number.POSITIVE_INFINITY,
+      });
+      expect(aiAllowance(theirs.id, db)).toEqual({ used: 0, limit: 0, left: 0 });
+    } finally {
+      delete process.env.OPERATOR_EMAILS;
+      resetEnvCache();
+    }
   });
 });
 
