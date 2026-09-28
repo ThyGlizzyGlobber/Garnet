@@ -34,6 +34,29 @@ const SOUTHERN_ZONES = [
 /** Places where wet and dry seasons matter more than winter and summer. */
 const TROPICAL_ZONES = [/^Australia\/Darwin$/];
 
+/**
+ * Hemisphere and climate for a household: from its postcode's map point when
+ * it has one (the tropics = within 23.44° of the equator, where wet and dry
+ * seasons matter more than winter and summer), else from its timezone.
+ */
+export function householdClimate(hh: { timezone: string; latitude: number | null }): {
+  hemisphere: Hemisphere;
+  climate: Climate;
+  from: 'postcode' | 'timezone';
+} {
+  if (hh.latitude !== null)
+    return {
+      hemisphere: hh.latitude < 0 ? 'south' : 'north',
+      climate: Math.abs(hh.latitude) < 23.44 ? 'tropical' : 'temperate',
+      from: 'postcode',
+    };
+  return {
+    hemisphere: hemisphereOf(hh.timezone),
+    climate: climateOf(hh.timezone),
+    from: 'timezone',
+  };
+}
+
 export function hemisphereOf(timezone: string): Hemisphere {
   return SOUTHERN_ZONES.some((re) => re.test(timezone)) ? 'south' : 'north';
 }
@@ -163,8 +186,7 @@ export function seasonAhead(
 ): SeasonNotice[] {
   const hh = getHousehold(householdId, db);
   if (!hh) return [];
-  const hemisphere = hemisphereOf(hh.timezone);
-  const climate = climateOf(hh.timezone);
+  const { hemisphere, climate } = householdClimate(hh);
   const change = nextSeason(today, hemisphere, climate);
   if (change.daysUntil > (opts.windowDays ?? NOTICE_DAYS)) return [];
 

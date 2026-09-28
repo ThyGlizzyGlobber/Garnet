@@ -4,6 +4,7 @@ import { membershipsFor } from '@/lib/accounts';
 import { requireAccount } from '@/lib/auth/session';
 import { getEnv } from '@/lib/env';
 import { addDays, todayIn } from '@/lib/dates';
+import { countriesWithData, countryFromLocale } from '@/lib/location';
 import { SetupWizard } from './wizard';
 
 export const dynamic = 'force-dynamic';
@@ -31,6 +32,8 @@ export default async function SetupPage() {
               ownerName: account.name,
             }}
             timezones={Intl.supportedValuesOf('timeZone')}
+            withData={countriesWithData()}
+            country={countryFromLocale(env.DEFAULT_LOCALE) ?? 'AU'}
           />
         </div>
       </main>

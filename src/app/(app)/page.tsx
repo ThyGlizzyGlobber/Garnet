@@ -15,6 +15,9 @@ import { documentCounts } from '@/lib/review';
 import { listServices } from '@/lib/services';
 import { householdUsage } from '@/lib/consumption';
 import { seasonAhead } from '@/lib/seasons';
+import { cookies } from 'next/headers';
+import { LOCATION_PROMPT_COOKIE } from '@/lib/location';
+import { dismissLocationPromptAction } from './settings/actions';
 import { SeasonAhead } from '@/components/app/season-ahead';
 import { unitLabel } from '@/lib/units';
 import { ChangeText, formatQty } from '@/components/app/usage';
@@ -56,6 +59,12 @@ export default async function HomePage() {
   const s = dashboardSummary(hh.id, today, hh.fiscalYearStartMonth);
   const usage = householdUsage(hh.id);
   const seasons = seasonAhead(hh.id, today);
+  const tl = await getTranslations('location');
+  const askForPostcode =
+    me.role === 'owner' &&
+    !hh.isDemo &&
+    !hh.postalCode &&
+    !(await cookies()).get(LOCATION_PROMPT_COOKIE);
   const services = listServices(hh.id);
   const tu = await getTranslations('usage');
   const projNow = projectMonth(hh.id, s.thisMonth.month);
@@ -535,6 +544,21 @@ export default async function HomePage() {
           <section className={`${tile} lg:col-span-3`}>
             <h2 className="font-display text-lg font-semibold">{t('anomaly.title')}</h2>
             <AnomalyList items={s.anomalies} money={money} empty={t('anomaly.empty')} />
+          </section>
+        )}
+
+        {askForPostcode && (
+          <section className={`${tile} flex flex-col gap-2 lg:col-span-3`}>
+            <h2 className="font-display text-lg font-semibold">{tl('prompt.title')}</h2>
+            <p className="text-sm text-fg-muted">{tl('prompt.body')}</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <LinkButton href="/settings#location">{tl('prompt.action')}</LinkButton>
+              <InlineAction
+                action={dismissLocationPromptAction}
+                label={tl('prompt.dismiss')}
+                variant="ghost"
+              />
+            </div>
           </section>
         )}
 

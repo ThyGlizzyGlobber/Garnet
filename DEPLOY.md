@@ -243,6 +243,12 @@ page has a search box (provider, month, amount, invoice number…, every word
 must match, matches highlighted) and filters by status, service and year; the
 Inbox has the same search.
 
+**Household location.** Each household can add its postcode (Settings →
+Location, or during setup). It sets the hemisphere and seasons now and the
+local weather later (S3). Australian postcodes come from GeoNames
+(`reference/postcodes/`, CC BY 4.0, credited in Settings); other countries keep
+the postcode without a map point until their file is added.
+
 **Scans and photos.** A PDF with no text layer (a scan) or a photo of a paper
 bill (JPEG/PNG; upload it, or forward it) is sent to the AI as the file itself,
 since there is no text to send. Everything else is sent as text only. iPhone

@@ -46,7 +46,8 @@
       "splitMode": "You can change this later in Settings.",
       "fiscalYearStartMonth": "Annual totals run from this month. July for an Australian financial year, January for a calendar year.",
       "pin": "4–8 digits. Used to log in on any device.",
-      "activeFrom": "Bills before this date won’t include you. A rough date is fine."
+      "activeFrom": "Bills before this date won’t include you. A rough date is fine.",
+      "location": "Your postcode tells the app your seasons (and later your weather). Just the postcode, never your address; you can add it later in Settings."
     },
     "splitModes": {
       "shared": {
@@ -1002,5 +1003,34 @@
     "covers": "Your set-aside for {month} already allows for it.",
     "basis": "Based on your bills from {year}.",
     "heading": "Season ahead"
+  },
+  "location": {
+    "title": "Location",
+    "body": "Your postcode lets the app know your seasons and, later, your local weather. We never ask for your address.",
+    "country": "Country",
+    "place": "Postcode or suburb",
+    "placeOptional": "Postcode or suburb (optional)",
+    "placeHint": "Type your postcode or suburb and pick it from the list.",
+    "placePlaceholder": "e.g. 3550 or Bendigo",
+    "postcode": "Postcode",
+    "postcodeOptional": "Postcode (optional)",
+    "noDataHint": "We don't have postcode details for this country yet, so seasons come from your timezone for now.",
+    "change": "Change",
+    "save": "Save location",
+    "remove": "Remove location",
+    "saved": "Location saved.",
+    "none": "No location yet. Seasons are worked out from your timezone until you add one.",
+    "summary": "{place} · {region}",
+    "southern": "Southern hemisphere",
+    "northern": "Northern hemisphere",
+    "tropical": "Tropics (wet and dry seasons)",
+    "temperate": "Four seasons",
+    "attribution": "Postcode data © GeoNames, licensed CC BY 4.0.",
+    "prompt": {
+      "title": "Add your postcode",
+      "body": "It tells the app your seasons, so it can warn you before winter or summer changes your bills. Just the postcode, never your address.",
+      "action": "Add postcode",
+      "dismiss": "Not now"
+    }
   }
 }

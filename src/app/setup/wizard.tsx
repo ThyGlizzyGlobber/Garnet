@@ -4,13 +4,14 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Button, Card, Field, Input, Select } from '@/components/ui';
 import { ActionForm } from '@/components/ui/form';
+import { LocationField } from '@/components/app/location-field';
 import { completeSetup } from './actions';
 
 const STEPS = ['household', 'region', 'owner'] as const;
 type Step = (typeof STEPS)[number];
 const FIELDS: Record<Step, string[]> = {
   household: ['householdName', 'splitMode'],
-  region: ['currency', 'locale', 'timezone', 'fiscalYearStartMonth'],
+  region: ['currency', 'locale', 'timezone', 'fiscalYearStartMonth', 'country', 'postalCode'],
   owner: ['ownerName', 'activeFrom'],
 };
 
@@ -22,6 +23,8 @@ const FIELDS: Record<Step, string[]> = {
 export function SetupWizard({
   defaults,
   timezones,
+  withData,
+  country,
 }: {
   defaults: {
     currency: string;
@@ -32,6 +35,10 @@ export function SetupWizard({
     ownerName: string;
   };
   timezones: string[];
+  /** Countries with postcode data, for the location field. */
+  withData: string[];
+  /** Default country (from the default locale). */
+  country: string;
 }) {
   const t = useTranslations('setup');
   const [step, setStep] = useState<Step>('household');
@@ -180,6 +187,13 @@ export function SetupWizard({
                   ))}
                 </Select>
               </Field>
+              <p className="text-xs text-fg-muted">{t('hints.location')}</p>
+              <LocationField
+                withData={withData}
+                initial={{ country, postalCode: '', locality: '' }}
+                errors={errors}
+                optional
+              />
             </Card>
           </div>
 

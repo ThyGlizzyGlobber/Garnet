@@ -40,6 +40,18 @@ export const household = sqliteTable(
      * in BILLS_ADDRESS_TEMPLATE. Created on first use; an admin can replace it.
      */
     billsAlias: text('bills_alias'),
+    /**
+     * Where the household is, to the postcode and never finer (scope S2):
+     * seasons, hemisphere and (later) weather come from it. Country is ISO
+     * 3166-1 alpha-2; latitude/longitude are the postcode's map point.
+     */
+    country: text('country'),
+    postalCode: text('postal_code'),
+    locality: text('locality'),
+    region: text('region'),
+    latitude: real('latitude'),
+    longitude: real('longitude'),
+    locationUpdatedAt: text('location_updated_at'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },

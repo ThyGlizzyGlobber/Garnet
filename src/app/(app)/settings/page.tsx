@@ -12,11 +12,20 @@ import { getTheme, THEMES } from '@/lib/theme';
 import {
   exitDemoAction,
   readMissingMetricsAction,
+  removeLocationAction,
   replaceBillsAddressAction,
   setThemeAction,
 } from './actions';
 import { catchUpCount, isReadingMetrics } from '@/ingest/metrics';
 import { UpdateCard } from './update-card';
+import { LocationForm } from './location-form';
+import {
+  countriesWithData,
+  countryFromLocale,
+  describeLocation,
+  hasPostcodeData,
+} from '@/lib/location';
+import { householdClimate } from '@/lib/seasons';
 
 export default async function SettingsPage() {
   const { hh, me } = await pageContext();
@@ -25,6 +34,10 @@ export default async function SettingsPage() {
   const t = await getTranslations('settings');
   const env = getEnv();
   const theme = await getTheme();
+  const tl = await getTranslations('location');
+  const place = describeLocation(hh);
+  const climate = householdClimate(hh);
+  const withData = countriesWithData();
   const missing = catchUpCount(hh.id);
   const reading = isReadingMetrics(hh.id);
   const demo = hh.isDemo;
@@ -53,6 +66,40 @@ export default async function SettingsPage() {
           paymentReferenceTemplate: hh.paymentReferenceTemplate,
         }}
       />
+      <Card className="mt-4 flex flex-col gap-3" id="location">
+        <h2 className="font-display font-semibold">{tl('title')}</h2>
+        <p className="text-xs text-fg-muted">{tl('body')}</p>
+        {place ? (
+          <p className="text-sm">
+            <span className="font-semibold">{place}</span>
+            {hh.region && <span className="text-fg-muted"> · {hh.region}</span>}
+            <span className="block text-xs text-fg-muted">
+              {climate.hemisphere === 'south' ? tl('southern') : tl('northern')} ·{' '}
+              {climate.climate === 'tropical' ? tl('tropical') : tl('temperate')}
+            </span>
+          </p>
+        ) : (
+          <p className="text-sm text-fg-muted">{tl('none')}</p>
+        )}
+        {me.role === 'owner' && (
+          <LocationForm
+            withData={withData}
+            initial={{
+              country: hh.country ?? countryFromLocale(hh.locale) ?? 'AU',
+              postalCode: hh.postalCode ?? '',
+              locality: hh.locality ?? '',
+            }}
+          />
+        )}
+        {me.role === 'owner' && place && (
+          <div>
+            <InlineAction action={removeLocationAction} label={tl('remove')} variant="ghost" />
+          </div>
+        )}
+        {hh.country && hasPostcodeData(hh.country) && (
+          <p className="text-[11px] text-fg-muted">{tl('attribution')}</p>
+        )}
+      </Card>
       <Card className="mt-4 flex flex-col gap-3">
         <h2 className="font-display font-semibold">{t('theme.title')}</h2>
         <p className="text-xs text-fg-muted">{t('theme.body')}</p>

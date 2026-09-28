@@ -14,6 +14,12 @@ import { requestIsHttps } from '@/lib/request';
 import { THEME_COOKIE, THEMES, type Theme } from '@/lib/theme';
 import { cancelUpdateRequest, checkForUpdate, requestUpdate } from '@/lib/updates';
 import { readMissingMetrics } from '@/ingest/metrics';
+import {
+  clearHouseholdLocation,
+  LOCATION_PROMPT_COOKIE,
+  LocationError,
+  setHouseholdLocation,
+} from '@/lib/location';
 
 const schema = z.object({
   name: z.string().min(1, 'Required').max(60),
@@ -114,4 +120,44 @@ export async function readMissingMetricsAction(): Promise<void> {
     )
     .catch((e) => console.error('[metrics]', (e as Error).message));
   revalidatePath('/settings');
+}
+
+/** Where the household is (postcode and country, never an address). Admins only. */
+export async function saveLocationAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
+  const me = await requireOwner();
+  const postalCode = str(fd, 'postalCode');
+  if (!postalCode)
+    return { fieldErrors: { postalCode: 'Type your postcode or suburb and pick it' } };
+  try {
+    setHouseholdLocation(me.householdId, {
+      country: str(fd, 'country'),
+      postalCode,
+      locality: str(fd, 'locality') || null,
+    });
+  } catch (e) {
+    if (e instanceof LocationError) return { fieldErrors: { postalCode: e.message } };
+    throw e;
+  }
+  revalidatePath('/settings');
+  revalidatePath('/');
+  return { ok: true };
+}
+
+export async function removeLocationAction(): Promise<void> {
+  const me = await requireOwner();
+  clearHouseholdLocation(me.householdId);
+  revalidatePath('/settings');
+}
+
+/** "Not now" on the dashboard's postcode prompt: hidden in this browser for 30 days. */
+export async function dismissLocationPromptAction(): Promise<void> {
+  const jar = await cookies();
+  jar.set(LOCATION_PROMPT_COOKIE, '1', {
+    maxAge: 30 * 86_400,
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: await requestIsHttps(),
+    path: '/',
+  });
+  revalidatePath('/');
 }

@@ -9,6 +9,7 @@ import { str, zodToState } from '@/lib/actions';
 import { getDb } from '@/db/client';
 import { isIsoDate } from '@/lib/dates';
 import { createHousehold } from '@/lib/households';
+import { hasPostcodeData, lookupPostcode, setHouseholdLocation } from '@/lib/location';
 import { createMember } from '@/lib/members';
 
 const schema = z
@@ -42,6 +43,22 @@ export async function completeSetup(_prev: ActionState, fd: FormData): Promise<A
   });
   if (!parsed.success) return zodToState(parsed.error);
   const v = parsed.data;
+  // Optional: country + postcode (checked before anything is created).
+  const location = {
+    country: str(fd, 'country'),
+    postalCode: str(fd, 'postalCode'),
+    locality: str(fd, 'locality') || null,
+  };
+  if (
+    location.postalCode &&
+    hasPostcodeData(location.country) &&
+    !lookupPostcode(location.country, location.postalCode)
+  )
+    return {
+      fieldErrors: {
+        postalCode: `We don't know postcode ${location.postalCode}. Try your suburb or town instead.`,
+      },
+    };
   let ownerId: string;
   try {
     ownerId = getDb().transaction((tx) => {
@@ -58,6 +75,7 @@ export async function completeSetup(_prev: ActionState, fd: FormData): Promise<A
         },
         tx,
       );
+      if (location.postalCode) setHouseholdLocation(hh.id, location, tx);
       return createMember(
         hh.id,
         {
