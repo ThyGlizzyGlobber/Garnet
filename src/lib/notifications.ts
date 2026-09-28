@@ -24,6 +24,9 @@ import { ulid } from '@/lib/ids';
 import { getMember, listMembers } from '@/lib/members';
 import { DAYS_PER_MONTH, usageHistory } from '@/lib/consumption';
 import { unitLabel } from '@/lib/units';
+import { monthLabel } from '@/lib/bill-month';
+import { seasonNoticeText } from '@/lib/season-text';
+import { seasonAhead } from '@/lib/seasons';
 import { getService } from '@/lib/services';
 import { daysUntil } from '@/lib/periods';
 
@@ -508,4 +511,63 @@ export async function sendDueReminders(now = new Date(), db: Db = getDb()): Prom
 /** Fire-and-forget wrapper for request handlers: a failed email never fails the action. */
 export function notifyInBackground(p: Promise<unknown>): void {
   p.catch((e) => console.error('[notify]', (e as Error).message));
+}
+
+const tSeasons = createTranslator({ locale: 'en', messages, namespace: 'seasons' });
+const ts = (key: string, vars?: Record<string, string | number>) =>
+  tSeasons(key as Parameters<typeof tSeasons>[0], vars as Parameters<typeof tSeasons>[1]);
+
+/**
+ * Season ahead: when a costly (or cheaper) season is a few weeks away, tell
+ * each seasonal service's payer what it did to the bills last year. Once per
+ * service per season; daytime only; follows the payer's reminder setting.
+ */
+export async function sendSeasonAhead(now = new Date(), db: Db = getDb()): Promise<number> {
+  let sent = 0;
+  for (const hh of listHouseholds(db)) {
+    if (hh.isDemo) continue;
+    const hour = localHour(hh.timezone, now);
+    if (hour < QUIET_START || hour >= QUIET_END) continue;
+    const notices = seasonAhead(hh.id, todayIn(hh.timezone, now), db);
+    if (!notices.length) continue;
+    const f = fmt(hh);
+    const members = new Map(listMembers(hh.id, db).map((m) => [m.id, m]));
+    for (const n of notices) {
+      const svc = getService(hh.id, n.serviceId, db);
+      const payer = svc?.payerMemberId ? members.get(svc.payerMemberId) : undefined;
+      if (!payer) continue;
+      const text = seasonNoticeText(n, ts, {
+        money: f.money,
+        month: (ym) => monthLabel(ym, hh.locale),
+      });
+      const ok = await sendOnce(
+        hh,
+        payer,
+        'reminders',
+        'season_ahead',
+        `${n.serviceId}:${n.startMonth}`,
+        () => ({
+          subject: t('seasonAhead.subject', {
+            season: ts(`title.${n.season}`),
+            service: n.serviceName,
+            direction: n.monthlyImpactMinor >= 0 ? t('seasonAhead.more') : t('seasonAhead.less'),
+            amount: f.money(Math.abs(n.monthlyImpactMinor), n.currency),
+          }),
+          blocks: [
+            { p: `${text.title}.` },
+            ...text.lines.map((line) => ({ p: line })),
+            {
+              button: {
+                label: t('seasonAhead.open', { service: n.serviceName }),
+                href: `${appUrl()}/services/${n.serviceId}`,
+              },
+            },
+          ],
+        }),
+        db,
+      );
+      if (ok) sent++;
+    }
+  }
+  return sent;
 }

@@ -94,6 +94,8 @@ export interface ServiceInput {
   usageUnit?: string | null;
   /** Usage limit per month, in usageUnit. */
   usageLimitMonthly?: number | null;
+  /** Cost changes with the seasons; defaults to on for electricity and gas. */
+  seasonal?: boolean;
   splitMode?: SplitMode;
   payerMemberId?: string | null;
   colour?: string;
@@ -117,6 +119,9 @@ function assertPayerInHousehold(
     throw new Error('Payer is not a member of this household');
 }
 
+/** Service types whose cost follows the seasons unless the household says otherwise. */
+export const SEASONAL_TYPES = ['electricity', 'gas'];
+
 export function createService(
   householdId: string,
   input: ServiceInput,
@@ -137,6 +142,7 @@ export function createService(
       cadence: rest.cadence ?? 'monthly',
       usageUnit: rest.usageUnit ?? null,
       usageLimitMonthly: rest.usageLimitMonthly ?? null,
+      seasonal: rest.seasonal ?? SEASONAL_TYPES.includes(rest.typeSlug),
       splitMode: rest.splitMode ?? 'equal',
       payerMemberId: rest.payerMemberId ?? null,
       colour: rest.colour ?? '#0a84ff',

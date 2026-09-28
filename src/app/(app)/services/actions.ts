@@ -8,6 +8,7 @@ import { CADENCES, SPLIT_MODES } from '@/db/schema';
 import type { ActionState } from '@/components/ui/form';
 import { optStr, str, zodToState } from '@/lib/actions';
 import { requireMember } from '@/lib/auth/session';
+import { refreshAnomalies } from '@/lib/bills';
 import { listMembers } from '@/lib/members';
 import { createService, createServiceType, updateService, type ServiceInput } from '@/lib/services';
 import { UNITS } from '@/lib/units';
@@ -78,6 +79,7 @@ function read(householdId: string, fd: FormData): ReadResult {
       notes: v.notes || null,
       trustedSenders: parseSenderList(str(fd, 'trustedSenders')),
       autoPay: fd.get('autoPay') === 'on',
+      seasonal: fd.get('seasonal') === 'on',
       customSplits,
     },
   };
@@ -103,6 +105,8 @@ export async function updateServiceAction(_prev: ActionState, fd: FormData): Pro
   if (!r.ok) return r.state;
   try {
     updateService(me.householdId, id, r.input);
+    // Seasonal on/off changes how its bills are judged Unusual.
+    refreshAnomalies(me.householdId, id);
   } catch (e) {
     return { error: (e as Error).message };
   }

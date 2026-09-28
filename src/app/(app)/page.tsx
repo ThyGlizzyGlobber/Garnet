@@ -14,6 +14,8 @@ import { remindersFor, summariseReminders } from '@/lib/reminders';
 import { documentCounts } from '@/lib/review';
 import { listServices } from '@/lib/services';
 import { householdUsage } from '@/lib/consumption';
+import { seasonAhead } from '@/lib/seasons';
+import { SeasonAhead } from '@/components/app/season-ahead';
 import { unitLabel } from '@/lib/units';
 import { ChangeText, formatQty } from '@/components/app/usage';
 import {
@@ -53,6 +55,7 @@ export default async function HomePage() {
 
   const s = dashboardSummary(hh.id, today, hh.fiscalYearStartMonth);
   const usage = householdUsage(hh.id);
+  const seasons = seasonAhead(hh.id, today);
   const services = listServices(hh.id);
   const tu = await getTranslations('usage');
   const projNow = projectMonth(hh.id, s.thisMonth.month);
@@ -533,6 +536,15 @@ export default async function HomePage() {
             <h2 className="font-display text-lg font-semibold">{t('anomaly.title')}</h2>
             <AnomalyList items={s.anomalies} money={money} empty={t('anomaly.empty')} />
           </section>
+        )}
+
+        {seasons.length > 0 && (
+          <SeasonAhead
+            notices={seasons}
+            locale={hh.locale}
+            money={money}
+            className="lg:col-span-3"
+          />
         )}
 
         {usage.length > 0 && (

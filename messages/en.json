@@ -284,7 +284,9 @@
       "autoPay": "Paid automatically (card on file or direct debit)",
       "autoPayHint": "Bills count as paid to the provider once their due date passes, unless the provider says a payment failed. Turned on by itself when an invoice shows automatic payment.",
       "usageLimit": "Usage limit per month ({unit})",
-      "usageLimitHint": "Optional. Bills are compared against it per day, so quarterly bills compare fairly. Leave empty for no limit."
+      "usageLimitHint": "Optional. Bills are compared against it per day, so quarterly bills compare fairly. Leave empty for no limit.",
+      "seasonal": "Changes with the seasons",
+      "seasonalHint": "Heating, cooling or solar make some months cost more than others. Bills are then compared with the same time last year, and you're told before a costly season starts."
     },
     "nextBill": "Next bill about {amount} · due {date}",
     "noHistory": "No bills yet",
@@ -929,6 +931,12 @@
       "check": "Please check who pays it (currently {payer}) and how it's split between everyone.",
       "open": "Check the service",
       "nobody": "nobody"
+    },
+    "seasonAhead": {
+      "subject": "{season} is coming: {service} usually {direction} about {amount} a month",
+      "more": "costs",
+      "less": "saves",
+      "open": "See {service}"
     }
   },
   "usage": {
@@ -959,6 +967,40 @@
       "title": "Usage",
       "hint": "Per day on each service's latest bill, compared with the bill before."
     },
-    "figureChange": "{change} vs last bill"
+    "figureChange": "{change} vs last bill",
+    "comingUp": {
+      "title": "Coming up",
+      "seasonal": "Based on {month} last year, adjusted for your recent bills",
+      "recent": "Average of your recent bills (no bill from {month} last year yet)",
+      "single": "Based on your only bill so far"
+    }
+  },
+  "seasons": {
+    "name": {
+      "summer": "summer",
+      "autumn": "autumn",
+      "winter": "winter",
+      "spring": "spring",
+      "wet": "the wet season",
+      "dry": "the dry season"
+    },
+    "title": {
+      "summer": "Summer",
+      "autumn": "Autumn",
+      "winter": "Winter",
+      "spring": "Spring",
+      "wet": "The wet season",
+      "dry": "The dry season"
+    },
+    "startsIn": "{season} starts {days, plural, =0 {today} one {tomorrow} other {in # days}}",
+    "costUp": "Last {season}, your {service} cost {pct}% more a day than in {previous}: about {amount} more a month at today's rates.",
+    "costDown": "Last {season}, your {service} cost {pct}% less a day than in {previous}: about {amount} less a month at today's rates.",
+    "usageUp": "You used {pct}% more.",
+    "usageDown": "You used {pct}% less.",
+    "solarUp": "Solar export went up {pct}%.",
+    "solarDown": "Solar export dropped {pct}%.",
+    "covers": "Your set-aside for {month} already allows for it.",
+    "basis": "Based on your bills from {year}.",
+    "heading": "Season ahead"
   }
 }

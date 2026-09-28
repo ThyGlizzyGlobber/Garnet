@@ -1,7 +1,7 @@
 import { getEnv, isImapConfigured } from '@/lib/env';
 import { pollMailbox, type PollResult } from '@/ingest/imap/poller';
 import { settleAutoPaidBills } from '@/lib/autopay';
-import { sendDueReminders } from '@/lib/notifications';
+import { sendDueReminders, sendSeasonAhead } from '@/lib/notifications';
 import { retryBusyReads } from '@/ingest/pipeline';
 
 export interface WorkerStatus {
@@ -39,6 +39,8 @@ export function startReminders(): void {
         return sendDueReminders();
       })
       .then((n) => n && console.log(`[reminders] sent ${n}`))
+      .then(() => sendSeasonAhead())
+      .then((n) => n && console.log(`[seasons] sent ${n} season-ahead email(s)`))
       .catch((e) => console.error('[reminders]', (e as Error).message))
       .finally(() => {
         busy = false;

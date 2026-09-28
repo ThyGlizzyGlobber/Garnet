@@ -99,6 +99,13 @@
       "when": 1790576530920,
       "tag": "0013_usage_limit",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "6",
+      "when": 1790608046647,
+      "tag": "0014_seasonal",
+      "breakpoints": true
     }
   ]
 }

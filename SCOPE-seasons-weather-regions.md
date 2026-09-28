@@ -1,6 +1,6 @@
 # Seasons, weather and regional insights — project scope
 
-**Status:** proposed, awaiting owner sign-off (§10 lists the decisions needed).
+**Status:** approved 29 September 2026 with the §10 recommendations as the decisions (owner). **S1 built** (29 Sep 2026); S2–S4 each still need the go-ahead to start.
 **Owner:** BRJ Labs · **Drafted:** 29 September 2026 · **Extends:** [SCOPE.md](SCOPE.md) (roadmap item 14)
 
 Each phase below is approved on its own before it is built, as with Prototype 1.
@@ -250,7 +250,7 @@ Not legal advice; the points to take to a lawyer.
 
 Each phase ships behind the usual release flow (commit → GitHub release → Update in Settings), with the owner's own household as the first test.
 
-## 10. Decisions needed
+## 10. Decisions (all taken as recommended, owner 29 Sep 2026)
 
 | #   | Decision                                                                       | Recommendation                                                                                              |
 | --- | ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- |

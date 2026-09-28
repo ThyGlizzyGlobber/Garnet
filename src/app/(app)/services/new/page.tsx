@@ -3,7 +3,7 @@ import { PageHeader } from '@/components/ui';
 import { CADENCES, SPLIT_MODES } from '@/db/schema';
 import { pageContext } from '@/lib/context';
 import { listMembers } from '@/lib/members';
-import { listServiceTypes } from '@/lib/services';
+import { listServiceTypes, SEASONAL_TYPES } from '@/lib/services';
 import { listUnits } from '@/lib/units';
 import { nextPaletteColour, TYPE_COLOUR } from '@/lib/palette';
 import { listServices } from '@/lib/services';
@@ -48,6 +48,7 @@ export default async function NewServicePage() {
           notes: '',
           trustedSenders: '',
           autoPay: false,
+          seasonal: SEASONAL_TYPES.includes(first.slug),
           customSplits: {},
         }}
       />

@@ -9,11 +9,16 @@ import { compareUsage, DAYS_PER_MONTH, usageHistory, type Change } from '@/lib/c
 import { pageContext } from '@/lib/context';
 import { getService } from '@/lib/services';
 import { unitLabel } from '@/lib/units';
+import { SeasonAhead } from '@/components/app/season-ahead';
+import { monthLabel } from '@/lib/bill-month';
+import { addMonths } from '@/lib/periods';
+import { projectMonth } from '@/lib/projections';
+import { seasonAhead } from '@/lib/seasons';
 
 /** A service at a glance: how much it uses and how that compares, then its bills. */
 export default async function ServicePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { hh, money, date } = await pageContext();
+  const { hh, money, date, today } = await pageContext();
   const t = await getTranslations('usage');
   const ts = await getTranslations('services');
   const svc = getService(hh.id, id);
@@ -45,6 +50,16 @@ export default async function ServicePage({ params }: { params: Promise<{ id: st
     rows.push({ label: t('vs.limit', { qty: qty(c.limit.monthly), unit }), usage: c.limit.usage });
   if (c?.similarHouseholds) rows.push({ label: t('vs.similar'), usage: c.similarHouseholds });
 
+  const seasons = seasonAhead(hh.id, today).filter((n) => n.serviceId === svc.id);
+  // The next three months' estimates, and what each is based on.
+  const comingUp = [0, 1, 2]
+    .map((i) => addMonths(today.slice(0, 7), i))
+    .map((month) => ({
+      month,
+      p: projectMonth(hh.id, month).services.find((x) => x.service.id === svc.id),
+    }))
+    .filter((x) => x.p && x.p.method !== 'none');
+
   // Per-band change against the previous bill with usage.
   const before = c?.previous?.period.parts ?? [];
 
@@ -58,6 +73,14 @@ export default async function ServicePage({ params }: { params: Promise<{ id: st
             {ts('edit')}
           </LinkButton>
         }
+      />
+
+      <SeasonAhead
+        notices={seasons}
+        locale={hh.locale}
+        money={money}
+        linkToService={false}
+        className="mb-4"
       />
 
       <Card>
@@ -154,6 +177,30 @@ export default async function ServicePage({ params }: { params: Promise<{ id: st
                 </div>
               );
             })}
+          </dl>
+        </Card>
+      )}
+
+      {comingUp.length > 0 && (
+        <Card className="mt-4">
+          <h2 className="font-semibold">{t('comingUp.title')}</h2>
+          <dl className="mt-2 divide-y divide-border text-sm">
+            {comingUp.map(({ month, p }) => (
+              <div key={month} className="flex items-baseline justify-between gap-4 py-2">
+                <dt>
+                  {monthLabel(month, hh.locale)}
+                  <span className="block text-xs text-fg-muted">
+                    {t(`comingUp.${p!.method}`, {
+                      month: new Intl.DateTimeFormat(hh.locale, {
+                        month: 'long',
+                        timeZone: 'UTC',
+                      }).format(new Date(`${month}-01T00:00:00Z`)),
+                    })}
+                  </span>
+                </dt>
+                <dd className="font-semibold tabular-nums">{money(p!.monthMinor)}</dd>
+              </div>
+            ))}
           </dl>
         </Card>
       )}

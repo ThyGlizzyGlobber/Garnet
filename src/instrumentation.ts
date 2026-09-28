@@ -18,6 +18,25 @@ export async function register() {
     console.log(`[ingest] removed ${purged} stored forward email(s); their PDFs are kept`);
   const orphans = purgeOrphanedBillDocuments();
   if (orphans) console.log(`[ingest] removed ${orphans} document(s) left behind by deleted bills`);
+  // The Unusual rule changed (seasons): re-check every bill once per rule version.
+  const { refreshAllAnomalies, ANOMALY_RULE_VERSION } = await import('./lib/bills');
+  const fs = await import('node:fs');
+  const path = await import('node:path');
+  const { ensureDataDirs } = await import('./lib/paths');
+  const marker = path.join(ensureDataDirs().config, 'anomaly-rule.json');
+  let seen = 0;
+  try {
+    seen = (JSON.parse(fs.readFileSync(marker, 'utf8')) as { version?: number }).version ?? 0;
+  } catch {
+    // First run with versioned rules.
+  }
+  if (seen < ANOMALY_RULE_VERSION) {
+    const changed = refreshAllAnomalies();
+    fs.writeFileSync(marker, JSON.stringify({ version: ANOMALY_RULE_VERSION }));
+    console.log(
+      `[bills] Unusual flags re-checked with rule v${ANOMALY_RULE_VERSION}: ${changed} changed`,
+    );
+  }
   if (env.DEMO_MODE) {
     const { seedDemo } = await import('./db/seed');
     const result = await seedDemo();

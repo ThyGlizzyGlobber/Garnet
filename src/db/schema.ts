@@ -157,6 +157,12 @@ export const service = sqliteTable(
     usageUnit: text('usage_unit'),
     /** Household's own usage limit, per month, in usage_unit (e.g. 400 kWh). Compared per day. */
     usageLimitMonthly: real('usage_limit_monthly'),
+    /**
+     * Cost changes with the seasons (heating, cooling, solar): the Unusual flag
+     * compares with the same time last year and allows for seasonal swings, and
+     * season-ahead notices are shown. On by default for electricity and gas.
+     */
+    seasonal: integer('seasonal', { mode: 'boolean' }).notNull().default(false),
     splitMode: text('split_mode', { enum: SPLIT_MODES }).notNull().default('equal'),
     /** Member who pays the provider; their own share is auto-marked paid. */
     payerMemberId: text('payer_member_id').references(() => member.id, { onDelete: 'set null' }),
@@ -285,6 +291,8 @@ export const bill = sqliteTable(
       onDelete: 'set null',
     }),
     anomalyNote: text('anomaly_note'),
+    /** What the Unusual check compared with: last_year | recent | seasonal_allowance. */
+    anomalyBasis: text('anomaly_basis', { enum: ['last_year', 'recent', 'seasonal_allowance'] }),
     notes: text('notes'),
     createdByMemberId: text('created_by_member_id').references(() => member.id, {
       onDelete: 'set null',

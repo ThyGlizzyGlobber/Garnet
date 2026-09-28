@@ -4,6 +4,7 @@ import path from 'node:path';
 import { and, eq, like, or } from 'drizzle-orm';
 import { getDb, type Db } from '@/db/client';
 import { bill, sourceDocument, type SourceDocument } from '@/db/schema';
+import { deleteBill } from '@/lib/bills';
 import { ulid } from '@/lib/ids';
 import { dataPaths, ensureDataDirs } from '@/lib/paths';
 
@@ -199,10 +200,9 @@ export function deleteBillWithDocument(
     .where(and(eq(bill.householdId, householdId), eq(bill.id, billId)))
     .get();
   if (!row) return;
-  // Shares and figures go with the bill (ON DELETE CASCADE).
-  db.delete(bill)
-    .where(and(eq(bill.householdId, householdId), eq(bill.id, billId)))
-    .run();
+  // Shares and figures go with the bill (ON DELETE CASCADE); the service's
+  // other bills are re-checked for Unusual.
+  deleteBill(householdId, billId, db);
   if (row.sourceDocumentId) deleteDocument(householdId, row.sourceDocumentId, db);
 }
 

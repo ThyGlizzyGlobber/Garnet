@@ -83,15 +83,12 @@ export function createBill(householdId: string, input: BillInput, db: Db = getDb
   const now = new Date().toISOString();
   const id = ulid();
   const currency = input.currency ?? hh.currency;
-  const anomaly = anomalyFor(householdId, input.serviceId, input, null, db);
 
   db.transaction((tx) => {
     tx.insert(bill)
       .values({
         id,
         householdId,
-        isAnomaly: anomaly.isAnomaly,
-        anomalyNote: anomaly.note,
         serviceId: input.serviceId,
         sourceDocumentId: input.sourceDocumentId ?? null,
         amountMinor: input.amountMinor,
@@ -128,6 +125,7 @@ export function createBill(householdId: string, input: BillInput, db: Db = getDb
       );
   });
 
+  refreshAnomalies(householdId, input.serviceId, db);
   return getBill(householdId, id, db)!;
 }
 
@@ -182,30 +180,56 @@ function insertShares(
     .run();
 }
 
-/** Compare against earlier bills of the same service (by period start). */
-function anomalyFor(
-  householdId: string,
-  serviceId: string,
-  b: { amountMinor: number; periodStart: string; periodEnd: string },
-  excludeId: string | null,
-  db: Db,
-): { isAnomaly: boolean; note: string | null } {
-  const priors = db
+/**
+ * Recalculate the Unusual flag for every bill of a service. Runs whenever a
+ * service's bills change, so bills arriving out of order (a year of history
+ * forwarded at once, oldest last) still end up compared with the right ones.
+ */
+export function refreshAnomalies(householdId: string, serviceId: string, db: Db = getDb()): number {
+  const svc = getService(householdId, serviceId, db);
+  if (!svc) return 0;
+  const rows = db
     .select({
       id: bill.id,
       amountMinor: bill.amountMinor,
       periodStart: bill.periodStart,
       periodEnd: bill.periodEnd,
+      isAnomaly: bill.isAnomaly,
+      anomalyNote: bill.anomalyNote,
+      anomalyBasis: bill.anomalyBasis,
     })
     .from(bill)
     .where(and(eq(bill.householdId, householdId), eq(bill.serviceId, serviceId)))
-    .all()
-    .filter((p) => p.id !== excludeId && p.periodStart < b.periodStart);
-  const r = detectAnomaly(b, priors);
-  return {
-    isAnomaly: r.isAnomaly,
-    note: r.isAnomaly && r.ratio !== null ? anomalyNote(r.ratio) : null,
-  };
+    .all();
+  let changed = 0;
+  for (const b of rows) {
+    const r = detectAnomaly(
+      b,
+      rows.filter((p) => p.id !== b.id),
+      { seasonal: svc.seasonal },
+    );
+    const note = r.isAnomaly && r.ratio !== null ? anomalyNote(r.ratio, r.basis ?? 'recent') : null;
+    if (b.isAnomaly === r.isAnomaly && b.anomalyNote === note && b.anomalyBasis === r.basis)
+      continue;
+    db.update(bill)
+      .set({ isAnomaly: r.isAnomaly, anomalyNote: note, anomalyBasis: r.basis })
+      .where(eq(bill.id, b.id))
+      .run();
+    changed++;
+  }
+  return changed;
+}
+
+/** Bump when the Unusual rule changes, so existing bills are re-checked once at startup. */
+export const ANOMALY_RULE_VERSION = 2;
+
+/** Recalculate every bill's Unusual flag (after the rule changes). */
+export function refreshAllAnomalies(db: Db = getDb()): number {
+  const pairs = db
+    .selectDistinct({ householdId: bill.householdId, serviceId: bill.serviceId })
+    .from(bill)
+    .all();
+  return pairs.reduce((n, p) => n + refreshAnomalies(p.householdId, p.serviceId, db), 0);
 }
 
 export function getBill(householdId: string, id: string, db: Db = getDb()): BillDetail | null {
@@ -289,12 +313,10 @@ export function updateBill(
   if (locked && affectsShares)
     throw new Error('Shares have been paid; amount and period are locked');
   const now = new Date().toISOString();
-  const anomaly = affectsShares ? anomalyFor(householdId, merged.serviceId, merged, id, db) : null;
   db.transaction((tx) => {
     tx.update(bill)
       .set({
         ...patch,
-        ...(anomaly ? { isAnomaly: anomaly.isAnomaly, anomalyNote: anomaly.note } : {}),
         updatedAt: now,
       })
       .where(and(eq(bill.householdId, householdId), eq(bill.id, id)))
@@ -316,13 +338,24 @@ export function updateBill(
       );
     }
   });
+  if (affectsShares) {
+    refreshAnomalies(householdId, merged.serviceId, db);
+    if (merged.serviceId !== existing.serviceId)
+      refreshAnomalies(householdId, existing.serviceId, db);
+  }
   return getBill(householdId, id, db)!;
 }
 
 export function deleteBill(householdId: string, id: string, db: Db = getDb()): void {
+  const row = db
+    .select({ serviceId: bill.serviceId })
+    .from(bill)
+    .where(and(eq(bill.householdId, householdId), eq(bill.id, id)))
+    .get();
   db.delete(bill)
     .where(and(eq(bill.householdId, householdId), eq(bill.id, id)))
     .run(); // shares cascade
+  if (row) refreshAnomalies(householdId, row.serviceId, db);
 }
 
 export function setSharePaid(
