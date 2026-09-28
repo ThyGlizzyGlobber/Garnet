@@ -14,6 +14,7 @@ import { monthLabel } from '@/lib/bill-month';
 import { addMonths } from '@/lib/periods';
 import { projectMonth } from '@/lib/projections';
 import { seasonAhead } from '@/lib/seasons';
+import { weatherAdjusted } from '@/lib/weather-model';
 
 /** A service at a glance: how much it uses and how that compares, then its bills. */
 export default async function ServicePage({ params }: { params: Promise<{ id: string }> }) {
@@ -51,6 +52,22 @@ export default async function ServicePage({ params }: { params: Promise<{ id: st
   if (c?.similarHouseholds) rows.push({ label: t('vs.similar'), usage: c.similarHouseholds });
 
   const seasons = seasonAhead(hh.id, today).filter((n) => n.serviceId === svc.id);
+  // "Against the same time last year: you used 12% more; it was 18% colder.
+  // Adjusted for the weather, 5% less." Only when the weather model qualifies.
+  const tw = await getTranslations('weather.adjusted');
+  const adj = svc.seasonal ? weatherAdjusted(hh.id, svc.id) : null;
+  const pctOf = (x: number) => Math.round(Math.abs(x) * 100);
+  const weatherLine = adj
+    ? [
+        `${tw(adj.against)}: ${tw(`${adj.measure}${adj.actual >= 0 ? 'More' : 'Less'}`, { pct: pctOf(adj.actual) })}${
+          adj.weather ? `; ${tw(adj.weather.kind, { pct: pctOf(adj.weather.pct) })}` : ''
+        }.`,
+        Math.abs(adj.adjusted) < 0.02
+          ? tw('adjustedSame')
+          : tw(adj.adjusted > 0 ? 'adjustedMore' : 'adjustedLess', { pct: pctOf(adj.adjusted) }),
+        tw('explains', { pct: pctOf(adj.r2) }),
+      ].join(' ')
+    : null;
   // The next three months' estimates, and what each is based on.
   const comingUp = [0, 1, 2]
     .map((i) => addMonths(today.slice(0, 7), i))
@@ -127,6 +144,9 @@ export default async function ServicePage({ params }: { params: Promise<{ id: st
           </>
         ) : (
           <p className="mt-1 text-sm text-fg-muted">{t('none')}</p>
+        )}
+        {weatherLine && (
+          <p className="mt-3 rounded-2xl bg-surface-2 px-4 py-3 text-sm">{weatherLine}</p>
         )}
       </Card>
 

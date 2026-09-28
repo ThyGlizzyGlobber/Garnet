@@ -534,7 +534,8 @@
         "seasonal": "Seasonal: same month last year, adjusted for drift",
         "recent": "Average of the last 3 bills per service",
         "single": "Based on one bill per service so far",
-        "none": "No history yet"
+        "none": "No history yet",
+        "weather": "Seasonal: normal weather for the month and how your bills follow it"
       }
     },
     "reminders": {
@@ -767,7 +768,17 @@
       "aiUsage": "AI reads this month: {used} of {limit}. After that, new documents wait in the review queue until next month.",
       "aiUsageUncapped": "AI reads this month: {used} (no monthly cap for the operator's household)."
     },
-    "demoOn": "Demo data"
+    "demoOn": "Demo data",
+    "weather": {
+      "title": "Weather",
+      "off": "Off",
+      "commercial": "commercial key",
+      "lastRun": "Last update",
+      "cells": "Areas kept up to date",
+      "calls": "Weather requests since start",
+      "billsWithWeather": "Your bills with their weather",
+      "hint": "Updated every 30 minutes for households with a postcode. The first update fetches ten years of history for normal weather."
+    }
   },
   "code": {
     "title": "Check your email",
@@ -973,7 +984,8 @@
       "title": "Coming up",
       "seasonal": "Based on {month} last year, adjusted for your recent bills",
       "recent": "Average of your recent bills (no bill from {month} last year yet)",
-      "single": "Based on your only bill so far"
+      "single": "Based on your only bill so far",
+      "weather": "Based on normal {month} weather where you live and how your bills follow the weather"
     }
   },
   "seasons": {
@@ -1002,7 +1014,14 @@
     "solarDown": "Solar export dropped {pct}%.",
     "covers": "Your set-aside for {month} already allows for it.",
     "basis": "Based on your bills from {year}.",
-    "heading": "Season ahead"
+    "heading": "Season ahead",
+    "basisWeather": "Based on normal weather where you live and how your bills follow it.",
+    "normalUp": "In a normal {season}, your {service} costs about {pct}% more a day than in {previous}: about {amount} more a month at today's rates.",
+    "normalDown": "In a normal {season}, your {service} costs about {pct}% less a day than in {previous}: about {amount} less a month at today's rates.",
+    "normalUsageUp": "You'd use about {pct}% more.",
+    "normalUsageDown": "You'd use about {pct}% less.",
+    "normalSolarUp": "Expect about {pct}% more solar export.",
+    "normalSolarDown": "Expect about {pct}% less solar export."
   },
   "location": {
     "title": "Location",
@@ -1031,6 +1050,51 @@
       "body": "It tells the app your seasons, so it can warn you before winter or summer changes your bills. Just the postcode, never your address.",
       "action": "Add postcode",
       "dismiss": "Not now"
+    }
+  },
+  "weather": {
+    "title": "Weather this week",
+    "titleAt": "Weather this week in {place}",
+    "impact": {
+      "heating": {
+        "more": "A colder week than usual: about {amount} more in heating.",
+        "less": "A milder week than usual: about {amount} less in heating.",
+        "total": "Heating this week: about {amount}."
+      },
+      "cooling": {
+        "more": "A hotter week than usual: about {amount} more in cooling.",
+        "less": "A cooler week than usual: about {amount} less in cooling.",
+        "total": "Cooling this week: about {amount}."
+      }
+    },
+    "code": {
+      "clear": "Sunny",
+      "partly": "Some cloud",
+      "cloudy": "Cloudy",
+      "fog": "Fog",
+      "drizzle": "Drizzle",
+      "rain": "Rain",
+      "snow": "Snow",
+      "storm": "Storms",
+      "unknown": "–"
+    },
+    "legend": "Tinted days need heating (blue) or cooling (amber)",
+    "attribution": "Weather data by Open-Meteo.com (CC BY 4.0)",
+    "adjusted": {
+      "lastYear": "Against the same time last year",
+      "previous": "Against the last bill",
+      "usageMore": "you used {pct}% more",
+      "usageLess": "you used {pct}% less",
+      "costMore": "it cost {pct}% more a day",
+      "costLess": "it cost {pct}% less a day",
+      "colder": "it was {pct}% colder",
+      "milder": "it was {pct}% milder",
+      "hotter": "it was {pct}% hotter",
+      "cooler": "it was {pct}% cooler",
+      "adjustedMore": "Adjusted for the weather, {pct}% more.",
+      "adjustedLess": "Adjusted for the weather, {pct}% less.",
+      "adjustedSame": "Adjusted for the weather, about the same.",
+      "explains": "The weather explains {pct}% of how this bill changes."
     }
   }
 }

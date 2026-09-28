@@ -1,6 +1,6 @@
 # Seasons, weather and regional insights — project scope
 
-**Status:** approved 29 September 2026 with the §10 recommendations as the decisions (owner). **S1 and S2 built** (29 Sep 2026); S3 and S4 each still need the go-ahead to start. S2 used GeoNames postcode data (owner's choice) instead of ABS + NCC climate zones; climate zones are deferred to S3's weather data.
+**Status:** approved 29 September 2026 with the §10 recommendations as the decisions (owner). **S1, S2 and S3 built** (29 Sep 2026); S4 still needs the go-ahead (and the §7 legal checklist) to start. S2 used GeoNames postcode data (owner's choice) instead of ABS + NCC climate zones; climate zones are deferred to S3's weather data.
 **Owner:** BRJ Labs · **Drafted:** 29 September 2026 · **Extends:** [SCOPE.md](SCOPE.md) (roadmap item 14)
 
 Each phase below is approved on its own before it is built, as with Prototype 1.

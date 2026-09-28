@@ -15,6 +15,8 @@ import { documentCounts } from '@/lib/review';
 import { listServices } from '@/lib/services';
 import { householdUsage } from '@/lib/consumption';
 import { seasonAhead } from '@/lib/seasons';
+import { weatherWeek } from '@/lib/weather-week';
+import { WeatherCard } from '@/components/app/weather-card';
 import { cookies } from 'next/headers';
 import { LOCATION_PROMPT_COOKIE } from '@/lib/location';
 import { dismissLocationPromptAction } from './settings/actions';
@@ -59,6 +61,7 @@ export default async function HomePage() {
   const s = dashboardSummary(hh.id, today, hh.fiscalYearStartMonth);
   const usage = householdUsage(hh.id);
   const seasons = seasonAhead(hh.id, today);
+  const week = weatherWeek(hh.id, today);
   const tl = await getTranslations('location');
   const askForPostcode =
     me.role === 'owner' &&
@@ -126,11 +129,13 @@ export default async function HomePage() {
   const myShare = nextDetail?.shares.find((sh) => sh.memberId === me.id) ?? null;
   const projMethod = proj.services.some((p) => p.method === 'seasonal')
     ? 'seasonal'
-    : proj.services.some((p) => p.method === 'recent')
-      ? 'recent'
-      : proj.services.some((p) => p.method === 'single')
-        ? 'single'
-        : 'none';
+    : proj.services.some((p) => p.method === 'weather')
+      ? 'weather'
+      : proj.services.some((p) => p.method === 'recent')
+        ? 'recent'
+        : proj.services.some((p) => p.method === 'single')
+          ? 'single'
+          : 'none';
   const maxForecast = Math.max(...forecast.map((f) => f.totalMinor), 1);
 
   return (
@@ -560,6 +565,15 @@ export default async function HomePage() {
               />
             </div>
           </section>
+        )}
+
+        {week && (
+          <WeatherCard
+            week={week}
+            locale={hh.locale}
+            money={(m) => money(m)}
+            className="lg:col-span-3"
+          />
         )}
 
         {seasons.length > 0 && (

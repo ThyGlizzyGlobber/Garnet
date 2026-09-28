@@ -20,7 +20,7 @@ export function seasonNoticeText(
   const lines: string[] = [];
   if (Math.abs(n.costRatio - 1) >= 0.1)
     lines.push(
-      t(n.costRatio >= 1 ? 'costUp' : 'costDown', {
+      t(`${n.basis === 'weather' ? 'normal' : 'cost'}${n.costRatio >= 1 ? 'Up' : 'Down'}`, {
         season,
         service: n.serviceName,
         pct: pct(n.costRatio),
@@ -29,12 +29,20 @@ export function seasonNoticeText(
       }),
     );
   if (n.usageRatio !== null && Math.abs(n.usageRatio - 1) >= 0.1)
-    lines.push(t(n.usageRatio >= 1 ? 'usageUp' : 'usageDown', { pct: pct(n.usageRatio) }));
+    lines.push(
+      t(`${n.basis === 'weather' ? 'normalUsage' : 'usage'}${n.usageRatio >= 1 ? 'Up' : 'Down'}`, {
+        pct: pct(n.usageRatio),
+      }),
+    );
   if (n.solarRatio !== null && Math.abs(n.solarRatio - 1) >= 0.25)
-    lines.push(t(n.solarRatio >= 1 ? 'solarUp' : 'solarDown', { pct: pct(n.solarRatio) }));
+    lines.push(
+      t(`${n.basis === 'weather' ? 'normalSolar' : 'solar'}${n.solarRatio >= 1 ? 'Up' : 'Down'}`, {
+        pct: pct(n.solarRatio),
+      }),
+    );
   if (n.setAsideCovers && n.monthlyImpactMinor > 0)
     lines.push(t('covers', { month: f.month(n.startMonth) }));
-  lines.push(t('basis', { year: n.basisYear }));
+  lines.push(n.basis === 'weather' ? t('basisWeather') : t('basis', { year: n.basisYear }));
   return {
     title: t('startsIn', { season: t(`title.${n.season}`), days: n.daysUntil }),
     lines,

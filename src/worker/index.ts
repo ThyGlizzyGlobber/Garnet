@@ -3,6 +3,8 @@ import { pollMailbox, type PollResult } from '@/ingest/imap/poller';
 import { settleAutoPaidBills } from '@/lib/autopay';
 import { sendDueReminders, sendSeasonAhead } from '@/lib/notifications';
 import { retryBusyReads } from '@/ingest/pipeline';
+import { syncWeather } from '@/lib/weather';
+import { weatherProvider } from '@/weather';
 
 export interface WorkerStatus {
   enabled: boolean;
@@ -19,7 +21,11 @@ interface WorkerState extends WorkerStatus {
 }
 
 // Survives Next.js hot reloads in dev; one poller per process.
-const g = globalThis as unknown as { __hudWorker?: WorkerState; __hudReminders?: NodeJS.Timeout };
+const g = globalThis as unknown as {
+  __hudWorker?: WorkerState;
+  __hudReminders?: NodeJS.Timeout;
+  __hudWeather?: NodeJS.Timeout;
+};
 
 /** Due-date reminders: checked every 15 minutes; each reminder is sent once (notification_log). */
 export function startReminders(): void {
@@ -88,8 +94,31 @@ export async function pollNow(): Promise<PollResult> {
   }
 }
 
+/** Weather for households with a postcode: every 30 minutes, first run soon after start. */
+export function startWeather(): void {
+  if (g.__hudWeather) return;
+  let busy = false;
+  const tick = () => {
+    if (busy) return;
+    busy = true;
+    syncWeather(weatherProvider())
+      .then((r) => {
+        if (r.calls || r.filled)
+          console.log(`[weather] ${r.calls} call(s), ${r.filled} bill(s) given their weather`);
+      })
+      .catch((e) => console.error('[weather]', (e as Error).message))
+      .finally(() => {
+        busy = false;
+      });
+  };
+  setTimeout(tick, 20_000).unref();
+  g.__hudWeather = setInterval(tick, 30 * 60_000);
+  g.__hudWeather.unref();
+}
+
 export function startWorker(): void {
   startReminders();
+  startWeather();
   const env = getEnv();
   const s = state();
   if (s.timer) return;

@@ -243,6 +243,14 @@ page has a search box (provider, month, amount, invoice number…, every word
 must match, matches highlighted) and filters by status, service and year; the
 Inbox has the same search.
 
+**Weather.** Households with a postcode get local weather from Open-Meteo
+(no key needed; data CC BY 4.0, credited in the app). The first update after
+someone adds a postcode fetches ten years of daily history for that area (one
+request), then the forecast every few hours. Open-Meteo's free API is for
+non-commercial use: once the product charges, buy their commercial plan and set
+`OPEN_METEO_API_KEY`. `WEATHER_PROVIDER=off` turns weather off. Status shows
+when it last updated.
+
 **Household location.** Each household can add its postcode (Settings →
 Location, or during setup). It sets the hemisphere and seasons now and the
 local weather later (S3). Australian postcodes come from GeoNames

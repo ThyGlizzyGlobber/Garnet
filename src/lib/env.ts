@@ -78,6 +78,14 @@ const envSchema = z.object({
   /** AI bill reads per household per month; beyond it, unknown bills go to the review queue. */
   AI_MONTHLY_LIMIT: z.coerce.number().int().min(0).default(60),
 
+  /** Weather for households with a postcode (scope S3). "off" disables all weather calls. */
+  WEATHER_PROVIDER: z.enum(['open-meteo', 'off']).default('open-meteo'),
+  /** Open-Meteo commercial API key; without it the free, non-commercial API is used. */
+  OPEN_METEO_API_KEY: pasted,
+  /** Degree-day base temperatures in °C (heating below, cooling above). */
+  WEATHER_HDD_BASE: z.coerce.number().default(18),
+  WEATHER_CDD_BASE: z.coerce.number().default(18),
+
   DEMO_MODE: boolish.default(false),
 
   // Stamped into the image by the release workflow; 'dev' for local builds.

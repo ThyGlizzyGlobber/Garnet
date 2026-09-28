@@ -5,6 +5,10 @@ import { allExtractors } from '@/ingest/extractors';
 import { readImapState } from '@/ingest/imap/poller';
 import { viewerIsOperator } from '@/lib/auth/session';
 import { aiAllowance } from '@/lib/usage';
+import { and, count, eq, isNotNull } from 'drizzle-orm';
+import { getDb } from '@/db/client';
+import { bill } from '@/db/schema';
+import { weatherStatus } from '@/lib/weather';
 import { pageContext } from '@/lib/context';
 import { getEnv, isImapConfigured, isLlmConfigured } from '@/lib/env';
 import { documentCounts, ingestionStats } from '@/lib/review';
@@ -15,6 +19,11 @@ export default async function StatusPage() {
   const { hh, date } = await pageContext();
   const operator = await viewerIsOperator();
   const ai = aiAllowance(hh.id);
+  const billsWithWeather = getDb()
+    .select({ n: count() })
+    .from(bill)
+    .where(and(eq(bill.householdId, hh.id), isNotNull(bill.weatherFilledAt)))
+    .get()!.n;
   const t = await getTranslations('status');
   const env = getEnv();
   const w = workerStatus();
@@ -117,6 +126,39 @@ export default async function StatusPage() {
             <InlineAction action={pollNowAction} label={t('mailbox.pollNow')} />
           </div>
         )}
+      </Card>
+
+      <Card className="mt-4">
+        <div className="flex items-start justify-between gap-3">
+          <h2 className="font-semibold">{t('weather.title')}</h2>
+          <Badge
+            tone={
+              env.WEATHER_PROVIDER === 'off'
+                ? 'neutral'
+                : weatherStatus.lastError
+                  ? 'danger'
+                  : 'success'
+            }
+          >
+            {env.WEATHER_PROVIDER === 'off'
+              ? t('weather.off')
+              : `${env.WEATHER_PROVIDER}${env.OPEN_METEO_API_KEY ? ` · ${t('weather.commercial')}` : ''}`}
+          </Badge>
+        </div>
+        <dl className="mt-2 grid grid-cols-2 gap-2 text-sm">
+          <dt className="text-fg-muted">{t('weather.lastRun')}</dt>
+          <dd>{dt(weatherStatus.lastRun)}</dd>
+          <dt className="text-fg-muted">{t('weather.cells')}</dt>
+          <dd>{weatherStatus.cells}</dd>
+          <dt className="text-fg-muted">{t('weather.calls')}</dt>
+          <dd>{weatherStatus.calls}</dd>
+          <dt className="text-fg-muted">{t('weather.billsWithWeather')}</dt>
+          <dd>{billsWithWeather}</dd>
+        </dl>
+        {weatherStatus.lastError && (
+          <p className="mt-2 text-xs text-danger">{weatherStatus.lastError}</p>
+        )}
+        <p className="mt-2 text-xs text-fg-muted">{t('weather.hint')}</p>
       </Card>
 
       <Card className="mt-4">

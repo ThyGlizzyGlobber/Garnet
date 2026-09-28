@@ -3,6 +3,7 @@ import path from 'node:path';
 import { and, eq } from 'drizzle-orm';
 import { getDb, type Db } from '@/db/client';
 import { household, type Household } from '@/db/schema';
+import { resetBillWeather } from '@/lib/weather';
 
 /**
  * Household location, to the postcode and never finer (scope S2).
@@ -175,10 +176,14 @@ export function setHouseholdLocation(
     };
   }
   const now = new Date().toISOString();
+  const before = db.select().from(household).where(eq(household.id, householdId)).get();
   db.update(household)
     .set({ country, postalCode, ...fields, locationUpdatedAt: now, updatedAt: now })
     .where(and(eq(household.id, householdId)))
     .run();
+  // A new map point means different weather for every bill.
+  if (before?.latitude !== fields.latitude || before?.longitude !== fields.longitude)
+    resetBillWeather(householdId, db);
   return db.select().from(household).where(eq(household.id, householdId)).get()!;
 }
 
@@ -197,6 +202,7 @@ export function clearHouseholdLocation(householdId: string, db: Db = getDb()): v
     })
     .where(eq(household.id, householdId))
     .run();
+  resetBillWeather(householdId, db);
 }
 
 /** "Bendigo, Victoria 3550" — or just the postcode and country when there's no data. */

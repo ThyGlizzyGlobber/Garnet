@@ -7,8 +7,9 @@ import { listMembers } from '@/lib/members';
 import { addMonths, allocateToMonths, monthBounds } from '@/lib/periods';
 import { getCustomSplits, listServices, type ServiceWithType } from '@/lib/services';
 import { computeShares } from '@/lib/splits';
+import { normalMonthCostPerDay } from '@/lib/weather-model';
 
-export type ProjectionMethod = 'seasonal' | 'recent' | 'single' | 'none';
+export type ProjectionMethod = 'seasonal' | 'weather' | 'recent' | 'single' | 'none';
 
 export interface ServiceProjection {
   service: ServiceWithType;
@@ -153,7 +154,13 @@ export function projectMonth(
       .filter((a) => a.month === month);
     const knownDays = known.reduce((s, a) => s + a.days, 0);
     const knownMinor = known.reduce((s, a) => s + a.minor, 0);
-    const est = estimatePerDay(history, month);
+    let est = estimatePerDay(history, month);
+    // No bill from this month last year: a seasonal service with a weather
+    // model uses normal weather for the month instead of a flat recent average.
+    if (svc.seasonal && (est.method === 'recent' || est.method === 'single')) {
+      const perDay = normalMonthCostPerDay(householdId, svc.id, month, db);
+      if (perDay !== null) est = { perDay, method: 'weather', basisCount: est.basisCount };
+    }
     const remainingDays = Math.max(0, days - knownDays);
     const monthMinor = knownMinor + Math.round(est.perDay * remainingDays);
     const latest = history[history.length - 1];

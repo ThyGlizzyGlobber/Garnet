@@ -1,4 +1,12 @@
-import { index, integer, real, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import {
+  index,
+  integer,
+  primaryKey,
+  real,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from 'drizzle-orm/sqlite-core';
 
 /**
  * Conventions:
@@ -288,6 +296,15 @@ export const bill = sqliteTable(
     usageUnit: text('usage_unit'),
     /** When the AI last listed this bill's figures (bill_metric), even if it found none. */
     metricsReadAt: text('metrics_read_at'),
+    /**
+     * Weather over the bill's period at the household's postcode (scope S3):
+     * heating/cooling degree-days and solar energy (MJ/m²), summed over the
+     * period. Filled once every day of the period has weather.
+     */
+    hdd: real('hdd'),
+    cdd: real('cdd'),
+    solarMj: real('solar_mj'),
+    weatherFilledAt: text('weather_filled_at'),
     source: text('source', { enum: BILL_SOURCES }).notNull(),
     extractor: text('extractor'),
     confidence: real('confidence'),
@@ -502,6 +519,50 @@ export const billMetric = sqliteTable(
   ],
 );
 
+/**
+ * Daily weather per map square (latitude/longitude rounded to 0.1°), shared by
+ * every household in it. Not personal data. `source` says which API filled it
+ * (the archive is final; forecast-API "past days" fill the last few days until
+ * the archive has them).
+ */
+export const weatherDay = sqliteTable(
+  'weather_day',
+  {
+    cell: text('cell').notNull(),
+    date: text('date').notNull(),
+    tempMean: real('temp_mean'),
+    tempMin: real('temp_min'),
+    tempMax: real('temp_max'),
+    /** Shortwave radiation, MJ/m² for the day. */
+    radiation: real('radiation'),
+    /** Hours of sunshine. */
+    sunshine: real('sunshine'),
+    /** WMO weather code. */
+    code: integer('code'),
+    source: text('source', { enum: ['archive', 'recent'] }).notNull(),
+    fetchedAt: text('fetched_at').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.cell, t.date] })],
+);
+
+/** The next days' forecast per map square, replaced on each refresh. */
+export const weatherForecast = sqliteTable(
+  'weather_forecast',
+  {
+    cell: text('cell').notNull(),
+    date: text('date').notNull(),
+    tempMean: real('temp_mean'),
+    tempMin: real('temp_min'),
+    tempMax: real('temp_max'),
+    radiation: real('radiation'),
+    sunshine: real('sunshine'),
+    code: integer('code'),
+    rainChance: integer('rain_chance'),
+    fetchedAt: text('fetched_at').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.cell, t.date] })],
+);
+
 /** One row per email sent about something, so nothing is sent twice. */
 export const notificationLog = sqliteTable(
   'notification_log',
@@ -533,6 +594,8 @@ export type ServiceSplit = typeof serviceSplit.$inferSelect;
 export type SourceDocument = typeof sourceDocument.$inferSelect;
 export type Bill = typeof bill.$inferSelect;
 export type BillMetric = typeof billMetric.$inferSelect;
+export type WeatherDay = typeof weatherDay.$inferSelect;
+export type WeatherForecast = typeof weatherForecast.$inferSelect;
 export type NewBill = typeof bill.$inferInsert;
 export type Share = typeof share.$inferSelect;
 export type Projection = typeof projection.$inferSelect;

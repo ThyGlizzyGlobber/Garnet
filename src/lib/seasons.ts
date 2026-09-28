@@ -8,6 +8,8 @@ import { getHousehold } from '@/lib/households';
 import { addMonths, monthBounds } from '@/lib/periods';
 import { projectMonth } from '@/lib/projections';
 import { listServices } from '@/lib/services';
+import { householdCell, weatherNormals, type MonthNormal } from '@/lib/weather';
+import { expected, serviceWeather } from '@/lib/weather-model';
 
 /**
  * Seasons (scope S1): which season is coming for a household, and what the
@@ -160,7 +162,9 @@ export interface SeasonNotice {
   /** What the change means per month at today's prices and usage (minor units, ±). */
   monthlyImpactMinor: number;
   currency: string;
-  /** Year the comparison comes from. */
+  /** Last year's bills, or normal weather + how the bills follow it (S3). */
+  basis: 'last_year' | 'weather';
+  /** Year the comparison comes from (last_year basis). */
   basisYear: string;
   /** The projection for the season's first month already uses last year's same month. */
   setAsideCovers: boolean;
@@ -209,8 +213,35 @@ export function seasonAhead(
     const cost = (b: { id: string }) => byId.get(b.id)!.amountMinor;
     const before = windowPerDay(bills, prevStart, prevEnd, cost);
     const during = windowPerDay(bills, nextStart, nextEnd, cost);
-    if (before.coverage < MIN_COVERAGE || during.coverage < MIN_COVERAGE || !before.perDay)
+    const cadence = projection.services.find((p) => p.service.id === svc.id)?.method;
+    if (before.coverage < MIN_COVERAGE || during.coverage < MIN_COVERAGE || !before.perDay) {
+      // No bills from last year's change of season: use normal weather, if the
+      // bills follow it well enough (scope S3).
+      const w = seasonFromWeather(householdId, svc.id, change, hemisphere, climate, db);
+      if (!w) continue;
+      const bigCost = Math.abs(w.costRatio - 1) >= MIN_CHANGE;
+      const bigSolar = w.solarRatio !== null && Math.abs(w.solarRatio - 1) >= 0.25;
+      if (!bigCost && !bigSolar) continue;
+      const recent = windowPerDay(bills, addDays(today, -120), today, cost);
+      const base = recent.coverage >= 0.5 ? recent.perDay : w.previousPerDay;
+      notices.push({
+        serviceId: svc.id,
+        serviceName: svc.name,
+        season: change.season,
+        previous: change.previous,
+        startMonth: change.startMonth,
+        daysUntil: change.daysUntil,
+        costRatio: w.costRatio,
+        usageRatio: w.usageRatio,
+        solarRatio: w.solarRatio,
+        monthlyImpactMinor: Math.round(base * (w.costRatio - 1) * DAYS_PER_MONTH),
+        currency: bills[0]!.currency,
+        basis: 'weather',
+        basisYear: '',
+        setAsideCovers: cadence === 'seasonal' || cadence === 'weather',
+      });
       continue;
+    }
     const costRatio = during.perDay / before.perDay;
 
     const usage = (b: { id: string }) => byId.get(b.id)!.usageQuantity;
@@ -257,12 +288,67 @@ export function seasonAhead(
       solarRatio,
       monthlyImpactMinor: Math.round(base * (costRatio - 1) * DAYS_PER_MONTH),
       currency: bills[0]!.currency,
+      basis: 'last_year',
       basisYear: nextStart.slice(0, 4),
-      setAsideCovers:
-        projection.services.find((p) => p.service.id === svc.id)?.method === 'seasonal',
+      setAsideCovers: cadence === 'seasonal',
     });
   }
   return notices;
+}
+
+/**
+ * The coming change of season from normal weather at the household's postcode
+ * and the service's weather models: cost (and usage, and solar export) per day
+ * over the coming season's months against the current season's.
+ */
+function seasonFromWeather(
+  householdId: string,
+  serviceId: string,
+  change: SeasonChange,
+  hemisphere: Hemisphere,
+  climate: Climate,
+  db: Db,
+): {
+  costRatio: number;
+  usageRatio: number | null;
+  solarRatio: number | null;
+  previousPerDay: number;
+} | null {
+  const hh = getHousehold(householdId, db);
+  const cell = hh && householdCell(hh);
+  if (!cell) return null;
+  const normals = weatherNormals(cell.key, db);
+  const sw = serviceWeather(householdId, serviceId, db);
+  if (!sw?.cost) return null;
+  const months = (from: string, to: string) => {
+    const out: number[] = [];
+    for (let m = from; m <= to; m = addMonths(m, 1)) out.push(monthNumber(m));
+    return out;
+  };
+  const avg = (ms: number[]) => {
+    const ns = ms.map((m) => normals.get(m));
+    if (ns.some((n) => !n)) return null;
+    const mean = (f: (n: MonthNormal) => number) => ns.reduce((s, n) => s + f(n!), 0) / ns.length;
+    return {
+      hdd: mean((n) => n.hdd),
+      cdd: mean((n) => n.cdd),
+      radiation: mean((n) => n.radiation),
+    };
+  };
+  const previous = avg(months(change.previousStart, addMonths(change.startMonth, -1)));
+  const coming = avg(months(change.startMonth, seasonEnd(change.startMonth, hemisphere, climate)));
+  if (!previous || !coming) return null;
+  const costBefore = expected(sw.cost, previous.hdd, previous.cdd);
+  const costAfter = expected(sw.cost, coming.hdd, coming.cdd);
+  if (costBefore <= 0) return null;
+  const usageBefore = sw.usage ? expected(sw.usage, previous.hdd, previous.cdd) : 0;
+  return {
+    costRatio: costAfter / costBefore,
+    usageRatio:
+      sw.usage && usageBefore > 0 ? expected(sw.usage, coming.hdd, coming.cdd) / usageBefore : null,
+    solarRatio: sw.solar && previous.radiation > 0 ? coming.radiation / previous.radiation : null,
+    previousPerDay: costBefore,
+  };
 }
 
 /** Solar export figure per bill (from the bill's figures), when there is one. */
