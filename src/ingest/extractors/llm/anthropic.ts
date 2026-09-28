@@ -5,14 +5,21 @@ import type {
   ImageBlockParam,
 } from '@anthropic-ai/sdk/resources/messages/messages';
 import { z } from 'zod';
+import { isIsoDate } from '@/lib/dates';
 import { getEnv } from '@/lib/env';
 import { minorUnitDigits } from '@/lib/format';
 import { listUnits } from '@/lib/units';
 import type { DocumentKind, ExtractedBill, ExtractionResult, Extractor, ScanFile } from '../types';
 
-const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+/**
+ * Dates are plain strings in the schema and checked in toResult(): a regex
+ * pattern per date field made the compiled output grammar too large for the
+ * API ("The compiled grammar is too large…"), failing every document.
+ */
+const isoDate = z.string();
 
-const outputSchema = z.object({
+/** Exported for tests (the schema must stay small enough for structured outputs). */
+export const outputSchema = z.object({
   document_type: z
     .enum([
       'bill',
@@ -137,10 +144,10 @@ Rules for everything:
 let client: Anthropic | undefined;
 
 /**
- * At most two AI reads at a time across the process: a member forwarding a
- * handful of receipts at once shouldn't turn into a burst the API refuses.
+ * One AI read at a time across the process: a forward carrying a dozen PDFs is
+ * read document by document, never as a burst the API refuses.
  */
-const MAX_PARALLEL = 2;
+const MAX_PARALLEL = 1;
 let running = 0;
 const waiting: (() => void)[] = [];
 async function oneAtATime<T>(fn: () => Promise<T>): Promise<T> {
@@ -160,6 +167,29 @@ function fileBlock(file: ScanFile): DocumentBlockParam | ImageBlockParam {
   return file.mediaType === 'application/pdf'
     ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data } }
     : { type: 'image', source: { type: 'base64', media_type: file.mediaType, data } };
+}
+
+/** The API refused the output schema as too large or complex to compile. */
+export function isSchemaTooLarge(e: unknown): boolean {
+  return /grammar is too large|schema is too (large|complex)|too many strict/i.test(
+    e instanceof Error ? e.message : String(e),
+  );
+}
+
+let schemaText: string | undefined;
+function jsonInstruction(): string {
+  schemaText ??= JSON.stringify(z.toJSONSchema(outputSchema));
+  return `Reply with exactly one JSON object and nothing else (no prose, no code fence). It must match this JSON Schema:\n${schemaText}`;
+}
+
+/** The JSON object in a plain-text answer, checked against the schema. */
+export function parseJsonRecord(text: string): Output {
+  const start = text.indexOf('{');
+  const end = text.lastIndexOf('}');
+  if (start < 0 || end <= start) throw new Error('The AI answer had no JSON record');
+  const parsed = outputSchema.safeParse(JSON.parse(text.slice(start, end + 1)));
+  if (!parsed.success) throw new Error('The AI answer was not in the expected format');
+  return parsed.data;
 }
 
 /** A failure worth trying again later: the API was busy, rate-limited or unreachable. */
@@ -216,29 +246,59 @@ export const anthropicExtractor: Extractor = {
       .filter((l) => l !== null)
       .join('\n');
 
-    const response = await oneAtATime(() =>
-      client!.messages.parse({
-        model: env.ANTHROPIC_MODEL,
-        // Room for adaptive thinking (on by default on current models) plus the record.
-        max_tokens: 16_000,
-        system: [{ type: 'text', text: SYSTEM, cache_control: { type: 'ephemeral' } }],
-        messages: [
-          {
-            role: 'user',
-            content: input.file
-              ? [fileBlock(input.file), { type: 'text', text: userText }]
-              : userText,
-          },
-        ],
-        output_config: { format: zodOutputFormat(outputSchema) },
-      }),
-    );
-    if (response.stop_reason === 'refusal' || !response.parsed_output) return null;
-    return toResult(response.parsed_output, input, this.name);
+    const document = input.file ? [fileBlock(input.file)] : [];
+    const system = [
+      { type: 'text' as const, text: SYSTEM, cache_control: { type: 'ephemeral' as const } },
+    ];
+    let record: Output | null;
+    try {
+      const response = await oneAtATime(() =>
+        client!.messages.parse({
+          model: env.ANTHROPIC_MODEL,
+          // Room for adaptive thinking (on by default on current models) plus the record.
+          max_tokens: 16_000,
+          system,
+          messages: [{ role: 'user', content: [...document, { type: 'text', text: userText }] }],
+          output_config: { format: zodOutputFormat(outputSchema) },
+        }),
+      );
+      if (response.stop_reason === 'refusal') return null;
+      record = response.parsed_output;
+    } catch (e) {
+      if (!isSchemaTooLarge(e)) throw e;
+      // Safety net: ask for the same record as plain JSON and check it here.
+      console.warn('[ai] structured output refused the schema; reading as plain JSON');
+      const response = await oneAtATime(() =>
+        client!.messages.create({
+          model: env.ANTHROPIC_MODEL,
+          max_tokens: 16_000,
+          system,
+          messages: [
+            {
+              role: 'user',
+              content: [
+                ...document,
+                { type: 'text', text: userText },
+                { type: 'text', text: jsonInstruction() },
+              ],
+            },
+          ],
+        }),
+      );
+      if (response.stop_reason === 'refusal') return null;
+      record = parseJsonRecord(
+        response.content.map((c) => (c.type === 'text' ? c.text : '')).join(''),
+      );
+    }
+    if (!record) return null;
+    return toResult(record, input, this.name);
   },
 };
 
 type Output = z.infer<typeof outputSchema>;
+
+/** A real YYYY-MM-DD date, or null. */
+const day = (s: string | null | undefined): string | null => (s && isIsoDate(s) ? s : null);
 
 /** Map the model's record onto the pipeline's types. Exported for tests. */
 export function toResult(
@@ -291,10 +351,10 @@ export function toResult(
       document: {
         kind,
         provider: o.provider,
-        date: o.document_date,
+        date: day(o.document_date),
         payment: o.payment
           ? {
-              date: o.payment.date,
+              date: day(o.payment.date),
               amountMinor,
               currency,
               invoiceRefs: o.payment.invoice_numbers.map((n) => n.replace(/^#/, '').trim()),
@@ -316,23 +376,24 @@ export function toResult(
     currency,
     taxMinor: minor(b.tax_amount, currency),
     taxLabel: b.tax_label,
-    periodStart: b.period_start,
-    periodEnd: b.period_end,
-    issueDate: b.issue_date,
-    dueDate: b.due_date,
+    periodStart: day(b.period_start) ?? '',
+    periodEnd: day(b.period_end) ?? '',
+    issueDate: day(b.issue_date),
+    dueDate: day(b.due_date) ?? '',
     usageQuantity: b.usage_quantity,
     usageUnit,
     externalRef: b.invoice_number,
     accountRef: b.account_number,
     serviceId: service?.id ?? null,
     autoPay: b.auto_pay ?? undefined,
-    previousPayment: b.previous_payment
-      ? {
-          dueDate: b.previous_payment.due_date,
-          amountDueMinor: minor(b.previous_payment.amount_due, currency)!,
-          receivedMinor: minor(b.previous_payment.amount_received, currency)!,
-        }
-      : null,
+    previousPayment:
+      b.previous_payment && day(b.previous_payment.due_date)
+        ? {
+            dueDate: b.previous_payment.due_date,
+            amountDueMinor: minor(b.previous_payment.amount_due, currency)!,
+            receivedMinor: minor(b.previous_payment.amount_received, currency)!,
+          }
+        : null,
     metrics: (b.metrics ?? []).map((m) => ({
       key: m.key,
       label: m.label,
@@ -341,10 +402,14 @@ export function toResult(
       unit: m.unit,
       amountMinor: minor(m.amount, currency),
       currency: m.amount === null ? null : currency,
-      periodStart: m.period_start,
-      periodEnd: m.period_end,
+      periodStart: day(m.period_start),
+      periodEnd: day(m.period_end),
     })),
   };
+  if (!bill.periodStart || !bill.periodEnd || !bill.dueDate) {
+    warnings.push('A billing date could not be read (expected YYYY-MM-DD)');
+    return { extractor, bill, confidence: Math.min(o.confidence, 0.3), warnings };
+  }
   if (bill.periodEnd < bill.periodStart) {
     warnings.push('Period end before start');
     return { extractor, bill, confidence: Math.min(o.confidence, 0.3), warnings };
@@ -354,6 +419,6 @@ export function toResult(
     bill,
     confidence: o.confidence,
     warnings,
-    document: { kind: 'bill', provider: o.provider, payment: null, date: o.document_date },
+    document: { kind: 'bill', provider: o.provider, payment: null, date: day(o.document_date) },
   };
 }
