@@ -202,6 +202,19 @@
       "overdueBody": "{provider} emailed on {date} to say this bill is overdue.",
       "viewEmail": "See their email",
       "resolve": "Mark as sorted"
+    },
+    "metrics": {
+      "title": "From the bill",
+      "body": "Every figure the AI read from this bill, kept so usage and costs can be compared over time.",
+      "kind": {
+        "usage": "Usage",
+        "reading": "Meter readings",
+        "charge": "Charges and credits",
+        "rate": "Rates",
+        "average": "Averages",
+        "comparison": "Comparisons",
+        "other": "Other figures"
+      }
     }
   },
   "services": {
@@ -415,6 +428,12 @@
       "slow": "This is taking longer than usual. Check the updater cron job and update.log on the NAS.",
       "cancel": "Cancel request",
       "done": "Updated from {from} ({date})."
+    },
+    "metrics": {
+      "title": "Usage details from earlier bills",
+      "body": "{count, plural, one {# bill came} other {# bills came}} in before the app kept every figure from a bill (usage by tariff, meter readings, charges, rates). Read them again to fill in those details. Each bill uses one AI read.",
+      "start": "Read {count, plural, one {# bill} other {# bills}}",
+      "reading": "Reading earlier bills in the background. Refresh in a minute or two to see how many are left."
     }
   },
   "health": {

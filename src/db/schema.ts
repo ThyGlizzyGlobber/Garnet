@@ -266,6 +266,8 @@ export const bill = sqliteTable(
     dueDate: text('due_date').notNull(),
     usageQuantity: real('usage_quantity'),
     usageUnit: text('usage_unit'),
+    /** When the AI last listed this bill's figures (bill_metric), even if it found none. */
+    metricsReadAt: text('metrics_read_at'),
     source: text('source', { enum: BILL_SOURCES }).notNull(),
     extractor: text('extractor'),
     confidence: real('confidence'),
@@ -434,6 +436,50 @@ export const usage = sqliteTable(
   (t) => [uniqueIndex('usage_household_month_kind_unique').on(t.householdId, t.month, t.kind)],
 );
 
+export const METRIC_KINDS = [
+  'usage',
+  'reading',
+  'charge',
+  'rate',
+  'average',
+  'comparison',
+  'other',
+] as const;
+export type MetricKind = (typeof METRIC_KINDS)[number];
+
+/**
+ * Every figure the AI reader found on a bill (usage by tariff, meter readings,
+ * charges, rates, daily averages, comparisons…), kept for later features.
+ * `key` is a stable snake_case name so the same figure lines up across bills and
+ * providers. Quantities and rates use value + unit (rates as major currency per
+ * unit, e.g. 0.2953 "AUD/kWh"); money amounts use amount_minor + currency.
+ */
+export const billMetric = sqliteTable(
+  'bill_metric',
+  {
+    id: text('id').primaryKey(),
+    householdId: householdId(),
+    billId: text('bill_id')
+      .notNull()
+      .references(() => bill.id, { onDelete: 'cascade' }),
+    key: text('key').notNull(),
+    label: text('label').notNull(),
+    kind: text('kind', { enum: METRIC_KINDS }).notNull(),
+    value: real('value'),
+    unit: text('unit'),
+    amountMinor: integer('amount_minor'),
+    currency: text('currency'),
+    periodStart: text('period_start'),
+    periodEnd: text('period_end'),
+    position: integer('position').notNull().default(0),
+    createdAt: text('created_at').notNull(),
+  },
+  (t) => [
+    index('bill_metric_bill_idx').on(t.billId),
+    index('bill_metric_household_key_idx').on(t.householdId, t.key),
+  ],
+);
+
 /** One row per email sent about something, so nothing is sent twice. */
 export const notificationLog = sqliteTable(
   'notification_log',
@@ -464,6 +510,7 @@ export type NewService = typeof service.$inferInsert;
 export type ServiceSplit = typeof serviceSplit.$inferSelect;
 export type SourceDocument = typeof sourceDocument.$inferSelect;
 export type Bill = typeof bill.$inferSelect;
+export type BillMetric = typeof billMetric.$inferSelect;
 export type NewBill = typeof bill.$inferInsert;
 export type Share = typeof share.$inferSelect;
 export type Projection = typeof projection.$inferSelect;

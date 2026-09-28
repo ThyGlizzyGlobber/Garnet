@@ -78,7 +78,7 @@ Key properties:
 - The single-mailbox IMAP poller built for our household stays available as an operator option, but the per-household address is the primary path.
 
 - **Raw bills are kept forever** on the NAS (`inbox/` folder) — audit trail and re-parse source. From a forwarded email only its PDF attachments are kept; an email with no PDF is kept as the bill itself.
-- **LLM extraction** (Anthropic API) turns any bill layout into `{provider, service_type, amount, billing_period, due_date, usage + units}` with one prompt — no per-provider parser maintenance. Volume is ~10–30 calls/month (cents).
+- **LLM extraction** (Anthropic API) turns any bill layout into `{provider, service_type, amount, billing_period, due_date, usage + units}` plus every other figure on the bill (usage by tariff, readings, charges, rates, averages, comparisons) with one prompt — no per-provider parser maintenance. Volume is ~10–30 calls/month (cents).
 - The extractor is an **interface**, not a hard dependency: the AI reader reads every document (no per-provider templates ship; the slot for one remains), manual queue last. Swapping or adding extraction methods later (local LLM, CDR APIs) touches config, not architecture.
 - Anything unparseable becomes a "needs review" card with a pre-filled manual-entry form — the system degrades gracefully, never silently misses a bill.
 
@@ -171,6 +171,7 @@ The alpha household is in Australia, but the alpha build is the version most lik
 - **Trusted device / session** — account × device, created by a full sign-in; unlocked by PIN afterwards
 - **Service** — type (internet/electricity/gas/water/rent/custom), provider, billing cadence, default split
 - **Bill** — service, amount (minor units) + currency, optional tax amount/label, billing period, due date, usage + normalised unit, source (template/llm/manual) + confidence, link to raw document, status, anomaly flag
+- **Bill metric** — every other figure on a bill: stable key (e.g. `usage_peak`, `supply_charge`), label as printed, kind (usage / reading / charge / rate / average / comparison / other), value + unit or amount (minor units) + currency, optional sub-period. Groundwork for usage limits and period comparisons across all services
 - **Share** — bill × member → amount owed, paid_at, method
 - **Projection** — service × month → estimated amount (computed, cached)
 

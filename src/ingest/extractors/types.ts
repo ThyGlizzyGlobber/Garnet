@@ -52,6 +52,22 @@ export interface ExtractedBill {
   previousPayment?: { dueDate: string; amountDueMinor: number; receivedMinor: number } | null;
   /** The provider takes payment automatically (card on file / direct debit). */
   autoPay?: boolean;
+  /** Every other figure on the bill (usage by tariff, readings, charges, rates…). */
+  metrics?: ExtractedMetric[];
+}
+
+export interface ExtractedMetric {
+  key: string;
+  label: string;
+  kind: 'usage' | 'reading' | 'charge' | 'rate' | 'average' | 'comparison' | 'other';
+  /** Quantities and rates. */
+  value: number | null;
+  unit: string | null;
+  /** Money (charges, credits; negative for credits and discounts). */
+  amountMinor: number | null;
+  currency: string | null;
+  periodStart: string | null;
+  periodEnd: string | null;
 }
 
 /** What a document is, when an extractor can tell (the AI reader can; templates only read bills). */

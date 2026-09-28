@@ -85,6 +85,13 @@
       "when": 1790570833171,
       "tag": "0011_drop_email_forward",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1790573670448,
+      "tag": "0012_bill_metrics",
+      "breakpoints": true
     }
   ]
 }

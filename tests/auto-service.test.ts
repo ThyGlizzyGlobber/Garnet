@@ -58,6 +58,7 @@ const bill = (
     account_number: '4410 2231',
     auto_pay: true,
     previous_payment: null,
+    metrics: [],
   },
   payment: null,
   confidence: 0.95,

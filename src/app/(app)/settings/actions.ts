@@ -13,6 +13,7 @@ import { exitDemo } from '@/lib/demo';
 import { requestIsHttps } from '@/lib/request';
 import { THEME_COOKIE, THEMES, type Theme } from '@/lib/theme';
 import { cancelUpdateRequest, checkForUpdate, requestUpdate } from '@/lib/updates';
+import { readMissingMetrics } from '@/ingest/metrics';
 
 const schema = z.object({
   name: z.string().min(1, 'Required').max(60),
@@ -99,5 +100,16 @@ export async function replaceBillsAddressAction(): Promise<void> {
   const me = await requireOwner();
   const hh = getHousehold(me.householdId);
   if (hh) replaceAlias(hh);
+  revalidatePath('/settings');
+}
+
+/** Read figures from bills that came in before they were kept (in the background). */
+export async function readMissingMetricsAction(): Promise<void> {
+  const me = await requireOwner();
+  void readMissingMetrics(me.householdId)
+    .then((r) =>
+      console.log(`[metrics] ${me.householdId}: read ${r.read}, ${r.withFigures} with figures`),
+    )
+    .catch((e) => console.error('[metrics]', (e as Error).message));
   revalidatePath('/settings');
 }

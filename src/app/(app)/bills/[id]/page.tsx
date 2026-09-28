@@ -7,6 +7,8 @@ import { getBill } from '@/lib/bills';
 import { pageContext } from '@/lib/context';
 import { formatMoney } from '@/lib/format';
 import { unitLabel } from '@/lib/units';
+import { listBillMetrics } from '@/lib/metrics';
+import { METRIC_KINDS } from '@/db/schema';
 import {
   clearBillAlertAction,
   deleteBillAction,
@@ -22,6 +24,12 @@ export default async function BillPage({ params }: { params: Promise<{ id: strin
   if (!b) notFound();
   const overdue = !b.paidToProviderAt && b.dueDate < today;
   const payer = b.shares.find((s) => s.paidMethod === 'payer')?.member;
+  const metrics = listBillMetrics(hh.id, b.id);
+  const number = new Intl.NumberFormat(hh.locale, { maximumFractionDigits: 4 });
+  const figure = (m: (typeof metrics)[number]) =>
+    m.amountMinor !== null
+      ? money(m.amountMinor, m.currency ?? b.currency)
+      : `${number.format(m.value ?? 0)}${m.unit ? ` ${unitLabel(m.unit)}` : ''}`;
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -208,6 +216,37 @@ export default async function BillPage({ params }: { params: Promise<{ id: strin
               ))}
             </div>
           )}
+        </Card>
+      )}
+
+      {metrics.length > 0 && (
+        <Card className="mt-4">
+          <h2 className="font-semibold">{t('metrics.title')}</h2>
+          <p className="mt-0.5 text-xs text-fg-muted">{t('metrics.body')}</p>
+          {METRIC_KINDS.filter((k) => metrics.some((m) => m.kind === k)).map((kind) => (
+            <div key={kind} className="mt-4">
+              <h3 className="text-xs font-semibold tracking-wide text-fg-muted uppercase">
+                {t(`metrics.kind.${kind}`)}
+              </h3>
+              <dl className="mt-1 divide-y divide-border text-sm">
+                {metrics
+                  .filter((m) => m.kind === kind)
+                  .map((m) => (
+                    <div key={m.id} className="flex items-baseline justify-between gap-4 py-1.5">
+                      <dt className="min-w-0">
+                        {m.label}
+                        {m.periodStart && m.periodEnd && (
+                          <span className="ml-1 text-xs text-fg-muted">
+                            {date(m.periodStart, 'short')} – {date(m.periodEnd, 'short')}
+                          </span>
+                        )}
+                      </dt>
+                      <dd className="shrink-0 font-medium tabular-nums">{figure(m)}</dd>
+                    </div>
+                  ))}
+              </dl>
+            </div>
+          ))}
         </Card>
       )}
     </div>

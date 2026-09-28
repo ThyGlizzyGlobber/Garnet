@@ -140,6 +140,7 @@ describe('mapping the AI record', () => {
           account_number: null,
           auto_pay: true,
           previous_payment: { due_date: '2026-09-15', amount_due: 410, amount_received: 410 },
+          metrics: [],
         },
       },
       { services: [], serviceTypes: ['electricity'], defaultCurrency: 'AUD' },
@@ -248,6 +249,7 @@ describe('the pipeline acting on what the AI says a document is', () => {
         account_number: null,
         auto_pay: true,
         previous_payment: { due_date: '2026-09-15', amount_due: 410, amount_received: 410 },
+        metrics: [],
       },
     });
     await processDocument(hh.id, doc(hh.id, TEXT).id, db);

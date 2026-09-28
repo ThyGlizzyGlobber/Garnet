@@ -15,7 +15,8 @@ import { isIsoDate } from '@/lib/dates';
 import { parseMoneyToMinor } from '@/lib/format';
 import { getHousehold } from '@/lib/households';
 import { notifyBillCreated, notifyInBackground } from '@/lib/notifications';
-import { listDocuments } from '@/lib/review';
+import { saveBillMetrics } from '@/lib/metrics';
+import { getReviewItem, listDocuments } from '@/lib/review';
 import { pollNow } from '@/worker';
 
 const isoDate = z.string().refine(isIsoDate, 'Use a valid date');
@@ -93,6 +94,9 @@ export async function approveReviewAction(_prev: ActionState, fd: FormData): Pro
   } catch (e) {
     return { error: (e as Error).message };
   }
+  // The figures the AI read stay with the bill, whatever the person corrected above.
+  const read = getReviewItem(hh.id, doc.id)?.extraction?.result;
+  if (read?.bill.metrics) saveBillMetrics(hh.id, billId, read.bill.metrics);
   // "Trust future bills from this sender": only for signed mail from that domain.
   // Personal mailboxes (gmail.com, …) are only ever trusted as the exact address.
   const address = addressOf(doc.emailFrom);

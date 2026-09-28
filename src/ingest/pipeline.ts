@@ -32,6 +32,7 @@ import {
   notifyServiceCreated,
 } from '@/lib/notifications';
 import { serviceForNewProvider } from '@/lib/auto-service';
+import { saveBillMetrics } from '@/lib/metrics';
 
 export interface PipelineOutcome {
   documentId: string;
@@ -412,7 +413,7 @@ export function createBillFromExtraction(
   db: Db = getDb(),
 ): BillDetail {
   const b = result.bill;
-  return createBill(
+  const created = createBill(
     householdId,
     {
       serviceId,
@@ -435,6 +436,8 @@ export function createBillFromExtraction(
     },
     db,
   );
+  saveBillMetrics(householdId, created.id, b.metrics, db);
+  return created;
 }
 
 const NOTICE_LABEL: Record<NoticeKind, string> = {

@@ -9,7 +9,14 @@ import { getEnv, isImapConfigured, isLlmConfigured } from '@/lib/env';
 import { SettingsForm } from './settings-form';
 import { InlineAction } from '@/components/ui/form';
 import { getTheme, THEMES } from '@/lib/theme';
-import { exitDemoAction, replaceBillsAddressAction, setThemeAction } from './actions';
+import {
+  exitDemoAction,
+  readMissingMetricsAction,
+  replaceBillsAddressAction,
+  setThemeAction,
+} from './actions';
+import { billsMissingMetrics } from '@/lib/metrics';
+import { isReadingMetrics } from '@/ingest/metrics';
 import { UpdateCard } from './update-card';
 
 export default async function SettingsPage() {
@@ -19,6 +26,8 @@ export default async function SettingsPage() {
   const t = await getTranslations('settings');
   const env = getEnv();
   const theme = await getTheme();
+  const missing = billsMissingMetrics(hh.id).length;
+  const reading = isReadingMetrics(hh.id);
   const demo = hh.isDemo;
   const months = Array.from({ length: 12 }, (_, i) =>
     new Intl.DateTimeFormat(hh.locale, { month: 'long' }).format(new Date(2026, i, 1)),
@@ -80,6 +89,23 @@ export default async function SettingsPage() {
             replaceAction={me.role === 'owner' ? replaceBillsAddressAction : undefined}
           />
         </div>
+      )}
+      {me.role === 'owner' && isLlmConfigured(env) && (missing > 0 || reading) && (
+        <Card className="mt-4 flex flex-col gap-2">
+          <h2 className="font-semibold">{t('metrics.title')}</h2>
+          <p className="text-sm text-fg-muted">
+            {reading ? t('metrics.reading') : t('metrics.body', { count: missing })}
+          </p>
+          {!reading && (
+            <div>
+              <InlineAction
+                action={readMissingMetricsAction}
+                label={t('metrics.start', { count: missing })}
+                variant="secondary"
+              />
+            </div>
+          )}
+        </Card>
       )}
       {operator && <UpdateCard hh={hh} />}
       <Card className="mt-4">

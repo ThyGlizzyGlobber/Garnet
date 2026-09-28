@@ -57,6 +57,39 @@ const outputSchema = z.object({
         .describe(
           'If the bill shows what happened to the previous bill (e.g. "Last month: $129 due, $129 received"), else null',
         ),
+      metrics: z
+        .array(
+          z.object({
+            key: z
+              .string()
+              .describe(
+                'Stable snake_case name, from the vocabulary in the instructions when one fits',
+              ),
+            label: z.string().describe('The figure’s name as printed on the bill'),
+            kind: z.enum(['usage', 'reading', 'charge', 'rate', 'average', 'comparison', 'other']),
+            value: z
+              .number()
+              .nullable()
+              .describe('For quantities, readings, averages and rates; null for money amounts'),
+            unit: z
+              .string()
+              .nullable()
+              .describe(
+                'Unit of value: an allowed unit key when one fits (kWh, MJ, kL, GB…), else as printed (days, kW, kg CO2e, minutes); for rates CURRENCY/unit, e.g. AUD/kWh, AUD/day',
+              ),
+            amount: z
+              .number()
+              .nullable()
+              .describe(
+                'For money amounts (charges, credits, discounts), in major units; negative for credits and discounts; null otherwise',
+              ),
+            period_start: isoDate
+              .nullable()
+              .describe('Only if this figure covers part of the bill period'),
+            period_end: isoDate.nullable(),
+          }),
+        )
+        .describe('Every other figure printed on the bill; empty if there are none'),
     })
     .nullable()
     .describe('Required when document_type is bill; null otherwise'),
@@ -89,6 +122,7 @@ Rules for bills:
 - If the bill covers a period, period_start and period_end are the first and last days inclusive. If only an issue date is given for a monthly service, use a one-month period starting on the issue date.
 - Map usage to the closest unit key from the allowed list (e.g. MJ for gas megajoules, kWh for electricity, kL or m3 for water). Use null if there is no metered usage.
 - Choose service_type from the household's list. Use "other" if none fit.
+- metrics: list EVERY figure printed on the bill besides the amount due, so the household can track them over time. That includes usage split by tariff or time band (peak, off-peak, shoulder, controlled load), solar export, meter readings (start/end, estimated or actual), days in the period, daily averages (usage and cost), comparisons (previous period, same period last year, similar households), each charge and credit line (supply/service/fixed charges, usage charges, discounts, concessions, fees, feed-in credits), each rate or tariff, emissions, data used and allowance, call/SMS counts, water by category, sewage and drainage charges, and anything else numeric. One entry per figure; convert rates printed in cents to major units (29.53 c/kWh → value 0.2953, unit AUD/kWh). Use these keys when they fit, otherwise invent one in the same style: usage_total, usage_peak, usage_off_peak, usage_shoulder, usage_controlled_load, solar_export, meter_read_start, meter_read_end, days_in_period, daily_average_usage, daily_average_cost, previous_period_usage, previous_period_cost, same_period_last_year_usage, similar_households_usage, supply_charge, usage_charge, usage_charge_peak, usage_charge_off_peak, controlled_load_charge, discount, concession, late_fee, feed_in_credit, rate_supply, rate_peak, rate_off_peak, rate_shoulder, rate_controlled_load, rate_feed_in, greenhouse_emissions, data_used, data_allowance, calls, water_usage, sewage_charge, water_service_charge, drainage_charge, subtotal_before_tax.
 Rules for everything:
 - Dates are ISO YYYY-MM-DD. If the text prints dates numerically, use the locale hint to decide day/month order.
 - A receipt or "your payment was successful" email is never a bill, even though it shows an amount.
@@ -293,6 +327,17 @@ export function toResult(
           receivedMinor: minor(b.previous_payment.amount_received, currency)!,
         }
       : null,
+    metrics: (b.metrics ?? []).map((m) => ({
+      key: m.key,
+      label: m.label,
+      kind: m.kind,
+      value: m.value,
+      unit: m.unit,
+      amountMinor: minor(m.amount, currency),
+      currency: m.amount === null ? null : currency,
+      periodStart: m.period_start,
+      periodEnd: m.period_end,
+    })),
   };
   if (bill.periodEnd < bill.periodStart) {
     warnings.push('Period end before start');
