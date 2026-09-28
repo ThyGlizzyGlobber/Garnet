@@ -92,6 +92,8 @@ export interface ServiceInput {
   accountRef?: string | null;
   cadence?: Cadence;
   usageUnit?: string | null;
+  /** Usage limit per month, in usageUnit. */
+  usageLimitMonthly?: number | null;
   splitMode?: SplitMode;
   payerMemberId?: string | null;
   colour?: string;
@@ -134,6 +136,7 @@ export function createService(
       accountRef: rest.accountRef ?? null,
       cadence: rest.cadence ?? 'monthly',
       usageUnit: rest.usageUnit ?? null,
+      usageLimitMonthly: rest.usageLimitMonthly ?? null,
       splitMode: rest.splitMode ?? 'equal',
       payerMemberId: rest.payerMemberId ?? null,
       colour: rest.colour ?? '#0a84ff',

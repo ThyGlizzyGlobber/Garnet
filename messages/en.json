@@ -205,7 +205,7 @@
     },
     "metrics": {
       "title": "From the bill",
-      "body": "Every figure the AI read from this bill, kept so usage and costs can be compared over time.",
+      "body": "Every figure the AI read from this bill. Arrows show the change since the last bill (per day for usage and charges).",
       "kind": {
         "usage": "Usage",
         "reading": "Meter readings",
@@ -272,7 +272,9 @@
       "trustedSenders": "Trusted bill senders",
       "trustedSendersHint": "Email domains (provider.com.au) or exact addresses whose signed bills are added automatically. Personal mailbox domains like gmail.com can only be added as a full address. Bills forwarded by household members are always accepted.",
       "autoPay": "Paid automatically (card on file or direct debit)",
-      "autoPayHint": "Bills count as paid to the provider once their due date passes, unless the provider says a payment failed. Turned on by itself when an invoice shows automatic payment."
+      "autoPayHint": "Bills count as paid to the provider once their due date passes, unless the provider says a payment failed. Turned on by itself when an invoice shows automatic payment.",
+      "usageLimit": "Usage limit per month ({unit})",
+      "usageLimitHint": "Optional. Bills are compared against it per day, so quarterly bills compare fairly. Leave empty for no limit."
     },
     "nextBill": "Next bill about {amount} · due {date}",
     "noHistory": "No bills yet",
@@ -284,7 +286,8 @@
       "noPayer": "No payer set",
       "cadence": "{cadence}",
       "perDay": "{amount} / day"
-    }
+    },
+    "edit": "Edit"
   },
   "members": {
     "title": "Members",
@@ -855,7 +858,8 @@
       "reference": "Payment reference: {reference}",
       "payDetails": "Pay {payer}: {details}",
       "payer": "You pay {provider} {amount} by {due}. The others owe you {owed} between them.",
-      "total": "It's due {due}."
+      "total": "It's due {due}.",
+      "overLimit": "Usage on this bill was {perDay} {unit} a day, {pct}% over your household's limit of {limit} {unit} a month."
     },
     "due": {
       "subject": "Reminder: your {service} share of {share} is due {when}",
@@ -901,5 +905,35 @@
       "open": "Check the service",
       "nobody": "nobody"
     }
+  },
+  "usage": {
+    "title": "Usage",
+    "perDay": "{qty} {unit} a day",
+    "perMonth": "About {qty} {unit} a month",
+    "latest": "Latest bill {start} – {end} · {cost} a day",
+    "more": "{pct}% more",
+    "less": "{pct}% less",
+    "same": "about the same",
+    "vs": {
+      "previous": "Last bill",
+      "lastYear": "Same time last year",
+      "average": "Average of the last {count} bills",
+      "limit": "Your limit ({qty} {unit} a month)",
+      "similar": "Similar households"
+    },
+    "costChange": "cost per day {change}",
+    "chart": "Usage per day, by bill",
+    "chartLabel": "Usage per day for each bill",
+    "bands": "By tariff",
+    "bandsHint": "Per day, compared with the last bill.",
+    "none": "None of this service's bills show usage yet. It's read from each bill as it arrives.",
+    "bills": "Recent bills",
+    "overLimit": "{pct}% over your limit",
+    "underLimit": "{pct}% under your limit",
+    "dashboard": {
+      "title": "Usage",
+      "hint": "Per day on each service's latest bill, compared with the bill before."
+    },
+    "figureChange": "{change} vs last bill"
   }
 }

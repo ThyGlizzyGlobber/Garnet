@@ -1,0 +1,1 @@
+ALTER TABLE `service` ADD `usage_limit_monthly` real;

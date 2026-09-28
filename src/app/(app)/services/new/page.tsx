@@ -40,6 +40,7 @@ export default async function NewServicePage() {
           accountRef: '',
           cadence: 'monthly',
           usageUnit: first.defaultUnit ?? '',
+          usageLimit: '',
           splitMode: 'equal',
           payerMemberId: me.id,
           colour,

@@ -31,17 +31,20 @@ export function TrendLine({
   colour = '#5b6f82',
   height = 240,
   id = 'trend',
+  label = 'Monthly household cost',
 }: {
   points: TrendPoint[];
   colour?: string;
   height?: number;
   id?: string;
+  /** Accessible name for the chart. */
+  label?: string;
 }) {
   const dark = useDarkMode();
   const c = seriesColour(colour, dark);
   const last = points[points.length - 1];
   return (
-    <div style={{ width: '100%', height }} role="img" aria-label="Monthly household cost">
+    <div style={{ width: '100%', height }} role="img" aria-label={label}>
       <ResponsiveContainer>
         <AreaChart data={points} margin={{ top: 30, right: 56, left: 0, bottom: 0 }}>
           <defs>

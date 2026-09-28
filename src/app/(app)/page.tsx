@@ -13,6 +13,9 @@ import { nextMonth, projectMonth } from '@/lib/projections';
 import { remindersFor, summariseReminders } from '@/lib/reminders';
 import { documentCounts } from '@/lib/review';
 import { listServices } from '@/lib/services';
+import { householdUsage } from '@/lib/consumption';
+import { unitLabel } from '@/lib/units';
+import { ChangeText, formatQty } from '@/components/app/usage';
 import {
   dashboardSummary,
   hasAnyBills,
@@ -49,6 +52,9 @@ export default async function HomePage() {
   }
 
   const s = dashboardSummary(hh.id, today, hh.fiscalYearStartMonth);
+  const usage = householdUsage(hh.id);
+  const services = listServices(hh.id);
+  const tu = await getTranslations('usage');
   const projNow = projectMonth(hh.id, s.thisMonth.month);
   const proj = projectMonth(hh.id, nextMonth(today));
   const forecast = Array.from({ length: 6 }, (_, i) =>
@@ -526,6 +532,54 @@ export default async function HomePage() {
           <section className={`${tile} lg:col-span-3`}>
             <h2 className="font-display text-lg font-semibold">{t('anomaly.title')}</h2>
             <AnomalyList items={s.anomalies} money={money} empty={t('anomaly.empty')} />
+          </section>
+        )}
+
+        {usage.length > 0 && (
+          <section className={`${tile} lg:col-span-3`}>
+            <h2 className="font-display text-lg font-semibold">{tu('dashboard.title')}</h2>
+            <p className="text-xs text-fg-muted">{tu('dashboard.hint')}</p>
+            <ul className="mt-3 grid gap-x-8 gap-y-1 sm:grid-cols-2 lg:grid-cols-3">
+              {usage.map((u) => {
+                const svc = services.find((x) => x.id === u.serviceId);
+                if (!svc) return null;
+                return (
+                  <li key={u.serviceId}>
+                    <Link
+                      href={`/services/${u.serviceId}`}
+                      className="flex items-baseline justify-between gap-3 border-b border-border py-2 text-sm hover:text-accent"
+                    >
+                      <span className="flex items-center gap-2">
+                        <span className="size-2.5 rounded-sm" style={swatch(svc.colour)} />
+                        {svc.name}
+                      </span>
+                      <span className="text-right">
+                        <span className="font-semibold tabular-nums">
+                          {tu('perDay', {
+                            qty: formatQty(u.latest.perDay!, hh.locale),
+                            unit: unitLabel(u.unit),
+                          })}
+                        </span>
+                        <ChangeText
+                          className="block text-xs"
+                          change={u.previous?.usage}
+                          words={(pct) => ({
+                            more: tu('more', { pct }),
+                            less: tu('less', { pct }),
+                            same: tu('same'),
+                          })}
+                        />
+                        {u.limit && u.limit.usage.pct !== null && u.limit.usage.pct > 0 && (
+                          <span className="block text-xs text-warning">
+                            {tu('overLimit', { pct: Math.round(u.limit.usage.pct * 100) })}
+                          </span>
+                        )}
+                      </span>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
           </section>
         )}
       </div>

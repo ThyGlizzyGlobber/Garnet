@@ -22,6 +22,8 @@ import { formatDate, formatMoney } from '@/lib/format';
 import { getHousehold, listHouseholds } from '@/lib/households';
 import { ulid } from '@/lib/ids';
 import { getMember, listMembers } from '@/lib/members';
+import { DAYS_PER_MONTH, usageHistory } from '@/lib/consumption';
+import { unitLabel } from '@/lib/units';
 import { getService } from '@/lib/services';
 import { daysUntil } from '@/lib/periods';
 
@@ -202,6 +204,27 @@ export async function notifyBillCreated(
   const payer = b.service.payerMemberId
     ? getMember(householdId, b.service.payerMemberId, db)
     : null;
+  // Over the household's own usage limit (compared per day): say so in every copy.
+  const overLimit: EmailBlock[] = [];
+  const limit = b.service.usageLimitMonthly;
+  const period = limit
+    ? usageHistory(householdId, b.serviceId, db)?.periods.find((p) => p.billId === b.id)
+    : null;
+  if (limit && period?.perDay) {
+    const pct = period.perDay / (limit / DAYS_PER_MONTH) - 1;
+    if (pct >= 0.02) {
+      const qty = (n: number) =>
+        new Intl.NumberFormat(hh.locale, { maximumFractionDigits: n >= 100 ? 0 : 1 }).format(n);
+      overLimit.push({
+        p: t('newBill.overLimit', {
+          perDay: qty(period.perDay),
+          unit: unitLabel(b.service.usageUnit ?? b.usageUnit),
+          pct: Math.round(pct * 100),
+          limit: qty(limit),
+        }),
+      });
+    }
+  }
   let sent = 0;
   const recipients: { m: Member; build: () => { subject: string; blocks: EmailBlock[] } }[] = [];
   if (b.shares.length) {
@@ -217,6 +240,7 @@ export async function notifyBillCreated(
             subject: t('newBill.subjectPayer', vars),
             blocks: [
               { p: t('newBill.intro', vars) },
+              ...overLimit,
               { p: t('newBill.payer', { ...vars, owed: f.money(owed, b.currency) }) },
               billLink(b),
             ],
@@ -230,6 +254,7 @@ export async function notifyBillCreated(
           subject: t('newBill.subject', { ...vars, share: shareStr }),
           blocks: [
             { p: t('newBill.intro', vars) },
+            ...overLimit,
             {
               p: payer
                 ? t('newBill.share', { share: shareStr, payer: payer.name, due })
@@ -252,7 +277,12 @@ export async function notifyBillCreated(
         m,
         build: () => ({
           subject: t('newBill.subjectNoShare', vars),
-          blocks: [{ p: t('newBill.intro', vars) }, { p: t('newBill.total', vars) }, billLink(b)],
+          blocks: [
+            { p: t('newBill.intro', vars) },
+            ...overLimit,
+            { p: t('newBill.total', vars) },
+            billLink(b),
+          ],
         }),
       });
   }

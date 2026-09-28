@@ -8,6 +8,8 @@ import { pageContext } from '@/lib/context';
 import { formatMoney } from '@/lib/format';
 import { unitLabel } from '@/lib/units';
 import { listBillMetrics } from '@/lib/metrics';
+import { figureChanges } from '@/lib/consumption';
+import { ChangeText } from '@/components/app/usage';
 import { METRIC_KINDS } from '@/db/schema';
 import {
   clearBillAlertAction,
@@ -25,6 +27,13 @@ export default async function BillPage({ params }: { params: Promise<{ id: strin
   const overdue = !b.paidToProviderAt && b.dueDate < today;
   const payer = b.shares.find((s) => s.paidMethod === 'payer')?.member;
   const metrics = listBillMetrics(hh.id, b.id);
+  const changes = metrics.length ? figureChanges(hh.id, b.id) : new Map();
+  const tu = await getTranslations('usage');
+  const words = (pct: number) => ({
+    more: tu('more', { pct }),
+    less: tu('less', { pct }),
+    same: tu('same'),
+  });
   const number = new Intl.NumberFormat(hh.locale, { maximumFractionDigits: 4 });
   const figure = (m: (typeof metrics)[number]) =>
     m.amountMinor !== null
@@ -241,7 +250,15 @@ export default async function BillPage({ params }: { params: Promise<{ id: strin
                           </span>
                         )}
                       </dt>
-                      <dd className="shrink-0 font-medium tabular-nums">{figure(m)}</dd>
+                      <dd className="shrink-0 text-right tabular-nums">
+                        <span className="font-medium">{figure(m)}</span>
+                        <ChangeText
+                          className="block text-xs"
+                          change={changes.get(m.id)}
+                          words={words}
+                          neutral={m.kind === 'average' || (m.amountMinor ?? 0) < 0}
+                        />
+                      </dd>
                     </div>
                   ))}
               </dl>

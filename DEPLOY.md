@@ -228,6 +228,14 @@ features (see "From the bill" on a bill's page). Bills read before this was
 added can be read again from Settings → **Usage details from earlier bills**
 (one AI read each).
 
+**Usage comparisons.** Each service has its own page (tap it on Services):
+usage per day on the latest bill, compared with the last bill, the same time
+last year, the average of recent bills, an optional monthly usage limit (set it
+when editing the service) and, when the bill prints it, similar households.
+Everything is compared per day so monthly and quarterly bills compare fairly.
+A bill's figures show their change since the last bill, the dashboard has a
+Usage tile, and the new-bill email says when usage went over the limit.
+
 **Scans and photos.** A PDF with no text layer (a scan) or a photo of a paper
 bill (JPEG/PNG; upload it, or forward it) is sent to the AI as the file itself,
 since there is no text to send. Everything else is sent as text only. iPhone

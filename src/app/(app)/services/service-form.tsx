@@ -13,6 +13,7 @@ export interface ServiceFormValues {
   accountRef: string;
   cadence: string;
   usageUnit: string;
+  usageLimit: string;
   splitMode: string;
   payerMemberId: string;
   colour: string;
@@ -129,6 +130,24 @@ export function ServiceForm({
                   ))}
                 </Select>
               </Field>
+              {usageUnit && (
+                <Field
+                  label={t('usageLimit', {
+                    unit: units.find((u) => u.key === usageUnit)?.label ?? usageUnit,
+                  })}
+                  hint={t('usageLimitHint')}
+                  error={errors.usageLimit}
+                >
+                  <Input
+                    name="usageLimit"
+                    type="number"
+                    inputMode="decimal"
+                    min="0"
+                    step="any"
+                    defaultValue={initial.usageLimit}
+                  />
+                </Field>
+              )}
               <Field label={t('colour')} error={errors.colour}>
                 <Input
                   name="colour"

@@ -155,6 +155,8 @@ export const service = sqliteTable(
     accountRef: text('account_ref'),
     cadence: text('cadence', { enum: CADENCES }).notNull().default('monthly'),
     usageUnit: text('usage_unit'),
+    /** Household's own usage limit, per month, in usage_unit (e.g. 400 kWh). Compared per day. */
+    usageLimitMonthly: real('usage_limit_monthly'),
     splitMode: text('split_mode', { enum: SPLIT_MODES }).notNull().default('equal'),
     /** Member who pays the provider; their own share is auto-marked paid. */
     payerMemberId: text('payer_member_id').references(() => member.id, { onDelete: 'set null' }),

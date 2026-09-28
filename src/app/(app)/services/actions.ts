@@ -19,6 +19,12 @@ const schema = z.object({
   accountRef: z.string().max(80),
   cadence: z.enum(CADENCES),
   usageUnit: z.string().refine((u) => u === '' || UNITS.has(u), 'Unknown unit'),
+  usageLimit: z
+    .string()
+    .refine(
+      (v) => v === '' || (Number.isFinite(Number(v)) && Number(v) > 0),
+      'Enter a number above zero',
+    ),
   splitMode: z.enum(SPLIT_MODES),
   payerMemberId: z.string(),
   colour: z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Pick a colour'),
@@ -36,6 +42,7 @@ function read(householdId: string, fd: FormData): ReadResult {
     accountRef: str(fd, 'accountRef'),
     cadence: str(fd, 'cadence'),
     usageUnit: str(fd, 'usageUnit'),
+    usageLimit: str(fd, 'usageLimit'),
     splitMode: str(fd, 'splitMode'),
     payerMemberId: str(fd, 'payerMemberId'),
     colour: str(fd, 'colour') || '#0a84ff',
@@ -62,6 +69,8 @@ function read(householdId: string, fd: FormData): ReadResult {
       accountRef: v.accountRef || null,
       cadence: v.cadence,
       usageUnit: v.usageUnit || null,
+      // A limit only means something with a unit to measure it in.
+      usageLimitMonthly: v.usageUnit && v.usageLimit ? Number(v.usageLimit) : null,
       splitMode: v.splitMode,
       payerMemberId: v.payerMemberId || null,
       colour: v.colour,
@@ -98,7 +107,7 @@ export async function updateServiceAction(_prev: ActionState, fd: FormData): Pro
     return { error: (e as Error).message };
   }
   revalidatePath('/services');
-  redirect('/services');
+  redirect(`/services/${id}`);
 }
 
 export async function createServiceTypeAction(fd: FormData): Promise<void> {

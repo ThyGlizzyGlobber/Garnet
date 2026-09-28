@@ -64,7 +64,7 @@ export default async function ServicesPage() {
             return (
               <Link
                 key={s.id}
-                href={`/services/${s.id}/edit`}
+                href={`/services/${s.id}`}
                 className="glass lift flex min-h-52 flex-col justify-between rounded-card p-5 text-fg"
                 style={tint(s.colour)}
               >

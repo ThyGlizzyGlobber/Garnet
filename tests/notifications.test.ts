@@ -17,7 +17,7 @@ import {
   unsubscribeUrl,
   verifyUnsubscribe,
 } from '@/lib/notifications';
-import { createService } from '@/lib/services';
+import { createService, updateService } from '@/lib/services';
 
 let dir: string;
 let db: Db;
@@ -123,6 +123,30 @@ describe('new bill emails', () => {
     expect(await notifyBillCreated(a.hh.id, a.bill.id, { except: a.jo.id, db })).toBe(0);
     const demo = setup({ isDemo: true });
     expect(await notifyBillCreated(demo.hh.id, demo.bill.id, { db })).toBe(0);
+  });
+});
+
+describe('usage limits in new bill emails', () => {
+  it('say when a bill used more than the household’s limit, per day', async () => {
+    const { hh, sam, svc } = setup();
+    updateService(hh.id, svc.id, { usageUnit: 'GB', usageLimitMonthly: 300 }, db);
+    const over = createBill(
+      hh.id,
+      {
+        serviceId: svc.id,
+        amountMinor: 12900,
+        periodStart: '2026-10-14',
+        periodEnd: '2026-11-13', // 31 days
+        dueDate: '2026-11-13',
+        usageQuantity: 372, // 12 GB/day vs ≈9.86 allowed
+        usageUnit: 'GB',
+        source: 'manual',
+      },
+      db,
+    );
+    await notifyBillCreated(hh.id, over.id, { db });
+    const mail = inbox(sam.email).find((e) => e.text.includes('over your household'));
+    expect(mail?.text).toContain("12 GB a day, 22% over your household's limit of 300 GB a month");
   });
 });
 
