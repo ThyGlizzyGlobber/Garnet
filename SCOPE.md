@@ -63,9 +63,8 @@ Provider email ──▶ Household's own bills address (e.g. smith-7k2f@bills.br
                         │  saves raw email/PDF to NAS (audit trail)
                         ▼
                   Extractor (pluggable)
-                   ├─ 1. Template parser (known providers, deterministic)
-                   ├─ 2. LLM extraction (Anthropic API → structured JSON)
-                   └─ 3. Low confidence? → Manual-review queue in the UI
+                   ├─ 1. AI reader (Anthropic API → what the document is + structured JSON)
+                   └─ 2. Low confidence or no AI? → Manual-review queue in the UI
                         ▼
                   Bill record in database
                         ▼
@@ -79,7 +78,7 @@ Key properties:
 
 - **Raw bills are kept forever** on the NAS (`inbox/` folder) — audit trail and re-parse source.
 - **LLM extraction** (Anthropic API) turns any bill layout into `{provider, service_type, amount, billing_period, due_date, usage + units}` with one prompt — no per-provider parser maintenance. Volume is ~10–30 calls/month (cents).
-- The extractor is an **interface**, not a hard dependency: template parsers first, LLM fallback, manual queue last. Swapping or adding extraction methods later (local LLM, CDR APIs) touches config, not architecture.
+- The extractor is an **interface**, not a hard dependency: the AI reader reads every document (no per-provider templates ship; the slot for one remains), manual queue last. Swapping or adding extraction methods later (local LLM, CDR APIs) touches config, not architecture.
 - Anything unparseable becomes a "needs review" card with a pre-filled manual-entry form — the system degrades gracefully, never silently misses a bill.
 
 ## 5. Core features

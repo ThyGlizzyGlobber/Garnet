@@ -23,6 +23,7 @@ import { billsWithAlerts, createBill, getBill, listBills, setBillAlert } from '@
 import { createMember } from '@/lib/members';
 import { createService, getService, updateService } from '@/lib/services';
 import { dkimKeys } from './helpers/dkim';
+import { scriptAi } from './helpers/fake-ai';
 import { listDocuments } from '@/lib/review';
 
 const SECRET = 's'.repeat(40);
@@ -545,5 +546,50 @@ describe('provider notices', () => {
       .map((d) => `${d.emailSubject}: ${d.status}`)
       .sort();
     expect(statuses).toEqual(['Reset your password: notice', 'Your new bill: needs_review']);
+  });
+
+  it('let the AI decide what an email is, whatever its subject says', async () => {
+    const { hh, bill: b, to } = setupWithBill('AI Decides', true);
+    scriptAi({
+      document_type: 'other',
+      provider: 'Aussie Broadband',
+      service_type: null,
+      bill: null,
+      payment: null,
+      confidence: 0.95,
+      notes: null,
+    });
+    try {
+      await deliver(
+        to,
+        await sign(
+          notice('Payment unsuccessful? Never again', 'Our new app makes paying simple and quick.'),
+          'aussiebroadband.com.au',
+        ),
+      );
+    } finally {
+      scriptAi(null);
+    }
+    expect(getBill(hh.id, b.id, db)?.alertKind).toBeNull();
+    expect(listDocuments(hh.id, {}, db)[0]?.status).toBe('notice');
+  });
+
+  it('fall back to the subject line when the AI can’t read (limit used up)', async () => {
+    process.env.AI_MONTHLY_LIMIT = '0';
+    resetEnvCache();
+    try {
+      const { hh, bill: b, to } = setupWithBill('No AI Left', true);
+      await deliver(
+        to,
+        await sign(
+          notice('Payment unsuccessful', 'Please see the details in your account.'),
+          'aussiebroadband.com.au',
+        ),
+      );
+      expect(getBill(hh.id, b.id, db)?.alertKind).toBe('payment_failed');
+    } finally {
+      delete process.env.AI_MONTHLY_LIMIT;
+      resetEnvCache();
+    }
   });
 });

@@ -2,24 +2,9 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import type { ExtractionInput, ExtractionResult } from '@/ingest/extractors/types';
+import { scriptAi, type AiOutput } from './helpers/fake-ai';
 
-/** The AI reader is scripted, as in ai-documents.test.ts, so no API calls are made. */
-type Output = Parameters<typeof import('@/ingest/extractors/llm/anthropic').toResult>[0];
-let nextAnswer: Output | null = null;
-
-vi.mock('@/ingest/extractors/llm/anthropic', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/ingest/extractors/llm/anthropic')>();
-  return {
-    ...actual,
-    anthropicExtractor: {
-      name: 'llm:anthropic',
-      canHandle: () => true,
-      extract: async (input: ExtractionInput): Promise<ExtractionResult | null> =>
-        nextAnswer ? actual.toResult(nextAnswer, input) : null,
-    },
-  };
-});
+type Output = AiOutput;
 
 const { openDb } = await import('@/db/client');
 const { runMigrations } = await import('@/db/migrate');
@@ -141,7 +126,7 @@ describe('provider names and billing frequency', () => {
 describe('services set up from a first bill', () => {
   it('are created from an upload, paid by the admin, split equally, and the admin is told', async () => {
     const { hh, jo } = setup();
-    nextAnswer = bill('Red Energy Pty Ltd');
+    scriptAi(bill('Red Energy Pty Ltd'));
     const outcome = await processDocument(hh.id, upload(hh.id).id, db);
     expect(outcome.status).toBe('extracted');
     const [svc] = listServices(hh.id, {}, db);
@@ -172,7 +157,7 @@ describe('services set up from a first bill', () => {
       { typeSlug: 'electricity', name: 'Electricity', provider: 'AGL', payerMemberId: jo.id },
       db,
     );
-    nextAnswer = bill('Red Energy');
+    scriptAi(bill('Red Energy'));
     const d = upload(hh.id, email('Red Energy <bills@redenergy.com.au>', 'redenergy.com.au'));
     expect((await processDocument(hh.id, d.id, db)).status).toBe('extracted');
     const red = listServices(hh.id, {}, db).find((s) => s.provider === 'Red Energy')!;
@@ -182,7 +167,7 @@ describe('services set up from a first bill', () => {
 
   it('are never created from a stranger’s email', async () => {
     const { hh } = setup();
-    nextAnswer = bill('Red Energy');
+    scriptAi(bill('Red Energy'));
     const d = upload(hh.id, email('Red Energy <bills@attacker.example>', 'attacker.example'));
     expect((await processDocument(hh.id, d.id, db)).status).toBe('needs_review');
     expect(listServices(hh.id, { includeInactive: true }, db)).toHaveLength(0);
@@ -191,7 +176,7 @@ describe('services set up from a first bill', () => {
 
   it('make the member who forwarded the bill its payer', async () => {
     const { hh, sam } = setup();
-    nextAnswer = bill('Red Energy');
+    scriptAi(bill('Red Energy'));
     const d = upload(hh.id, email(`Sam <${sam.email}>`, 'example.com'));
     expect((await processDocument(hh.id, d.id, db)).status).toBe('extracted');
     expect(listServices(hh.id, {}, db)[0]?.payerMemberId).toBe(sam.id);
@@ -210,7 +195,7 @@ describe('services set up from a first bill', () => {
       },
       db,
     );
-    nextAnswer = bill('Red Energy Pty Ltd');
+    scriptAi(bill('Red Energy Pty Ltd'));
     expect((await processDocument(hh.id, upload(hh.id).id, db)).status).toBe('extracted');
     expect(listServices(hh.id, { includeInactive: true }, db)).toHaveLength(1);
     expect(getService(hh.id, old.id, db)?.isActive).toBe(true);
@@ -223,7 +208,7 @@ describe('services set up from a first bill', () => {
       createService(hh.id, { typeSlug, name, provider: 'Origin Energy', payerMemberId: jo.id }, db);
     svc('gas', 'Gas');
     const power = svc('electricity', 'Power');
-    nextAnswer = bill('Origin Energy');
+    scriptAi(bill('Origin Energy'));
     const outcome = await processDocument(hh.id, upload(hh.id).id, db);
     expect(getBill(hh.id, outcome.billId!, db)?.serviceId).toBe(power.id);
     expect(listServices(hh.id, {}, db)).toHaveLength(2);

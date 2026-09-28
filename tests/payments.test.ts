@@ -5,9 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { openDb, type Db } from '@/db/client';
 import { runMigrations } from '@/db/migrate';
 import { archiveDocument, getDocument, type ArchiveInput } from '@/ingest/archive';
-import { aussieBroadbandExtractor } from '@/ingest/extractors/template/aussie-broadband';
 import { processDocument } from '@/ingest/pipeline';
-import { parseReceipt } from '@/ingest/receipts';
 import { settleAutoPaidBills } from '@/lib/autopay';
 import { createBill, getBill, setBillAlert } from '@/lib/bills';
 import { createHousehold } from '@/lib/households';
@@ -87,17 +85,6 @@ function upload(hid: string, text: string, extra: Partial<ArchiveInput> = {}) {
 }
 
 describe('payment receipts', () => {
-  it('are read from the Aussie Broadband layout', () => {
-    expect(parseReceipt(RECEIPT)).toEqual({
-      provider: 'Aussie Broadband',
-      paidDate: '2026-07-28',
-      totalMinor: 12900,
-      method: 'Credit Card',
-      invoices: [{ ref: '60097874', amountMinor: 12900 }],
-    });
-    expect(parseReceipt(INVOICE)).toBeNull();
-  });
-
   it('mark the invoice they name as paid on the receipt date and clear any flag', async () => {
     const { hh, bill } = setup();
     const july = bill('60097874', '2026-07-28', '2026-07-14', '2026-08-13');
@@ -143,24 +130,6 @@ describe('payment receipts', () => {
 });
 
 describe('what an invoice says about last month', () => {
-  it('is read from the invoice, along with automatic payment', async () => {
-    const r = await aussieBroadbandExtractor.extract({
-      text: INVOICE,
-      locale: 'en-AU',
-      services: [],
-      serviceTypes: [],
-      email: null,
-      filename: null,
-      defaultCurrency: 'AUD',
-    });
-    expect(r?.bill.autoPay).toBe(true);
-    expect(r?.bill.previousPayment).toEqual({
-      dueDate: '2026-05-28',
-      amountDueMinor: 12900,
-      receivedMinor: 12900,
-    });
-  });
-
   it('marks the previous bill paid and remembers the service pays automatically', async () => {
     const { hh, svc, bill } = setup();
     const may = bill('58000000', '2026-05-28', '2026-05-14', '2026-06-13');

@@ -1,28 +1,10 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import type { ExtractionInput, ExtractionResult } from '@/ingest/extractors/types';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { scriptAi, type AiOutput } from './helpers/fake-ai';
 
-/**
- * The AI reader is replaced by a scripted answer that still goes through the
- * real mapping (toResult), so the whole pipeline runs without calling the API.
- */
-type Output = Parameters<typeof import('@/ingest/extractors/llm/anthropic').toResult>[0];
-let nextAnswer: Output | null = null;
-
-vi.mock('@/ingest/extractors/llm/anthropic', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/ingest/extractors/llm/anthropic')>();
-  return {
-    ...actual,
-    anthropicExtractor: {
-      name: 'llm:anthropic',
-      canHandle: () => true,
-      extract: async (input: ExtractionInput): Promise<ExtractionResult | null> =>
-        nextAnswer ? actual.toResult(nextAnswer, input) : null,
-    },
-  };
-});
+type Output = AiOutput;
 
 const { openDb } = await import('@/db/client');
 const { runMigrations } = await import('@/db/migrate');
@@ -174,12 +156,12 @@ describe('mapping the AI record', () => {
 describe('the pipeline acting on what the AI says a document is', () => {
   it('marks the invoice a receipt names as paid, matching "AGL Energy" to the AGL service', async () => {
     const { hh, bill } = setup();
-    nextAnswer = {
+    scriptAi({
       ...base,
       document_type: 'payment_receipt',
       provider: 'AGL Energy',
       payment: { date: '2026-09-14', amount: 410, currency: 'AUD', invoice_numbers: ['INV-7'] },
-    };
+    });
     const d = doc(hh.id, TEXT);
     expect((await processDocument(hh.id, d.id, db)).status).toBe('notice');
     expect(getBill(hh.id, bill.id, db)?.paidToProviderAt).toBe('2026-09-14T00:00:00Z');
@@ -188,24 +170,24 @@ describe('the pipeline acting on what the AI says a document is', () => {
 
   it('flags the bill for a payment-failed notice a member uploads', async () => {
     const { hh, bill } = setup();
-    nextAnswer = {
+    scriptAi({
       ...base,
       document_type: 'payment_failed',
       provider: 'AGL',
       payment: { date: '2026-09-15', amount: 410, currency: 'AUD', invoice_numbers: [] },
-    };
+    });
     await processDocument(hh.id, doc(hh.id, TEXT).id, db);
     expect(getBill(hh.id, bill.id, db)?.alertKind).toBe('payment_failed');
   });
 
   it("never lets a stranger's email use the AI's provider name to change a bill", async () => {
     const { hh, bill } = setup('Aussie Broadband');
-    nextAnswer = {
+    scriptAi({
       ...base,
       document_type: 'payment_failed',
       provider: 'Aussie Broadband',
       payment: null,
-    };
+    });
     const spoof = doc(hh.id, TEXT, {
       kind: 'email',
       emailFrom: 'Aussie Broadband <billing@attacker.example>',
@@ -219,7 +201,7 @@ describe('the pipeline acting on what the AI says a document is', () => {
 
   it('changes nothing when the reading is unsure', async () => {
     const { hh, bill } = setup();
-    nextAnswer = { ...base, document_type: 'payment_failed', provider: 'AGL', confidence: 0.4 };
+    scriptAi({ ...base, document_type: 'payment_failed', provider: 'AGL', confidence: 0.4 });
     const d = doc(hh.id, TEXT);
     expect((await processDocument(hh.id, d.id, db)).reason).toBe('unsure');
     expect(getBill(hh.id, bill.id, db)?.alertKind).toBeNull();
@@ -227,12 +209,12 @@ describe('the pipeline acting on what the AI says a document is', () => {
 
   it('files other documents as notices, but sends an unsure one that looks like a bill to review', async () => {
     const { hh } = setup();
-    nextAnswer = { ...base, document_type: 'other', provider: 'AGL' };
+    scriptAi({ ...base, document_type: 'other', provider: 'AGL' });
     const other = doc(hh.id, TEXT);
     await processDocument(hh.id, other.id, db);
     expect(getDocument(hh.id, other.id, db)?.status).toBe('notice');
 
-    nextAnswer = { ...base, document_type: 'other', provider: 'AGL', confidence: 0.3 };
+    scriptAi({ ...base, document_type: 'other', provider: 'AGL', confidence: 0.3 });
     const billish = doc(hh.id, 'Your bill: amount due $88.10, pay by 3 November. Tax invoice.', {
       kind: 'email',
       emailSubject: 'Your bill',
@@ -245,7 +227,7 @@ describe('the pipeline acting on what the AI says a document is', () => {
 
   it('adds an AI-read bill and applies what it says about last month and auto-pay', async () => {
     const { hh, svc, bill } = setup();
-    nextAnswer = {
+    scriptAi({
       ...base,
       document_type: 'bill',
       provider: 'AGL',
@@ -266,7 +248,7 @@ describe('the pipeline acting on what the AI says a document is', () => {
         auto_pay: true,
         previous_payment: { due_date: '2026-09-15', amount_due: 410, amount_received: 410 },
       },
-    };
+    });
     await processDocument(hh.id, doc(hh.id, TEXT).id, db);
     expect(
       listBills(hh.id, {}, db)

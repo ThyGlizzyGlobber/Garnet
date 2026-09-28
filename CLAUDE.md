@@ -46,8 +46,8 @@ visual system v2 restyle. Latest commit is on `main` in both checkouts.
 - Next.js (TypeScript) full-stack, single repo, single Docker container.
 - SQLite via Drizzle ORM. DB file, config, and `inbox/` (raw bill files) all live
   under one mounted data directory given by `DATA_DIR`.
-- Bill extraction is a pluggable interface: template parsers → Anthropic API LLM
-  extraction → manual-review queue. The Anthropic key comes from env. Low-confidence
+- Bill extraction is a pluggable interface: (per-provider template slot, none ship) →
+  Anthropic API AI reader → manual-review queue. The Anthropic key comes from env. Low-confidence
   parses are never silently accepted.
 - Settlement is calculate-and-track only. The app never holds or moves money.
   It sits behind `SettlementAdapter` so a pooling service can plug in later.
@@ -254,3 +254,4 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - 2026-09-28 — With an API key the AI reader replaces per-provider readers: one structured-output call per document classifies it and extracts the fields for its kind (owner: "we shouldn't need readers if I have the Anthropic API token in"). Built-in templates stay first (free, instant, no AI cap). Keyword notice rules stay as the no-AI fallback. The AI's provider name never lets a stranger's mail act on a bill — only uploads and member forwards may be matched by name.
 - 2026-09-28 — Default `ANTHROPIC_MODEL` moved from claude-sonnet-5 to claude-opus-5 (current default model; extraction touches money). A few cents a month per household at the alpha's volume; override with the env var.
 - 2026-09-28 — Services are created automatically from a new provider's first readable bill (owner request): same trust rules as acting on a bill (upload, member forward, or signed mail from the provider's own domain, which becomes a trusted sender). Payer = forwarding member, else the admin; equal split; admins get a "New service" email. A matching cancelled service is reactivated; ambiguous matches go to review. `matchService` no longer falls back to "the only service of this type" when the bill names a provider — after switching retailers the new one's bills must not land on the old service.
+- 2026-09-28 — AI reader is the only thing reading documents (owner: "remove the templated Aussie Broadband one entirely so the AI is the only thing scanning documents"). Removed the Aussie Broadband invoice template, the Aussie receipt parser and their date/amount helpers; `templateExtractors` stays as an empty slot. For bills-address email the AI now decides first; the keyword notice rules only run when the AI can't (no key, month's limit used, or no answer). Tests use a stand-in AI (`tests/setup.ts` + `tests/helpers/fake-ai.ts`) that reads the redacted fixtures; `scriptAi()` overrides it per test.

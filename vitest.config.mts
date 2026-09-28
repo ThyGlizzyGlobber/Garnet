@@ -8,6 +8,7 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['tests/**/*.test.ts', 'src/**/*.test.ts'],
+    setupFiles: ['tests/setup.ts'],
     env: {
       DATA_DIR: '.vitest-data',
       AUTH_SECRET: 'test-secret-test-secret-test-secret-1234',

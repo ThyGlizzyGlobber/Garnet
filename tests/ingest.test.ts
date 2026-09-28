@@ -5,7 +5,6 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { openDb, type Db } from '@/db/client';
 import { runMigrations } from '@/db/migrate';
 import { archiveDocument, getDocument, readDocument } from '@/ingest/archive';
-import { monthFirst, parseAmount, parseDate } from '@/ingest/extractors/dates';
 import type { ExtractionInput, Extractor } from '@/ingest/extractors/types';
 import { buildInput, processDocument, runExtractors } from '@/ingest/pipeline';
 import { htmlToText } from '@/ingest/text/html';
@@ -13,32 +12,6 @@ import { createHousehold } from '@/lib/households';
 import { createMember } from '@/lib/members';
 import { createService } from '@/lib/services';
 import { resetEnvCache } from '@/lib/env';
-
-describe('date and amount parsing', () => {
-  it('parses textual and ISO dates', () => {
-    expect(parseDate('14 Jun 2026')).toBe('2026-06-14');
-    expect(parseDate('June 14, 2026')).toBe('2026-06-14');
-    expect(parseDate('2026-06-14')).toBe('2026-06-14');
-    expect(parseDate('14 September 2026')).toBe('2026-09-14');
-  });
-  it('uses the locale for ambiguous numeric dates and overrides when unambiguous', () => {
-    expect(parseDate('03/04/2026', 'en-AU')).toBe('2026-04-03');
-    expect(parseDate('03/04/2026', 'en-US')).toBe('2026-03-04');
-    expect(parseDate('25/04/2026', 'en-US')).toBe('2026-04-25');
-    expect(monthFirst('en-US')).toBe(true);
-    expect(monthFirst('en-AU')).toBe(false);
-  });
-  it('rejects nonsense', () => {
-    expect(parseDate('31 Feb 2026')).toBeNull();
-    expect(parseDate('soon')).toBeNull();
-  });
-  it('parses amounts', () => {
-    expect(parseAmount('$129.00')).toBe(12900);
-    expect(parseAmount('1,234.56')).toBe(123456);
-    expect(parseAmount('12,50')).toBe(1250);
-    expect(parseAmount('¥1500', 0)).toBe(1500);
-  });
-});
 
 describe('html to text', () => {
   it('strips tags and keeps line breaks', () => {
@@ -113,7 +86,7 @@ describe('archive + pipeline', () => {
     expect(b.doc.id).toBe(a.doc.id);
   });
 
-  it('routes a confident template result to a bill and blocks duplicates', async () => {
+  it('routes a confident AI reading to a bill and blocks duplicates', async () => {
     const text = fs.readFileSync(path.join(__dirname, 'fixtures', 'aussie-broadband.txt'), 'utf8');
     const doc = archiveDocument(
       hid,
@@ -127,7 +100,7 @@ describe('archive + pipeline', () => {
     ).doc;
     const outcome = await processDocument(hid, doc.id, db);
     expect(outcome.status).toBe('extracted');
-    expect(outcome.result?.extractor).toBe('template:aussie-broadband');
+    expect(outcome.result?.extractor).toBe('llm:anthropic');
     expect(outcome.result?.bill.amountMinor).toBe(12900);
     expect(outcome.result?.bill.externalRef).toBe('59259831');
     expect(outcome.result?.bill.accountRef).toBe('14809800');
@@ -149,7 +122,7 @@ describe('archive + pipeline', () => {
     expect(dup.reason).toBe('duplicate');
   });
 
-  it('sends unreadable and unknown documents to review without the LLM configured', async () => {
+  it('sends unreadable documents, and ones the AI can’t read, to review', async () => {
     const empty = archiveDocument(
       hid,
       {

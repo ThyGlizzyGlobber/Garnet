@@ -15,7 +15,6 @@ import type {
   Extractor,
 } from './extractors/types';
 import { extractText } from './text';
-import { parseReceipt, type PaymentReceipt } from './receipts';
 import { aiAllowance, AI_READ, recordUsage } from '@/lib/usage';
 import { householdEmails } from '@/lib/accounts';
 import { addressOf, isFreemail, isTrustedSender, trustTarget } from '@/lib/sender-auth';
@@ -161,13 +160,15 @@ export async function processDocument(
   // payment received) update the matching bill instead of being read as a bill.
   const fromBillsAddress = doc.senderVerified !== null;
   const emailBody = fromBillsAddress && doc.kind === 'email';
-  // A payment receipt names the invoices it paid: mark those bills paid.
-  const hhForLocale = getHousehold(householdId, db);
-  const receipt = parseReceipt(text, hhForLocale?.locale ?? 'en-AU');
-  if (receipt) return noted(applyReceipt(householdId, doc, receipt, store, db));
+  const input = buildInput(householdId, text, doc, db);
+  // AI reads are capped per household per month (AI_MONTHLY_LIMIT).
+  const aiLeft = aiAllowance(householdId, db).left > 0;
+  const aiReads = aiLeft && fallbackExtractors.some((e) => e.canHandle(input));
 
-  // The subject decides first; the body only once no bill could be read.
-  if (emailBody) {
+  // The AI reader decides what every document is. Only when it can't run (no
+  // key, or the month's limit is used up) do the keyword rules look at an
+  // email's subject first, and at its body once no bill could be read.
+  if (emailBody && !aiReads) {
     const kind = classifySubject(doc.emailSubject);
     if (kind) return noted(applyNotice(householdId, doc, kind, text, store, db));
   }
@@ -185,9 +186,6 @@ export async function processDocument(
     return { documentId: doc.id, status: 'notice', reason: 'not-a-bill', result: null };
   };
 
-  const input = buildInput(householdId, text, doc, db);
-  // AI reads are capped per household per month (AI_MONTHLY_LIMIT); templates never are.
-  const aiLeft = aiAllowance(householdId, db).left > 0;
   const { best, attempts } = await runExtractors(input, {
     extractors: aiLeft ? [...templateExtractors, ...fallbackExtractors] : templateExtractors,
   });
@@ -211,10 +209,10 @@ export async function processDocument(
     store(
       'needs_review',
       attempts.length
-        ? 'No extractor could read this bill'
+        ? 'The AI reader could not read this document'
         : aiLeft
-          ? 'No extractor applies and AI extraction is not configured'
-          : 'No template applies and this month’s AI reading limit is used up',
+          ? 'AI reading is not set up (no API key), so this needs entering by hand'
+          : 'This month’s AI reading limit is used up, so this needs entering by hand',
       null,
       attempts,
     );
@@ -510,6 +508,15 @@ function providerNameMatches(service: string, named: string): boolean {
   return (
     (short.length >= 4 && long.includes(short)) || (short.length >= 3 && long.startsWith(short))
   );
+}
+
+/** What a payment receipt says: which invoices were paid, and when. */
+interface PaymentReceipt {
+  provider: string;
+  paidDate: string;
+  totalMinor: number;
+  method: string | null;
+  invoices: { ref: string; amountMinor: number }[];
 }
 
 /** A receipt: mark each invoice it lists as paid to the provider on the receipt's date. */

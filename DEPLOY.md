@@ -156,7 +156,7 @@ Add these to the app (**Edit → Container Configuration → Environment Variabl
 | `RESEND_API_KEY`                            | Resend API key with sending access to your verified domain                                                                                                 |
 | `EMAIL_FROM`                                | e.g. `Home Utilities <no-reply@mail.brjlabs.com>`                                                                                                          |
 | `EMAIL_LOG_ONLY`                            | `true` writes emails to the app log instead of sending (only for trying things out)                                                                        |
-| `AI_MONTHLY_LIMIT`                          | AI bill reads per household per month (default 60). Beyond it, bills no template recognises wait in the review queue                                       |
+| `AI_MONTHLY_LIMIT`                          | AI bill reads per household per month (default 60). Beyond it, new documents wait in the review queue until next month                                     |
 
 **First sign-in after upgrading from a version without accounts:** sign in with
 the email in `OPERATOR_EMAILS`. The Welcome screen offers to link your existing
@@ -208,8 +208,10 @@ reader decides what each document is — a bill, a payment receipt, a payment
 problem, an overdue reminder, a payment confirmation, or something else — and
 extracts the matching details (for bills also auto-pay and "last month
 received"). Receipts, notices and other documents never become bills; unsure
-readings change nothing. Built-in readers (Aussie Broadband) still run first
-because they're free and instant. Model: `ANTHROPIC_MODEL` (default
+readings change nothing. The AI reads every document; there are no built-in
+per-provider readers. Without a key (or once the month's limit is used up)
+bills wait for entry by hand, and emails are sorted by simple subject-line
+rules ("payment failed", "payment received"). Model: `ANTHROPIC_MODEL` (default
 `claude-opus-5`); reads count toward `AI_MONTHLY_LIMIT`.
 
 **New providers set themselves up.** When a readable bill arrives from a
@@ -222,8 +224,8 @@ domain (which is then trusted for that service); a stranger's mail still goes
 to review. A cancelled service for the same provider is switched back on
 instead of duplicated.
 
-**Paid to the provider, without anyone ticking it.** A payment receipt (Aussie
-Broadband's "PAYMENT RECEIPT" PDF) marks the invoices it names as paid on the
+**Paid to the provider, without anyone ticking it.** A payment receipt (like
+Aussie Broadband's "PAYMENT RECEIPT" PDF) marks the invoices it names as paid on the
 receipt's date and clears any flag. Each new invoice's "Last Month … Payment
 Received" line also confirms the previous bill (or flags it overdue if nothing
 was received). Services whose invoices show automatic payment (card on file /

@@ -1,7 +1,7 @@
 /**
  * Dry-run the extractor pipeline on local bill files. No database writes.
  *   npm run extract:dry-run -- sample-bills/*.pdf
- *   npm run extract:dry-run -- --llm sample-bills/some-bill.pdf   (skip templates, force the LLM)
+ *   npm run extract:dry-run -- --llm sample-bills/some-bill.pdf   (only the AI reader)
  *   npm run extract:dry-run -- --json ...                          (machine-readable)
  */
 import fs from 'node:fs';
