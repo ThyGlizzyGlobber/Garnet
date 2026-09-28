@@ -211,6 +211,7 @@ After ~2 billing cycles with our household:
 11. **Community template parsers** — declarative rules so other households add providers without a release
 12. **Open Banking / CDR payment confirmation** — close the "did they actually pay" loop automatically
 13. **Product metrics** — % of bills auto-parsed, time saved, money tracked; logged from the alpha onward for the pitch deck
+14. **Seasons, weather and regional insights** — season-aware flags and forecasts, household postcode, weather-adjusted usage, and opt-in pooled area figures. Full scope (proposed, awaiting sign-off): [SCOPE-seasons-weather-regions.md](SCOPE-seasons-weather-regions.md)
 
 ## 12. Open questions
 
