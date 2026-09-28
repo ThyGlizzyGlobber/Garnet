@@ -1,7 +1,9 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
+import { ForwardAddress } from '@/components/app/forward-address';
 import { Icon } from '@/components/app/icons';
 import { Badge, EmptyState, LinkButton, PageHeader } from '@/components/ui';
+import { billsAddress } from '@/lib/bills-address';
 import { listBills, type BillListItem } from '@/lib/bills';
 import { pageContext } from '@/lib/context';
 import { darkVariant } from '@/lib/palette';
@@ -22,6 +24,7 @@ export default async function BillsPage({
   const t = await getTranslations('bills');
   const all = listBills(hh.id);
   const hasServices = listServices(hh.id).length > 0;
+  const address = billsAddress(hh);
   const isOverdue = (b: BillListItem) => !b.paidToProviderAt && b.dueDate < today;
   const bills = all.filter((b) => {
     if (
@@ -78,6 +81,7 @@ export default async function BillsPage({
           </span>
         }
       />
+      {address && <ForwardAddress address={address} />}
       <div className="mb-5 flex flex-wrap items-center gap-2">
         {FILTERS.map((nf) => (
           <Link

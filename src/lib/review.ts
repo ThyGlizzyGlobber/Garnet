@@ -6,7 +6,22 @@ import type { StoredExtraction } from '@/ingest/pipeline';
 export type ReviewItem = SourceDocument & {
   extraction: StoredExtraction | null;
   billId: string | null;
+  category: DocumentCategory;
 };
+
+/** Inbox filters: what a document turned out to be. */
+export type DocumentCategory = 'bill' | 'receipt' | 'other';
+
+export function documentCategory(
+  status: SourceDocument['status'],
+  extraction: StoredExtraction | null,
+): DocumentCategory {
+  if (status === 'extracted') return 'bill';
+  // Documents read before the code was stored are recognised by their reason.
+  if (extraction?.code === 'receipt' || /^Payment receipt/.test(extraction?.reason ?? ''))
+    return 'receipt';
+  return 'other';
+}
 
 function parse(json: string | null): StoredExtraction | null {
   if (!json) return null;
@@ -18,6 +33,7 @@ function parse(json: string | null): StoredExtraction | null {
       reason: v.reason ?? '',
       textPreview: v.textPreview ?? '',
       processedAt: v.processedAt ?? '',
+      ...(v.code ? { code: v.code } : {}),
       ...(v.billId ? { billId: v.billId } : {}),
     };
   } catch {
@@ -42,7 +58,15 @@ export function listDocuments(
     )
     .orderBy(desc(sourceDocument.receivedAt))
     .all();
-  return rows.map((r) => ({ ...r.doc, extraction: parse(r.doc.extractionJson), billId: r.billId }));
+  return rows.map((r) => {
+    const extraction = parse(r.doc.extractionJson);
+    return {
+      ...r.doc,
+      extraction,
+      billId: r.billId,
+      category: documentCategory(r.doc.status, extraction),
+    };
+  });
 }
 
 export function getReviewItem(

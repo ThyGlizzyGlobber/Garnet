@@ -7,18 +7,36 @@ import { pageContext } from '@/lib/context';
 import { documentCounts, listDocuments } from '@/lib/review';
 import { reprocessAllAction } from './actions';
 
+type Filter = 'review' | 'bills' | 'receipts' | 'other' | 'all';
+const FILTERS: Filter[] = ['review', 'bills', 'receipts', 'other', 'all'];
+
 export default async function ReviewPage({
   searchParams,
 }: {
-  searchParams: Promise<{ all?: string }>;
+  searchParams: Promise<{ all?: string; f?: string }>;
 }) {
   const { hh, date, money } = await pageContext();
   const t = await getTranslations('review');
   const tb = await getTranslations('billsAddress');
   const address = billsAddress(hh);
-  const { all } = await searchParams;
-  const showAll = all === '1';
-  const docs = showAll ? listDocuments(hh.id) : listDocuments(hh.id, { status: 'needs_review' });
+  const { all, f } = await searchParams;
+  const filter: Filter = (FILTERS as string[]).includes(f ?? '')
+    ? (f as Filter)
+    : all === '1'
+      ? 'all'
+      : 'review';
+  const everything = listDocuments(hh.id);
+  const docs = everything.filter((d) =>
+    filter === 'all'
+      ? true
+      : filter === 'review'
+        ? d.status === 'needs_review'
+        : filter === 'bills'
+          ? d.category === 'bill'
+          : filter === 'receipts'
+            ? d.category === 'receipt'
+            : d.category === 'other' && d.status !== 'needs_review',
+  );
   const counts = documentCounts(hh.id);
   const tone = {
     needs_review: 'warning',
@@ -34,7 +52,7 @@ export default async function ReviewPage({
         title={t('title')}
         subtitle={t('subtitle', {
           review: counts.needs_review,
-          total: counts.needs_review + counts.extracted + counts.ignored + counts.unprocessed,
+          total: Object.values(counts).reduce((x, y) => x + y, 0),
         })}
         action={
           <LinkButton href="/bills/upload" variant="secondary">
@@ -51,18 +69,15 @@ export default async function ReviewPage({
         </p>
       )}
       <div className="mb-4 flex flex-wrap items-center gap-2 text-sm">
-        <Link
-          href="/review"
-          className={`rounded-full px-3.5 py-1.5 font-medium ${!showAll ? 'bg-accent text-accent-fg' : 'bg-surface-2 text-fg-muted'}`}
-        >
-          {t('filter.review')}
-        </Link>
-        <Link
-          href="/review?all=1"
-          className={`rounded-full px-3.5 py-1.5 font-medium ${showAll ? 'bg-accent text-accent-fg' : 'bg-surface-2 text-fg-muted'}`}
-        >
-          {t('filter.all')}
-        </Link>
+        {FILTERS.map((key) => (
+          <Link
+            key={key}
+            href={key === 'review' ? '/review' : `/review?f=${key}`}
+            className={`rounded-full px-3.5 py-1.5 font-medium ${filter === key ? 'bg-accent text-accent-fg' : 'bg-surface-2 text-fg-muted'}`}
+          >
+            {t(`filter.${key}`)}
+          </Link>
+        ))}
         <span className="flex-1" />
         <InlineAction
           action={reprocessAllAction}
@@ -73,7 +88,7 @@ export default async function ReviewPage({
       </div>
       {docs.length === 0 ? (
         <EmptyState
-          title={showAll ? t('empty.allTitle') : t('empty.title')}
+          title={filter === 'review' ? t('empty.title') : t('empty.allTitle')}
           body={t('empty.body')}
           action={<LinkButton href="/bills/upload">{t('upload')}</LinkButton>}
         />

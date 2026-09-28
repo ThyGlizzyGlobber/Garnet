@@ -1,9 +1,9 @@
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, like, or } from 'drizzle-orm';
 import { getDb, type Db } from '@/db/client';
-import { sourceDocument, type SourceDocument } from '@/db/schema';
+import { bill, sourceDocument, type SourceDocument } from '@/db/schema';
 import { ulid } from '@/lib/ids';
 import { dataPaths, ensureDataDirs } from '@/lib/paths';
 
@@ -43,8 +43,8 @@ function extFor(mime: string | null | undefined, name: string | null | undefined
 }
 
 /**
- * Write a raw bill file under DATA_DIR/inbox/YYYY/MM/ and record it. Files are
- * never deleted. Returns the existing record when the same bytes were seen before.
+ * Write a raw bill file under DATA_DIR/inbox/YYYY/MM/ and record it. Bill files
+ * are never deleted. Returns the existing record when the same bytes were seen before.
  */
 export function archiveDocument(
   householdId: string,
@@ -127,4 +127,36 @@ export function setDocumentStatus(
     .set({ status, ...(extractionJson !== undefined ? { extractionJson } : {}) })
     .where(and(eq(sourceDocument.householdId, householdId), eq(sourceDocument.id, id)))
     .run();
+}
+
+/**
+ * Forwarded emails used to be kept as "envelopes" beside their PDFs. They're no
+ * longer stored, so remove any left from before (row and file). Only envelopes
+ * no bill points at; safe to run on every start.
+ */
+export function purgeEmailEnvelopes(db: Db = getDb()): number {
+  const envelopes = db
+    .select()
+    .from(sourceDocument)
+    .where(
+      and(
+        eq(sourceDocument.kind, 'email'),
+        eq(sourceDocument.status, 'ignored'),
+        like(sourceDocument.extractionJson, '%Envelope for PDF attachment%'),
+      ),
+    )
+    .all();
+  let removed = 0;
+  for (const doc of envelopes) {
+    const used = db
+      .select({ id: bill.id })
+      .from(bill)
+      .where(or(eq(bill.sourceDocumentId, doc.id), eq(bill.alertDocumentId, doc.id)))
+      .get();
+    if (used) continue;
+    db.delete(sourceDocument).where(eq(sourceDocument.id, doc.id)).run();
+    fs.rmSync(documentPath(doc), { force: true });
+    removed++;
+  }
+  return removed;
 }

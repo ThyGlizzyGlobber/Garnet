@@ -1,19 +1,20 @@
 import { simpleParser } from 'mailparser';
 import { getDb, type Db } from '@/db/client';
-import { archiveDocument, setDocumentStatus } from './archive';
+import { archiveDocument } from './archive';
 import { processDocument, type PipelineOutcome } from './pipeline';
 
 export interface ArchivedEmail {
-  /** New documents written (the .eml and any PDFs not seen before). */
+  /** New documents written (the PDFs, or the email when it has none). */
   archived: number;
   /** Documents to run through the pipeline: new PDFs, or the email itself when it has none. */
   toProcess: string[];
 }
 
 /**
- * Keep a raw email for a household: the .eml always (audit trail), plus each PDF
- * attachment as its own document. With PDFs the .eml is only the envelope and is
- * marked ignored; without, the email body is the bill. Same bytes twice → no-op.
+ * Keep what a household's email brought in. With PDF attachments, only the PDFs
+ * are kept, each as its own document carrying the email's sender and subject;
+ * the email itself isn't stored (owner decision: forwards are just envelopes).
+ * Without PDFs the email is the bill (or notice) and is kept. Same bytes twice → no-op.
  */
 export async function archiveEmail(
   householdId: string,
@@ -23,60 +24,40 @@ export async function archiveEmail(
   sender?: { domain: string | null; verified: boolean },
 ): Promise<ArchivedEmail> {
   const parsed = await simpleParser(source);
-  const from = parsed.from?.text ?? null;
   const subject = parsed.subject ?? null;
-  const messageId = parsed.messageId ?? null;
   const meta = {
     receivedAt,
-    emailFrom: from,
+    emailFrom: parsed.from?.text ?? null,
     emailSubject: subject,
-    emailMessageId: messageId,
+    emailMessageId: parsed.messageId ?? null,
     ...(sender ? { senderDomain: sender.domain, senderVerified: sender.verified } : {}),
   };
-  const { doc: emailDoc, duplicate } = archiveDocument(
-    householdId,
-    {
-      kind: 'email',
-      buffer: source,
-      originalFilename: `${subject ?? 'message'}.eml`,
-      mimeType: 'message/rfc822',
-      ...meta,
-    },
-    db,
-  );
-  const out: ArchivedEmail = { archived: duplicate ? 0 : 1, toProcess: [] };
+  const out: ArchivedEmail = { archived: 0, toProcess: [] };
   const pdfs = (parsed.attachments ?? []).filter(
     (a) => a.contentType === 'application/pdf' || (a.filename ?? '').toLowerCase().endsWith('.pdf'),
   );
-  if (!pdfs.length) {
-    if (!duplicate) out.toProcess.push(emailDoc.id);
-    return out;
-  }
-  for (const a of pdfs) {
-    const { doc, duplicate: dupPdf } = archiveDocument(
-      householdId,
-      {
-        kind: 'pdf',
+  const files = pdfs.length
+    ? pdfs.map((a) => ({
+        kind: 'pdf' as const,
         buffer: a.content,
         originalFilename: a.filename ?? 'attachment.pdf',
         mimeType: 'application/pdf',
-        ...meta,
-      },
-      db,
-    );
-    if (!dupPdf) {
+      }))
+    : [
+        {
+          kind: 'email' as const,
+          buffer: source,
+          originalFilename: `${subject ?? 'message'}.eml`,
+          mimeType: 'message/rfc822',
+        },
+      ];
+  for (const f of files) {
+    const { doc, duplicate } = archiveDocument(householdId, { ...f, ...meta }, db);
+    if (!duplicate) {
       out.archived++;
       out.toProcess.push(doc.id);
     }
   }
-  if (!duplicate)
-    setDocumentStatus(
-      householdId,
-      emailDoc.id,
-      'ignored',
-      JSON.stringify({ reason: 'Envelope for PDF attachment(s)' }),
-      db,
-    );
   return out;
 }
 

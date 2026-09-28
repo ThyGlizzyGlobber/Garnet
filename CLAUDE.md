@@ -51,8 +51,9 @@ visual system v2 restyle. Latest commit is on `main` in both checkouts.
   parses are never silently accepted.
 - Settlement is calculate-and-track only. The app never holds or moves money.
   It sits behind `SettlementAdapter` so a pooling service can plug in later.
-- Raw bill emails/PDFs are stored permanently as an audit trail. Every extracted
-  Bill links back to its source file.
+- Raw bill files are stored permanently as an audit trail: PDFs, uploads, and bill
+  emails that carry no PDF. A forwarded email that carries PDFs is not kept, only
+  its PDFs (owner, 2026-09-28). Every extracted Bill links back to its source file.
 - Internet-facing through a Cloudflare Tunnel. Several households on one install;
   every household-owned row carries `household_id` and every query is scoped to it.
   Sign-in is Google OAuth or an emailed one-time code; a member's own PIN only
@@ -256,3 +257,6 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - 2026-09-28 — Services are created automatically from a new provider's first readable bill (owner request): same trust rules as acting on a bill (upload, member forward, or signed mail from the provider's own domain, which becomes a trusted sender). Payer = forwarding member, else the admin; equal split; admins get a "New service" email. A matching cancelled service is reactivated; ambiguous matches go to review. `matchService` no longer falls back to "the only service of this type" when the bill names a provider — after switching retailers the new one's bills must not land on the old service.
 - 2026-09-28 — AI reader is the only thing reading documents (owner: "remove the templated Aussie Broadband one entirely so the AI is the only thing scanning documents"). Removed the Aussie Broadband invoice template, the Aussie receipt parser and their date/amount helpers; `templateExtractors` stays as an empty slot. For bills-address email the AI now decides first; the keyword notice rules only run when the AI can't (no key, month's limit used, or no answer). Tests use a stand-in AI (`tests/setup.ts` + `tests/helpers/fake-ai.ts`) that reads the redacted fixtures; `scriptAi()` overrides it per test.
 - 2026-09-28 — Emails are read as text via mailparser (headers From/Date/Subject, the HTML part as text, plus any attached message/rfc822) instead of their raw MIME source — the AI was being sent DKIM headers and quoted-printable. A failed AI call (bad key, outage) now sends the document to review with the API's message, never "Not a bill", and isn't counted against the monthly limit. Optional `ANTHROPIC_WORKSPACE_ID` (sent as `anthropic-workspace-id`) for organisation-wide keys, which the API rejects without it.
+- 2026-09-28 — Forward-only for the prototype (owner, after asking their mum as a tester): members forward bills from their own inbox to the household address; nobody changes the email on provider accounts. Bills page shows "Forward bills to <address> · Copy" to every member; Settings copy rewritten; the provider-account and "forward provider emails to me" hints are gone from the address card (the member-page forwarding feature itself stays).
+- 2026-09-28 — Forwards with PDF attachments keep only the PDFs (each carrying the forward's From/Subject/DKIM result); the .eml is no longer stored. Supersedes the 2026-09-24 envelope decision. `purgeEmailEnvelopes()` runs at startup and deletes old envelope rows + files that no bill references. Emails without a PDF are still kept as the document.
+- 2026-09-28 — Inbox (was "Review queue") filters: Needs review · Bills · Receipts · Other emails · All. The pipeline stores its outcome code on each document (`extraction_json.code`); older receipts are recognised by their reason text.

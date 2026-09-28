@@ -19,11 +19,9 @@ export async function BillsAddressCard({
       <p className="text-sm text-fg-muted">{t('body')}</p>
       <CopyField label={t('label')} value={address} />
       <ul className="list-disc space-y-1 pl-5 text-xs text-fg-muted">
-        <li>{t('howProvider')}</li>
         <li>{t('howForward')}</li>
         <li>{t('howTrust')}</li>
         <li>{t('howReview')}</li>
-        <li>{t('howForwardToMe')}</li>
       </ul>
       {replaceAction && (
         <div>

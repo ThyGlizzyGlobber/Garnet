@@ -10,6 +10,7 @@ import { settleAutoPaidBills } from '@/lib/autopay';
 import { createBill, getBill, setBillAlert } from '@/lib/bills';
 import { createHousehold } from '@/lib/households';
 import { createMember } from '@/lib/members';
+import { listDocuments } from '@/lib/review';
 import { createService, getService, updateService } from '@/lib/services';
 
 let dir: string;
@@ -97,6 +98,12 @@ describe('payment receipts', () => {
     expect(after.alertKind).toBeNull();
     // The review page links the receipt to the bill it paid.
     expect(JSON.parse(getDocument(hh.id, doc.id, db)!.extractionJson!).billId).toBe(july.id);
+    // …and the inbox files it under Receipts, apart from bills.
+    const invoice = upload(hh.id, INVOICE.replaceAll('59259831', '61111111'));
+    await processDocument(hh.id, invoice.id, db);
+    const byId = new Map(listDocuments(hh.id, {}, db).map((d) => [d.id, d.category]));
+    expect(byId.get(doc.id)).toBe('receipt');
+    expect(byId.get(invoice.id)).toBe('bill');
   });
 
   it('say so, and change nothing, when the invoice is not in the app', async () => {

@@ -73,10 +73,10 @@ Provider email ──▶ Household's own bills address (e.g. smith-7k2f@bills.br
 
 Key properties:
 
-- **Zero setup for households:** each household gets a unique bills address on the owner's domain. They give it to their providers (change the billing email in each provider account, once), or forward a bill to it. No mailbox credentials, no forwarding rules. Where a provider can't email bills, **Upload a bill** takes the PDF.
+- **Zero setup for households:** each household gets a unique bills address on the owner's domain. Members forward each bill to it from their own inbox as it arrives (owner decision 2026-09-28, after asking a non-technical tester: forwarding fits day-to-day life; nobody changes the email on their provider accounts). No mailbox credentials, no forwarding rules. **Upload a bill** takes a PDF directly.
 - The single-mailbox IMAP poller built for our household stays available as an operator option, but the per-household address is the primary path.
 
-- **Raw bills are kept forever** on the NAS (`inbox/` folder) — audit trail and re-parse source.
+- **Raw bills are kept forever** on the NAS (`inbox/` folder) — audit trail and re-parse source. From a forwarded email only its PDF attachments are kept; an email with no PDF is kept as the bill itself.
 - **LLM extraction** (Anthropic API) turns any bill layout into `{provider, service_type, amount, billing_period, due_date, usage + units}` with one prompt — no per-provider parser maintenance. Volume is ~10–30 calls/month (cents).
 - The extractor is an **interface**, not a hard dependency: the AI reader reads every document (no per-provider templates ship; the slot for one remains), manual queue last. Swapping or adding extraction methods later (local LLM, CDR APIs) touches config, not architecture.
 - Anything unparseable becomes a "needs review" card with a pre-filled manual-entry form — the system degrades gracefully, never silently misses a bill.

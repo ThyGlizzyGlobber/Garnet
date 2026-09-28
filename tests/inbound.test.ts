@@ -5,7 +5,13 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 import worker, { sign as workerSign } from '../deploy/email-worker/worker.js';
 import { openDb, type Db } from '@/db/client';
 import { runMigrations } from '@/db/migrate';
-import { getDocument } from '@/ingest/archive';
+import {
+  archiveDocument,
+  documentPath,
+  getDocument,
+  purgeEmailEnvelopes,
+  setDocumentStatus,
+} from '@/ingest/archive';
 import { handleInboundEmail } from '@/ingest/inbound';
 import {
   aliasFromRecipient,
@@ -268,7 +274,7 @@ describe('inbound deliveries', () => {
     expect(dup.body).toEqual({ archived: 0, reading: 0 });
   });
 
-  it('keep PDF attachments as their own documents and mark the email as the envelope', async () => {
+  it('keep only the PDFs from a forward, not the email itself', async () => {
     const hh = household('Attachment House');
     const pdf = Buffer.concat([Buffer.from('%PDF-1.4\n'), Buffer.alloc(512, 3)]);
     const raw = email({ subject: 'Invoice attached', body: 'See attached.', pdf });
@@ -276,13 +282,41 @@ describe('inbound deliveries', () => {
       db,
       waitForProcessing: true,
     });
-    expect(res.body).toEqual({ archived: 2, reading: 1 });
+    expect(res.body).toEqual({ archived: 1, reading: 1 });
     const docs = listDocuments(hh.id, {}, db);
-    const envelope = docs.find((d) => d.kind === 'email')!;
-    const attachment = docs.find((d) => d.kind === 'pdf')!;
-    expect(getDocument(hh.id, envelope.id, db)?.status).toBe('ignored');
-    expect(attachment.originalFilename).toBe('bill.pdf');
-    expect(attachment.status).toBe('needs_review');
+    expect(docs.map((d) => d.kind)).toEqual(['pdf']);
+    expect(docs[0]?.originalFilename).toBe('bill.pdf');
+    expect(docs[0]?.emailSubject).toBe('Invoice attached');
+    expect(docs[0]?.status).toBe('needs_review');
+  });
+
+  it('remove forward emails stored beside their PDFs before this change', () => {
+    const hh = household('Old Envelopes');
+    const keep = (kind: 'email' | 'pdf', body: string) =>
+      archiveDocument(
+        hh.id,
+        { kind, buffer: Buffer.from(body), originalFilename: `${kind}.bin`, mimeType: null },
+        db,
+      ).doc;
+    const envelope = keep('email', `Subject: old forward ${Math.random()}`);
+    setDocumentStatus(
+      hh.id,
+      envelope.id,
+      'ignored',
+      JSON.stringify({ reason: 'Envelope for PDF attachment(s)' }),
+      db,
+    );
+    const billEmail = keep('email', `Subject: a bill in the body ${Math.random()}`);
+    const pdfDoc = keep('pdf', `%PDF-1.4 ${Math.random()}`);
+    expect(fs.existsSync(documentPath(envelope))).toBe(true);
+    expect(purgeEmailEnvelopes(db)).toBe(1);
+    expect(fs.existsSync(documentPath(envelope))).toBe(false);
+    expect(
+      listDocuments(hh.id, {}, db)
+        .map((d) => d.id)
+        .sort(),
+    ).toEqual([billEmail.id, pdfDoc.id].sort());
+    expect(purgeEmailEnvelopes(db)).toBe(0);
   });
 
   it('refuse bad signatures, unknown addresses and floods', async () => {

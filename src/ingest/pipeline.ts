@@ -45,6 +45,8 @@ export interface StoredExtraction {
   reason: string;
   textPreview: string;
   processedAt: string;
+  /** What the pipeline decided (receipt, payment_failed, not-a-bill, …); drives the inbox filters. */
+  code?: string;
   /** For notices: the bill it changed (marked paid or flagged). */
   billId?: string;
 }
@@ -110,6 +112,24 @@ export async function processDocument(
   documentId: string,
   db: Db = getDb(),
 ): Promise<PipelineOutcome> {
+  const outcome = await readAndRoute(householdId, documentId, db);
+  // Remember what it turned out to be (and, for a notice, the bill it changed)
+  // for the inbox filters and the review page.
+  const doc = getDocument(householdId, documentId, db);
+  if (doc?.extractionJson) {
+    const stored = JSON.parse(doc.extractionJson) as StoredExtraction;
+    stored.code = outcome.reason ?? outcome.status;
+    if (outcome.status === 'notice' && outcome.billId) stored.billId = outcome.billId;
+    setDocumentStatus(householdId, doc.id, doc.status, JSON.stringify(stored), db);
+  }
+  return outcome;
+}
+
+async function readAndRoute(
+  householdId: string,
+  documentId: string,
+  db: Db,
+): Promise<PipelineOutcome> {
   const doc = getDocument(householdId, documentId, db);
   if (!doc) throw new Error('Document not found');
   const env = getEnv();
@@ -127,7 +147,7 @@ export async function processDocument(
     result: ExtractionResult | null,
     attempts: StoredExtraction['attempts'],
   ) => {
-    stored = {
+    const stored: StoredExtraction = {
       result,
       attempts,
       reason,
@@ -135,15 +155,6 @@ export async function processDocument(
       processedAt: new Date().toISOString(),
     };
     setDocumentStatus(householdId, doc.id, status, JSON.stringify(stored), db);
-  };
-  let stored: StoredExtraction | null = null;
-  // A notice that changed a bill remembers which, so the review page can link to it.
-  const noted = (o: PipelineOutcome): PipelineOutcome => {
-    if (o.status === 'notice' && o.billId && stored) {
-      stored.billId = o.billId;
-      setDocumentStatus(householdId, doc.id, 'notice', JSON.stringify(stored), db);
-    }
-    return o;
   };
 
   if (readError) {
@@ -170,12 +181,12 @@ export async function processDocument(
   // email's subject first, and at its body once no bill could be read.
   if (emailBody && !aiReads) {
     const kind = classifySubject(doc.emailSubject);
-    if (kind) return noted(applyNotice(householdId, doc, kind, text, store, db));
+    if (kind) return applyNotice(householdId, doc, kind, text, store, db);
   }
   const notABill = (attempts: StoredExtraction['attempts']): PipelineOutcome | null => {
     if (!emailBody) return null;
     const kind = classifyNotice(doc.emailSubject, text);
-    if (kind) return noted(applyNotice(householdId, doc, kind, text, store, db));
+    if (kind) return applyNotice(householdId, doc, kind, text, store, db);
     if (looksLikeBill(doc.emailSubject, text)) return null;
     // The AI failed (bad key, outage): nobody has really read it, so a person should.
     if (attempts.some((a) => a.error)) return null;
@@ -206,7 +217,7 @@ export async function processDocument(
       db,
       env.EXTRACTOR_CONFIDENCE_THRESHOLD,
     );
-    if (routed) return noted(routed);
+    if (routed) return routed;
   }
   if (!best) {
     const notice = notABill(attempts);

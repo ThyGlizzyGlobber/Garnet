@@ -170,6 +170,13 @@ Email Routing hands mail for those addresses to a small Email Worker
 (`deploy/email-worker/worker.js`), which signs each message and posts it to
 `<APP_URL>/api/inbound/email`. The app archives it and reads it like any other bill.
 
+**How households use it (prototype, 2026-09-28):** members forward each bill
+from their own inbox to the household address as it arrives. Nobody changes the
+email address on their provider accounts. From a forwarded email only the
+attached PDFs are kept (each with the forward's sender and subject); an email
+with no PDF is kept as the bill itself. The address is shown on the Bills page
+for every member, with a Copy button.
+
 **Chosen for this install (2026-09-28): the apex catch-all, `BILLS_ADDRESS_TEMPLATE={alias}@brjlabs.com`.**
 
 Pick one address style. Cloudflare catch-alls only work on a zone's apex, so:
@@ -193,7 +200,8 @@ Steps:
 **Who can create bills by email.** Anyone who learns a household's address can
 send to it, so the app checks each message's DKIM signature itself (Cloudflare
 doesn't pass its verdicts to Workers). A signed bill is added straight away when
-it comes from a household member, from a sender already trusted for that
+it comes from a household member (forwarded from the email they sign in with —
+the usual case), from a sender already trusted for that
 service, or from a domain that is plainly the provider's (`agl.com.au` for
 AGL, `yvw.com.au` for Yarra Valley Water) — that domain is then remembered.
 Unsigned mail, and signed mail from a domain that doesn't look like the

@@ -604,18 +604,21 @@
     "each": "each"
   },
   "review": {
-    "title": "Review queue",
+    "title": "Inbox",
     "subtitle": "{review} to review · {total} documents archived",
     "upload": "Upload a bill",
     "filter": {
       "review": "Needs review",
-      "all": "All documents"
+      "bills": "Bills",
+      "receipts": "Receipts",
+      "other": "Other emails",
+      "all": "All"
     },
     "reprocessAll": "Re-run extraction on everything",
     "reprocessAllConfirm": "Re-run the extractors over every archived document that isn't already a bill? Existing bills are untouched.",
     "empty": {
       "title": "Nothing to review",
-      "allTitle": "No documents yet",
+      "allTitle": "Nothing here yet",
       "body": "Bills that can't be read confidently land here with the file beside a pre-filled form. Upload one to try it."
     },
     "kind": {
@@ -630,7 +633,7 @@
       "ignored": "Ignored",
       "notice": "Notice"
     },
-    "footnote": "Every file is kept permanently under the data directory's inbox folder, so a bill can always be re-read later.",
+    "footnote": "Every bill file is kept permanently in the data directory's inbox folder, so a bill can always be re-read later. From a forwarded email only its PDFs are kept; an email with no PDF is kept as the bill itself.",
     "detail": {
       "untitled": "Document",
       "viewBill": "View bill",
@@ -805,17 +808,15 @@
     }
   },
   "billsAddress": {
-    "title": "Bills email address",
-    "body": "Bills sent to this address are added automatically. If a provider says a payment failed or a bill is overdue, the bill is flagged.",
-    "label": "Your household's address",
-    "howProvider": "Easiest: in each provider's online account, change the email address bills are sent to.",
-    "howForward": "Or forward a bill here from your own inbox whenever one arrives.",
-    "howReview": "Emails that aren't bills (password resets, plan changes) are kept and, if you turn it on, forwarded to you — they don't need anything from you.",
+    "title": "Household bills address",
+    "body": "Forward bills to this address and they're added automatically. Forward a provider's “payment failed” or “overdue” email and the bill is flagged.",
+    "label": "Forward bills to",
+    "howForward": "When a bill arrives in your own inbox, forward it here as it is: the PDF attachment or the bill email itself. No need to change anything with your providers.",
+    "howReview": "Only the PDFs from a forwarded email are kept; the email itself isn't stored. Receipts mark the bill they paid.",
     "replace": "Get a new address",
-    "replaceConfirm": "Replace the address? The current one stops working immediately, so update any provider that uses it.",
-    "short": "Bills can also be emailed to {address}",
-    "howForwardToMe": "Want provider emails (like password resets) in your own inbox too? Turn on forwarding on your member page.",
-    "howTrust": "Bills from your providers are added the moment they arrive. Only an email that can't be proven to come from the provider waits for a quick look."
+    "replaceConfirm": "Replace the address? The current one stops working immediately, so let everyone in the household know the new one.",
+    "short": "Forward bills to ",
+    "howTrust": "Bills forwarded by household members from the email they sign in with are added straight away. Anything else waits for a quick look."
   },
   "forward": {
     "title": "Forward emails to me",

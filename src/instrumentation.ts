@@ -12,6 +12,10 @@ export async function register() {
   runMigrations(env.DATA_DIR);
   const { adoptLegacyDemoFlag } = await import('./lib/demo');
   adoptLegacyDemoFlag();
+  const { purgeEmailEnvelopes } = await import('./ingest/archive');
+  const purged = purgeEmailEnvelopes();
+  if (purged)
+    console.log(`[ingest] removed ${purged} stored forward email(s); their PDFs are kept`);
   if (env.DEMO_MODE) {
     const { seedDemo } = await import('./db/seed');
     const result = await seedDemo();
