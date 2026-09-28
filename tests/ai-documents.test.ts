@@ -9,8 +9,8 @@ type Output = AiOutput;
 const { openDb } = await import('@/db/client');
 const { runMigrations } = await import('@/db/migrate');
 const { archiveDocument, getDocument } = await import('@/ingest/archive');
-const { processDocument } = await import('@/ingest/pipeline');
-const { toResult } = await import('@/ingest/extractors/llm/anthropic');
+const { processDocument, retryBusyReads } = await import('@/ingest/pipeline');
+const { isTransientAiError, toResult } = await import('@/ingest/extractors/llm/anthropic');
 const { createBill, getBill, listBills } = await import('@/lib/bills');
 const { createHousehold } = await import('@/lib/households');
 const { createMember } = await import('@/lib/members');
@@ -290,5 +290,53 @@ describe('when the AI reader fails', () => {
     } finally {
       scriptAi(null);
     }
+  });
+});
+
+describe('when the AI service is busy', () => {
+  it('tells overload and rate limits apart from real failures', () => {
+    expect(isTransientAiError('529 {"type":"error","error":{"type":"overloaded_error"}}')).toBe(
+      true,
+    );
+    expect(isTransientAiError('429 {"error":{"type":"rate_limit_error"}}')).toBe(true);
+    expect(isTransientAiError('Request timed out.')).toBe(true);
+    expect(isTransientAiError('400 {"error":{"type":"invalid_request_error"}}')).toBe(false);
+    expect(isTransientAiError('401 invalid x-api-key')).toBe(false);
+  });
+
+  it('waits, then reads the document again by itself', async () => {
+    const { hh, bill } = setup();
+    scriptAi(() => {
+      throw new Error(
+        '529 {"type":"error","error":{"type":"overloaded_error","message":"Overloaded"}}',
+      );
+    });
+    const d = doc(hh.id, TEXT);
+    expect((await processDocument(hh.id, d.id, db)).status).toBe('needs_review');
+    const stored = JSON.parse(getDocument(hh.id, d.id, db)!.extractionJson!) as {
+      reason: string;
+      busyRetries: number;
+      processedAt: string;
+    };
+    expect(stored.reason).toMatch(
+      /^The AI service was busy, so the app will try reading this again/,
+    );
+    expect(stored.busyRetries).toBe(1);
+    const at = (minutes: number) => new Date(Date.parse(stored.processedAt) + minutes * 60_000);
+
+    scriptAi({
+      ...base,
+      document_type: 'payment_receipt',
+      provider: 'AGL',
+      payment: { date: '2026-09-14', amount: 410, currency: 'AUD', invoice_numbers: ['INV-7'] },
+    });
+    try {
+      expect(await retryBusyReads(at(5), db)).toBe(0); // too soon
+      expect(await retryBusyReads(at(16), db)).toBeGreaterThanOrEqual(1);
+    } finally {
+      scriptAi(null);
+    }
+    expect(getDocument(hh.id, d.id, db)?.status).toBe('notice');
+    expect(getBill(hh.id, bill.id, db)?.paidToProviderAt).toBe('2026-09-14T00:00:00Z');
   });
 });

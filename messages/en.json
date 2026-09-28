@@ -614,8 +614,8 @@
       "other": "Other emails",
       "all": "All"
     },
-    "reprocessAll": "Re-run extraction on everything",
-    "reprocessAllConfirm": "Re-run the extractors over every archived document that isn't already a bill? Existing bills are untouched.",
+    "reprocessAll": "Re-read everything waiting",
+    "reprocessAllConfirm": "Read every document waiting for review again? Useful after fixing the AI key.",
     "empty": {
       "title": "Nothing to review",
       "allTitle": "Nothing here yet",

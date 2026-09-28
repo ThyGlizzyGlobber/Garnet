@@ -2,6 +2,7 @@ import { getEnv, isImapConfigured } from '@/lib/env';
 import { pollMailbox, type PollResult } from '@/ingest/imap/poller';
 import { settleAutoPaidBills } from '@/lib/autopay';
 import { sendDueReminders } from '@/lib/notifications';
+import { retryBusyReads } from '@/ingest/pipeline';
 
 export interface WorkerStatus {
   enabled: boolean;
@@ -31,6 +32,10 @@ export function startReminders(): void {
       .then(() => {
         const settled = settleAutoPaidBills();
         if (settled) console.log(`[autopay] marked ${settled} bill(s) paid to the provider`);
+        return retryBusyReads();
+      })
+      .then((n) => {
+        if (n) console.log(`[ingest] re-read ${n} document(s) the AI was too busy for`);
         return sendDueReminders();
       })
       .then((n) => n && console.log(`[reminders] sent ${n}`))

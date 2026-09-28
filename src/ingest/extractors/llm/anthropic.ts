@@ -94,6 +94,31 @@ Rules for everything:
 let client: Anthropic | undefined;
 
 /**
+ * At most two AI reads at a time across the process: a member forwarding a
+ * handful of receipts at once shouldn't turn into a burst the API refuses.
+ */
+const MAX_PARALLEL = 2;
+let running = 0;
+const waiting: (() => void)[] = [];
+async function oneAtATime<T>(fn: () => Promise<T>): Promise<T> {
+  if (running >= MAX_PARALLEL) await new Promise<void>((go) => waiting.push(go));
+  running++;
+  try {
+    return await fn();
+  } finally {
+    running--;
+    waiting.shift()?.();
+  }
+}
+
+/** A failure worth trying again later: the API was busy, rate-limited or unreachable. */
+export function isTransientAiError(error: string): boolean {
+  return /^(408|409|429|5\d\d)\b|overloaded|rate_limit|timed out|timeout|connection error|ECONNRESET|socket hang up/i.test(
+    error,
+  );
+}
+
+/**
  * AI reader: works out what a document is (bill, receipt, payment problem,
  * overdue reminder, payment confirmation, other) and extracts the matching
  * fields via the Claude API, so no per-provider reader is needed.
@@ -110,6 +135,8 @@ export const anthropicExtractor: Extractor = {
     if (!env.ANTHROPIC_API_KEY) return null;
     client ??= new Anthropic({
       apiKey: env.ANTHROPIC_API_KEY,
+      // Overloaded (529) and rate-limited (429) answers are retried with backoff.
+      maxRetries: 5,
       ...(env.ANTHROPIC_WORKSPACE_ID
         ? { defaultHeaders: { 'anthropic-workspace-id': env.ANTHROPIC_WORKSPACE_ID } }
         : {}),
@@ -135,14 +162,16 @@ export const anthropicExtractor: Extractor = {
       .filter((l) => l !== null)
       .join('\n');
 
-    const response = await client.messages.parse({
-      model: env.ANTHROPIC_MODEL,
-      // Room for adaptive thinking (on by default on current models) plus the record.
-      max_tokens: 16_000,
-      system: [{ type: 'text', text: SYSTEM, cache_control: { type: 'ephemeral' } }],
-      messages: [{ role: 'user', content: userText }],
-      output_config: { format: zodOutputFormat(outputSchema) },
-    });
+    const response = await oneAtATime(() =>
+      client!.messages.parse({
+        model: env.ANTHROPIC_MODEL,
+        // Room for adaptive thinking (on by default on current models) plus the record.
+        max_tokens: 16_000,
+        system: [{ type: 'text', text: SYSTEM, cache_control: { type: 'ephemeral' } }],
+        messages: [{ role: 'user', content: userText }],
+        output_config: { format: zodOutputFormat(outputSchema) },
+      }),
+    );
     if (response.stop_reason === 'refusal' || !response.parsed_output) return null;
     return toResult(response.parsed_output, input, this.name);
   },

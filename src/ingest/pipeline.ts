@@ -1,6 +1,6 @@
 import { and, eq } from 'drizzle-orm';
 import { getDb, type Db } from '@/db/client';
-import { account, bill, type SourceDocument } from '@/db/schema';
+import { account, bill, sourceDocument, type SourceDocument } from '@/db/schema';
 import { createBill, type BillDetail } from '@/lib/bills';
 import { getEnv, isLlmConfigured } from '@/lib/env';
 import { getHousehold } from '@/lib/households';
@@ -8,6 +8,7 @@ import { listMembers } from '@/lib/members';
 import { getService, listServices, listServiceTypes, updateService } from '@/lib/services';
 import { getDocument, readDocument, setDocumentStatus } from './archive';
 import { fallbackExtractors, templateExtractors } from './extractors';
+import { isTransientAiError } from './extractors/llm/anthropic';
 import type {
   DocumentKind,
   ExtractionInput,
@@ -49,6 +50,8 @@ export interface StoredExtraction {
   code?: string;
   /** For notices: the bill it changed (marked paid or flagged). */
   billId?: string;
+  /** Reads in a row that failed because the AI service was busy. */
+  busyRetries?: number;
 }
 
 export function buildInput(
@@ -112,14 +115,18 @@ export async function processDocument(
   documentId: string,
   db: Db = getDb(),
 ): Promise<PipelineOutcome> {
+  const before = storedExtraction(getDocument(householdId, documentId, db));
   const outcome = await readAndRoute(householdId, documentId, db);
   // Remember what it turned out to be (and, for a notice, the bill it changed)
   // for the inbox filters and the review page.
   const doc = getDocument(householdId, documentId, db);
-  if (doc?.extractionJson) {
-    const stored = JSON.parse(doc.extractionJson) as StoredExtraction;
+  const stored = storedExtraction(doc);
+  if (doc && stored) {
     stored.code = outcome.reason ?? outcome.status;
     if (outcome.status === 'notice' && outcome.billId) stored.billId = outcome.billId;
+    // The AI was busy: count it, so retryBusyReads() backs off and eventually stops.
+    if (stored.attempts.some((a) => a.error && isTransientAiError(a.error)))
+      stored.busyRetries = (before?.busyRetries ?? 0) + 1;
     setDocumentStatus(householdId, doc.id, doc.status, JSON.stringify(stored), db);
   }
   return outcome;
@@ -219,15 +226,17 @@ async function readAndRoute(
     if (notice) return notice;
     store(
       'needs_review',
-      aiError
-        ? `The AI reader failed, so this needs checking by hand (${aiProblem(aiError)})`
-        : attempts.length
-          ? 'The AI reader could not read this document'
-          : aiLeft && isLlmConfigured(env)
-            ? 'There is too little text in this document for the AI reader, so this needs entering by hand'
-            : aiLeft
-              ? 'AI reading is not set up (no API key), so this needs entering by hand'
-              : 'This month’s AI reading limit is used up, so this needs entering by hand',
+      aiError && isTransientAiError(aiError)
+        ? `The AI service was busy, so the app will try reading this again shortly (${aiProblem(aiError)})`
+        : aiError
+          ? `The AI reader failed, so this needs checking by hand (${aiProblem(aiError)})`
+          : attempts.length
+            ? 'The AI reader could not read this document'
+            : aiLeft && isLlmConfigured(env)
+              ? 'There is too little text in this document for the AI reader, so this needs entering by hand'
+              : aiLeft
+                ? 'AI reading is not set up (no API key), so this needs entering by hand'
+                : 'This month’s AI reading limit is used up, so this needs entering by hand',
       null,
       attempts,
     );
@@ -732,4 +741,39 @@ function memberAccountEmail(accountId: string | null, db: Db): string | null {
 export function aiProblem(error: string): string {
   const message = error.match(/"message":\s*"((?:[^"\\]|\\.)*)"/)?.[1] ?? error;
   return message.length > 200 ? `${message.slice(0, 197)}…` : message;
+}
+
+function storedExtraction(doc: SourceDocument | null): StoredExtraction | null {
+  if (!doc?.extractionJson) return null;
+  try {
+    return JSON.parse(doc.extractionJson) as StoredExtraction;
+  } catch {
+    return null;
+  }
+}
+
+/** Busy reads are retried after 15 min, 30 min, 1 h, 2 h, 4 h, 8 h; then a person looks. */
+export const MAX_BUSY_RETRIES = 6;
+
+/**
+ * Documents whose AI read failed only because the service was busy: read them
+ * again once their backoff has passed. Runs from the worker's 15-minute tick.
+ */
+export async function retryBusyReads(now = new Date(), db: Db = getDb()): Promise<number> {
+  const waiting = db
+    .select()
+    .from(sourceDocument)
+    .where(eq(sourceDocument.status, 'needs_review'))
+    .all();
+  let retried = 0;
+  for (const doc of waiting) {
+    const s = storedExtraction(doc);
+    const n = s?.busyRetries ?? 0;
+    if (!s || n < 1 || n > MAX_BUSY_RETRIES) continue;
+    const due = Date.parse(s.processedAt) + 15 * 60_000 * 2 ** (n - 1);
+    if (now.getTime() < due) continue;
+    await processDocument(doc.householdId, doc.id, db);
+    retried++;
+  }
+  return retried;
 }

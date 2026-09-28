@@ -141,8 +141,9 @@ export async function reprocessDocumentAction(fd: FormData): Promise<void> {
 /** Re-run the pipeline over every document that isn't already a bill. */
 export async function reprocessAllAction(): Promise<void> {
   const me = await requireMember();
+  // Only what's waiting: re-reading a notice would re-flag a bill someone already sorted.
   for (const d of listDocuments(me.householdId)) {
-    if (d.billId || d.status === 'extracted' || d.kind === 'email') continue;
+    if (d.status !== 'needs_review' && d.status !== 'unprocessed') continue;
     await processDocument(me.householdId, d.id);
   }
   revalidatePath('/review');
