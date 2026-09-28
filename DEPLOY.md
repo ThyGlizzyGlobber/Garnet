@@ -250,14 +250,6 @@ no "pay the provider" reminder.
 Other non-bill emails (password resets, plan changes) are kept as notices,
 out of the review queue. Only signed notices change a bill.
 
-Members can get copies of everything sent to the bills address (password
-resets, account notices, bills) on their own member page → **Forward emails to
-me**: every email, or only the ones that aren't read as bills. The app re-sends
-them through Resend from `EMAIL_FROM`, with Reply-To set to the original
-sender; an address other than the member's sign-in email must be confirmed
-from a link first. Forwarded copies carry an `X-Home-Utilities-Forwarded`
-header so a copy that comes back is never forwarded again.
-
 Unknown addresses are rejected; if the app can't be reached, the Worker forwards
 the message to `FALLBACK_TO` so no bill is lost. Each household can receive
 `INBOUND_MAX_PER_HOUR` messages (default 60). If Cloudflare Access protects the
@@ -284,7 +276,7 @@ every email; Gmail's one-click Unsubscribe works too (RFC 8058).
 
 DMARC tells other mail servers what to do with mail that claims to be from
 `brjlabs.com` but fails authentication, which stops others spoofing the domain
-and helps invites, sign-in codes and forwarded copies avoid spam folders. The
+and helps invites, sign-in codes and household emails avoid spam folders. The
 only legitimate sender is Resend (`mail.brjlabs.com`, DKIM-signed and aligned).
 
 1. Cloudflare → `brjlabs.com` → **Email → DMARC Management** → enable it. Cloudflare

@@ -818,35 +818,6 @@
     "short": "Forward bills to ",
     "howTrust": "Bills forwarded by household members from the email they sign in with are added straight away. Anything else waits for a quick look."
   },
-  "forward": {
-    "title": "Forward emails to me",
-    "body": "Get a copy of what arrives at {address}: password resets and account notices from providers, and bills. Replies go straight back to the provider.",
-    "mode": "Forward",
-    "modes": {
-      "off": "Nothing",
-      "all": "Every email",
-      "non_bills": "Only emails that aren't bills"
-    },
-    "email": "To",
-    "emailHint": "Your sign-in email works straight away. Any other address gets a confirmation link first.",
-    "save": "Save",
-    "saved": "Saved.",
-    "active": "Forwarding to {email}.",
-    "pending": "Check {email} for a confirmation link. Nothing is forwarded until it's confirmed.",
-    "invalidEmail": "Enter a valid email address.",
-    "confirmSubject": "Confirm forwarding for {household}",
-    "confirmIntro": "{member} asked to receive copies of email sent to {household}'s bills address at this address.",
-    "confirmButton": "Confirm forwarding",
-    "confirmIgnore": "The link works for 3 days. If this wasn't you, ignore this email and nothing will be forwarded.",
-    "confirmPage": {
-      "title": "Confirm forwarding",
-      "body": "Send copies of {household}'s bills email to {email}?",
-      "cta": "Confirm",
-      "done": "Done. Emails to the bills address will now be copied to this address.",
-      "invalid": "This confirmation link has expired or was already used. Set forwarding up again from your member page."
-    },
-    "banner": "Forwarded from your household's bills address {address}. Sent by {sender}."
-  },
   "notify": {
     "footer": "You get these because you're in {household}. Stop {category}: {url}",
     "categories": {

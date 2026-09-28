@@ -10,15 +10,11 @@ import {
   changePinAction,
   deleteMemberAction,
   removeAccessAction,
-  saveForwardAction,
   saveNotifyPrefsAction,
   signOutOtherDevicesAction,
   updateMemberAction,
 } from '../../actions';
-import { ForwardForm } from '../../forward-form';
 import { NotifyForm } from '../../notify-form';
-import { billsAddress } from '@/lib/bills-address';
-import { getForward } from '@/lib/forwarding';
 import { countDevices } from '@/lib/auth/devices';
 import { authState } from '@/lib/auth/session';
 import { MemberForm } from '../../member-form';
@@ -33,11 +29,8 @@ export default async function EditMemberPage({ params }: { params: Promise<{ id:
   const admin = me.role === 'owner';
   const state = await authState();
   const account = state.kind === 'ok' ? state.account : null;
-  const tf = await getTranslations('forward');
   const tn = await getTranslations('notify.prefs');
-  const address = billsAddress(hh);
   const self = me.id === m.id;
-  const forward = self ? getForward(hh.id, m.id) : null;
   if (!admin && !self) redirect('/members');
   return (
     <div className="mx-auto max-w-xl">
@@ -109,24 +102,6 @@ export default async function EditMemberPage({ params }: { params: Promise<{ id:
           ) : (
             <p className="text-sm text-fg-muted">{tn('noEmail')}</p>
           )}
-        </Card>
-      )}
-      {self && account && address && (
-        <Card className="mt-4 flex flex-col gap-3">
-          <h2 className="font-display font-semibold">{tf('title')}</h2>
-          <p className="text-sm text-fg-muted">{tf('body', { address })}</p>
-          {forward && (
-            <p className="text-sm">
-              {forward.verifiedAt
-                ? tf('active', { email: forward.email })
-                : tf('pending', { email: forward.email })}
-            </p>
-          )}
-          <ForwardForm
-            action={saveForwardAction}
-            email={forward?.email ?? account.email}
-            mode={forward?.mode ?? 'off'}
-          />
         </Card>
       )}
       {self && account && (

@@ -202,7 +202,7 @@ export const serviceSplit = sqliteTable(
 
 /**
  * notice = a provider email that isn't a bill (payment failed/received, password
- * reset, plan change…): kept and forwarded, but not in the review queue.
+ * reset, plan change…): kept, but not in the review queue.
  */
 export const DOCUMENT_STATUSES = [
   'unprocessed',
@@ -434,28 +434,6 @@ export const usage = sqliteTable(
   (t) => [uniqueIndex('usage_household_month_kind_unique').on(t.householdId, t.month, t.kind)],
 );
 
-export const FORWARD_MODES = ['all', 'non_bills'] as const;
-export type ForwardMode = (typeof FORWARD_MODES)[number];
-
-/**
- * A member's wish to receive copies of mail sent to the household's bills
- * address (password resets, notices, bills). No row = off. An address other
- * than the member's sign-in email must be confirmed before anything is sent.
- */
-export const emailForward = sqliteTable('email_forward', {
-  memberId: text('member_id')
-    .primaryKey()
-    .references(() => member.id, { onDelete: 'cascade' }),
-  householdId: householdId(),
-  email: text('email').notNull(),
-  mode: text('mode', { enum: FORWARD_MODES }).notNull().default('all'),
-  verifiedAt: text('verified_at'),
-  tokenHash: text('token_hash'),
-  tokenExpiresAt: text('token_expires_at'),
-  createdAt: text('created_at').notNull(),
-  updatedAt: text('updated_at').notNull(),
-});
-
 /** One row per email sent about something, so nothing is sent twice. */
 export const notificationLog = sqliteTable(
   'notification_log',
@@ -475,7 +453,6 @@ export const notificationLog = sqliteTable(
 );
 
 export type Household = typeof household.$inferSelect;
-export type EmailForward = typeof emailForward.$inferSelect;
 export type Account = typeof account.$inferSelect;
 export type Invite = typeof invite.$inferSelect;
 export type Device = typeof device.$inferSelect;

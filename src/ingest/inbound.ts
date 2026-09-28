@@ -1,12 +1,6 @@
 import { getDb, type Db } from '@/db/client';
-import {
-  aliasFromRecipient,
-  billsAddress,
-  householdByAlias,
-  verifyDelivery,
-} from '@/lib/bills-address';
+import { aliasFromRecipient, householdByAlias, verifyDelivery } from '@/lib/bills-address';
 import type { DNSResolver } from 'mailauth';
-import { forwardInbound } from '@/lib/forwarding';
 import { checkSender } from '@/lib/sender-auth';
 import { getEnv, isInboundEmailConfigured } from '@/lib/env';
 import { rateLimit } from '@/lib/rate-limit';
@@ -32,8 +26,6 @@ export async function handleInboundEmail(
     db?: Db;
     nowS?: number;
     waitForProcessing?: boolean;
-    /** Banner on forwarded copies (translated by the route). */
-    forwardBanner?: (sender: string, address: string) => string;
     /** DNS lookups for DKIM keys (tests). */
     resolver?: DNSResolver;
   } = {},
@@ -63,32 +55,12 @@ export async function handleInboundEmail(
     domain: sender.fromDomain,
     verified: sender.verified,
   });
-  const address = billsAddress(hh, db) ?? '';
-  const banner =
-    opts.forwardBanner ??
-    ((sender: string, to: string) =>
-      `Forwarded from your household's bills address ${to}. Sent by ${sender}.`);
   const work = (async () => {
-    let readAsBill = false;
     for (const id of toProcess) {
       try {
-        const outcome = await processDocument(hh.id, id, db);
-        if (outcome.status === 'extracted' || outcome.reason === 'duplicate') readAsBill = true;
+        await processDocument(hh.id, id, db);
       } catch (e) {
         console.error(`[inbound] processing ${id} failed:`, (e as Error).message);
-      }
-    }
-    // Copies go out once per new message, after reading so "only non-bills" can decide.
-    if (archived > 0) {
-      try {
-        await forwardInbound(hh.id, req.body, {
-          billsAddress: address,
-          readAsBill,
-          banner: (sender) => banner(sender, address),
-          db,
-        });
-      } catch (e) {
-        console.error('[inbound] forwarding failed:', (e as Error).message);
       }
     }
   })();

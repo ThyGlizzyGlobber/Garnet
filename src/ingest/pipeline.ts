@@ -190,12 +190,7 @@ async function readAndRoute(
     if (looksLikeBill(doc.emailSubject, text)) return null;
     // The AI failed (bad key, outage): nobody has really read it, so a person should.
     if (attempts.some((a) => a.error)) return null;
-    store(
-      'notice',
-      'Not a bill (kept, and forwarded to anyone who asked for copies)',
-      null,
-      attempts,
-    );
+    store('notice', 'Not a bill (kept for reference)', null, attempts);
     return { documentId: doc.id, status: 'notice', reason: 'not-a-bill', result: null };
   };
 
@@ -665,7 +660,7 @@ function applyDocument(
   const sure = best.confidence >= threshold;
   if (info.kind === 'other') {
     if (!sure && looksLikeBill(doc.emailSubject, text)) return null;
-    store('notice', 'Not a bill (kept, and forwarded to anyone who asked for copies)', null, []);
+    store('notice', 'Not a bill (kept for reference)', null, []);
     return { documentId: doc.id, status: 'notice', reason: 'not-a-bill', result: null };
   }
   if (!sure) {

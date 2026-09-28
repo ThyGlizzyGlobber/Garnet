@@ -19,9 +19,6 @@ import { EMAIL_PATTERN } from '@/lib/auth/tokens';
 import { isIsoDate } from '@/lib/dates';
 import { getHousehold } from '@/lib/households';
 import { inviteLink, sendInviteEmail } from '@/lib/invite-email';
-import { composeEmail, sendEmail } from '@/lib/email';
-import { appUrl } from '@/lib/env';
-import { disableForward, setForward } from '@/lib/forwarding';
 import { setNotifyPref } from '@/lib/notifications';
 import { createInvite, revokeInvites } from '@/lib/invites';
 import { createMember, deleteMember, getMember, updateMember } from '@/lib/members';
@@ -206,48 +203,6 @@ export async function signOutOtherDevicesAction(): Promise<void> {
   const keep = await currentDeviceId(s.account.id);
   if (keep) forgetOtherDevices(s.account.id, keep);
   revalidatePath(`/members/${s.member.id}/edit`);
-}
-
-/** Your own forwarding of bills-address mail. Other addresses must be confirmed first. */
-export async function saveForwardAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
-  const s = await authState();
-  if (s.kind !== 'ok' || !s.account) redirect('/');
-  const t = await getTranslations('forward');
-  const me = s.member;
-  const mode = str(fd, 'mode');
-  if (mode === 'off') {
-    disableForward(me.householdId, me.id);
-    revalidatePath(`/members/${me.id}/edit`);
-    return { ok: true };
-  }
-  if (mode !== 'all' && mode !== 'non_bills') return { error: t('invalidEmail') };
-  const email = str(fd, 'email').toLowerCase();
-  if (!EMAIL_PATTERN.test(email)) return { fieldErrors: { email: t('invalidEmail') } };
-  const { token } = setForward(me.householdId, me.id, {
-    email,
-    mode,
-    accountEmail: s.account.email,
-  });
-  if (token) {
-    const hh = getHousehold(me.householdId)!;
-    const vars = { household: hh.name, member: me.name };
-    const sent = await sendEmail(
-      composeEmail({
-        to: email,
-        subject: t('confirmSubject', vars),
-        blocks: [
-          { p: t('confirmIntro', vars) },
-          {
-            button: { label: t('confirmButton'), href: `${appUrl()}/forwarding/confirm/${token}` },
-          },
-        ],
-        footer: t('confirmIgnore'),
-      }),
-    );
-    if (!sent.sent) return { error: sent.reason };
-  }
-  revalidatePath(`/members/${me.id}/edit`);
-  return { ok: true };
 }
 
 /** Your own email preferences. */
