@@ -158,7 +158,8 @@ export default async function LedgerPage({
         ) : (
           <ul className="divide-y divide-border">
             {ledger.unpaid.map((s) => {
-              const overdue = s.bill.dueDate < today;
+              const due = s.dueDate ?? s.bill.dueDate;
+              const overdue = due < today;
               return (
                 <li key={s.id} className="flex flex-wrap items-center gap-3 py-3 sm:flex-nowrap">
                   {s.payer ? (
@@ -175,7 +176,10 @@ export default async function LedgerPage({
                     <Link href={`/bills/${s.billId}`} className="block truncate font-semibold">
                       {s.service.name}{' '}
                       <span className="font-normal text-fg-muted">
-                        · {date(s.bill.periodStart, 'short')} – {date(s.bill.periodEnd, 'short')}
+                        ·{' '}
+                        {s.instalment
+                          ? t('unpaid.instalment', { n: s.instalment, date: date(due, 'short') })
+                          : `${date(s.bill.periodStart, 'short')} – ${date(s.bill.periodEnd, 'short')}`}
                       </span>
                     </Link>
                     <p className="flex flex-wrap items-center gap-x-2 text-xs text-fg-muted">

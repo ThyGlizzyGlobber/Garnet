@@ -1,6 +1,7 @@
 import { and, eq, isNull, lt } from 'drizzle-orm';
 import { getDb, type Db } from '@/db/client';
-import { bill, service } from '@/db/schema';
+import { bill, billInstalment, service } from '@/db/schema';
+import { setInstalmentPaid } from '@/lib/bills';
 import { todayIn } from '@/lib/dates';
 import { listHouseholds } from '@/lib/households';
 
@@ -14,7 +15,7 @@ export function settleAutoPaidBills(now = new Date(), db: Db = getDb()): number 
   for (const hh of listHouseholds(db)) {
     const today = todayIn(hh.timezone, now);
     const due = db
-      .select({ id: bill.id, dueDate: bill.dueDate })
+      .select({ id: bill.id, dueDate: bill.dueDate, paymentPlan: bill.paymentPlan })
       .from(bill)
       .innerJoin(service, eq(bill.serviceId, service.id))
       .where(
@@ -28,6 +29,19 @@ export function settleAutoPaidBills(now = new Date(), db: Db = getDb()): number 
       )
       .all();
     for (const b of due) {
+      if (b.paymentPlan === 'instalments') {
+        // Each instalment is taken on its own date.
+        const open = db
+          .select()
+          .from(billInstalment)
+          .where(and(eq(billInstalment.billId, b.id), isNull(billInstalment.paidToProviderAt)))
+          .all()
+          .filter((i) => i.dueDate < today);
+        for (const i of open)
+          setInstalmentPaid(hh.id, b.id, i.seq, true, db, `${i.dueDate}T00:00:00Z`);
+        if (open.length) settled++;
+        continue;
+      }
       settled += db
         .update(bill)
         .set({ paidToProviderAt: `${b.dueDate}T00:00:00Z`, updatedAt: now.toISOString() })

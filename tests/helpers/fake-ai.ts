@@ -72,6 +72,7 @@ function readFixture(t: string): AiOutput | null {
       auto_pay: true,
       previous_payment: { due_date: '2026-05-28', amount_due: 129, amount_received: received },
       metrics: [],
+      instalments: null,
     },
     confidence: 0.97,
   };

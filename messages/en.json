@@ -141,7 +141,30 @@
       "prorated": "{days} of {total} days",
       "markPaid": "Mark paid",
       "markUnpaid": "Undo",
-      "payTo": "Pay {name}"
+      "payTo": "Pay {name}",
+      "instalment": "Instalment {n} · due {date}"
+    },
+    "plan": {
+      "title": "How will you pay?",
+      "undecided": "This notice can be paid in full or in {count} instalments. Until someone chooses, it's treated as paid in full.",
+      "whoChooses": "The person who pays {service} or a household admin can choose.",
+      "chosenFull": "You're paying this in full.",
+      "chosenInstalments": "You're paying this in {count} instalments. Everyone's share is split across them.",
+      "full": "In full",
+      "fullBy": "by {date}",
+      "instalments": "In {count} instalments",
+      "total": "{amount} in total",
+      "chosen": "Chosen",
+      "choose": "Pay this way",
+      "lockedShares": "Someone has paid their share, so the plan can't change now.",
+      "lockedProvider": "A payment to the provider is recorded. Undo it to change the plan.",
+      "paidOn": "Paid {date}",
+      "due": "Due",
+      "overdue": "Overdue",
+      "markPaid": "Mark paid to {provider}",
+      "undo": "Undo",
+      "nextDue": "Next instalment due",
+      "ordinal": "{n, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} instalment"
     },
     "form": {
       "create": "Add bill",
@@ -168,6 +191,7 @@
     "anomaly": "Unusual",
     "download": "Download all bills (CSV)",
     "tile": {
+      "instalment": "instalment {n} of {of}",
       "paidProvider": "Paid",
       "unpaid": "Unpaid",
       "overdue": "Overdue",
@@ -578,7 +602,8 @@
       "paid": "Your share is paid",
       "noShare": "Not split with you",
       "none": "Nothing due",
-      "viewBill": "View bill"
+      "viewBill": "View bill",
+      "instalment": "Instalment {n} of {of}"
     },
     "billsTile": {
       "title": "Bills",
@@ -609,6 +634,10 @@
       "payment_failed": "{provider}: the payment for the bill due {due} failed",
       "overdue": "{provider}: the bill due {due} is overdue",
       "open": "Open bill"
+    },
+    "planBanner": {
+      "text": "{service} can be paid in full or in {count} instalments. Choose how you'll pay it",
+      "open": "Choose"
     }
   },
   "ledger": {
@@ -631,6 +660,7 @@
       "noPayer": "No payer set for this service",
       "ref": "ref {ref}",
       "overdue": "Overdue",
+      "instalment": "instalment {n} · due {date}",
       "markPaid": "Mark paid",
       "count": "{count, plural, =0 {nothing to pay} one {# share to pay} other {# shares to pay}}"
     },
@@ -929,7 +959,8 @@
       "payDetails": "Pay {payer}: {details}",
       "payer": "You pay {provider} {amount} by {due}. The others owe you {owed} between them.",
       "total": "It's due {due}.",
-      "overLimit": "Usage on this bill was {perDay} {unit} a day, {pct}% over your household's limit of {limit} {unit} a month."
+      "overLimit": "Usage on this bill was {perDay} {unit} a day, {pct}% over your household's limit of {limit} {unit} a month.",
+      "instalments": "This bill can also be paid in {count} instalments (the first is {amount}, due {due}). Open it in the app to choose how you'll pay it."
     },
     "due": {
       "subject": "Reminder: your {service} share of {share} is due {when}",

@@ -70,6 +70,8 @@ export async function approveReviewAction(_prev: ActionState, fd: FormData): Pro
       error: 'Please fix the highlighted fields.',
       fieldErrors: { amount: 'Enter a valid amount' },
     };
+  // What the AI read stays with the bill (figures, instalments), whatever the person corrected.
+  const read = getReviewItem(hh.id, doc.id)?.extraction?.result;
   let billId: string;
   try {
     billId = createBill(hh.id, {
@@ -90,12 +92,11 @@ export async function approveReviewAction(_prev: ActionState, fd: FormData): Pro
       externalRef: v.externalRef || null,
       notes: v.notes || null,
       createdByMemberId: me.id,
+      instalments: read?.bill.instalments ?? null,
     }).id;
   } catch (e) {
     return { error: (e as Error).message };
   }
-  // The figures the AI read stay with the bill, whatever the person corrected above.
-  const read = getReviewItem(hh.id, doc.id)?.extraction?.result;
   if (read?.bill.metrics) saveBillMetrics(hh.id, billId, read.bill.metrics);
   // "Trust future bills from this sender": only for signed mail from that domain.
   // Personal mailboxes (gmail.com, …) are only ever trusted as the exact address.

@@ -11,6 +11,8 @@ import {
   createBill,
   getBill,
   setBillPaidToProvider,
+  setInstalmentPaid,
+  setPaymentPlan,
   setSharePaid,
   updateBill,
   type BillInput,
@@ -172,6 +174,34 @@ export async function clearBillAlertAction(fd: FormData): Promise<void> {
   const me = await requireMember();
   const id = str(fd, 'id');
   clearBillAlert(me.householdId, id);
+  revalidatePath(`/bills/${id}`);
+  revalidatePath('/bills');
+  revalidatePath('/');
+}
+
+/** Pay a bill in full or by the instalments it offers: the service's payer or an admin chooses. */
+export async function setPaymentPlanAction(fd: FormData): Promise<void> {
+  const me = await requireMember();
+  const id = str(fd, 'id');
+  const plan = str(fd, 'plan');
+  const b = getBill(me.householdId, id);
+  if (!b || (plan !== 'full' && plan !== 'instalments')) return;
+  if (me.role !== 'owner' && b.service.payerMemberId !== me.id) return;
+  try {
+    setPaymentPlan(me.householdId, id, plan);
+  } catch (e) {
+    // The page only offers the switch while it's allowed; a race changes nothing.
+    console.warn('[bills] payment plan:', (e as Error).message);
+  }
+  revalidatePath(`/bills/${id}`);
+  revalidatePath('/bills');
+  revalidatePath('/');
+}
+
+export async function toggleInstalmentPaidAction(fd: FormData): Promise<void> {
+  const me = await requireMember();
+  const id = str(fd, 'id');
+  setInstalmentPaid(me.householdId, id, Number(str(fd, 'seq')), str(fd, 'paid') === 'true');
   revalidatePath(`/bills/${id}`);
   revalidatePath('/bills');
   revalidatePath('/');

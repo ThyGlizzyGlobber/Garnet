@@ -71,6 +71,7 @@ const waterBill = (ref: string): AiOutput => ({
     auto_pay: false,
     previous_payment: null,
     metrics: [],
+    instalments: null,
   },
   payment: null,
   confidence: 0.93,

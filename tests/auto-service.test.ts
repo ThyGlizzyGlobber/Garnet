@@ -60,6 +60,7 @@ const bill = (
     auto_pay: true,
     previous_payment: null,
     metrics: [],
+    instalments: null,
   },
   payment: null,
   confidence: 0.95,

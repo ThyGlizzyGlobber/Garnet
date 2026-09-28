@@ -5,7 +5,8 @@ import { TrendLine } from '@/components/charts/trend-line';
 import { Badge, Card, EmptyState, LinkButton, PageHeader } from '@/components/ui';
 import { InlineAction } from '@/components/ui/form';
 import { Arc, Ring } from '@/components/ui/ring';
-import { billsWithAlerts, getBill } from '@/lib/bills';
+import { billsWithAlerts, getBill, listBills } from '@/lib/bills';
+import { dueNow, planUndecided } from '@/lib/instalments';
 import { pageContext } from '@/lib/context';
 import { darkVariant } from '@/lib/palette';
 import { addMonths } from '@/lib/periods';
@@ -91,6 +92,13 @@ export default async function HomePage() {
   const settled = shared ? settlementRate(hh.id, s.thisMonth.month) : null;
   const reviewCount = documentCounts(hh.id).needs_review;
   const alerts = billsWithAlerts(hh.id);
+  // Bills offering instalments that nobody has chosen a plan for (the payer or an admin chooses).
+  const planChoices = listBills(hh.id).filter(
+    (b) =>
+      planUndecided(b) &&
+      !b.paidToProviderAt &&
+      (me.role === 'owner' || b.service.payerMemberId === me.id),
+  );
 
   const monthName = (m: string, style: 'short' | 'long' = 'short') =>
     new Intl.DateTimeFormat(hh.locale, { month: style, timeZone: 'UTC' }).format(
@@ -135,7 +143,12 @@ export default async function HomePage() {
 
   const nextBill = s.overdue[0] ?? s.upcoming[0];
   const nextDetail = nextBill ? getBill(hh.id, nextBill.id) : null;
-  const myShare = nextDetail?.shares.find((sh) => sh.memberId === me.id) ?? null;
+  // Paid by instalments: the instalment due now, and my share of it.
+  const nextDue = nextBill ? dueNow(nextBill) : null;
+  const myShare =
+    nextDetail?.shares.find(
+      (sh) => sh.memberId === me.id && sh.instalment === (nextDue?.seq ?? 0),
+    ) ?? null;
   // The strongest basis any service's estimate uses, for the set-aside note.
   const projMethod =
     (['seasonal', 'weather', 'recent', 'area', 'single'] as const).find((m) =>
@@ -205,6 +218,21 @@ export default async function HomePage() {
             })}
           </span>
           <span>{t('alertBanner.open')} →</span>
+        </Link>
+      ))}
+      {planChoices.map((b) => (
+        <Link
+          key={b.id}
+          href={`/bills/${b.id}#plan`}
+          className="mb-4 flex items-center justify-between gap-3 rounded-card bg-accent-soft px-5 py-3 text-sm font-semibold text-accent"
+        >
+          <span>
+            {t('planBanner.text', {
+              service: b.service.name,
+              count: b.instalments.length,
+            })}
+          </span>
+          <span>{t('planBanner.open')} →</span>
         </Link>
       ))}
       {reviewCount > 0 && (
@@ -398,8 +426,13 @@ export default async function HomePage() {
                 {nextBill.service.name}
               </Link>
               <p className="font-display text-[34px] leading-none font-semibold tracking-tight tabular-nums">
-                {money(nextBill.amountMinor, nextBill.currency)}
+                {money(nextDue!.amountMinor, nextBill.currency)}
               </p>
+              {nextDue!.seq !== null && (
+                <p className="text-xs text-fg-muted">
+                  {t('nextDue.instalment', { n: nextDue!.seq, of: nextDue!.of })}
+                </p>
+              )}
               <p className="text-sm text-fg-muted">
                 {nextBill.daysUntilDue < 0 ? (
                   <span className="font-semibold text-danger">
@@ -460,7 +493,7 @@ export default async function HomePage() {
                 </span>
               </span>
               <span className="text-sm font-semibold tabular-nums">
-                {money(b.amountMinor, b.currency)}
+                {money(dueNow(b).amountMinor, b.currency)}
               </span>
             </Link>
           ))}

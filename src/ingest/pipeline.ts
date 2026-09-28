@@ -469,6 +469,7 @@ export function createBillFromExtraction(
       confidence: result.confidence,
       externalRef: b.externalRef ?? null,
       notes: result.warnings.length ? result.warnings.join('\n') : null,
+      instalments: b.instalments ?? null,
     },
     db,
   );
@@ -626,7 +627,14 @@ function applyReceipt(
       .all()
       .find((x) => allowed.some((s) => s.id === x.serviceId));
     if (!b) continue;
-    setBillPaidToProvider(householdId, b.id, true, db, `${receipt.paidDate}T00:00:00Z`);
+    setBillPaidToProvider(
+      householdId,
+      b.id,
+      true,
+      db,
+      `${receipt.paidDate}T00:00:00Z`,
+      inv.amountMinor || null,
+    );
     clearBillAlert(householdId, b.id, db);
     paid.push(`#${inv.ref}`);
     firstBill ??= b.id;

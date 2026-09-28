@@ -77,6 +77,7 @@ const electricity = (ref: string): AiOutput => ({
     account_number: null,
     auto_pay: false,
     previous_payment: null,
+    instalments: null,
     metrics: [
       {
         key: 'usage_peak',

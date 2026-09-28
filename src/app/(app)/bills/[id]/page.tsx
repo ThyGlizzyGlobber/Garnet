@@ -11,10 +11,13 @@ import { listBillMetrics } from '@/lib/metrics';
 import { figureChanges } from '@/lib/consumption';
 import { ChangeText } from '@/components/app/usage';
 import { METRIC_KINDS } from '@/db/schema';
+import { paysByInstalments } from '@/lib/instalments';
 import {
   clearBillAlertAction,
   deleteBillAction,
+  setPaymentPlanAction,
   toggleBillPaidAction,
+  toggleInstalmentPaidAction,
   toggleSharePaidAction,
 } from '../actions';
 
@@ -26,6 +29,14 @@ export default async function BillPage({ params }: { params: Promise<{ id: strin
   if (!b) notFound();
   const overdue = !b.paidToProviderAt && b.dueDate < today;
   const payer = b.shares.find((s) => s.paidMethod === 'payer')?.member;
+  const byInstalments = paysByInstalments(b);
+  const tp = await getTranslations('bills.plan');
+  // Shares grouped per instalment when paying by instalments (one group otherwise).
+  const shareGroups = [...new Set(b.shares.map((s) => s.instalment))].map((n) => ({
+    n,
+    instalment: b.instalments.find((i) => i.seq === n),
+    shares: b.shares.filter((s) => s.instalment === n),
+  }));
   const metrics = listBillMetrics(hh.id, b.id);
   const changes = metrics.length ? figureChanges(hh.id, b.id) : new Map();
   const tu = await getTranslations('usage');
@@ -107,7 +118,10 @@ export default async function BillPage({ params }: { params: Promise<{ id: strin
           </div>
         </div>
         <dl className="mt-5 grid grid-cols-2 gap-x-4 gap-y-3 text-sm sm:grid-cols-3">
-          <Row label={t('detail.dueDate')} value={date(b.dueDate)} />
+          <Row
+            label={byInstalments ? tp('nextDue') : t('detail.dueDate')}
+            value={date(b.dueDate)}
+          />
           <Row label={t('detail.issueDate')} value={date(b.issueDate) || '—'} />
           <Row label={t('detail.externalRef')} value={b.externalRef ?? '—'} />
           <Row
@@ -134,13 +148,15 @@ export default async function BillPage({ params }: { params: Promise<{ id: strin
         )}
         {b.notes && <p className="mt-4 whitespace-pre-wrap text-sm text-fg-muted">{b.notes}</p>}
         <div className="mt-5 flex flex-wrap gap-2">
-          <InlineAction
-            action={toggleBillPaidAction}
-            hidden={{ id: b.id, paid: b.paidToProviderAt ? 'false' : 'true' }}
-            label={
-              b.paidToProviderAt ? t('detail.markUnpaidProvider') : t('detail.markPaidProvider')
-            }
-          />
+          {!byInstalments && (
+            <InlineAction
+              action={toggleBillPaidAction}
+              hidden={{ id: b.id, paid: b.paidToProviderAt ? 'false' : 'true' }}
+              label={
+                b.paidToProviderAt ? t('detail.markUnpaidProvider') : t('detail.markPaidProvider')
+              }
+            />
+          )}
           <InlineAction
             action={deleteBillAction}
             hidden={{ id: b.id }}
@@ -150,6 +166,17 @@ export default async function BillPage({ params }: { params: Promise<{ id: strin
           />
         </div>
       </Card>
+
+      {b.instalments.length > 0 && (
+        <PaymentPlan
+          bill={b}
+          canChoose={me.role === 'owner' || b.service.payerMemberId === me.id}
+          today={today}
+          money={money}
+          date={date}
+          t={tp}
+        />
+      )}
 
       {hh.splitMode === 'shared' && (
         <Card className="mt-4">
@@ -162,58 +189,67 @@ export default async function BillPage({ params }: { params: Promise<{ id: strin
           {b.shares.length === 0 ? (
             <p className="mt-3 text-sm text-fg-muted">{t('shares.none')}</p>
           ) : (
-            <ul className="mt-3 divide-y divide-border">
-              {b.shares.map((s) => {
-                const mine = s.memberId === me.id;
-                const prorated = s.basisDays !== s.periodDays;
-                return (
-                  <li key={s.id} className="flex items-center justify-between gap-3 py-3">
-                    <div className="flex items-center gap-3">
-                      <span
-                        className="size-3 rounded-full"
-                        style={{ background: s.member.colour }}
-                      />
-                      <div>
-                        <p className="font-medium">
-                          {s.member.name}{' '}
-                          {mine && (
-                            <span className="text-xs text-fg-muted">({t('shares.you')})</span>
+            shareGroups.map((g) => (
+              <div key={g.n}>
+                {g.instalment && (
+                  <h3 className="mt-4 text-xs font-semibold tracking-wide text-fg-muted uppercase">
+                    {t('shares.instalment', { n: g.n, date: date(g.instalment.dueDate, 'short') })}
+                  </h3>
+                )}
+                <ul className="mt-3 divide-y divide-border">
+                  {g.shares.map((s) => {
+                    const mine = s.memberId === me.id;
+                    const prorated = s.basisDays !== s.periodDays;
+                    return (
+                      <li key={s.id} className="flex items-center justify-between gap-3 py-3">
+                        <div className="flex items-center gap-3">
+                          <span
+                            className="size-3 rounded-full"
+                            style={{ background: s.member.colour }}
+                          />
+                          <div>
+                            <p className="font-medium">
+                              {s.member.name}{' '}
+                              {mine && (
+                                <span className="text-xs text-fg-muted">({t('shares.you')})</span>
+                              )}
+                            </p>
+                            <p className="text-xs text-fg-muted">
+                              {s.paidAt
+                                ? s.paidMethod === 'payer'
+                                  ? t('shares.paidProvider')
+                                  : t('shares.paidOn', { date: date(s.paidAt, 'short') })
+                                : s.paymentReference
+                                  ? t('shares.ref', { ref: s.paymentReference })
+                                  : t('shares.unpaid')}
+                              {prorated &&
+                                ` · ${t('shares.prorated', { days: s.basisDays, total: s.periodDays })}`}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="font-semibold tabular-nums">
+                            {formatMoney(s.amountMinor, s.currency, hh.locale)}
+                          </span>
+                          {s.paidMethod !== 'payer' && (
+                            <InlineAction
+                              action={toggleSharePaidAction}
+                              hidden={{
+                                shareId: s.id,
+                                billId: b.id,
+                                paid: s.paidAt ? 'false' : 'true',
+                              }}
+                              label={s.paidAt ? t('shares.markUnpaid') : t('shares.markPaid')}
+                              variant={s.paidAt ? 'ghost' : 'primary'}
+                            />
                           )}
-                        </p>
-                        <p className="text-xs text-fg-muted">
-                          {s.paidAt
-                            ? s.paidMethod === 'payer'
-                              ? t('shares.paidProvider')
-                              : t('shares.paidOn', { date: date(s.paidAt, 'short') })
-                            : s.paymentReference
-                              ? t('shares.ref', { ref: s.paymentReference })
-                              : t('shares.unpaid')}
-                          {prorated &&
-                            ` · ${t('shares.prorated', { days: s.basisDays, total: s.periodDays })}`}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="font-semibold tabular-nums">
-                        {formatMoney(s.amountMinor, s.currency, hh.locale)}
-                      </span>
-                      {s.paidMethod !== 'payer' && (
-                        <InlineAction
-                          action={toggleSharePaidAction}
-                          hidden={{
-                            shareId: s.id,
-                            billId: b.id,
-                            paid: s.paidAt ? 'false' : 'true',
-                          }}
-                          label={s.paidAt ? t('shares.markUnpaid') : t('shares.markPaid')}
-                          variant={s.paidAt ? 'ghost' : 'primary'}
-                        />
-                      )}
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ))
           )}
           {payer && payer.paymentDetails.length > 0 && (
             <div className="mt-3 rounded-xl bg-surface-2 p-3 text-xs">
@@ -276,5 +312,140 @@ function Row({ label, value }: { label: string; value: string }) {
       <dt className="text-fg-muted">{label}</dt>
       <dd className="font-medium">{value}</dd>
     </div>
+  );
+}
+
+type Translate = (key: string, values?: Record<string, string | number>) => string;
+
+/**
+ * "How will you pay?": the notice's two options (in full, or by instalments),
+ * which one the household chose, and each instalment's payment to the provider.
+ */
+function PaymentPlan({
+  bill: b,
+  canChoose,
+  today,
+  money,
+  date,
+  t,
+}: {
+  bill: NonNullable<ReturnType<typeof getBill>>;
+  canChoose: boolean;
+  today: string;
+  money: (minor: number, currency?: string) => string;
+  date: (iso: string | null | undefined, style?: 'short' | 'medium') => string;
+  t: Translate;
+}) {
+  const chosen = b.paymentPlan;
+  const current = chosen ?? 'full';
+  const count = b.instalments.length;
+  const total = b.instalments.reduce((s, i) => s + i.amountMinor, 0);
+  // Paid in order: mark the next one paid, or undo the last one paid.
+  const nextSeq = b.instalments.find((i) => !i.paidToProviderAt)?.seq;
+  const lastPaidSeq = b.instalments.filter((i) => i.paidToProviderAt).at(-1)?.seq;
+  const lock = b.shares.some((s) => s.paidAt && s.paidMethod !== 'payer')
+    ? t('lockedShares')
+    : b.paidToProviderAt || b.instalments.some((i) => i.paidToProviderAt)
+      ? t('lockedProvider')
+      : null;
+  const option = (plan: 'full' | 'instalments') => {
+    const isChosen = chosen === plan;
+    return `flex flex-col gap-2 rounded-2xl border p-4 ${
+      isChosen ? 'border-accent bg-accent-soft' : 'border-border-strong bg-surface-2'
+    }`;
+  };
+  const choose = (plan: 'full' | 'instalments') =>
+    canChoose && chosen !== plan && !(lock && current !== plan) ? (
+      <div className="mt-auto pt-1">
+        <InlineAction
+          action={setPaymentPlanAction}
+          hidden={{ id: b.id, plan }}
+          label={t('choose')}
+          variant={chosen === null ? 'primary' : 'secondary'}
+        />
+      </div>
+    ) : null;
+  return (
+    <Card className="mt-4 scroll-mt-24" id="plan">
+      <h2 className="font-semibold">{t('title')}</h2>
+      <p className="mt-0.5 text-xs text-fg-muted">
+        {chosen === null
+          ? t('undecided', { count })
+          : chosen === 'full'
+            ? t('chosenFull')
+            : t('chosenInstalments', { count })}
+        {chosen === null && !canChoose && ` ${t('whoChooses', { service: b.service.name })}`}
+      </p>
+      <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_1.4fr]">
+        <div className={option('full')}>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm font-semibold">{t('full')}</p>
+            {chosen === 'full' && <Badge tone="success">{t('chosen')}</Badge>}
+          </div>
+          <p className="font-display text-2xl font-semibold tabular-nums">
+            {money(b.fullAmountMinor ?? b.amountMinor, b.currency)}
+          </p>
+          <p className="text-xs text-fg-muted">
+            {t('fullBy', { date: date(b.fullDueDate ?? b.dueDate) })}
+          </p>
+          {choose('full')}
+        </div>
+        <div className={option('instalments')}>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm font-semibold">{t('instalments', { count })}</p>
+            {chosen === 'instalments' && <Badge tone="success">{t('chosen')}</Badge>}
+          </div>
+          <ul className="divide-y divide-border text-sm">
+            {b.instalments.map((i) => {
+              const late = !i.paidToProviderAt && i.dueDate < today;
+              return (
+                <li key={i.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                  <span className="flex flex-col">
+                    <span className="font-medium">{t('ordinal', { n: i.seq })}</span>
+                    <span className="flex flex-wrap items-center gap-2 text-xs text-fg-muted">
+                      {date(i.dueDate)}
+                      {chosen === 'instalments' &&
+                        (i.paidToProviderAt ? (
+                          <Badge tone="success">
+                            {t('paidOn', { date: date(i.paidToProviderAt, 'short') })}
+                          </Badge>
+                        ) : late ? (
+                          <Badge tone="danger">{t('overdue')}</Badge>
+                        ) : null)}
+                    </span>
+                  </span>
+                  <span className="font-semibold tabular-nums">
+                    {money(i.amountMinor, b.currency)}
+                  </span>
+                  {chosen === 'instalments' && (i.seq === nextSeq || i.seq === lastPaidSeq) && (
+                    <div className="basis-full">
+                      <InlineAction
+                        action={toggleInstalmentPaidAction}
+                        hidden={{
+                          id: b.id,
+                          seq: String(i.seq),
+                          paid: i.paidToProviderAt ? 'false' : 'true',
+                        }}
+                        label={
+                          i.paidToProviderAt
+                            ? t('undo')
+                            : t('markPaid', { provider: b.service.provider })
+                        }
+                        variant={i.paidToProviderAt ? 'ghost' : 'secondary'}
+                      />
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+          <p className="text-xs text-fg-muted">
+            {t('total', { amount: money(total, b.currency) })}
+          </p>
+          {choose('instalments')}
+        </div>
+      </div>
+      {lock && canChoose && <p className="mt-3 text-xs text-fg-muted">{lock}</p>}
+    </Card>
   );
 }

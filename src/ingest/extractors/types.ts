@@ -56,6 +56,16 @@ export interface ExtractedBill {
   autoPay?: boolean;
   /** Every other figure on the bill (usage by tariff, readings, charges, rates…). */
   metrics?: ExtractedMetric[];
+  /**
+   * The bill offers paying by instalments (council rates, rego, insurance): each
+   * instalment in order. `amountMinor`/`dueDate` are then the pay-in-full option.
+   */
+  instalments?: BillInstalmentOption[] | null;
+}
+
+export interface BillInstalmentOption {
+  dueDate: string;
+  amountMinor: number;
 }
 
 export interface ExtractedMetric {

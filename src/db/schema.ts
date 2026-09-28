@@ -328,6 +328,19 @@ export const bill = sqliteTable(
     anomalyNote: text('anomaly_note'),
     /** What the Unusual check compared with: last_year | recent | seasonal_allowance. */
     anomalyBasis: text('anomaly_basis', { enum: ['last_year', 'recent', 'seasonal_allowance'] }),
+    /**
+     * Bills that offer instalments (council rates, rego, insurance): the "pay in
+     * full" option, kept so the household can switch back from instalments.
+     * Null when the bill offers no instalments (bill_instalment has no rows).
+     */
+    fullAmountMinor: integer('full_amount_minor'),
+    fullDueDate: text('full_due_date'),
+    /**
+     * How the household pays a bill that offers instalments: null = not chosen
+     * yet (treated as in full), full, or instalments. With instalments,
+     * amount_minor is their sum and due_date the next unpaid instalment's.
+     */
+    paymentPlan: text('payment_plan', { enum: ['full', 'instalments'] }),
     notes: text('notes'),
     createdByMemberId: text('created_by_member_id').references(() => member.id, {
       onDelete: 'set null',
@@ -343,6 +356,28 @@ export const bill = sqliteTable(
   ],
 );
 
+/** An instalment a bill offers ("1st instalment $918.00 due 30/09/2026"), in order. */
+export const billInstalment = sqliteTable(
+  'bill_instalment',
+  {
+    id: text('id').primaryKey(),
+    householdId: householdId(),
+    billId: text('bill_id')
+      .notNull()
+      .references(() => bill.id, { onDelete: 'cascade' }),
+    /** 1-based position on the bill. */
+    seq: integer('seq').notNull(),
+    dueDate: text('due_date').notNull(),
+    amountMinor: integer('amount_minor').notNull(),
+    /** Only used while the household pays this bill by instalments. */
+    paidToProviderAt: text('paid_to_provider_at'),
+  },
+  (t) => [
+    uniqueIndex('bill_instalment_bill_seq_unique').on(t.billId, t.seq),
+    index('bill_instalment_household_idx').on(t.householdId),
+  ],
+);
+
 export const share = sqliteTable(
   'share',
   {
@@ -354,6 +389,10 @@ export const share = sqliteTable(
     memberId: text('member_id')
       .notNull()
       .references(() => member.id),
+    /** 0 = the whole bill; 1…n = that instalment, when the bill is paid by instalments. */
+    instalment: integer('instalment').notNull().default(0),
+    /** The instalment's due date; null = the bill's due date. */
+    dueDate: text('due_date'),
     amountMinor: integer('amount_minor').notNull(),
     currency: text('currency').notNull(),
     /** How the split was derived, kept for transparency in the UI. */
@@ -371,7 +410,7 @@ export const share = sqliteTable(
     updatedAt: text('updated_at').notNull(),
   },
   (t) => [
-    uniqueIndex('share_bill_member_unique').on(t.billId, t.memberId),
+    uniqueIndex('share_bill_member_unique').on(t.billId, t.memberId, t.instalment),
     index('share_member_idx').on(t.memberId),
     index('share_household_idx').on(t.householdId),
   ],
@@ -649,4 +688,5 @@ export type WeatherDay = typeof weatherDay.$inferSelect;
 export type WeatherForecast = typeof weatherForecast.$inferSelect;
 export type NewBill = typeof bill.$inferInsert;
 export type Share = typeof share.$inferSelect;
+export type BillInstalment = typeof billInstalment.$inferSelect;
 export type Projection = typeof projection.$inferSelect;

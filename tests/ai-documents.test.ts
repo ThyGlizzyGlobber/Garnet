@@ -145,6 +145,7 @@ describe('mapping the AI record', () => {
           auto_pay: true,
           previous_payment: { due_date: '2026-09-15', amount_due: 410, amount_received: 410 },
           metrics: [],
+          instalments: null,
         },
       },
       { services: [], serviceTypes: ['electricity'], defaultCurrency: 'AUD' },
@@ -258,6 +259,7 @@ describe('the pipeline acting on what the AI says a document is', () => {
         auto_pay: true,
         previous_payment: { due_date: '2026-09-15', amount_due: 410, amount_received: 410 },
         metrics: [],
+        instalments: null,
       },
     });
     await processDocument(hh.id, doc(hh.id, TEXT).id, db);
@@ -382,6 +384,7 @@ describe('"It\'s a bill" on a document filed as something else', () => {
       auto_pay: false,
       previous_payment: null,
       metrics: [],
+      instalments: null,
     },
   };
 

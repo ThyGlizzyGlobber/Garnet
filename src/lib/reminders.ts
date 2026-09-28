@@ -1,6 +1,7 @@
 import { and, eq, isNull } from 'drizzle-orm';
 import { getDb, type Db } from '@/db/client';
 import { bill, service, share, type Bill, type Share } from '@/db/schema';
+import { shareDueDate } from '@/lib/instalments';
 import { daysUntil } from '@/lib/periods';
 
 export type ReminderLevel = 'overdue' | 'due_soon' | 'upcoming';
@@ -36,7 +37,7 @@ export function remindersFor(
     .all();
   return rows
     .map((r) => {
-      const d = daysUntil(today, r.bill.dueDate);
+      const d = daysUntil(today, shareDueDate(r.share, r.bill));
       const level: ReminderLevel = d < 0 ? 'overdue' : d <= soonDays ? 'due_soon' : 'upcoming';
       return {
         share: r.share,

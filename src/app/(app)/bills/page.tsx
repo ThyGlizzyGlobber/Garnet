@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { dueNow, paysByInstalments, unpaidMinor } from '@/lib/instalments';
 import { getTranslations } from 'next-intl/server';
 import { ForwardAddress } from '@/components/app/forward-address';
 import { Icon } from '@/components/app/icons';
@@ -50,7 +51,7 @@ export default async function BillsPage({
   const total = bills.reduce((sum, b) => sum + b.amountMinor, 0);
   const unpaid = bills
     .filter((b) => !b.paidToProviderAt)
-    .reduce((sum, b) => sum + b.amountMinor, 0);
+    .reduce((sum, b) => sum + unpaidMinor(b), 0);
   // Links that change one filter and keep the rest.
   const href = (change: { f?: Filter; s?: string | null; y?: string | null; q?: string }) => {
     const next = { f: filter, s: serviceId, y: year, q, ...change };
@@ -259,6 +260,8 @@ export default async function BillsPage({
                           end: date(b.periodEnd, 'short'),
                         })}{' '}
                         · {t('due')} {date(b.dueDate, 'short')}
+                        {paysByInstalments(b) &&
+                          ` · ${t('tile.instalment', { n: dueNow(b).seq!, of: dueNow(b).of })}`}
                       </p>
                     </div>
                     {hh.splitMode === 'shared' && sharePct !== null && (

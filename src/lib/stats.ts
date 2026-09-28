@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, inArray, lte, ne } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, lte, ne, sql } from 'drizzle-orm';
 import { getDb, type Db } from '@/db/client';
 import { bill, member, share, type Bill, type Member, type Share } from '@/db/schema';
 import { type BillListItem, listBills } from '@/lib/bills';
@@ -12,6 +12,7 @@ import {
   monthBounds,
 } from '@/lib/periods';
 import { listServices, type ServiceWithType } from '@/lib/services';
+import { shareDueDate } from '@/lib/instalments';
 
 export interface ServiceTotal {
   service: ServiceWithType;
@@ -214,7 +215,7 @@ export function memberLedger(
     .from(share)
     .innerJoin(bill, eq(share.billId, bill.id))
     .where(and(eq(share.householdId, householdId), eq(share.memberId, memberId)))
-    .orderBy(desc(bill.dueDate))
+    .orderBy(desc(sql`coalesce(${share.dueDate}, ${bill.dueDate})`))
     .all();
   const enrich = (r: { share: Share; bill: Bill }): LedgerShare => {
     const svc = services.get(r.bill.serviceId)!;
@@ -226,7 +227,10 @@ export function memberLedger(
     };
   };
   const mine = rows.map(enrich);
-  const unpaid = mine.filter((s) => !s.paidAt);
+  // Soonest due first (instalments of one bill then read in order).
+  const unpaid = mine
+    .filter((s) => !s.paidAt)
+    .sort((a, b) => shareDueDate(a, a.bill).localeCompare(shareDueDate(b, b.bill)));
   const inFy = mine.filter((s) => s.bill.periodStart >= fy.start && s.bill.periodStart <= fy.end);
   // What others owe me: unpaid non-payer shares on bills for services I pay.
   const myServiceIds = [...services.values()]
@@ -305,13 +309,12 @@ export function settlementRate(
   db: Db = getDb(),
 ): { paid: number; total: number; pct: number | null } {
   const { start, end } = monthBounds(month);
+  const due = sql<string>`coalesce(${share.dueDate}, ${bill.dueDate})`;
   const rows = db
     .select({ paidAt: share.paidAt, paidMethod: share.paidMethod })
     .from(share)
     .innerJoin(bill, eq(share.billId, bill.id))
-    .where(
-      and(eq(share.householdId, householdId), gte(bill.dueDate, start), lte(bill.dueDate, end)),
-    )
+    .where(and(eq(share.householdId, householdId), gte(due, start), lte(due, end)))
     .all()
     .filter((r) => r.paidMethod !== 'payer');
   const paid = rows.filter((r) => r.paidAt).length;

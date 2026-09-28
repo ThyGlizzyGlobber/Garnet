@@ -1,10 +1,11 @@
 import { createHmac } from 'node:crypto';
-import { and, eq, gte, isNull, lte } from 'drizzle-orm';
+import { and, eq, gte, isNull, lte, sql } from 'drizzle-orm';
 import { createTranslator } from 'next-intl';
 import { getDb, type Db } from '@/db/client';
 import {
   account,
   bill,
+  billInstalment,
   member,
   notificationLog,
   service,
@@ -29,6 +30,7 @@ import { seasonNoticeText } from '@/lib/season-text';
 import { seasonAhead } from '@/lib/seasons';
 import { getService } from '@/lib/services';
 import { daysUntil } from '@/lib/periods';
+import { shareDueDate } from '@/lib/instalments';
 
 /**
  * Household emails: a new bill (each person's share and how to pay it),
@@ -208,7 +210,7 @@ export async function notifyBillCreated(
     ? getMember(householdId, b.service.payerMemberId, db)
     : null;
   // Over the household's own usage limit (compared per day): say so in every copy.
-  const overLimit: EmailBlock[] = [];
+  const extra: EmailBlock[] = [];
   const limit = b.service.usageLimitMonthly;
   const period = limit
     ? usageHistory(householdId, b.serviceId, db)?.periods.find((p) => p.billId === b.id)
@@ -218,7 +220,7 @@ export async function notifyBillCreated(
     if (pct >= 0.02) {
       const qty = (n: number) =>
         new Intl.NumberFormat(hh.locale, { maximumFractionDigits: n >= 100 ? 0 : 1 }).format(n);
-      overLimit.push({
+      extra.push({
         p: t('newBill.overLimit', {
           perDay: qty(period.perDay),
           unit: unitLabel(b.service.usageUnit ?? b.usageUnit),
@@ -228,6 +230,16 @@ export async function notifyBillCreated(
       });
     }
   }
+  // The bill offers instalments: say so, and where to choose.
+  const first = b.instalments[0];
+  if (first && b.paymentPlan === null)
+    extra.push({
+      p: t('newBill.instalments', {
+        count: b.instalments.length,
+        amount: f.money(first.amountMinor, b.currency),
+        due: f.day(first.dueDate),
+      }),
+    });
   let sent = 0;
   const recipients: { m: Member; build: () => { subject: string; blocks: EmailBlock[] } }[] = [];
   if (b.shares.length) {
@@ -243,7 +255,7 @@ export async function notifyBillCreated(
             subject: t('newBill.subjectPayer', vars),
             blocks: [
               { p: t('newBill.intro', vars) },
-              ...overLimit,
+              ...extra,
               { p: t('newBill.payer', { ...vars, owed: f.money(owed, b.currency) }) },
               billLink(b),
             ],
@@ -257,7 +269,7 @@ export async function notifyBillCreated(
           subject: t('newBill.subject', { ...vars, share: shareStr }),
           blocks: [
             { p: t('newBill.intro', vars) },
-            ...overLimit,
+            ...extra,
             {
               p: payer
                 ? t('newBill.share', { share: shareStr, payer: payer.name, due })
@@ -282,7 +294,7 @@ export async function notifyBillCreated(
           subject: t('newBill.subjectNoShare', vars),
           blocks: [
             { p: t('newBill.intro', vars) },
-            ...overLimit,
+            ...extra,
             { p: t('newBill.total', vars) },
             billLink(b),
           ],
@@ -413,15 +425,16 @@ export async function sendDueReminders(now = new Date(), db: Db = getDb()): Prom
         and(
           eq(share.householdId, hh.id),
           isNull(share.paidAt),
-          gte(bill.dueDate, from),
-          lte(bill.dueDate, to),
+          gte(sql`coalesce(${share.dueDate}, ${bill.dueDate})`, from),
+          lte(sql`coalesce(${share.dueDate}, ${bill.dueDate})`, to),
         ),
       )
       .all();
     for (const { s, b, svc } of unpaid) {
       const m = members.get(s.memberId);
       if (!m) continue;
-      const days = daysUntil(today, b.dueDate);
+      const dueDate = shareDueDate(s, b);
+      const days = daysUntil(today, dueDate);
       const payer = svc.payerMemberId ? (members.get(svc.payerMemberId) ?? null) : null;
       const shareStr = f.money(s.amountMinor, s.currency);
       let kind: string;
@@ -450,7 +463,7 @@ export async function sendDueReminders(now = new Date(), db: Db = getDb()): Prom
         const round = Math.floor((-days - 1) / 7);
         if (round >= OVERDUE_REMINDERS) continue;
         kind = `share_overdue:${round}`;
-        const due = f.day(b.dueDate);
+        const due = f.day(dueDate);
         build = () => ({
           subject: t('overdue.subject', { service: svc.name, share: shareStr }),
           blocks: [
@@ -484,10 +497,20 @@ export async function sendDueReminders(now = new Date(), db: Db = getDb()): Prom
     for (const { b, svc } of toProvider) {
       const payer = svc.payerMemberId ? members.get(svc.payerMemberId) : undefined;
       if (!payer) continue;
+      // By instalments: the one due now (the bill's due date follows it), once each.
+      const instalment =
+        b.paymentPlan === 'instalments'
+          ? db
+              .select()
+              .from(billInstalment)
+              .where(and(eq(billInstalment.billId, b.id), isNull(billInstalment.paidToProviderAt)))
+              .all()
+              .find((i) => i.dueDate === b.dueDate)
+          : undefined;
       const vars = {
         service: svc.name,
         provider: svc.provider,
-        amount: f.money(b.amountMinor, b.currency),
+        amount: f.money(instalment?.amountMinor ?? b.amountMinor, b.currency),
         due: f.day(b.dueDate),
       };
       const ok = await sendOnce(
@@ -495,7 +518,7 @@ export async function sendDueReminders(now = new Date(), db: Db = getDb()): Prom
         payer,
         'reminders',
         'provider_due',
-        b.id,
+        instalment ? `${b.id}:${instalment.seq}` : b.id,
         () => ({
           subject: t('providerDue.subject', vars),
           blocks: [{ p: t('providerDue.intro', vars) }, billLink(b)],

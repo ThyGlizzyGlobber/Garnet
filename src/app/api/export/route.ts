@@ -113,7 +113,7 @@ export async function GET(req: Request) {
     formatMinorPlain(s.amountMinor, s.currency),
     s.currency,
     `${s.basisDays}/${s.periodDays}`,
-    s.bill.dueDate,
+    s.dueDate ?? s.bill.dueDate,
     s.paidAt ? s.paidAt.slice(0, 10) : '',
     s.paidMethod ?? '',
     s.paymentReference ?? '',

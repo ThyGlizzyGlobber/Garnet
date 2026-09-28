@@ -1,15 +1,19 @@
-import { and, desc, eq, inArray } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray } from 'drizzle-orm';
 import { getDb, type Db } from '@/db/client';
 import {
   bill,
+  billInstalment,
   member,
   service,
   share,
   type Bill,
+  type BillInstalment,
   type BillSource,
   type Member,
   type Share,
 } from '@/db/schema';
+import type { BillInstalmentOption } from '@/ingest/extractors/types';
+import { instalmentDueDate } from '@/lib/instalments';
 import { ulid } from '@/lib/ids';
 import { getHousehold } from '@/lib/households';
 import { listMembers } from '@/lib/members';
@@ -37,14 +41,22 @@ export interface BillInput {
   paidToProviderAt?: string | null;
   notes?: string | null;
   createdByMemberId?: string | null;
+  /** The instalments the bill offers (amount and due date are then the pay-in-full option). */
+  instalments?: BillInstalmentOption[] | null;
 }
 
 export type ShareWithMember = Share & { member: Member };
-export type BillDetail = Bill & { service: ServiceWithType; shares: ShareWithMember[] };
+export type BillDetail = Bill & {
+  service: ServiceWithType;
+  shares: ShareWithMember[];
+  /** The instalments the bill offers, in order; empty when it offers none. */
+  instalments: BillInstalment[];
+};
 export type BillListItem = Bill & {
   service: ServiceWithType;
   shareCount: number;
   paidShareCount: number;
+  instalments: BillInstalment[];
 };
 
 /** Short period label for payment references, e.g. "Jul26". */
@@ -83,6 +95,7 @@ export function createBill(householdId: string, input: BillInput, db: Db = getDb
   const now = new Date().toISOString();
   const id = ulid();
   const currency = input.currency ?? hh.currency;
+  const options = input.instalments && input.instalments.length >= 2 ? input.instalments : null;
 
   db.transaction((tx) => {
     tx.insert(bill)
@@ -108,10 +121,25 @@ export function createBill(householdId: string, input: BillInput, db: Db = getDb
         paidToProviderAt: input.paidToProviderAt ?? null,
         notes: input.notes ?? null,
         createdByMemberId: input.createdByMemberId ?? null,
+        fullAmountMinor: options ? input.amountMinor : null,
+        fullDueDate: options ? input.dueDate : null,
         createdAt: now,
         updatedAt: now,
       })
       .run();
+    if (options)
+      tx.insert(billInstalment)
+        .values(
+          options.map((o, i) => ({
+            id: ulid(),
+            householdId,
+            billId: id,
+            seq: i + 1,
+            dueDate: o.dueDate,
+            amountMinor: o.amountMinor,
+          })),
+        )
+        .run();
     if (hh.splitMode === 'shared')
       insertShares(
         tx,
@@ -129,6 +157,11 @@ export function createBill(householdId: string, input: BillInput, db: Db = getDb
   return getBill(householdId, id, db)!;
 }
 
+/**
+ * A bill's member shares. Paid by instalments, each instalment is split the
+ * same way as the whole bill would be, with the instalment's due date, and its
+ * payment reference names the instalment's month.
+ */
 function insertShares(
   tx: Db,
   householdId: string,
@@ -138,46 +171,64 @@ function insertShares(
   template: string,
   locale: string,
   now: string,
+  instalments: Pick<BillInstalment, 'seq' | 'dueDate' | 'amountMinor'>[] = [],
 ) {
   const members = listMembers(householdId, tx);
-  const results = computeShares({
-    amountMinor: input.amountMinor,
-    periodStart: input.periodStart,
-    periodEnd: input.periodEnd,
-    splitMode: svc.splitMode,
-    members,
-    customWeights:
-      svc.splitMode === 'custom' ? getCustomSplits(householdId, svc.id, tx) : undefined,
-    payerMemberId: svc.payerMemberId,
-  });
-  if (!results.length) return;
   const byId = new Map(members.map((m) => [m.id, m]));
-  tx.insert(share)
-    .values(
-      results.map((r) => ({
-        id: ulid(),
-        householdId,
-        billId,
-        memberId: r.memberId,
-        amountMinor: r.amountMinor,
-        currency: input.currency,
-        basisWeight: r.basisWeight,
-        basisDays: r.basisDays,
-        periodDays: r.periodDays,
-        paidAt: r.isPayer ? now : null,
-        paidMethod: r.isPayer ? 'payer' : null,
-        paymentReference: renderPaymentReference(template, {
-          service: svc.name,
-          period: periodLabel(input.periodStart, locale),
-          member: byId.get(r.memberId)?.name ?? '',
-          ref: input.externalRef,
-        }),
-        markedByMemberId: null,
-        createdAt: now,
-        updatedAt: now,
-      })),
-    )
-    .run();
+  const customWeights =
+    svc.splitMode === 'custom' ? getCustomSplits(householdId, svc.id, tx) : undefined;
+  const parts = instalments.length
+    ? instalments.map((i) => ({
+        instalment: i.seq,
+        dueDate: i.dueDate,
+        amountMinor: i.amountMinor,
+      }))
+    : [{ instalment: 0, dueDate: null, amountMinor: input.amountMinor }];
+  const rows = parts.flatMap((part) =>
+    computeShares({
+      amountMinor: part.amountMinor,
+      periodStart: input.periodStart,
+      periodEnd: input.periodEnd,
+      splitMode: svc.splitMode,
+      members,
+      customWeights,
+      payerMemberId: svc.payerMemberId,
+    }).map((r) => ({
+      id: ulid(),
+      householdId,
+      billId,
+      memberId: r.memberId,
+      instalment: part.instalment,
+      dueDate: part.dueDate,
+      amountMinor: r.amountMinor,
+      currency: input.currency,
+      basisWeight: r.basisWeight,
+      basisDays: r.basisDays,
+      periodDays: r.periodDays,
+      paidAt: r.isPayer ? now : null,
+      paidMethod: r.isPayer ? 'payer' : null,
+      paymentReference: renderPaymentReference(template, {
+        service: svc.name,
+        period: periodLabel(part.dueDate ?? input.periodStart, locale),
+        member: byId.get(r.memberId)?.name ?? '',
+        ref: input.externalRef,
+      }),
+      markedByMemberId: null,
+      createdAt: now,
+      updatedAt: now,
+    })),
+  );
+  if (rows.length) tx.insert(share).values(rows).run();
+}
+
+function listInstalments(billIds: string[], db: Db): BillInstalment[] {
+  if (!billIds.length) return [];
+  return db
+    .select()
+    .from(billInstalment)
+    .where(inArray(billInstalment.billId, billIds))
+    .orderBy(asc(billInstalment.seq))
+    .all();
 }
 
 /**
@@ -245,9 +296,10 @@ export function getBill(householdId: string, id: string, db: Db = getDb()): Bill
     .from(share)
     .innerJoin(member, eq(share.memberId, member.id))
     .where(eq(share.billId, id))
+    .orderBy(asc(share.instalment))
     .all()
     .map((r) => ({ ...r.share, member: r.member }));
-  return { ...b, service: svc, shares };
+  return { ...b, service: svc, shares, instalments: listInstalments([id], db) };
 }
 
 export function listBills(
@@ -272,6 +324,7 @@ export function listBills(
   if (!rows.length) return [];
   const ids = rows.map((r) => r.bill.id);
   const shares = db.select().from(share).where(inArray(share.billId, ids)).all();
+  const instalments = listInstalments(ids, db);
   const services = new Map<string, ServiceWithType>();
   return rows.map((r) => {
     let svc = services.get(r.service.id);
@@ -285,6 +338,7 @@ export function listBills(
       service: svc,
       shareCount: mine.length,
       paidShareCount: mine.filter((s) => s.paidAt).length,
+      instalments: instalments.filter((i) => i.billId === r.bill.id),
     };
   });
 }
@@ -301,6 +355,19 @@ export function updateBill(
   if (patch.serviceId && !getService(householdId, patch.serviceId, db))
     throw new Error('Service not found');
   const hh = getHousehold(householdId, db)!;
+  const byInstalments = existing.paymentPlan === 'instalments' && existing.instalments.length > 0;
+  if (byInstalments) {
+    // Amount, due date and "paid to the provider" follow the instalments.
+    if (
+      (patch.amountMinor !== undefined && patch.amountMinor !== existing.amountMinor) ||
+      (patch.dueDate !== undefined && patch.dueDate !== existing.dueDate)
+    )
+      throw new Error(
+        'This bill is paid by instalments: its amount and due date come from them. Switch it to paying in full to change them.',
+      );
+    patch = { ...patch };
+    delete patch.paidToProviderAt;
+  }
   const merged: BillInput = { ...existing, ...patch, source: existing.source };
   if (merged.periodEnd < merged.periodStart)
     throw new Error('Billing period end is before its start');
@@ -314,9 +381,15 @@ export function updateBill(
     throw new Error('Shares have been paid; amount and period are locked');
   const now = new Date().toISOString();
   db.transaction((tx) => {
+    const fields = { ...patch };
+    delete fields.instalments;
     tx.update(bill)
       .set({
-        ...patch,
+        ...fields,
+        // Paying in full: the pay-in-full option is what the bill says now.
+        ...(existing.instalments.length && !byInstalments
+          ? { fullAmountMinor: merged.amountMinor, fullDueDate: merged.dueDate }
+          : {}),
         updatedAt: now,
       })
       .where(and(eq(bill.householdId, householdId), eq(bill.id, id)))
@@ -335,6 +408,7 @@ export function updateBill(
         hh.paymentReferenceTemplate,
         hh.locale,
         now,
+        byInstalments ? existing.instalments : [],
       );
     }
   });
@@ -393,6 +467,11 @@ export function setSharePaid(
   return row;
 }
 
+/**
+ * Record a payment to the provider (or undo one). A bill paid by instalments
+ * takes it as its next instalment (as many as `amountMinor` covers, when a
+ * receipt says how much was paid); undoing reopens the last paid instalment.
+ */
 export function setBillPaidToProvider(
   householdId: string,
   id: string,
@@ -400,12 +479,153 @@ export function setBillPaidToProvider(
   db: Db = getDb(),
   /** When it was paid (a receipt's date); defaults to now. */
   at?: string,
+  /** How much was paid, when known. */
+  amountMinor?: number | null,
 ): void {
   const now = new Date().toISOString();
-  db.update(bill)
-    .set({ paidToProviderAt: paid ? (at ?? now) : null, updatedAt: now })
+  const b = db
+    .select({ paymentPlan: bill.paymentPlan })
+    .from(bill)
     .where(and(eq(bill.householdId, householdId), eq(bill.id, id)))
-    .run();
+    .get();
+  const instalments = b?.paymentPlan === 'instalments' ? listInstalments([id], db) : [];
+  if (!instalments.length) {
+    db.update(bill)
+      .set({ paidToProviderAt: paid ? (at ?? now) : null, updatedAt: now })
+      .where(and(eq(bill.householdId, householdId), eq(bill.id, id)))
+      .run();
+    return;
+  }
+  if (paid) {
+    let left = amountMinor ?? null;
+    let marked = 0;
+    for (const i of instalments.filter((x) => !x.paidToProviderAt)) {
+      if (marked > 0 && (left === null || left < i.amountMinor)) break;
+      i.paidToProviderAt = at ?? now;
+      if (left !== null) left -= i.amountMinor;
+      marked++;
+    }
+  } else {
+    const last = instalments.filter((x) => x.paidToProviderAt).at(-1);
+    if (last) last.paidToProviderAt = null;
+  }
+  saveInstalmentPayments(householdId, id, instalments, db);
+}
+
+/** Mark one instalment paid to the provider (or not). */
+export function setInstalmentPaid(
+  householdId: string,
+  billId: string,
+  seq: number,
+  paid: boolean,
+  db: Db = getDb(),
+  at?: string,
+): void {
+  const instalments = listInstalments([billId], db).filter((i) => i.householdId === householdId);
+  const target = instalments.find((i) => i.seq === seq);
+  if (!target) throw new Error('Instalment not found');
+  target.paidToProviderAt = paid
+    ? (target.paidToProviderAt ?? at ?? new Date().toISOString())
+    : null;
+  saveInstalmentPayments(householdId, billId, instalments, db);
+}
+
+/**
+ * Write instalments' payments and keep the bill in step: due on the next unpaid
+ * instalment, paid to the provider once the last one is paid.
+ */
+function saveInstalmentPayments(
+  householdId: string,
+  billId: string,
+  instalments: BillInstalment[],
+  db: Db,
+): void {
+  const now = new Date().toISOString();
+  const allPaid = instalments.every((i) => i.paidToProviderAt);
+  db.transaction((tx) => {
+    for (const i of instalments)
+      tx.update(billInstalment)
+        .set({ paidToProviderAt: i.paidToProviderAt })
+        .where(eq(billInstalment.id, i.id))
+        .run();
+    tx.update(bill)
+      .set({
+        dueDate: instalmentDueDate(instalments),
+        paidToProviderAt: allPaid
+          ? instalments
+              .map((i) => i.paidToProviderAt!)
+              .sort()
+              .at(-1)!
+          : null,
+        updatedAt: now,
+      })
+      .where(and(eq(bill.householdId, householdId), eq(bill.id, billId)))
+      .run();
+  });
+}
+
+export type PaymentPlan = 'full' | 'instalments';
+
+/**
+ * Choose how a bill that offers instalments is paid. Switching re-splits the
+ * bill (per instalment, or as one amount), so it's refused once a housemate's
+ * share or a payment to the provider has been recorded.
+ */
+export function setPaymentPlan(
+  householdId: string,
+  billId: string,
+  plan: PaymentPlan,
+  db: Db = getDb(),
+): BillDetail {
+  const b = getBill(householdId, billId, db);
+  if (!b) throw new Error('Bill not found');
+  if (!b.instalments.length) throw new Error('This bill doesn’t offer instalments');
+  const current: PaymentPlan = b.paymentPlan ?? 'full';
+  if (current === plan) {
+    if (b.paymentPlan === null)
+      db.update(bill)
+        .set({ paymentPlan: plan, updatedAt: new Date().toISOString() })
+        .where(eq(bill.id, billId))
+        .run();
+    return getBill(householdId, billId, db)!;
+  }
+  if (b.shares.some((s) => s.paidAt && s.paidMethod !== 'payer'))
+    throw new Error('Someone has already paid their share, so the payment plan is locked');
+  if (b.paidToProviderAt || b.instalments.some((i) => i.paidToProviderAt))
+    throw new Error(
+      'A payment to the provider is already recorded. Undo it first to change the plan',
+    );
+  const hh = getHousehold(householdId, db)!;
+  const amountMinor =
+    plan === 'instalments'
+      ? b.instalments.reduce((sum, i) => sum + i.amountMinor, 0)
+      : (b.fullAmountMinor ?? b.amountMinor);
+  const dueDate =
+    plan === 'instalments' ? instalmentDueDate(b.instalments) : (b.fullDueDate ?? b.dueDate);
+  const now = new Date().toISOString();
+  db.transaction((tx) => {
+    tx.update(bill)
+      .set({ paymentPlan: plan, amountMinor, dueDate, updatedAt: now })
+      .where(and(eq(bill.householdId, householdId), eq(bill.id, billId)))
+      .run();
+    if (hh.splitMode !== 'shared') return;
+    tx.delete(share)
+      .where(and(eq(share.householdId, householdId), eq(share.billId, billId)))
+      .run();
+    insertShares(
+      tx,
+      householdId,
+      billId,
+      b.service,
+      { ...b, amountMinor, dueDate, currency: b.currency },
+      hh.paymentReferenceTemplate,
+      hh.locale,
+      now,
+      plan === 'instalments' ? b.instalments : [],
+    );
+  });
+  if (amountMinor !== b.amountMinor) refreshAnomalies(householdId, b.serviceId, db);
+  return getBill(householdId, billId, db)!;
 }
 
 export type BillAlertKind = 'payment_failed' | 'overdue';
@@ -424,11 +644,12 @@ export function setBillAlert(
       alertKind: kind,
       alertAt: now,
       alertDocumentId: documentId,
-      ...(kind === 'payment_failed' ? { paidToProviderAt: null } : {}),
       updatedAt: now,
     })
     .where(and(eq(bill.householdId, householdId), eq(bill.id, billId)))
     .run();
+  // The payment didn't go through: by instalments, the last one paid is open again.
+  if (kind === 'payment_failed') setBillPaidToProvider(householdId, billId, false, db);
 }
 
 export function clearBillAlert(householdId: string, billId: string, db: Db = getDb()): void {

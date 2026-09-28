@@ -6,6 +6,7 @@ import { TrendLine } from '@/components/charts/trend-line';
 import { Ring } from '@/components/ui/ring';
 import { authState, pathFor } from '@/lib/auth/session';
 import { todayIn } from '@/lib/dates';
+import { dueNow } from '@/lib/instalments';
 import { formatDate, formatMoney } from '@/lib/format';
 import { getHousehold } from '@/lib/households';
 import { darkVariant } from '@/lib/palette';
@@ -157,7 +158,7 @@ export default async function WallPage() {
                       <p className="font-display text-[2.8vw] leading-[1.1] font-semibold tracking-tight">
                         {next.service.name}{' '}
                         <span className="text-fg-muted tabular-nums">
-                          {money(next.amountMinor)}
+                          {money(dueNow(next).amountMinor)}
                         </span>
                       </p>
                       <p

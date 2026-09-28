@@ -113,6 +113,7 @@ describe('dates in the AI record', () => {
       auto_pay: null,
       previous_payment: { due_date: 'last month', amount_due: 129, amount_received: 129 },
       metrics: [],
+      instalments: null,
     };
     const r = real.toResult(
       {

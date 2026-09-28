@@ -371,6 +371,40 @@ export async function seedDemo(db: Db = getDb()) {
       db,
     );
   });
+  // Annual council rates: the notice offers paying in full or in four instalments,
+  // and nobody has chosen yet (the demo's "How will you pay?").
+  const rates = createService(
+    hh.id,
+    {
+      typeSlug: 'other',
+      name: 'Council rates',
+      provider: 'Example City Council',
+      cadence: 'annual',
+      payerMemberId: alex.id,
+      colour: TYPE_COLOUR.other,
+    },
+    db,
+  );
+  createBill(
+    hh.id,
+    {
+      serviceId: rates.id,
+      amountMinor: 214035,
+      periodStart: '2026-07-01',
+      periodEnd: '2027-06-30',
+      issueDate: '2026-08-11',
+      dueDate: '2026-09-30',
+      source: 'manual',
+      externalRef: 'RATES-2026',
+      instalments: [
+        { dueDate: '2026-09-30', amountMinor: 53500 },
+        { dueDate: '2026-11-30', amountMinor: 53500 },
+        { dueDate: '2027-03-01', amountMinor: 53500 },
+        { dueDate: '2027-05-31', amountMinor: 53535 },
+      ],
+    },
+    db,
+  );
   void sam;
   // Settle everything before the current cycle so the demo shows a realistic "who owes what".
   const settled = db

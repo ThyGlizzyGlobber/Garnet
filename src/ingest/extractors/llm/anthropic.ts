@@ -9,7 +9,14 @@ import { isIsoDate } from '@/lib/dates';
 import { getEnv } from '@/lib/env';
 import { minorUnitDigits } from '@/lib/format';
 import { listUnits } from '@/lib/units';
-import type { DocumentKind, ExtractedBill, ExtractionResult, Extractor, ScanFile } from '../types';
+import type {
+  BillInstalmentOption,
+  DocumentKind,
+  ExtractedBill,
+  ExtractionResult,
+  Extractor,
+  ScanFile,
+} from '../types';
 
 /**
  * Dates are plain strings in the schema and checked in toResult(): a regex
@@ -41,14 +48,20 @@ export const outputSchema = z.object({
   service_type: z.string().nullable().describe('One of the household service types, or "other"'),
   bill: z
     .object({
-      amount: z.number().describe('Total amount due for THIS bill, in major units (e.g. 129.00)'),
+      amount: z
+        .number()
+        .describe(
+          'Total amount due for THIS bill, in major units (e.g. 129.00); for a bill offering instalments, the amount to pay in full',
+        ),
       currency: z.string().describe('ISO 4217 code, e.g. AUD, USD, EUR'),
       tax_amount: z.number().nullable().describe('Tax included in the amount, if stated'),
       tax_label: z.string().nullable().describe('GST, VAT, sales tax, etc.'),
       period_start: isoDate.describe('First day of the billing period, YYYY-MM-DD'),
       period_end: isoDate.describe('Last day of the billing period, YYYY-MM-DD'),
       issue_date: isoDate.nullable(),
-      due_date: isoDate.describe('Payment due or direct-debit date, YYYY-MM-DD'),
+      due_date: isoDate.describe(
+        'Payment due or direct-debit date, YYYY-MM-DD; for a bill offering instalments, the date to pay in full by',
+      ),
       usage_quantity: z.number().nullable().describe('Metered usage for the period, if any'),
       usage_unit: z.string().nullable().describe('Unit key for the usage, from the allowed list'),
       invoice_number: z.string().nullable(),
@@ -102,6 +115,17 @@ export const outputSchema = z.object({
           }),
         )
         .describe('Every other figure printed on the bill; empty if there are none'),
+      instalments: z
+        .array(
+          z.object({
+            due_date: isoDate.describe('YYYY-MM-DD'),
+            amount: z.number().describe('Major units'),
+          }),
+        )
+        .nullable()
+        .describe(
+          'If the bill offers paying in instalments, every instalment in order (e.g. 4 quarterly instalments); null if it offers none',
+        ),
     })
     .nullable()
     .describe('Required when document_type is bill; null otherwise'),
@@ -135,6 +159,7 @@ Rules for bills:
 - Map usage to the closest unit key from the allowed list (e.g. MJ for gas megajoules, kWh for electricity, kL or m3 for water). Use null if there is no metered usage.
 - Choose service_type from the household's list. Use "other" if none fit.
 - metrics: list EVERY figure printed on the bill besides the amount due, so the household can track them over time. That includes usage split by tariff or time band (peak, off-peak, shoulder, controlled load), solar export, meter readings (start/end, estimated or actual), days in the period, daily averages (usage and cost), comparisons (previous period, same period last year, similar households), each charge and credit line (supply/service/fixed charges, usage charges, discounts, concessions, fees, feed-in credits), each rate or tariff, emissions, data used and allowance, call/SMS counts, water by category, sewage and drainage charges, and anything else numeric. One entry per figure; convert rates printed in cents to major units (29.53 c/kWh → value 0.2953, unit AUD/kWh). Use these keys when they fit, otherwise invent one in the same style: usage_total, usage_peak, usage_off_peak, usage_shoulder, usage_controlled_load, solar_export, meter_read_start, meter_read_end, days_in_period, daily_average_usage, daily_average_cost, previous_period_usage, previous_period_cost, same_period_last_year_usage, similar_households_usage, supply_charge, usage_charge, usage_charge_peak, usage_charge_off_peak, controlled_load_charge, discount, concession, late_fee, feed_in_credit, rate_supply, rate_peak, rate_off_peak, rate_shoulder, rate_controlled_load, rate_feed_in, greenhouse_emissions, data_used, data_allowance, calls, water_usage, sewage_charge, water_service_charge, drainage_charge, subtotal_before_tax.
+- instalments: some bills (council rates, water, vehicle registration, insurance) let the customer choose between paying in full and paying in instalments. List every instalment with its own due date and amount exactly as printed (one is often a few cents different); amount and due_date are then the pay-in-full option. If the bill prints only instalments, amount is their total and due_date the first instalment's date. A separate reminder for one instalment of a notice already issued (e.g. "2nd instalment due 30 November") is not a new bill: use document_type other and say so in notes.
 Rules for everything:
 - Dates are ISO YYYY-MM-DD. If the text prints dates numerically, use the locale hint to decide day/month order.
 - A receipt or "your payment was successful" email is never a bill, even though it shows an amount.
@@ -303,6 +328,29 @@ type Output = z.infer<typeof outputSchema>;
 /** A real YYYY-MM-DD date, or null. */
 const day = (s: string | null | undefined): string | null => (s && isIsoDate(s) ? s : null);
 
+/**
+ * The instalments as printed, when they make a real plan: two or more, each
+ * with a valid date and a positive amount, in date order. Anything else is
+ * dropped with a warning (the bill itself is still read).
+ */
+function instalmentOptions(
+  list: { due_date: string; amount: number }[] | null | undefined,
+  currency: string,
+  warnings: string[],
+): BillInstalmentOption[] | null {
+  if (!list?.length) return null;
+  const digits = minorUnitDigits(currency);
+  const out = list.map((i) => ({
+    dueDate: day(i.due_date) ?? '',
+    amountMinor: Math.round(i.amount * 10 ** digits),
+  }));
+  if (out.length < 2 || out.some((i) => !i.dueDate || i.amountMinor <= 0)) {
+    warnings.push('The instalment options could not be read');
+    return null;
+  }
+  return out.sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+}
+
 /** Map the model's record onto the pipeline's types. Exported for tests. */
 export function toResult(
   o: Output,
@@ -400,6 +448,7 @@ export function toResult(
       periodStart: day(m.period_start),
       periodEnd: day(m.period_end),
     })),
+    instalments: instalmentOptions(b.instalments, currency, warnings),
   };
   if (!bill.periodStart || !bill.periodEnd || !bill.dueDate) {
     warnings.push('A billing date could not be read (expected YYYY-MM-DD)');
