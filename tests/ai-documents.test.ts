@@ -38,6 +38,7 @@ afterAll(() => {
 const base: Output = {
   document_type: 'other',
   provider: null,
+  document_date: null,
   service_type: null,
   bill: null,
   payment: null,
@@ -106,6 +107,7 @@ describe('mapping the AI record', () => {
         ...base,
         document_type: 'payment_receipt',
         provider: 'AGL Energy',
+        document_date: null,
         payment: { date: '2026-09-15', amount: 410, currency: 'aud', invoice_numbers: ['#INV-7'] },
       },
       { services: [], serviceTypes: ['electricity'], defaultCurrency: 'AUD' },
@@ -113,6 +115,7 @@ describe('mapping the AI record', () => {
     expect(r.document).toEqual({
       kind: 'payment_receipt',
       provider: 'AGL Energy',
+      date: null,
       payment: { date: '2026-09-15', amountMinor: 41000, currency: 'AUD', invoiceRefs: ['INV-7'] },
     });
     expect(r.bill.periodStart).toBe('');
@@ -124,6 +127,7 @@ describe('mapping the AI record', () => {
         ...base,
         document_type: 'bill',
         provider: 'AGL',
+        document_date: null,
         service_type: 'electricity',
         bill: {
           amount: 400,
@@ -162,6 +166,7 @@ describe('the pipeline acting on what the AI says a document is', () => {
       ...base,
       document_type: 'payment_receipt',
       provider: 'AGL Energy',
+      document_date: null,
       payment: { date: '2026-09-14', amount: 410, currency: 'AUD', invoice_numbers: ['INV-7'] },
     });
     const d = doc(hh.id, TEXT);
@@ -176,6 +181,7 @@ describe('the pipeline acting on what the AI says a document is', () => {
       ...base,
       document_type: 'payment_failed',
       provider: 'AGL',
+      document_date: null,
       payment: { date: '2026-09-15', amount: 410, currency: 'AUD', invoice_numbers: [] },
     });
     await processDocument(hh.id, doc(hh.id, TEXT).id, db);
@@ -188,6 +194,7 @@ describe('the pipeline acting on what the AI says a document is', () => {
       ...base,
       document_type: 'payment_failed',
       provider: 'Aussie Broadband',
+      document_date: null,
       payment: null,
     });
     const spoof = doc(hh.id, TEXT, {
@@ -233,6 +240,7 @@ describe('the pipeline acting on what the AI says a document is', () => {
       ...base,
       document_type: 'bill',
       provider: 'AGL',
+      document_date: null,
       service_type: 'electricity',
       bill: {
         amount: 400,
@@ -330,6 +338,7 @@ describe('when the AI service is busy', () => {
       ...base,
       document_type: 'payment_receipt',
       provider: 'AGL',
+      document_date: null,
       payment: { date: '2026-09-14', amount: 410, currency: 'AUD', invoice_numbers: ['INV-7'] },
     });
     try {

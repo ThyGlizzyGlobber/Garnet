@@ -108,7 +108,9 @@ export async function readMissingMetricsAction(): Promise<void> {
   const me = await requireOwner();
   void readMissingMetrics(me.householdId)
     .then((r) =>
-      console.log(`[metrics] ${me.householdId}: read ${r.read}, ${r.withFigures} with figures`),
+      console.log(
+        `[metrics] ${me.householdId}: read ${r.read}, ${r.withFigures} with figures, ${r.dated} dated`,
+      ),
     )
     .catch((e) => console.error('[metrics]', (e as Error).message));
   revalidatePath('/settings');

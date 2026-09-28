@@ -55,6 +55,8 @@ export interface StoredExtraction {
   billId?: string;
   /** Reads in a row that failed because the AI service was busy. */
   busyRetries?: number;
+  /** The date printed on the document (for a forward, the original's), when the AI read one. */
+  documentDate?: string;
 }
 
 export function buildInput(
@@ -151,6 +153,8 @@ async function readAndRoute(
   } catch (e) {
     readError = (e as Error).message;
   }
+  // The date printed on the document, once the AI has read it (see StoredExtraction).
+  let documentDate: string | null = null;
   const store = (
     status: PipelineOutcome['status'],
     reason: string,
@@ -163,6 +167,7 @@ async function readAndRoute(
       reason,
       textPreview: text.slice(0, 4000),
       processedAt: new Date().toISOString(),
+      ...(documentDate ? { documentDate } : {}),
     };
     setDocumentStatus(householdId, doc.id, status, JSON.stringify(stored), db);
   };
@@ -217,6 +222,7 @@ async function readAndRoute(
   const { best, attempts } = await runExtractors(input, {
     extractors: aiLeft ? [...templateExtractors, ...fallbackExtractors] : templateExtractors,
   });
+  documentDate = best?.document?.date ?? best?.bill.issueDate ?? null;
   // Failed calls (bad key, outage) aren't charged, so they don't count either.
   if (attempts.some((a) => a.extractor.startsWith('llm:') && !a.error))
     recordUsage(householdId, AI_READ, db);

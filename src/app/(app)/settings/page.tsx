@@ -15,8 +15,7 @@ import {
   replaceBillsAddressAction,
   setThemeAction,
 } from './actions';
-import { billsMissingMetrics } from '@/lib/metrics';
-import { isReadingMetrics } from '@/ingest/metrics';
+import { catchUpCount, isReadingMetrics } from '@/ingest/metrics';
 import { UpdateCard } from './update-card';
 
 export default async function SettingsPage() {
@@ -26,7 +25,7 @@ export default async function SettingsPage() {
   const t = await getTranslations('settings');
   const env = getEnv();
   const theme = await getTheme();
-  const missing = billsMissingMetrics(hh.id).length;
+  const missing = catchUpCount(hh.id);
   const reading = isReadingMetrics(hh.id);
   const demo = hh.isDemo;
   const months = Array.from({ length: 12 }, (_, i) =>

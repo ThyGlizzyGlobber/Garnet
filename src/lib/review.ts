@@ -2,11 +2,19 @@ import { and, desc, eq, isNotNull, sql } from 'drizzle-orm';
 import { getDb, type Db } from '@/db/client';
 import { bill, sourceDocument, type SourceDocument } from '@/db/schema';
 import type { StoredExtraction } from '@/ingest/pipeline';
+import { billDate } from '@/lib/bill-month';
+import { minorUnitDigits } from '@/lib/format';
+import { amountWords, matchesAll, monthWords, searchTokens } from '@/lib/search';
 
 export type ReviewItem = SourceDocument & {
   extraction: StoredExtraction | null;
   billId: string | null;
   category: DocumentCategory;
+  /**
+   * The date the document belongs to (YYYY-MM-DD): its bill's month date, the
+   * date printed on it, or, only when neither is known, the day it arrived.
+   */
+  date: string;
 };
 
 /** Inbox filters: what a document turned out to be. */
@@ -35,6 +43,7 @@ function parse(json: string | null): StoredExtraction | null {
       processedAt: v.processedAt ?? '',
       ...(v.code ? { code: v.code } : {}),
       ...(v.billId ? { billId: v.billId } : {}),
+      ...(v.documentDate ? { documentDate: v.documentDate } : {}),
     };
   } catch {
     return null;
@@ -47,7 +56,14 @@ export function listDocuments(
   db: Db = getDb(),
 ): ReviewItem[] {
   const rows = db
-    .select({ doc: sourceDocument, billId: bill.id })
+    .select({
+      doc: sourceDocument,
+      billId: bill.id,
+      issueDate: bill.issueDate,
+      periodStart: bill.periodStart,
+      periodEnd: bill.periodEnd,
+      dueDate: bill.dueDate,
+    })
     .from(sourceDocument)
     .leftJoin(bill, eq(bill.sourceDocumentId, sourceDocument.id))
     .where(
@@ -58,15 +74,30 @@ export function listDocuments(
     )
     .orderBy(desc(sourceDocument.receivedAt))
     .all();
-  return rows.map((r) => {
-    const extraction = parse(r.doc.extractionJson);
-    return {
-      ...r.doc,
-      extraction,
-      billId: r.billId,
-      category: documentCategory(r.doc.status, extraction),
-    };
-  });
+  return rows
+    .map((r) => {
+      const extraction = parse(r.doc.extractionJson);
+      const read = extraction?.result?.bill;
+      const date = r.billId
+        ? billDate({
+            issueDate: r.issueDate,
+            periodStart: r.periodStart!,
+            periodEnd: r.periodEnd!,
+            dueDate: r.dueDate!,
+          })
+        : (extraction?.documentDate ??
+          (read?.periodStart && read.periodEnd && read.dueDate
+            ? billDate({ ...read, issueDate: read.issueDate ?? null })
+            : r.doc.receivedAt.slice(0, 10)));
+      return {
+        ...r.doc,
+        extraction,
+        billId: r.billId,
+        category: documentCategory(r.doc.status, extraction),
+        date,
+      };
+    })
+    .sort((a, b) => b.date.localeCompare(a.date) || b.receivedAt.localeCompare(a.receivedAt));
 }
 
 export function getReviewItem(
@@ -116,4 +147,37 @@ export function ingestionStats(
     else auto += r.n;
   }
   return { auto, reviewed };
+}
+
+/** Inbox search: provider, subject, sender, file name, what happened, amount, month. */
+export function searchDocuments(
+  docs: ReviewItem[],
+  query: string,
+  locale: string,
+): { docs: ReviewItem[]; tokens: string[] } {
+  const tokens = searchTokens(query);
+  if (!tokens.length) return { docs, tokens };
+  return {
+    docs: docs.filter((d) => {
+      const read = d.extraction?.result?.bill;
+      const hay = [
+        read?.provider ?? '',
+        read?.serviceType ?? '',
+        read?.externalRef ?? '',
+        ...(read && read.amountMinor
+          ? amountWords(read.amountMinor, minorUnitDigits(read.currency))
+          : []),
+        d.originalFilename ?? '',
+        d.emailSubject ?? '',
+        d.emailFrom ?? '',
+        d.extraction?.reason ?? '',
+        d.category,
+        ...monthWords(d.date.slice(0, 7), locale),
+      ]
+        .join(' ')
+        .toLowerCase();
+      return matchesAll(hay, tokens);
+    }),
+    tokens,
+  };
 }

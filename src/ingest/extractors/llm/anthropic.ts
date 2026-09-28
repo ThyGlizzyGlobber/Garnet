@@ -26,6 +26,11 @@ const outputSchema = z.object({
       'bill = an invoice/bill asking for payment; payment_receipt = a receipt confirming a payment was taken (often names the invoices it paid); payment_failed = a payment, direct debit or card charge was declined/dishonoured/unsuccessful; overdue_notice = a reminder that a bill is overdue or unpaid; payment_received = a short "thanks for your payment" confirmation without receipt details; other = anything else (password resets, plan changes, marketing, welcome emails)',
     ),
   provider: z.string().nullable().describe('Company that sent the document, as printed'),
+  document_date: isoDate
+    .nullable()
+    .describe(
+      'The date printed on the document (issue date of a bill, date of a receipt or notice). For a forwarded email, the ORIGINAL message’s date, never the forward’s. Null if none is shown.',
+    ),
   service_type: z.string().nullable().describe('One of the household service types, or "other"'),
   bill: z
     .object({
@@ -286,6 +291,7 @@ export function toResult(
       document: {
         kind,
         provider: o.provider,
+        date: o.document_date,
         payment: o.payment
           ? {
               date: o.payment.date,
@@ -348,6 +354,6 @@ export function toResult(
     bill,
     confidence: o.confidence,
     warnings,
-    document: { kind: 'bill', provider: o.provider, payment: null },
+    document: { kind: 'bill', provider: o.provider, payment: null, date: o.document_date },
   };
 }

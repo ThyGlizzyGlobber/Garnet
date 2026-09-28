@@ -53,6 +53,7 @@ function household() {
 const waterBill = (ref: string): AiOutput => ({
   document_type: 'bill',
   provider: 'Yarra Valley Water',
+  document_date: null,
   service_type: 'water',
   bill: {
     amount: 182.35,

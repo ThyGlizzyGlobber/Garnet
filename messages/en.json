@@ -103,7 +103,8 @@
       "title": "No bills yet",
       "body": "Add your first bill by hand, or wait for the mailbox to pick one up once ingestion is set up.",
       "noServices": "Create a service first, then add bills against it.",
-      "addService": "Add a service"
+      "addService": "Add a service",
+      "noMatch": "No matching bills"
     },
     "source": {
       "manual": "Entered by hand",
@@ -215,7 +216,16 @@
         "comparison": "Comparisons",
         "other": "Other figures"
       }
-    }
+    },
+    "search": {
+      "placeholder": "Search bills: provider, month, amount, invoice number…",
+      "label": "Search bills",
+      "submit": "Search",
+      "allServices": "All services",
+      "allYears": "All years",
+      "inInbox": "{count, plural, one {# match} other {# matches}} in the Inbox"
+    },
+    "filterResults": "{count, plural, =0 {No bills match these filters} one {# bill matches} other {# bills match}}"
   },
   "services": {
     "title": "Services",
@@ -433,10 +443,10 @@
       "done": "Updated from {from} ({date})."
     },
     "metrics": {
-      "title": "Usage details from earlier bills",
-      "body": "{count, plural, one {# bill came} other {# bills came}} in before the app kept every figure from a bill (usage by tariff, meter readings, charges, rates). Read them again to fill in those details. Each bill uses one AI read.",
-      "start": "Read {count, plural, one {# bill} other {# bills}}",
-      "reading": "Reading earlier bills in the background. Refresh in a minute or two to see how many are left."
+      "title": "Details from earlier bills and emails",
+      "body": "{count, plural, one {# document came} other {# documents came}} in before the app kept every figure from a bill and the date printed on each receipt and email. Read them again to fill those in, so usage comparisons have history and the Inbox files everything under the right month. Each uses one AI read.",
+      "start": "Read {count, plural, one {# document} other {# documents}}",
+      "reading": "Reading earlier documents in the background. Refresh in a minute or two to see how many are left."
     }
   },
   "health": {
@@ -693,6 +703,17 @@
       "notes": "Notes",
       "trustSender": "Trust future bills from {domain} for this service",
       "trustSenderHint": "The email was signed by its sender, so future bills from {domain} can be added without asking."
+    },
+    "search": {
+      "placeholder": "Search the inbox: provider, month, amount…",
+      "label": "Search the inbox",
+      "submit": "Search",
+      "results": "{count, plural, =0 {Nothing matches} one {# document matches} other {# documents match}} “{q}”",
+      "clear": "Clear"
+    },
+    "arrived": "arrived {date}",
+    "category": {
+      "receipt": "Receipt"
     }
   },
   "upload": {

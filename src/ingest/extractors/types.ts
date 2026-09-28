@@ -77,6 +77,8 @@ export type DocumentKind =
 export interface DocumentInfo {
   kind: DocumentKind;
   provider: string | null;
+  /** The date printed on the document (for a forward, the original's). */
+  date?: string | null;
   /** For receipts and payment notices: what was (or wasn't) paid. */
   payment: {
     date: string | null;

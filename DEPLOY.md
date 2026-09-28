@@ -236,6 +236,13 @@ Everything is compared per day so monthly and quarterly bills compare fairly.
 A bill's figures show their change since the last bill, the dashboard has a
 Usage tile, and the new-bill email says when usage went over the limit.
 
+**Finding bills.** Bills and the Inbox are grouped by the month each bill
+belongs to (its issue date, or the billing period), not when the email arrived,
+so forwarding a stack of old bills files each under its own month. The Bills
+page has a search box (provider, month, amount, invoice number…, every word
+must match, matches highlighted) and filters by status, service and year; the
+Inbox has the same search.
+
 **Scans and photos.** A PDF with no text layer (a scan) or a photo of a paper
 bill (JPEG/PNG; upload it, or forward it) is sent to the AI as the file itself,
 since there is no text to send. Everything else is sent as text only. iPhone

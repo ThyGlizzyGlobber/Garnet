@@ -6,13 +6,14 @@ import { eq } from 'drizzle-orm';
 import { openDb, type Db } from '@/db/client';
 import { bill as billTable } from '@/db/schema';
 import { runMigrations } from '@/db/migrate';
-import { archiveDocument } from '@/ingest/archive';
-import { readMissingMetrics } from '@/ingest/metrics';
+import { archiveDocument, setDocumentStatus } from '@/ingest/archive';
+import { documentsMissingDates, readMissingMetrics } from '@/ingest/metrics';
 import { processDocument } from '@/ingest/pipeline';
 import { createBill } from '@/lib/bills';
 import { createHousehold } from '@/lib/households';
 import { createMember } from '@/lib/members';
 import { billsMissingMetrics, listBillMetrics, metricKey, saveBillMetrics } from '@/lib/metrics';
+import { listDocuments } from '@/lib/review';
 import { createService } from '@/lib/services';
 import { scriptAi, type AiOutput } from './helpers/fake-ai';
 
@@ -59,6 +60,7 @@ function setup() {
 const electricity = (ref: string): AiOutput => ({
   document_type: 'bill',
   provider: 'Red Energy',
+  document_date: null,
   service_type: 'electricity',
   bill: {
     amount: 412.5,
@@ -218,13 +220,45 @@ describe('figures from a bill', () => {
     );
     expect(billsMissingMetrics(hh.id, db).map((b) => b.id)).toEqual([old.id]);
     scriptAi(electricity('E-2'));
-    expect(await readMissingMetrics(hh.id, db)).toEqual({ read: 1, withFigures: 1 });
+    expect(await readMissingMetrics(hh.id, db)).toEqual({ read: 1, withFigures: 1, dated: 0 });
     expect(listBillMetrics(hh.id, old.id, db)).toHaveLength(6);
     expect(listBillMetrics(hh.id, manual.id, db)).toHaveLength(0);
     // The bill itself is untouched, and it isn't read again.
     const after = db.select().from(billTable).where(eq(billTable.id, old.id)).get()!;
     expect(after.amountMinor).toBe(41250);
-    expect(await readMissingMetrics(hh.id, db)).toEqual({ read: 0, withFigures: 0 });
+    expect(await readMissingMetrics(hh.id, db)).toEqual({ read: 0, withFigures: 0, dated: 0 });
+  });
+
+  it('date receipts read before dates were kept, once', async () => {
+    const { hh } = setup();
+    const doc = upload(hh.id);
+    setDocumentStatus(
+      hh.id,
+      doc.id,
+      'notice',
+      JSON.stringify({
+        result: null,
+        attempts: [],
+        reason: 'Payment receipt from Red Energy',
+        textPreview: '',
+        processedAt: '',
+      }),
+      db,
+    );
+    expect(documentsMissingDates(hh.id, db).map((d) => d.id)).toEqual([doc.id]);
+    scriptAi({
+      document_type: 'payment_receipt',
+      provider: 'Red Energy',
+      document_date: '2026-05-03',
+      service_type: 'electricity',
+      bill: null,
+      payment: { date: '2026-05-03', amount: 412.5, currency: 'AUD', invoice_numbers: [] },
+      confidence: 0.95,
+      notes: null,
+    });
+    expect(await readMissingMetrics(hh.id, db)).toEqual({ read: 1, withFigures: 0, dated: 1 });
+    expect(listDocuments(hh.id, {}, db).find((d) => d.id === doc.id)?.date).toBe('2026-05-03');
+    expect(documentsMissingDates(hh.id, db)).toHaveLength(0);
   });
 
   it('are replaced, not duplicated, when read again', () => {

@@ -42,6 +42,7 @@ const bill = (
 ): Output => ({
   document_type: 'bill',
   provider,
+  document_date: null,
   service_type: 'electricity',
   bill: {
     amount: 412.5,

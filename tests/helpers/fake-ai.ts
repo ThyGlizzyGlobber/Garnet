@@ -22,6 +22,7 @@ export function fakeAiAnswer(text: string, input: Input): AiOutput | null {
 const blank: AiOutput = {
   document_type: 'other',
   provider: null,
+  document_date: null,
   service_type: null,
   bill: null,
   payment: null,
@@ -37,6 +38,7 @@ function readFixture(t: string): AiOutput | null {
       ...blank,
       document_type: 'payment_receipt',
       provider: 'Aussie Broadband',
+      document_date: null,
       service_type: 'internet',
       payment: {
         date: `${y}-${m}-${d}`,
@@ -52,6 +54,7 @@ function readFixture(t: string): AiOutput | null {
     ...blank,
     document_type: 'bill',
     provider: 'Aussie Broadband',
+    document_date: null,
     service_type: 'internet',
     bill: {
       amount: 129,

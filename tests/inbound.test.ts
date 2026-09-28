@@ -587,6 +587,7 @@ describe('provider notices', () => {
     scriptAi({
       document_type: 'other',
       provider: 'Aussie Broadband',
+      document_date: null,
       service_type: null,
       bill: null,
       payment: null,
