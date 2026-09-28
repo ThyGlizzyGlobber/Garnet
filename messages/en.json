@@ -373,6 +373,14 @@
       "body": "{count, plural, one {# browser is} other {# browsers are}} signed in as {email}.",
       "signOutOthers": "Sign out other devices",
       "confirm": "Sign out every other browser? They'll need Google or an emailed code to get back in."
+    },
+    "subtitle": "Shares paid this financial year ({fy}) and what each person owes now.",
+    "tile": {
+      "settled": "All settled",
+      "owes": "{count, plural, one {# share to pay} other {# shares to pay}}",
+      "nothingOwed": "Nothing to pay right now",
+      "paidOf": "{paid} of {total} paid this year",
+      "owedToThem": "Owed {amount} by others"
     }
   },
   "settings": {
@@ -450,6 +458,20 @@
       "body": "{count, plural, one {# document came} other {# documents came}} in before the app kept every figure from a bill and the date printed on each receipt and email. Read them again to fill those in, so usage comparisons have history and the Inbox files everything under the right month. Each uses one AI read.",
       "start": "Read {count, plural, one {# document} other {# documents}}",
       "reading": "Reading earlier documents in the background. Refresh in a minute or two to see how many are left."
+    },
+    "glance": {
+      "members": "Members",
+      "location": "Location",
+      "billsAddress": "Bills address",
+      "sharing": "Area comparisons",
+      "notSet": "Not set",
+      "ready": "Ready",
+      "on": "On",
+      "off": "Off",
+      "region": "{currency} · {locale} · {timezone}",
+      "aiReads": "AI reads this month",
+      "noCap": "No monthly cap",
+      "ofLimit": "of {limit} this month"
     }
   },
   "health": {

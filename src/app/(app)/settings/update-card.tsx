@@ -16,7 +16,7 @@ export async function UpdateCard({ hh }: { hh: Household }) {
   const date = (iso: string) => formatDate(iso, hh.locale, hh.timezone);
 
   return (
-    <Card className="mt-4 flex flex-col gap-3">
+    <Card className="flex flex-col gap-3">
       <h2 className="font-display font-semibold">{t('title')}</h2>
       <p className="text-sm">
         {build.commit === 'dev' ? (
