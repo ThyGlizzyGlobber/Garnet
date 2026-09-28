@@ -535,7 +535,8 @@
         "recent": "Average of the last 3 bills per service",
         "single": "Based on one bill per service so far",
         "none": "No history yet",
-        "weather": "Seasonal: normal weather for the month and how your bills follow it"
+        "weather": "Seasonal: normal weather for the month and how your bills follow it",
+        "area": "Typical costs for households in your area (little history of your own yet)"
       }
     },
     "reminders": {
@@ -778,6 +779,14 @@
       "calls": "Weather requests since start",
       "billsWithWeather": "Your bills with their weather",
       "hint": "Updated every 30 minutes for households with a postcode. The first update fetches ten years of history for normal weather."
+    },
+    "regional": {
+      "title": "Area comparisons",
+      "on": "On",
+      "off": "Off",
+      "sharing": "Households sharing (with a postcode)",
+      "figures": "Area figures kept",
+      "hint": "Recomputed every six hours. A figure is only kept when at least {k} households stand behind it, so small installs show none."
     }
   },
   "code": {
@@ -985,7 +994,8 @@
       "seasonal": "Based on {month} last year, adjusted for your recent bills",
       "recent": "Average of your recent bills (no bill from {month} last year yet)",
       "single": "Based on your only bill so far",
-      "weather": "Based on normal {month} weather where you live and how your bills follow the weather"
+      "weather": "Based on normal {month} weather where you live and how your bills follow the weather",
+      "area": "Typical {month} cost for similar households in your area (not enough bills of your own yet)"
     }
   },
   "seasons": {
@@ -1096,5 +1106,101 @@
       "adjustedSame": "Adjusted for the weather, about the same.",
       "explains": "The weather explains {pct}% of how this bill changes."
     }
+  },
+  "sharing": {
+    "title": "Area comparisons",
+    "body": "Your household adds anonymised figures to area comparisons, and gets \"households like yours\" figures and better estimates back when your own history is thin. A figure is only kept or shown when at least {k} households stand behind it.",
+    "shared": "Shared: monthly cost, usage, rates, supply charges and solar export per kind of service (electricity, gas…), with your postcode area and household size band.",
+    "never": "Never shared: names, emails, addresses, account or invoice numbers, notes or the bills themselves.",
+    "checkbox": "Share anonymised figures for area comparisons",
+    "checkboxHint": "On by default. Turning it off takes your household out of every area figure straight away.",
+    "save": "Save",
+    "onMember": "Your household shares anonymised figures (your admin can change this).",
+    "offMember": "Your household doesn't share figures (your admin can change this).",
+    "since": {
+      "on": "On since {date}.",
+      "off": "Off since {date}."
+    },
+    "privacy": "How your data is used",
+    "notice": {
+      "title": "Area comparisons are on",
+      "body": "Your household adds anonymised figures (costs, usage and rates per kind of service, with your postcode area) to comparisons with similar households, never names, addresses or bills. You can turn this off in Settings at any time.",
+      "ok": "Got it",
+      "change": "Change in Settings"
+    },
+    "setup": "Share anonymised figures for area comparisons (you can turn this off later in Settings)."
+  },
+  "area": {
+    "title": "Households like yours",
+    "basis": "{month} · {households} households in {area}",
+    "basisSameSize": "{month} · {households} households of your size in {area}",
+    "metric": {
+      "cost": "Cost per day",
+      "usage": "Usage per day",
+      "rate": "Effective rate"
+    },
+    "typical": "typical {value}",
+    "range": "most between {low} and {high}",
+    "you": "you: {value}"
+  },
+  "privacy": {
+    "title": "How your data is used",
+    "version": "Notice version {version}. A plain-language summary for the alpha; it will be reviewed before the app is offered publicly.",
+    "intro": "This app keeps track of your household's bills, splits them between the people you live with, and helps you understand and plan for them. This page explains what it keeps, who can see it, and the choices you have.",
+    "stored": {
+      "title": "What the app keeps",
+      "points": [
+        "Your household: its name, settings, postcode and suburb (never your street address), and who's in it.",
+        "Members: names, the email each person signs in with, payment details you choose to add, and a PIN stored only as a one-way hash.",
+        "Bills: the PDFs, photos and bill emails forwarded or uploaded to the app, and what was read from them (amounts, dates, usage, every figure on the bill).",
+        "Who has paid what, and the emails the app has sent."
+      ]
+    },
+    "who": {
+      "title": "Who can see it",
+      "points": [
+        "Only members of your household see your household's bills, shares and documents.",
+        "The operator who runs this installation can reach the stored data to keep the app working, but doesn't browse households' bills."
+      ]
+    },
+    "area": {
+      "title": "Area comparisons (on by default)",
+      "points": [
+        "Unless your household admin turns it off, your household adds anonymised figures to comparisons with similar households: monthly cost, usage, effective rates, supply charges and solar export for each kind of service (electricity, gas…), with your postcode area and a household size band (1, 2, 3–4, 5+).",
+        "Names, emails, addresses, account and invoice numbers, notes and the bills themselves are never shared.",
+        "Figures are pooled into typical values and ranges. A figure is only kept or shown when at least {k} households stand behind it; thinner areas are widened to your region, state or country. The pooled figures don't record which households they came from.",
+        "In return you see \"households like yours\" comparisons, and estimates for services where your own history is still thin. Only households that share can see area figures.",
+        "Turning it off (Settings → Area comparisons) takes your household out of every area figure straight away. Each change is recorded with who made it and when."
+      ]
+    },
+    "services": {
+      "title": "Services the app uses",
+      "points": [
+        "Anthropic (Claude) reads your bills so you don't have to type them in: it receives a bill's text, or the file itself for scans and photos, and is not used to train models under the API's terms.",
+        "Resend sends the app's emails (sign-in codes, invites, bill emails, reminders).",
+        "Cloudflare carries your household's bills email address and the connection to the app.",
+        "Open-Meteo provides weather for your area: it is only sent the rough map point of your postcode (about 10 km), never who you are. Postcode data comes from GeoNames and is stored in the app itself."
+      ]
+    },
+    "where": {
+      "title": "Where it's kept",
+      "points": [
+        "On the operator's own server. Bill files are kept until the bill is deleted; deleting a bill deletes its file.",
+        "Backups of the database are taken before each software update."
+      ]
+    },
+    "choices": {
+      "title": "Your choices",
+      "points": [
+        "Household admins can turn area comparisons off, remove the household's postcode, and delete bills.",
+        "Each member controls which emails they get, from their own member page.",
+        "To see or correct what the app holds about you, or to have your household removed, ask your household admin or the operator."
+      ]
+    },
+    "contact": {
+      "title": "Contact",
+      "points": ["Questions about this notice go to the operator of this installation."]
+    },
+    "back": "Back to the app"
   }
 }

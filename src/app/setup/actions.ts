@@ -11,6 +11,7 @@ import { isIsoDate } from '@/lib/dates';
 import { createHousehold } from '@/lib/households';
 import { hasPostcodeData, lookupPostcode, setHouseholdLocation } from '@/lib/location';
 import { createMember } from '@/lib/members';
+import { setRegionalSharing } from '@/lib/regional';
 
 const schema = z
   .object({
@@ -76,7 +77,7 @@ export async function completeSetup(_prev: ActionState, fd: FormData): Promise<A
         tx,
       );
       if (location.postalCode) setHouseholdLocation(hh.id, location, tx);
-      return createMember(
+      const owner = createMember(
         hh.id,
         {
           name: v.ownerName,
@@ -86,7 +87,11 @@ export async function completeSetup(_prev: ActionState, fd: FormData): Promise<A
           email: account.email,
         },
         tx,
-      ).id;
+      );
+      // Area comparisons: on unless unticked; recorded with the notice version.
+      const share = fd.get('shareRegional') === 'on';
+      setRegionalSharing(hh.id, share, share ? 'default' : 'settings', owner.id, tx);
+      return owner.id;
     });
   } catch (e) {
     return { error: (e as Error).message };

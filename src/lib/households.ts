@@ -34,6 +34,8 @@ export interface HouseholdInput {
   splitMode: 'shared' | 'single';
   paymentReferenceTemplate?: string;
   isDemo?: boolean;
+  /** Share anonymised figures with area comparisons (default on). */
+  shareRegional?: boolean;
 }
 
 export function createHousehold(input: HouseholdInput, db: Db = getDb()): Household {
@@ -57,6 +59,7 @@ export function createHousehold(input: HouseholdInput, db: Db = getDb()): Househ
     latitude: null,
     longitude: null,
     locationUpdatedAt: null,
+    shareRegional: input.shareRegional ?? true,
     createdAt: now,
     updatedAt: now,
   };

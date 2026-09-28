@@ -243,6 +243,13 @@ page has a search box (provider, month, amount, invoice number…, every word
 must match, matches highlighted) and filters by status, service and year; the
 Inbox has the same search.
 
+**Area comparisons.** Households share anonymised monthly figures (cost,
+usage, rates, supply charges, solar export per kind of service, with postcode
+area and size band) unless an admin turns it off in Settings → Area
+comparisons. Figures are pooled every six hours and only kept for areas with at
+least `REGIONAL_MIN_HOUSEHOLDS` (default 10) households, so a small install
+shows none. `/privacy` explains it to users. `REGIONAL_INSIGHTS=off` stops it.
+
 **Weather.** Households with a postcode get local weather from Open-Meteo
 (no key needed; data CC BY 4.0, credited in the app). The first update after
 someone adds a postcode fetches ten years of daily history for that area (one

@@ -4,6 +4,7 @@ import { settleAutoPaidBills } from '@/lib/autopay';
 import { sendDueReminders, sendSeasonAhead } from '@/lib/notifications';
 import { retryBusyReads } from '@/ingest/pipeline';
 import { syncWeather } from '@/lib/weather';
+import { computeRegionalStats, regionalEnabled } from '@/lib/regional';
 import { weatherProvider } from '@/weather';
 
 export interface WorkerStatus {
@@ -25,6 +26,7 @@ const g = globalThis as unknown as {
   __hudWorker?: WorkerState;
   __hudReminders?: NodeJS.Timeout;
   __hudWeather?: NodeJS.Timeout;
+  __hudRegional?: NodeJS.Timeout;
 };
 
 /** Due-date reminders: checked every 15 minutes; each reminder is sent once (notification_log). */
@@ -116,9 +118,27 @@ export function startWeather(): void {
   g.__hudWeather.unref();
 }
 
+/** Area figures (scope S4): recomputed every six hours, first a minute after start. */
+export function startRegional(): void {
+  if (g.__hudRegional) return;
+  const tick = () => {
+    if (!regionalEnabled()) return;
+    try {
+      const r = computeRegionalStats();
+      console.log(`[regional] ${r.households} sharing household(s), ${r.rows} area figure(s)`);
+    } catch (e) {
+      console.error('[regional]', (e as Error).message);
+    }
+  };
+  setTimeout(tick, 60_000).unref();
+  g.__hudRegional = setInterval(tick, 6 * 3_600_000);
+  g.__hudRegional.unref();
+}
+
 export function startWorker(): void {
   startReminders();
   startWeather();
+  startRegional();
   const env = getEnv();
   const s = state();
   if (s.timer) return;

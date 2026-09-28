@@ -19,7 +19,8 @@ import { weatherWeek } from '@/lib/weather-week';
 import { WeatherCard } from '@/components/app/weather-card';
 import { cookies } from 'next/headers';
 import { LOCATION_PROMPT_COOKIE } from '@/lib/location';
-import { dismissLocationPromptAction } from './settings/actions';
+import { acknowledgeSharingAction, dismissLocationPromptAction } from './settings/actions';
+import { latestRegionalChoice, regionalEnabled } from '@/lib/regional';
 import { SeasonAhead } from '@/components/app/season-ahead';
 import { unitLabel } from '@/lib/units';
 import { ChangeText, formatQty } from '@/components/app/usage';
@@ -63,6 +64,14 @@ export default async function HomePage() {
   const seasons = seasonAhead(hh.id, today);
   const week = weatherWeek(hh.id, today);
   const tl = await getTranslations('location');
+  const tsh = await getTranslations('sharing');
+  // Households from before area comparisons: tell the admin once that it's on.
+  const sharingNotice =
+    me.role === 'owner' &&
+    !hh.isDemo &&
+    hh.shareRegional &&
+    regionalEnabled() &&
+    !latestRegionalChoice(hh.id);
   const askForPostcode =
     me.role === 'owner' &&
     !hh.isDemo &&
@@ -127,15 +136,11 @@ export default async function HomePage() {
   const nextBill = s.overdue[0] ?? s.upcoming[0];
   const nextDetail = nextBill ? getBill(hh.id, nextBill.id) : null;
   const myShare = nextDetail?.shares.find((sh) => sh.memberId === me.id) ?? null;
-  const projMethod = proj.services.some((p) => p.method === 'seasonal')
-    ? 'seasonal'
-    : proj.services.some((p) => p.method === 'weather')
-      ? 'weather'
-      : proj.services.some((p) => p.method === 'recent')
-        ? 'recent'
-        : proj.services.some((p) => p.method === 'single')
-          ? 'single'
-          : 'none';
+  // The strongest basis any service's estimate uses, for the set-aside note.
+  const projMethod =
+    (['seasonal', 'weather', 'recent', 'area', 'single'] as const).find((m) =>
+      proj.services.some((p) => p.method === m),
+    ) ?? 'none';
   const maxForecast = Math.max(...forecast.map((f) => f.totalMinor), 1);
 
   return (
@@ -549,6 +554,22 @@ export default async function HomePage() {
           <section className={`${tile} lg:col-span-3`}>
             <h2 className="font-display text-lg font-semibold">{t('anomaly.title')}</h2>
             <AnomalyList items={s.anomalies} money={money} empty={t('anomaly.empty')} />
+          </section>
+        )}
+
+        {sharingNotice && (
+          <section className={`${tile} flex flex-col gap-2 lg:col-span-3`}>
+            <h2 className="font-display text-lg font-semibold">{tsh('notice.title')}</h2>
+            <p className="text-sm text-fg-muted">{tsh('notice.body')}</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <InlineAction action={acknowledgeSharingAction} label={tsh('notice.ok')} />
+              <LinkButton href="/settings#sharing" variant="secondary">
+                {tsh('notice.change')}
+              </LinkButton>
+              <Link href="/privacy" className="text-sm font-semibold text-accent">
+                {tsh('privacy')}
+              </Link>
+            </div>
           </section>
         )}
 

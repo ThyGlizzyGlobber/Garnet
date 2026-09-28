@@ -8,8 +8,9 @@ import { addMonths, allocateToMonths, monthBounds } from '@/lib/periods';
 import { getCustomSplits, listServices, type ServiceWithType } from '@/lib/services';
 import { computeShares } from '@/lib/splits';
 import { normalMonthCostPerDay } from '@/lib/weather-model';
+import { areaMonthCostPerDay } from '@/lib/regional';
 
-export type ProjectionMethod = 'seasonal' | 'weather' | 'recent' | 'single' | 'none';
+export type ProjectionMethod = 'seasonal' | 'weather' | 'recent' | 'area' | 'single' | 'none';
 
 export interface ServiceProjection {
   service: ServiceWithType;
@@ -160,6 +161,12 @@ export function projectMonth(
     if (svc.seasonal && (est.method === 'recent' || est.method === 'single')) {
       const perDay = normalMonthCostPerDay(householdId, svc.id, month, db);
       if (perDay !== null) est = { perDay, method: 'weather', basisCount: est.basisCount };
+    }
+    // Little or no history of its own: the typical cost for this kind of
+    // service where the household lives (area figures, scope S4).
+    if (est.method === 'none' || est.method === 'single') {
+      const perDay = areaMonthCostPerDay(householdId, svc.typeSlug, month, start, db);
+      if (perDay !== null) est = { perDay, method: 'area', basisCount: est.basisCount };
     }
     const remainingDays = Math.max(0, days - knownDays);
     const monthMinor = knownMinor + Math.round(est.perDay * remainingDays);

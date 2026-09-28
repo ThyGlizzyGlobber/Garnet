@@ -86,6 +86,11 @@ const envSchema = z.object({
   WEATHER_HDD_BASE: z.coerce.number().default(18),
   WEATHER_CDD_BASE: z.coerce.number().default(18),
 
+  /** Area comparisons from households that share (scope S4); "off" stops computing and showing them. */
+  REGIONAL_INSIGHTS: z.enum(['on', 'off']).default('on'),
+  /** No area figure is kept or shown unless at least this many households stand behind it. */
+  REGIONAL_MIN_HOUSEHOLDS: z.coerce.number().int().min(5).default(10),
+
   DEMO_MODE: boolish.default(false),
 
   // Stamped into the image by the release workflow; 'dev' for local builds.

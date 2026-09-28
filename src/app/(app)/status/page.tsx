@@ -9,6 +9,7 @@ import { and, count, eq, isNotNull } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import { bill } from '@/db/schema';
 import { weatherStatus } from '@/lib/weather';
+import { regionalCounts, regionalEnabled } from '@/lib/regional';
 import { pageContext } from '@/lib/context';
 import { getEnv, isImapConfigured, isLlmConfigured } from '@/lib/env';
 import { documentCounts, ingestionStats } from '@/lib/review';
@@ -19,6 +20,7 @@ export default async function StatusPage() {
   const { hh, date } = await pageContext();
   const operator = await viewerIsOperator();
   const ai = aiAllowance(hh.id);
+  const regional = regionalCounts();
   const billsWithWeather = getDb()
     .select({ n: count() })
     .from(bill)
@@ -159,6 +161,24 @@ export default async function StatusPage() {
           <p className="mt-2 text-xs text-danger">{weatherStatus.lastError}</p>
         )}
         <p className="mt-2 text-xs text-fg-muted">{t('weather.hint')}</p>
+      </Card>
+
+      <Card className="mt-4">
+        <div className="flex items-start justify-between gap-3">
+          <h2 className="font-semibold">{t('regional.title')}</h2>
+          <Badge tone={regionalEnabled() ? 'success' : 'neutral'}>
+            {regionalEnabled() ? t('regional.on') : t('regional.off')}
+          </Badge>
+        </div>
+        <dl className="mt-2 grid grid-cols-2 gap-2 text-sm">
+          <dt className="text-fg-muted">{t('regional.sharing')}</dt>
+          <dd>{regional.sharing}</dd>
+          <dt className="text-fg-muted">{t('regional.figures')}</dt>
+          <dd>{regional.figures}</dd>
+        </dl>
+        <p className="mt-2 text-xs text-fg-muted">
+          {t('regional.hint', { k: env.REGIONAL_MIN_HOUSEHOLDS })}
+        </p>
       </Card>
 
       <Card className="mt-4">

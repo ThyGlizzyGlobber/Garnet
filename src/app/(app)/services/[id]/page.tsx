@@ -15,6 +15,7 @@ import { addMonths } from '@/lib/periods';
 import { projectMonth } from '@/lib/projections';
 import { seasonAhead } from '@/lib/seasons';
 import { weatherAdjusted } from '@/lib/weather-model';
+import { areaComparison } from '@/lib/regional';
 
 /** A service at a glance: how much it uses and how that compares, then its bills. */
 export default async function ServicePage({ params }: { params: Promise<{ id: string }> }) {
@@ -52,6 +53,18 @@ export default async function ServicePage({ params }: { params: Promise<{ id: st
   if (c?.similarHouseholds) rows.push({ label: t('vs.similar'), usage: c.similarHouseholds });
 
   const seasons = seasonAhead(hh.id, today).filter((n) => n.serviceId === svc.id);
+  // "Households like yours" (scope S4): only for households that share.
+  const ta = await getTranslations('area');
+  const area = areaComparison(hh.id, svc.id, today);
+  const perUnit = (v: number, unit: string) => {
+    const [currency, per] = unit.split('/');
+    const price = new Intl.NumberFormat(hh.locale, {
+      style: 'currency',
+      currency: currency || hh.currency,
+      maximumFractionDigits: 3,
+    }).format(v);
+    return `${price}/${unitLabel(per)}`;
+  };
   // "Against the same time last year: you used 12% more; it was 18% colder.
   // Adjusted for the weather, 5% less." Only when the weather model qualifies.
   const tw = await getTranslations('weather.adjusted');
@@ -197,6 +210,57 @@ export default async function ServicePage({ params }: { params: Promise<{ id: st
                 </div>
               );
             })}
+          </dl>
+        </Card>
+      )}
+
+      {area && (
+        <Card className="mt-4">
+          <h2 className="font-semibold">{ta('title')}</h2>
+          <p className="mt-0.5 text-xs text-fg-muted">
+            {ta(area.sameSize ? 'basisSameSize' : 'basis', {
+              month: monthLabel(area.month, hh.locale),
+              households: area.cost?.households ?? 0,
+              area: area.areaName,
+            })}
+          </p>
+          <dl className="mt-2 divide-y divide-border text-sm">
+            {(
+              [
+                ['cost', area.cost, (v: number) => money(Math.round(v))],
+                ['usage', area.usage, (v: number) => `${qty(v)} ${unitLabel(area.usage?.unit)}`],
+                ['rate', area.rate, (v: number) => perUnit(v, area.rate?.unit ?? '')],
+              ] as const
+            )
+              .filter(([, f]) => f)
+              .map(([key, f, show]) => (
+                <div key={key} className="flex items-baseline justify-between gap-4 py-2">
+                  <dt>
+                    {ta(`metric.${key}`)}
+                    <span className="block text-xs text-fg-muted">
+                      {ta('range', { low: show(f!.p25), high: show(f!.p75) })}
+                    </span>
+                  </dt>
+                  <dd className="text-right tabular-nums">
+                    <span className="font-semibold">
+                      {ta('typical', { value: show(f!.median) })}
+                    </span>
+                    {f!.you !== null && (
+                      <span className="block text-xs">
+                        {ta('you', { value: show(f!.you) })}{' '}
+                        <ChangeText
+                          change={{
+                            from: f!.median,
+                            to: f!.you,
+                            pct: f!.median ? (f!.you - f!.median) / f!.median : null,
+                          }}
+                          words={words}
+                        />
+                      </span>
+                    )}
+                  </dd>
+                </div>
+              ))}
           </dl>
         </Card>
       )}

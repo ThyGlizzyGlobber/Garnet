@@ -41,6 +41,7 @@ export function SetupWizard({
   country: string;
 }) {
   const t = useTranslations('setup');
+  const tShare = useTranslations('sharing');
   const [step, setStep] = useState<Step>('household');
   const [splitMode, setSplitMode] = useState<'shared' | 'single'>('shared');
   const pages = useRef<Record<Step, HTMLDivElement | null>>({
@@ -194,6 +195,20 @@ export function SetupWizard({
                 errors={errors}
                 optional
               />
+              <label className="flex items-start gap-3 text-sm">
+                <input
+                  type="checkbox"
+                  name="shareRegional"
+                  defaultChecked
+                  className="mt-0.5 size-5 accent-accent"
+                />
+                <span>
+                  {tShare('setup')}{' '}
+                  <a href="/privacy" target="_blank" className="font-semibold text-accent">
+                    {tShare('privacy')}
+                  </a>
+                </span>
+              </label>
             </Card>
           </div>
 

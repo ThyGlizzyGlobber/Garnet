@@ -13,6 +13,7 @@ import {
   exitDemoAction,
   readMissingMetricsAction,
   removeLocationAction,
+  saveSharingAction,
   replaceBillsAddressAction,
   setThemeAction,
 } from './actions';
@@ -26,6 +27,7 @@ import {
   hasPostcodeData,
 } from '@/lib/location';
 import { householdClimate } from '@/lib/seasons';
+import { latestRegionalChoice, regionalEnabled } from '@/lib/regional';
 
 export default async function SettingsPage() {
   const { hh, me } = await pageContext();
@@ -35,6 +37,9 @@ export default async function SettingsPage() {
   const env = getEnv();
   const theme = await getTheme();
   const tl = await getTranslations('location');
+  const ts = await getTranslations('sharing');
+  const choice = latestRegionalChoice(hh.id);
+  const minHouseholds = getEnv().REGIONAL_MIN_HOUSEHOLDS;
   const place = describeLocation(hh);
   const climate = householdClimate(hh);
   const withData = countriesWithData();
@@ -100,6 +105,56 @@ export default async function SettingsPage() {
           <p className="text-[11px] text-fg-muted">{tl('attribution')}</p>
         )}
       </Card>
+      {regionalEnabled() && (
+        <Card className="mt-4 flex flex-col gap-3" id="sharing">
+          <h2 className="font-display font-semibold">{ts('title')}</h2>
+          <p className="text-sm text-fg-muted">{ts('body', { k: minHouseholds })}</p>
+          <ul className="list-disc space-y-1 pl-5 text-xs text-fg-muted">
+            <li>{ts('shared')}</li>
+            <li>{ts('never')}</li>
+          </ul>
+          {me.role === 'owner' ? (
+            <form action={saveSharingAction} className="flex flex-col gap-3">
+              <label className="flex items-start gap-3 text-sm font-medium">
+                <input
+                  type="checkbox"
+                  name="share"
+                  defaultChecked={hh.shareRegional}
+                  className="mt-0.5 size-5 accent-accent"
+                />
+                <span>
+                  {ts('checkbox')}
+                  <span className="block text-xs font-normal text-fg-muted">
+                    {ts('checkboxHint')}
+                  </span>
+                </span>
+              </label>
+              <div>
+                <button
+                  type="submit"
+                  className="rounded-full bg-surface-2 px-4 py-2 text-sm font-semibold hover:text-accent"
+                >
+                  {ts('save')}
+                </button>
+              </div>
+            </form>
+          ) : (
+            <p className="text-sm">{hh.shareRegional ? ts('onMember') : ts('offMember')}</p>
+          )}
+          {choice && (
+            <p className="text-xs text-fg-muted">
+              {ts(choice.granted ? 'since.on' : 'since.off', {
+                date: new Intl.DateTimeFormat(hh.locale, { dateStyle: 'medium' }).format(
+                  new Date(choice.at),
+                ),
+              })}
+            </p>
+          )}
+          <Link href="/privacy" className="text-xs font-semibold text-accent">
+            {ts('privacy')}
+          </Link>
+        </Card>
+      )}
       <Card className="mt-4 flex flex-col gap-3">
         <h2 className="font-display font-semibold">{t('theme.title')}</h2>
         <p className="text-xs text-fg-muted">{t('theme.body')}</p>

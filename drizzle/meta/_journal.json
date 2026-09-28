@@ -120,6 +120,13 @@
       "when": 1790610863784,
       "tag": "0016_weather",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1790612126171,
+      "tag": "0017_regional",
+      "breakpoints": true
     }
   ]
 }

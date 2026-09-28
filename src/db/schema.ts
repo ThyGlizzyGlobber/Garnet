@@ -60,6 +60,12 @@ export const household = sqliteTable(
     latitude: real('latitude'),
     longitude: real('longitude'),
     locationUpdatedAt: text('location_updated_at'),
+    /**
+     * Share anonymised figures with the area comparisons (scope S4). On by
+     * default (owner decision); admins can turn it off in Settings. Every
+     * change is recorded in household_consent.
+     */
+    shareRegional: integer('share_regional', { mode: 'boolean' }).notNull().default(true),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
@@ -561,6 +567,51 @@ export const weatherForecast = sqliteTable(
     fetchedAt: text('fetched_at').notNull(),
   },
   (t) => [primaryKey({ columns: [t.cell, t.date] })],
+);
+
+/** Each change to a household's data-sharing choice, with who made it and under which notice. */
+export const householdConsent = sqliteTable(
+  'household_consent',
+  {
+    id: text('id').primaryKey(),
+    householdId: householdId(),
+    kind: text('kind', { enum: ['regional'] }).notNull(),
+    granted: integer('granted', { mode: 'boolean' }).notNull(),
+    /** How it was given: the default at setup, acknowledged later, or changed in Settings. */
+    how: text('how', { enum: ['default', 'acknowledged', 'settings'] }).notNull(),
+    /** Version of the privacy notice shown at the time. */
+    noticeVersion: text('notice_version').notNull(),
+    byMemberId: text('by_member_id').references(() => member.id, { onDelete: 'set null' }),
+    at: text('at').notNull(),
+  },
+  (t) => [index('household_consent_household_idx').on(t.householdId, t.kind)],
+);
+
+/**
+ * Area figures (scope S4): medians and quartiles across sharing households,
+ * written only when at least REGIONAL_MIN_HOUSEHOLDS households stand behind
+ * them. No household ids: nothing here can be traced back to one home.
+ * Recomputed in full by the worker.
+ */
+export const regionalStat = sqliteTable(
+  'regional_stat',
+  {
+    level: text('level', { enum: ['postcode', 'region', 'state', 'country'] }).notNull(),
+    area: text('area').notNull(),
+    serviceType: text('service_type').notNull(),
+    month: text('month').notNull(),
+    /** Household size band: all | 1 | 2 | 3-4 | 5+. */
+    sizeBand: text('size_band').notNull(),
+    metric: text('metric').notNull(),
+    /** Unit of the values: a currency (minor units per day), a usage unit per day, or currency/unit. */
+    unit: text('unit').notNull(),
+    households: integer('households').notNull(),
+    median: real('median').notNull(),
+    p25: real('p25').notNull(),
+    p75: real('p75').notNull(),
+    computedAt: text('computed_at').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.level, t.area, t.serviceType, t.month, t.sizeBand, t.metric] })],
 );
 
 /** One row per email sent about something, so nothing is sent twice. */

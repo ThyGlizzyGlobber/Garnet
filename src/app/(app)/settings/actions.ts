@@ -14,6 +14,7 @@ import { requestIsHttps } from '@/lib/request';
 import { THEME_COOKIE, THEMES, type Theme } from '@/lib/theme';
 import { cancelUpdateRequest, checkForUpdate, requestUpdate } from '@/lib/updates';
 import { readMissingMetrics } from '@/ingest/metrics';
+import { computeRegionalStats, regionalEnabled, setRegionalSharing } from '@/lib/regional';
 import {
   clearHouseholdLocation,
   LOCATION_PROMPT_COOKIE,
@@ -159,5 +160,22 @@ export async function dismissLocationPromptAction(): Promise<void> {
     secure: await requestIsHttps(),
     path: '/',
   });
+  revalidatePath('/');
+}
+
+/** Area comparisons on or off (admins). Turning it off takes the household out of every figure now. */
+export async function saveSharingAction(fd: FormData): Promise<void> {
+  const me = await requireOwner();
+  const share = fd.get('share') === 'on';
+  setRegionalSharing(me.householdId, share, 'settings', me.id);
+  if (!share && regionalEnabled()) computeRegionalStats();
+  revalidatePath('/settings');
+  revalidatePath('/');
+}
+
+/** "Got it" on the dashboard notice that area comparisons are on. */
+export async function acknowledgeSharingAction(): Promise<void> {
+  const me = await requireOwner();
+  setRegionalSharing(me.householdId, true, 'acknowledged', me.id);
   revalidatePath('/');
 }
