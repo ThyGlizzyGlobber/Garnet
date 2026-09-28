@@ -130,6 +130,19 @@ export async function ignoreDocumentAction(fd: FormData): Promise<void> {
   redirect('/review');
 }
 
+/** "It's a bill": read a filed-away document again as a bill (a person vouches for it). */
+export async function readAsBillAction(fd: FormData): Promise<void> {
+  const me = await requireMember();
+  const id = str(fd, 'documentId');
+  if (!getDocument(me.householdId, id)) redirect('/review');
+  const outcome = await processDocument(me.householdId, id, undefined, { asBill: true });
+  revalidatePath('/review');
+  revalidatePath('/bills');
+  redirect(
+    outcome.status === 'extracted' && outcome.billId ? `/bills/${outcome.billId}` : `/review/${id}`,
+  );
+}
+
 export async function reprocessDocumentAction(fd: FormData): Promise<void> {
   const me = await requireMember();
   const id = str(fd, 'documentId');

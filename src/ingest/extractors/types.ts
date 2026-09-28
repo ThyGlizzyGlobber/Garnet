@@ -14,6 +14,8 @@ export interface ExtractionInput {
   text: string;
   /** Set only when the document has no text (a scan or photo). */
   file?: ScanFile | null;
+  /** A household member has confirmed what the document is. */
+  hint?: 'bill' | null;
   /** Original filename, when known. */
   filename?: string | null;
   /** Email metadata, when the document arrived by mail. */

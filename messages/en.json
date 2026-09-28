@@ -674,8 +674,8 @@
       "noPreview": "No text could be read from this file.",
       "alreadyBill": "This document already became a bill.",
       "reprocess": "Re-run extraction",
-      "ignore": "Ignore",
-      "ignoreConfirm": "Ignore this document? It stays archived but leaves the queue.",
+      "ignore": "Not a bill",
+      "ignoreConfirm": "Move this to Other emails? It's kept, and you can move it back with “It's a bill”.",
       "openFile": "Open file",
       "attempts": "Extractors tried",
       "attemptError": "error: {error}",
@@ -683,7 +683,10 @@
       "noticeTitle": "This isn't a bill",
       "noticeBody": "It was read as a receipt or notice from the provider and filed away, so there's nothing to fill in.",
       "noticeBill": "See the bill it updated",
-      "addAnyway": "It is a bill? Add it by hand"
+      "addAnyway": "Or type the bill in yourself",
+      "ignoredBody": "Someone marked this as not a bill, so it's filed under Other emails.",
+      "readAsBill": "It's a bill",
+      "readAsBillHint": "Wrongly filed? “It's a bill” has the AI read it again as a bill (one AI read) and adds it. If some details can't be read, you'll get the form to finish it."
     },
     "form": {
       "approve": "Create bill",

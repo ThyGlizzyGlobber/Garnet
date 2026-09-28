@@ -9,7 +9,7 @@ import { getReviewItem } from '@/lib/review';
 import { listServices } from '@/lib/services';
 import { listUnits } from '@/lib/units';
 import { matchService } from '@/ingest/pipeline';
-import { ignoreDocumentAction, reprocessDocumentAction } from '../actions';
+import { ignoreDocumentAction, readAsBillAction, reprocessDocumentAction } from '../actions';
 import { ReviewForm } from './review-form';
 import { isImageFile } from '@/ingest/scan';
 import { addressOf, trustTarget } from '@/lib/sender-auth';
@@ -30,7 +30,7 @@ export default async function ReviewItemPage({ params }: { params: Promise<{ id:
   const isPhoto = isImageFile(d.mimeType, d.path);
   const canReview = d.status !== 'extracted';
   // A receipt or provider notice: nothing to fill in, so say what happened instead.
-  const isNotice = d.status === 'notice';
+  const isNotice = d.status === 'notice' || d.status === 'ignored';
   const linked = d.billId ?? d.extraction?.billId ?? null;
   // A receipt or notice may point at a bill that has since been deleted.
   const relatedBill = linked && getBill(hh.id, linked) ? linked : null;
@@ -145,13 +145,25 @@ export default async function ReviewItemPage({ params }: { params: Promise<{ id:
             <>
               <Card className="flex flex-col gap-3">
                 <p className="font-display text-lg font-semibold">{t('detail.noticeTitle')}</p>
-                {d.extraction?.reason && <p className="text-sm">{d.extraction.reason}.</p>}
-                <p className="text-sm text-fg-muted">{t('detail.noticeBody')}</p>
-                {relatedBill && (
-                  <div>
-                    <LinkButton href={`/bills/${relatedBill}`}>{t('detail.noticeBill')}</LinkButton>
-                  </div>
+                {d.status === 'notice' && d.extraction?.reason && (
+                  <p className="text-sm">{d.extraction.reason}.</p>
                 )}
+                <p className="text-sm text-fg-muted">
+                  {d.status === 'ignored' ? t('detail.ignoredBody') : t('detail.noticeBody')}
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  {relatedBill && (
+                    <LinkButton href={`/bills/${relatedBill}`} variant="secondary">
+                      {t('detail.noticeBill')}
+                    </LinkButton>
+                  )}
+                  <InlineAction
+                    action={readAsBillAction}
+                    hidden={{ documentId: d.id }}
+                    label={t('detail.readAsBill')}
+                  />
+                </div>
+                <p className="text-xs text-fg-muted">{t('detail.readAsBillHint')}</p>
               </Card>
               <details className="group">
                 <summary className="cursor-pointer text-sm font-semibold text-accent">
@@ -172,7 +184,7 @@ export default async function ReviewItemPage({ params }: { params: Promise<{ id:
               label={t('detail.reprocess')}
               variant="secondary"
             />
-            {d.status !== 'ignored' && (
+            {(d.status === 'needs_review' || d.status === 'unprocessed') && (
               <InlineAction
                 action={ignoreDocumentAction}
                 hidden={{ documentId: d.id }}

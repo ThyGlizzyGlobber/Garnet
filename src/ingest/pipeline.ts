@@ -31,7 +31,7 @@ import {
   notifyInBackground,
   notifyServiceCreated,
 } from '@/lib/notifications';
-import { serviceForNewProvider } from '@/lib/auto-service';
+import { serviceForNewProvider, typeFits } from '@/lib/auto-service';
 import { saveBillMetrics } from '@/lib/metrics';
 
 export interface PipelineOutcome {
@@ -119,9 +119,10 @@ export async function processDocument(
   householdId: string,
   documentId: string,
   db: Db = getDb(),
+  opts: ReadOptions = {},
 ): Promise<PipelineOutcome> {
   const before = storedExtraction(getDocument(householdId, documentId, db));
-  const outcome = await readAndRoute(householdId, documentId, db);
+  const outcome = await readAndRoute(householdId, documentId, db, opts);
   // Remember what it turned out to be (and, for a notice, the bill it changed)
   // for the inbox filters and the review page.
   const doc = getDocument(householdId, documentId, db);
@@ -137,13 +138,25 @@ export async function processDocument(
   return outcome;
 }
 
+export interface ReadOptions {
+  /**
+   * A household member says this document is a bill ("It's a bill" in the
+   * Inbox): the AI is told so, notice rules are skipped, and it's trusted like
+   * an upload, since a person vouches for it.
+   */
+  asBill?: boolean;
+}
+
 async function readAndRoute(
   householdId: string,
   documentId: string,
   db: Db,
+  opts: ReadOptions,
 ): Promise<PipelineOutcome> {
-  const doc = getDocument(householdId, documentId, db);
-  if (!doc) throw new Error('Document not found');
+  const found = getDocument(householdId, documentId, db);
+  if (!found) throw new Error('Document not found');
+  // senderVerified null = brought in by the household (uploads); see mayActFor.
+  const doc = opts.asBill ? { ...found, senderVerified: null } : found;
   const env = getEnv();
   // A damaged or unsupported file must still land in the review queue, never vanish.
   let text = '';
@@ -196,7 +209,11 @@ async function readAndRoute(
   // payment received) update the matching bill instead of being read as a bill.
   const fromBillsAddress = doc.senderVerified !== null;
   const emailBody = fromBillsAddress && doc.kind === 'email';
-  const input = { ...buildInput(householdId, text, doc, db), file: scan };
+  const input = {
+    ...buildInput(householdId, text, doc, db),
+    file: scan,
+    hint: opts.asBill ? ('bill' as const) : null,
+  };
   // AI reads are capped per household per month (AI_MONTHLY_LIMIT).
   const aiLeft = aiAllowance(householdId, db).left > 0;
   const aiReads = aiLeft && fallbackExtractors.some((e) => e.canHandle(input));
@@ -227,8 +244,18 @@ async function readAndRoute(
   if (attempts.some((a) => a.extractor.startsWith('llm:') && !a.error))
     recordUsage(householdId, AI_READ, db);
   const aiError = attempts.find((a) => a.error)?.error;
+  // Marked as a bill, but the AI still found no bill details: a person fills them in.
+  if (opts.asBill && best && !best.bill.periodStart) {
+    store(
+      'needs_review',
+      'Marked as a bill, but the AI couldn’t read the bill details. Fill them in below.',
+      best,
+      attempts,
+    );
+    return { documentId: doc.id, status: 'needs_review', reason: 'as-bill-unread', result: best };
+  }
   // The AI reader says what a document is; anything but a bill never becomes one.
-  if (best?.document && best.document.kind !== 'bill') {
+  if (!opts.asBill && best?.document && best.document.kind !== 'bill') {
     const routed = applyDocument(
       householdId,
       doc,
@@ -397,11 +424,14 @@ export function matchService(
       p.includes(s.provider.toLowerCase()) ||
       s.provider.toLowerCase().includes(p),
   );
-  if (byProvider.length === 1) return byProvider[0]!.id;
-  if (byProvider.length > 1) {
-    // One provider, several services (gas and electricity): tell them apart by type.
-    const both = byProvider.filter((s) => s.typeSlug === result.bill.serviceType);
-    return both.length === 1 ? both[0]!.id : null;
+  if (byProvider.length) {
+    // One provider can supply several things (AGL power and gas): the service
+    // must also be of the bill's type. A gas bill from the household's only AGL
+    // service, which is electricity, is a new service, not that one.
+    const typed = byProvider.filter((s) => typeFits(s.typeSlug, result.bill.serviceType));
+    if (typed.length === 1) return typed[0]!.id;
+    const exact = typed.filter((s) => s.typeSlug === result.bill.serviceType);
+    return exact.length === 1 ? exact[0]!.id : null;
   }
   // A named provider with no service is a new provider (set up automatically),
   // not the household's other service of the same type: after switching

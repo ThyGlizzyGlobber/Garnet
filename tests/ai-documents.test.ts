@@ -351,3 +351,72 @@ describe('when the AI service is busy', () => {
     expect(getBill(hh.id, bill.id, db)?.paidToProviderAt).toBe('2026-09-14T00:00:00Z');
   });
 });
+
+describe('"It\'s a bill" on a document filed as something else', () => {
+  const gasEmail = (hid: string) =>
+    doc(hid, 'Fwd: Your AGL gas bill is ready. Amount due $212.40 by 14 October. Account 1234.', {
+      kind: 'email',
+      emailFrom: 'Someone <someone@elsewhere.example>',
+      emailSubject: 'Fwd: Your AGL gas bill',
+      senderDomain: 'elsewhere.example',
+      senderVerified: true,
+    });
+  const gasBill: Output = {
+    ...base,
+    document_type: 'bill',
+    provider: 'AGL',
+    service_type: 'gas',
+    bill: {
+      amount: 212.4,
+      currency: 'AUD',
+      tax_amount: null,
+      tax_label: null,
+      period_start: '2026-06-01',
+      period_end: '2026-08-31',
+      issue_date: '2026-09-15',
+      due_date: '2026-10-14',
+      usage_quantity: 4100,
+      usage_unit: 'MJ',
+      invoice_number: 'GAS-1',
+      account_number: '1234',
+      auto_pay: false,
+      previous_payment: null,
+      metrics: [],
+    },
+  };
+
+  it('reads it again as a bill, told so, and adds it even from an unknown sender', async () => {
+    const { hh, svc } = setup();
+    scriptAi({ ...base, document_type: 'other', provider: 'AGL' });
+    const d = gasEmail(hh.id);
+    expect((await processDocument(hh.id, d.id, db)).status).toBe('notice');
+
+    let hinted = false;
+    scriptAi((_text, input) => {
+      hinted = input.hint === 'bill';
+      return gasBill;
+    });
+    const outcome = await processDocument(hh.id, d.id, db, { asBill: true });
+    expect(hinted).toBe(true);
+    expect(outcome.status).toBe('extracted');
+    const gas = getBill(hh.id, outcome.billId!, db)!;
+    expect(gas.amountMinor).toBe(21240);
+    expect(getDocument(hh.id, d.id, db)?.status).toBe('extracted');
+    // The household's AGL service is electricity: the gas bill gets its own service.
+    expect(gas.service.typeSlug).toBe('gas');
+    expect(gas.service.provider).toBe('AGL');
+    expect(gas.serviceId).not.toBe(svc.id);
+  });
+
+  it('asks a person to fill in the details when the AI still finds none', async () => {
+    const { hh } = setup();
+    scriptAi({ ...base, document_type: 'other', provider: 'AGL' });
+    const d = gasEmail(hh.id);
+    await processDocument(hh.id, d.id, db);
+    const outcome = await processDocument(hh.id, d.id, db, { asBill: true });
+    expect(outcome.status).toBe('needs_review');
+    const reason = JSON.parse(getDocument(hh.id, d.id, db)!.extractionJson!).reason as string;
+    expect(reason).toMatch(/^Marked as a bill/);
+    scriptAi(null);
+  });
+});

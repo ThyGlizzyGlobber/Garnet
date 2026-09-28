@@ -236,6 +236,9 @@ export const anthropicExtractor: Extractor = {
       input.filename ? `Filename: ${input.filename}` : null,
       input.email?.from ? `Email from: ${input.email.from}` : null,
       input.email?.subject ? `Email subject: ${input.email.subject}` : null,
+      input.hint === 'bill'
+        ? 'A household member has confirmed this document IS a bill: set document_type to "bill" and read its bill details (for a forwarded email, the bill inside it).'
+        : null,
       '',
       ...(input.file
         ? [
@@ -313,14 +316,6 @@ export function toResult(
   const warnings: string[] = [];
   if (o.notes) warnings.push(o.notes);
   const provider = o.provider ?? '';
-  const service = provider
-    ? (input.services.find((s) => s.provider.toLowerCase() === provider.toLowerCase()) ??
-      input.services.find(
-        (s) =>
-          provider.toLowerCase().includes(s.provider.toLowerCase()) ||
-          s.provider.toLowerCase().includes(provider.toLowerCase()),
-      ))
-    : undefined;
   const serviceType =
     o.service_type && input.serviceTypes.includes(o.service_type) ? o.service_type : 'other';
   if (o.service_type && serviceType !== o.service_type)
@@ -341,7 +336,7 @@ export function toResult(
       periodStart: '',
       periodEnd: '',
       dueDate: '',
-      serviceId: service?.id ?? null,
+      serviceId: null, // matchService() picks it (provider and type)
     };
     return {
       extractor,
@@ -384,7 +379,7 @@ export function toResult(
     usageUnit,
     externalRef: b.invoice_number,
     accountRef: b.account_number,
-    serviceId: service?.id ?? null,
+    serviceId: null, // matchService() picks it (provider and type)
     autoPay: b.auto_pay ?? undefined,
     previousPayment:
       b.previous_payment && day(b.previous_payment.due_date)

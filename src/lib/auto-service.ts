@@ -56,6 +56,14 @@ export function sameProvider(a: string, b: string): boolean {
   );
 }
 
+/**
+ * Could a service of this type take a bill of that type? Yes when they're the
+ * same, or either is "other" (unknown), so an unsure reading never splits a service.
+ */
+export function typeFits(serviceType: string, billType: string | null | undefined): boolean {
+  return !billType || billType === 'other' || serviceType === 'other' || serviceType === billType;
+}
+
 export interface AutoServiceResult {
   service: ServiceWithType;
   created: boolean;
@@ -74,13 +82,15 @@ export function serviceForNewProvider(
   // reused rather than duplicated, but only when exactly one fits; otherwise
   // a person picks.
   const same = all.filter((s) => sameProvider(s.provider, provider));
-  if (same.length) {
-    const fits = same.length === 1 ? same : same.filter((s) => s.typeSlug === bill.serviceType);
-    const existing = fits.length === 1 ? fits[0]! : null;
+  const typed = same.filter((s) => typeFits(s.typeSlug, bill.serviceType));
+  if (typed.length) {
+    const exact = typed.filter((s) => s.typeSlug === bill.serviceType);
+    const existing = typed.length === 1 ? typed[0]! : exact.length === 1 ? exact[0]! : null;
     if (!existing) return null;
     if (!existing.isActive) updateService(householdId, existing.id, { isActive: true }, db);
     return { service: { ...existing, isActive: true }, created: false };
   }
+  // Same provider, different kind of service (AGL gas beside AGL power): a new service.
   const types = listServiceTypes(db);
   const type =
     types.find((t) => t.slug === bill.serviceType) ?? types.find((t) => t.slug === 'other')!;
