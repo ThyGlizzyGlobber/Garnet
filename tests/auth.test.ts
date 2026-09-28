@@ -353,3 +353,16 @@ describe('email', () => {
     expect(e.text.indexOf('Go:')).toBeLessThan(e.text.indexOf('K7M4-QX2P'));
   });
 });
+
+describe('pasted keys', () => {
+  it('ignore surrounding spaces and treat blank as unset', () => {
+    const base = { DATA_DIR: '/tmp/x', AUTH_SECRET: 'a'.repeat(40) };
+    expect(parseEnv({ ...base, ANTHROPIC_API_KEY: '  sk-ant-test\n' }).ANTHROPIC_API_KEY).toBe(
+      'sk-ant-test',
+    );
+    expect(parseEnv({ ...base, ANTHROPIC_API_KEY: '   ' }).ANTHROPIC_API_KEY).toBeUndefined();
+    expect(
+      parseEnv({ ...base, ANTHROPIC_WORKSPACE_ID: '' }).ANTHROPIC_WORKSPACE_ID,
+    ).toBeUndefined();
+  });
+});

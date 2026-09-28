@@ -10,6 +10,12 @@ const boolish = z
     typeof v === 'boolean' ? v : ['1', 'true', 'yes', 'on'].includes(v.toLowerCase()),
   );
 
+/** A pasted key or ID: surrounding spaces and newlines dropped; blank counts as unset. */
+const pasted = z
+  .string()
+  .optional()
+  .transform((v) => v?.trim() || undefined);
+
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   DATA_DIR: z.string().min(1).default('./data'),
@@ -64,10 +70,10 @@ const envSchema = z.object({
   IMAP_MAILBOX: z.string().default('INBOX'),
   IMAP_POLL_INTERVAL_SECONDS: z.coerce.number().int().min(0).default(300),
 
-  ANTHROPIC_API_KEY: z.string().optional(),
+  ANTHROPIC_API_KEY: pasted,
   ANTHROPIC_MODEL: z.string().default('claude-opus-5'),
   /** Only for an organisation-wide key: the workspace to bill (sent as anthropic-workspace-id). */
-  ANTHROPIC_WORKSPACE_ID: z.string().optional(),
+  ANTHROPIC_WORKSPACE_ID: pasted,
   EXTRACTOR_CONFIDENCE_THRESHOLD: z.coerce.number().min(0).max(1).default(0.85),
   /** AI bill reads per household per month; beyond it, unknown bills go to the review queue. */
   AI_MONTHLY_LIMIT: z.coerce.number().int().min(0).default(60),

@@ -2,7 +2,7 @@ import { and, eq } from 'drizzle-orm';
 import { getDb, type Db } from '@/db/client';
 import { account, bill, type SourceDocument } from '@/db/schema';
 import { createBill, type BillDetail } from '@/lib/bills';
-import { getEnv } from '@/lib/env';
+import { getEnv, isLlmConfigured } from '@/lib/env';
 import { getHousehold } from '@/lib/households';
 import { listMembers } from '@/lib/members';
 import { getService, listServices, listServiceTypes, updateService } from '@/lib/services';
@@ -223,9 +223,11 @@ async function readAndRoute(
         ? `The AI reader failed, so this needs checking by hand (${aiProblem(aiError)})`
         : attempts.length
           ? 'The AI reader could not read this document'
-          : aiLeft
-            ? 'AI reading is not set up (no API key), so this needs entering by hand'
-            : 'This month’s AI reading limit is used up, so this needs entering by hand',
+          : aiLeft && isLlmConfigured(env)
+            ? 'There is too little text in this document for the AI reader, so this needs entering by hand'
+            : aiLeft
+              ? 'AI reading is not set up (no API key), so this needs entering by hand'
+              : 'This month’s AI reading limit is used up, so this needs entering by hand',
       null,
       attempts,
     );
