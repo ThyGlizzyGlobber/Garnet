@@ -98,3 +98,16 @@ export function confirmOwnership(householdId: string, serviceId: string, db: Db 
     .where(and(eq(service.householdId, householdId), eq(service.id, serviceId)))
     .run();
 }
+
+/**
+ * May this member switch a service between household and personal? Its owner
+ * can hand a personal one back; an admin or its payer can make a household one
+ * theirs. (Whoever is asked "Who's this for?" may answer either way.)
+ */
+export function canChangeOwner(
+  me: { id: string; role: string },
+  svc: { ownerMemberId: string | null; payerMemberId: string | null },
+): boolean {
+  if (svc.ownerMemberId) return svc.ownerMemberId === me.id;
+  return me.role === 'owner' || svc.payerMemberId === me.id;
+}

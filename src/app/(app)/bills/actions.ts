@@ -1,6 +1,6 @@
 'use server';
 
-import { answerOwnership, asksMember } from '@/lib/ownership';
+import { answerOwnership, asksMember, canChangeOwner } from '@/lib/ownership';
 import { rotateDocument } from '@/ingest/rotate';
 import { getReviewItem } from '@/lib/review';
 import { refileDocuments } from '@/lib/filing';
@@ -258,5 +258,22 @@ export async function answerOwnershipAction(fd: FormData): Promise<void> {
   answerOwnership(me.householdId, b.serviceId, me, answer);
   revalidatePath(`/bills/${billId}`);
   revalidatePath('/bills');
+  revalidatePath('/');
+}
+
+/** One tap on the bill page: make its service just mine, or the household's again. */
+export async function setWhoseAction(fd: FormData): Promise<void> {
+  const me = await requireMember();
+  const billId = str(fd, 'billId');
+  const b = visibleBill(me, billId);
+  const whose = str(fd, 'whose');
+  if (!b || (whose !== 'mine' && whose !== 'household')) return;
+  if (!canChangeOwner(me, b.service) && !asksMember(b.service, me)) return;
+  answerOwnership(me.householdId, b.serviceId, me, whose);
+  // Its files move folder ("… (Mum, personal)" or back).
+  refileDocuments(me.householdId);
+  revalidatePath(`/bills/${billId}`);
+  revalidatePath('/bills');
+  revalidatePath('/services');
   revalidatePath('/');
 }

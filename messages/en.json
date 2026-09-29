@@ -268,7 +268,15 @@
       "bodyMine": "{service} is set up as yours: only you see it, and it isn't split. Is that right, or is it the household's?",
       "bodyHousehold": "{service} is set up as the household's: everyone sees it and it's split. Is it the household's, or just yours?",
       "mine": "Just mine",
-      "household": "The household's"
+      "household": "The household's",
+      "label": "Whose",
+      "isMine": "Yours: only you see it, and it isn't split",
+      "isHousehold": "The household's: split between everyone",
+      "makeHousehold": "Make it the household's",
+      "makeMine": "Make it just mine",
+      "confirmHousehold": "Make {service} the household's? Everyone will see it and its bills, and they'll be split between you.",
+      "confirmMine": "Make {service} just yours? Only you will see it and its bills, and they won't be split.",
+      "lockedShares": "Housemates have paid their shares, so it stays the household's."
     },
     "downloadHint": "A zip of every bill: spreadsheets for your accountant plus each bill's file, filed by year, month and service",
     "downloadMine": "Download my bills",

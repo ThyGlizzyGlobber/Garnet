@@ -19,7 +19,7 @@ import { devOutbox } from '@/lib/email';
 import { createHousehold, updateHousehold } from '@/lib/households';
 import { createMember, deleteMember, setMemberRole } from '@/lib/members';
 import { notifyBillCreated } from '@/lib/notifications';
-import { answerOwnership, ownershipQuestions } from '@/lib/ownership';
+import { answerOwnership, canChangeOwner, ownershipQuestions } from '@/lib/ownership';
 import { personalSummary } from '@/lib/personal';
 import { createService, listServices } from '@/lib/services';
 import { dashboardSummary, monthlySeries } from '@/lib/stats';
@@ -407,5 +407,17 @@ describe('who a new service is for', () => {
     updateHousehold(hh.id, { splitMode: 'single' }, db);
     await uploadAs(hh.id, sam.id, water());
     expect(ownershipQuestions(hh.id, sam, db)).toEqual([]);
+  });
+});
+
+describe('switching whose a service is, from its bill', () => {
+  it('its owner can hand it back; an admin or its payer can make a household one theirs', () => {
+    const { jo, sam, power, rego } = setup();
+    // Jo's rego: Jo can hand it back, Sam can't touch it.
+    expect(canChangeOwner(jo, rego)).toBe(true);
+    expect(canChangeOwner(sam, rego)).toBe(false);
+    // The household's power (Jo pays, Jo is the admin): Jo can, Sam can't.
+    expect(canChangeOwner(jo, power)).toBe(true);
+    expect(canChangeOwner(sam, power)).toBe(false);
   });
 });

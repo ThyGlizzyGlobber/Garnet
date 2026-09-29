@@ -1,5 +1,5 @@
 import type { SourceDocument } from '@/db/schema';
-import { asksMember } from '@/lib/ownership';
+import { asksMember, canChangeOwner } from '@/lib/ownership';
 import { Icon } from '@/components/app/icons';
 import { actingMember } from '@/ingest/pipeline';
 import { canRotate } from '@/ingest/rotate';
@@ -25,6 +25,7 @@ import {
   clearBillAlertAction,
   answerOwnershipAction,
   deleteBillAction,
+  setWhoseAction,
   rotateDocumentAction,
   setPaymentPlanAction,
   toggleBillPaidAction,
@@ -246,6 +247,33 @@ export default async function BillPage({ params }: { params: Promise<{ id: strin
             <Row label={t('detail.type')} value={b.service.type.label} />
           </dl>
           {notes && <p className="mt-4 text-sm whitespace-pre-wrap text-fg-muted">{notes}</p>}
+          {hh.splitMode === 'shared' && (
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-surface-2 px-4 py-3">
+              <div className="min-w-0">
+                <p className="text-xs text-fg-muted">{t('whose.label')}</p>
+                <p className="text-sm font-medium">
+                  {personal ? t('whose.isMine') : t('whose.isHousehold')}
+                </p>
+              </div>
+              {!personal && b.shares.some((x) => x.paidAt && x.paidMethod !== 'payer') ? (
+                <p className="text-xs text-fg-muted">{t('whose.lockedShares')}</p>
+              ) : (
+                (canChangeOwner(me, b.service) || asksMember(b.service, me)) && (
+                  <InlineAction
+                    action={setWhoseAction}
+                    hidden={{ billId: b.id, whose: personal ? 'household' : 'mine' }}
+                    label={personal ? t('whose.makeHousehold') : t('whose.makeMine')}
+                    variant="secondary"
+                    confirm={
+                      personal
+                        ? t('whose.confirmHousehold', { service: b.service.name })
+                        : t('whose.confirmMine', { service: b.service.name })
+                    }
+                  />
+                )
+              )}
+            </div>
+          )}
         </Card>
 
         {/* The email and file it came from, and anything since. */}

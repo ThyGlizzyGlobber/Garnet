@@ -1,6 +1,6 @@
 'use server';
 
-import { confirmOwnership } from '@/lib/ownership';
+import { canChangeOwner, confirmOwnership } from '@/lib/ownership';
 import { refileDocuments } from '@/lib/filing';
 import { parseSenderList } from '@/lib/sender-auth';
 import { revalidatePath } from 'next/cache';
@@ -126,7 +126,7 @@ export async function updateServiceAction(_prev: ActionState, fd: FormData): Pro
     // Household ↔ personal: only its owner hands it back; only an admin or its
     // payer can make a household service their own. Its bills move with it.
     if (personal !== !!existing.ownerMemberId) {
-      if (!canChangePersonal(me, existing))
+      if (!canChangeOwner(me, existing))
         return { error: 'Only an admin or the person who pays it can make it personal' };
       setServiceOwner(me.householdId, id, personal ? me.id : null);
     }
@@ -142,15 +142,6 @@ export async function updateServiceAction(_prev: ActionState, fd: FormData): Pro
   }
   revalidatePath('/services');
   redirect(`/services/${id}`);
-}
-
-/** May this member switch the service between household and personal? */
-function canChangePersonal(
-  me: { id: string; role: string },
-  svc: { ownerMemberId: string | null; payerMemberId: string | null },
-): boolean {
-  if (svc.ownerMemberId) return svc.ownerMemberId === me.id;
-  return me.role === 'owner' || svc.payerMemberId === me.id;
 }
 
 export async function createServiceTypeAction(fd: FormData): Promise<void> {
