@@ -13,9 +13,8 @@ export interface DailyWeather {
 }
 
 /**
- * Where weather comes from (scope S3). Swappable, like extractors and the
- * settlement adapter: Open-Meteo first, anything with daily history and a
- * short forecast can replace it.
+ * Where weather comes from (scope S3). Swappable, like extractors: Open-Meteo
+ * first, anything with daily history and a short forecast can replace it.
  */
 export interface WeatherProvider {
   name: string;

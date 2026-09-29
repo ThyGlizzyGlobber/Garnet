@@ -133,10 +133,11 @@ Key properties:
 
 ## 6. Money: calculate and track, never hold
 
-Prototype 1 **never touches funds**. Holding or moving other people's money is a regulated activity everywhere (AFSL in Australia, EMI/PSD2 in the EU/UK, MSB licensing in the US), so settlement is designed as a **pluggable layer**:
+Prototype 1 **never touches funds**. Holding or moving other people's money is a regulated activity everywhere (AFSL in Australia, EMI/PSD2 in the EU/UK, MSB licensing in the US), so settlement is **calculate and track only**:
 
-- **v1 adapter:** compute shares → generate payment reference → track paid/unpaid.
-- **Future adapter:** a licensed pooling/direct-debit service (shared-account products, bill-splitting services) plugs into the same interface when the project is ready — no core changes.
+- **What the app does:** works out each member's share of a bill, gives it a payment reference, and tracks it as paid or unpaid when the household marks it. Whether the bill itself was paid to the provider comes from receipts, payment notices and auto-pay.
+- **What it never does:** collect, hold, pool or send money. Members pay each other and the provider through their own banks.
+- **Later:** a licensed pooling or direct-debit service (shared-account products, bill-splitting services) could be added as its own module that talks to that provider. The licensed provider holds the money, never this app.
 
 ## 7. Architecture & deployment
 
@@ -206,7 +207,7 @@ After ~2 billing cycles with our household:
 ## 11. Roadmap after Prototype 1
 
 1. **Alpha feedback round** — family/friends' households, structured feedback
-2. **Settlement adapter** — integrate a licensed pooling / auto-collection service
+2. **Licensed settlement** — integrate a licensed pooling / auto-collection service as its own module (the app still never holds funds)
 3. **Native iOS app** (SwiftUI) + push notifications; wall-display product support as the market develops
 4. **CDR integration** — regulated energy + banking data APIs to supplement or replace email ingestion
 5. **Hosted offering** — billing, plans, self-serve operations on top of the multi-household core (multiple households on one install is now in Prototype 1)

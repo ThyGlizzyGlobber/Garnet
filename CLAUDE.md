@@ -59,8 +59,7 @@ log below; this section is the quick orientation.
 - **Open items for the owner.** Product name and domain (BRAND.md lists Homebill / Housekeep / Tally); display
   type and brand mark; Open-Meteo commercial plan (`OPEN_METEO_API_KEY`) before charging anyone; the scope's §7
   privacy/legal review before non-family households (sharing is on by default by the owner's choice — see the
-  decisions log); the `SettlementAdapter` in the hard constraints was never built (shares are tracked in
-  `src/lib`): add the thin interface or reword the constraint; paste the new email Worker into Cloudflare after
+  decisions log); paste the new email Worker into Cloudflare after
   installing the 2026-09-29 update; lib-level error messages and stored Unusual notes are still English text
   rather than message keys.
 - **Likely next steps.** The UI/UX redesign: every screen reads its numbers from a view function in `src/lib`
@@ -76,8 +75,12 @@ log below; this section is the quick orientation.
 - Bill extraction is a pluggable interface: (per-provider template slot, none ship) →
   Anthropic API AI reader → manual-review queue. The Anthropic key comes from env. Low-confidence
   parses are never silently accepted.
-- Settlement is calculate-and-track only. The app never holds or moves money.
-  It sits behind `SettlementAdapter` so a pooling service can plug in later.
+- Settlement is calculate-and-track only. The app never holds or moves money: it
+  works out each member's share (`src/lib/splits.ts`), stores it with a payment
+  reference (`share` rows via `src/lib/bills.ts`), and records what the household marks
+  paid; balances and the ledger come from `src/lib/stats.ts`. There is no adapter
+  layer. A licensed pooling or direct-debit service, if ever added, is a separate
+  module that talks to that provider; nothing in this app holds funds.
 - Raw bill files are stored permanently as an audit trail: PDFs, uploads, and bill
   emails that carry no PDF. A forwarded email that carries PDFs is not kept, only
   its PDFs (owner, 2026-09-28). Every extracted Bill links back to its source file;
@@ -110,7 +113,7 @@ log below; this section is the quick orientation.
 - Nothing Australia- or provider-specific in core logic. AU defaults live in
   `.env.example` and seed data.
 - The regulated-money boundary is universal (AFSL in AU, EMI/PSD2 in EU/UK, MSB in
-  US): the settlement adapter never holds funds.
+  US): the app never holds or moves funds.
 
 ## Demo and privacy
 
@@ -364,3 +367,4 @@ Append entries as `- YYYY-MM-DD — decision — why`. Do not rewrite old entrie
 - 2026-09-29 — Owner's answers to the audit's open items. **IMAP poller removed** (bills arrive through the household bills addresses and uploads): `src/ingest/imap/`, `ingestEmail`, the Status mailbox card and "Poll now", the `IMAP_*` settings and the `imapflow` dependency are gone; a run-once step deletes `config/imap-state.json`. Supersedes the 2026-09-23/24 IMAP entries. **Next.js stays pinned at 16.3.6.** The `SettlementAdapter` question is still open.
 - 2026-09-29 — Bills-address deliveries are signed per household (owner): the Worker's HMAC now covers "v2.<timestamp>.<recipient>." plus the message (`X-Signature: v2=…`), so a captured delivery can't be replayed to another household's address. Workers pasted earlier send the older `sha256=` signature, which the app accepts only until the first v2 delivery arrives (recorded in `config/inbound-signature.json`), then refuses for good — installing the app first and pasting the new Worker after loses nothing. Status → Bills addresses (operators) shows which signature is in use. Supersedes the 2026-09-27 signature format.
 - 2026-09-29 — Personal uploads stay out of the household's Inbox (owner): a document a member brought in (an upload, or a signed forward from their own address) that isn't a bill yet is listed only for that member, unless the reader took it for one of the household's bills (matched a household service, or a type that isn't personal by default) — then admins can help with it as before. Unreadable ones stay the member's (they can't be told apart). Mail straight from a provider is the household's. The Inbox badge, the Home "waiting" banner, the Inbox and Status counts, the document page and the file route all follow the same rule (`listDocuments` in `src/lib/review.ts`; `documentCounts` now takes the viewer).
+- 2026-09-29 — Settlement constraint reworded to match the code (owner), settling the open `SettlementAdapter` question: shares are calculated in `src/lib/splits.ts`, stored with their payment references by `src/lib/bills.ts`, marked paid in the app, and totalled in `src/lib/stats.ts`; paid-to-provider is inferred from receipts, notices and auto-pay. No `SettlementAdapter` interface or `src/settlement/` exists and none is planned now: an interface with one implementation would be guesswork about a provider nobody has chosen. A licensed pooling or direct-debit service would be designed as its own module when one is chosen. The rule that matters is unchanged: the app never holds or moves money.

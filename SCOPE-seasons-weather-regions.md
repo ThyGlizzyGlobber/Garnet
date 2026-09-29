@@ -135,7 +135,7 @@ own legal and consent gate (§7).
 
 **Architecture**
 
-- A `WeatherProvider` interface (same pattern as `Extractor` and `SettlementAdapter`): `dailyHistory(lat, lon, from, to)`, `forecast(lat, lon, days)`, `climateNormals(lat, lon)`, each returning daily mean/min/max temperature, HDD/CDD at the configured bases, solar radiation (MJ/m²) and sunshine hours.
+- A `WeatherProvider` interface (same pattern as `Extractor`): `dailyHistory(lat, lon, from, to)`, `forecast(lat, lon, days)`, `climateNormals(lat, lon)`, each returning daily mean/min/max temperature, HDD/CDD at the configured bases, solar radiation (MJ/m²) and sunshine hours.
 - First provider: **Open-Meteo** (historical reanalysis, 16-day forecast, no key). Its free tier is for non-commercial use; a paid plan is needed once the product charges. **Terms to confirm (D5).** An alternative provider can be swapped in behind the interface.
 - `weather_day` cache table keyed by grid cell (lat/lon rounded to 0.1°) and date: shared by every household in the same cell, contains no personal data, filled lazily and by the worker every 30 minutes. Forecasts cached 3 hours.
 - Network calls happen in the worker, never while rendering a page; pages read the cache.
