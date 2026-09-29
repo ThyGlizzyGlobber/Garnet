@@ -31,7 +31,7 @@ import {
   notifyInBackground,
   notifyServiceCreated,
 } from '@/lib/notifications';
-import { serviceForNewProvider, typeFits } from '@/lib/auto-service';
+import { promoteServiceType, serviceForNewProvider, typeFits } from '@/lib/auto-service';
 import { saveBillMetrics } from '@/lib/metrics';
 
 export interface PipelineOutcome {
@@ -392,6 +392,13 @@ async function readAndRoute(
       }
     }
   }
+  // A service still filed as "Other" takes the bill's type (e.g. Council rates).
+  promoteServiceType(
+    householdId,
+    getService(householdId, serviceId, db)!,
+    best.bill.serviceType,
+    db,
+  );
   const created = createBillFromExtraction(householdId, best, serviceId, doc.id, db);
   store('extracted', `Created bill via ${best.extractor}`, best, attempts);
   applyPaymentHints(householdId, serviceId, best.bill, db);

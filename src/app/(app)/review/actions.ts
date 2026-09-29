@@ -1,5 +1,6 @@
 'use server';
 
+import { promoteServiceType } from '@/lib/auto-service';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
@@ -98,6 +99,9 @@ export async function approveReviewAction(_prev: ActionState, fd: FormData): Pro
     return { error: (e as Error).message };
   }
   if (read?.bill.metrics) saveBillMetrics(hh.id, billId, read.bill.metrics);
+  // The service still filed as "Other" takes the type the AI read (e.g. Council rates).
+  const chosen = getService(hh.id, v.serviceId);
+  if (chosen) promoteServiceType(hh.id, chosen, read?.bill.serviceType);
   // "Trust future bills from this sender": only for signed mail from that domain.
   // Personal mailboxes (gmail.com, …) are only ever trusted as the exact address.
   const address = addressOf(doc.emailFrom);

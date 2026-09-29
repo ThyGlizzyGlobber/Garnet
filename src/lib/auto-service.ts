@@ -64,6 +64,42 @@ export function typeFits(serviceType: string, billType: string | null | undefine
   return !billType || billType === 'other' || serviceType === 'other' || serviceType === billType;
 }
 
+/**
+ * A bill of a known type landed on a service still filed as "Other" (set up
+ * before that type existed, or from an unsure reading): file the service
+ * under the bill's type. A service that was named after its type ("Other")
+ * takes the new type's name, and the Other colour gives way to the type's.
+ * Returns the service, changed or not.
+ */
+export function promoteServiceType(
+  householdId: string,
+  svc: ServiceWithType,
+  billType: string | null | undefined,
+  db: Db = getDb(),
+): ServiceWithType {
+  if (svc.typeSlug !== 'other' || !billType || billType === 'other') return svc;
+  const types = listServiceTypes(db);
+  const type = types.find((t) => t.slug === billType);
+  if (!type) return svc;
+  const other = types.find((t) => t.slug === 'other');
+  const namedAfterType = svc.name.trim().toLowerCase() === (other?.label ?? 'Other').toLowerCase();
+  const taken = listServices(householdId, { includeInactive: true }, db).some(
+    (s) => s.id !== svc.id && s.name.toLowerCase() === type.label.toLowerCase(),
+  );
+  return updateService(
+    householdId,
+    svc.id,
+    {
+      typeSlug: type.slug,
+      ...(namedAfterType ? { name: taken ? `${type.label} (${svc.provider})` : type.label } : {}),
+      ...(svc.colour.toLowerCase() === TYPE_COLOUR.other && TYPE_COLOUR[type.slug]
+        ? { colour: TYPE_COLOUR[type.slug] }
+        : {}),
+    },
+    db,
+  );
+}
+
 export interface AutoServiceResult {
   service: ServiceWithType;
   created: boolean;

@@ -137,7 +137,7 @@ describe('0002_multi_household', () => {
   });
 });
 
-describe('0018 instalments and 0019 service types', () => {
+describe('0018 instalments, 0019 service types and 0020 service names', () => {
   it('re-file council and insurance services and keep existing shares whole', () => {
     const d = fs.mkdtempSync(path.join(os.tmpdir(), 'hud-migrate-19-'));
     const upTo17 = migrationsUpTo('0017_regional');
@@ -156,7 +156,8 @@ describe('0018 instalments and 0019 service types', () => {
           ('S2', 'H1', 'other', 'Council', 'Riverside Shire Council', '${t}', '${t}'),
           ('S3', 'H1', 'other', 'Home & contents', 'Example Insurance', '${t}', '${t}'),
           ('S4', 'H1', 'other', 'Gym', 'Example Fitness', '${t}', '${t}'),
-          ('S5', 'H1', 'internet', 'Internet', 'Example Broadband', '${t}', '${t}');
+          ('S5', 'H1', 'internet', 'Internet', 'Example Broadband', '${t}', '${t}'),
+          ('S6', 'H1', 'other', 'Other', 'City of Greater Example', '${t}', '${t}');
         INSERT INTO bill (id, household_id, service_id, amount_minor, currency, period_start, period_end, due_date, source, created_at, updated_at)
           VALUES ('B1', 'H1', 'S5', 12900, 'AUD', '2026-09-01', '2026-09-30', '2026-09-15', 'manual', '${t}', '${t}');
         INSERT INTO share (id, household_id, bill_id, member_id, amount_minor, currency, basis_weight, basis_days, period_days, created_at, updated_at)
@@ -165,13 +166,15 @@ describe('0018 instalments and 0019 service types', () => {
       db.close();
       runMigrations(d);
       const after = new Database(file, { readonly: true });
-      const types = after.prepare('SELECT id, type_slug FROM service ORDER BY id').all();
+      const types = after.prepare('SELECT id, name, type_slug FROM service ORDER BY id').all();
+      // Re-filed, and a service named after its old type ("Other") takes the new name (0020).
       expect(types).toEqual([
-        { id: 'S1', type_slug: 'council_rates' },
-        { id: 'S2', type_slug: 'council_rates' },
-        { id: 'S3', type_slug: 'insurance' },
-        { id: 'S4', type_slug: 'other' },
-        { id: 'S5', type_slug: 'internet' },
+        { id: 'S1', name: 'Rates', type_slug: 'council_rates' },
+        { id: 'S2', name: 'Council', type_slug: 'council_rates' },
+        { id: 'S3', name: 'Home & contents', type_slug: 'insurance' },
+        { id: 'S4', name: 'Gym', type_slug: 'other' },
+        { id: 'S5', name: 'Internet', type_slug: 'internet' },
+        { id: 'S6', name: 'Council rates', type_slug: 'council_rates' },
       ]);
       expect(after.prepare('SELECT instalment, due_date FROM share').get()).toEqual({
         instalment: 0,

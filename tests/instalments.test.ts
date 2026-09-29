@@ -24,7 +24,7 @@ import { dueNow, planUndecided, unpaidMinor } from '@/lib/instalments';
 import { createMember } from '@/lib/members';
 import { remindersFor } from '@/lib/reminders';
 import { filterBills } from '@/lib/bill-search';
-import { createService, updateService } from '@/lib/services';
+import { createService, getService, updateService } from '@/lib/services';
 import { settlementRate } from '@/lib/stats';
 import { scriptAi, type AiOutput } from './helpers/fake-ai';
 
@@ -183,6 +183,91 @@ describe('reading instalments from a bill', () => {
     );
     expect(b.paymentPlan).toBeNull();
     expect(b.fullAmountMinor).toBe(200035);
+  });
+});
+
+describe('the service a council notice lands on', () => {
+  const notice = (): AiOutput => ({
+    document_type: 'bill',
+    provider: 'City of Greater Example',
+    document_date: '2026-08-11',
+    service_type: 'council_rates',
+    bill: {
+      amount: 2000.35,
+      currency: 'AUD',
+      tax_amount: null,
+      tax_label: null,
+      period_start: '2026-07-01',
+      period_end: '2027-06-30',
+      issue_date: '2026-08-11',
+      due_date: '2026-09-30',
+      usage_quantity: null,
+      usage_unit: null,
+      invoice_number: null,
+      account_number: null,
+      auto_pay: false,
+      previous_payment: null,
+      metrics: [],
+      instalments: null,
+    },
+    payment: null,
+    confidence: 0.95,
+    notes: null,
+  });
+  const upload = (hid: string) =>
+    archiveDocument(
+      hid,
+      {
+        kind: 'upload',
+        buffer: Buffer.from(`Rates and valuation notice for 2026-27, reference ${Math.random()}`),
+        originalFilename: 'rates.txt',
+        mimeType: 'text/plain',
+      },
+      db,
+    ).doc;
+
+  it('re-files a service still filed as "Other" (named after it) as Council rates', async () => {
+    const { hh } = setup();
+    const old = createService(
+      hh.id,
+      { typeSlug: 'other', name: 'Other', provider: 'City of Greater Example' },
+      db,
+    );
+    scriptAi(notice());
+    const outcome = await processDocument(hh.id, upload(hh.id).id, db);
+    expect(outcome.status).toBe('extracted');
+    expect(getBill(hh.id, outcome.billId!, db)!.serviceId).toBe(old.id);
+    const svc = getService(hh.id, old.id, db)!;
+    // The household already has a "Council rates", so the provider tells them apart.
+    expect([svc.typeSlug, svc.name]).toEqual([
+      'council_rates',
+      'Council rates (City of Greater Example)',
+    ]);
+  });
+
+  it('keeps a name the household chose', async () => {
+    const { hh } = setup();
+    const old = createService(
+      hh.id,
+      { typeSlug: 'other', name: 'Mum’s rates', provider: 'City of Greater Example' },
+      db,
+    );
+    scriptAi(notice());
+    await processDocument(hh.id, upload(hh.id).id, db);
+    const svc = getService(hh.id, old.id, db)!;
+    expect([svc.typeSlug, svc.name]).toEqual(['council_rates', 'Mum’s rates']);
+  });
+
+  it('sets up a new provider as Council rates', async () => {
+    const { hh } = setup();
+    scriptAi({ ...notice(), provider: 'Shire of Elsewhere' });
+    const outcome = await processDocument(hh.id, upload(hh.id).id, db);
+    const svc = getBill(hh.id, outcome.billId!, db)!.service;
+    expect([svc.typeSlug, svc.name, svc.cadence]).toEqual([
+      'council_rates',
+      'Council rates (Shire of Elsewhere)',
+      'annual',
+    ]);
   });
 });
 
