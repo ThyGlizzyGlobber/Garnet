@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { visibleTo } from '@/lib/scope';
 import { getTranslations } from 'next-intl/server';
 import { LinkButton, PageHeader } from '@/components/ui';
 import { CADENCES, SPLIT_MODES } from '@/db/schema';
@@ -11,10 +12,10 @@ import { ServiceForm } from '../../service-form';
 
 export default async function EditServicePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { hh } = await pageContext();
+  const { hh, me } = await pageContext();
   const t = await getTranslations('services');
   const s = getService(hh.id, id);
-  if (!s) notFound();
+  if (!s || !visibleTo(s.ownerMemberId, me.id)) notFound();
   return (
     <div className="mx-auto max-w-xl">
       <PageHeader
@@ -34,6 +35,11 @@ export default async function EditServicePage({ params }: { params: Promise<{ id
         cadences={CADENCES}
         splitModes={SPLIT_MODES}
         sharedHousehold={hh.splitMode === 'shared'}
+        canChangePersonal={
+          s.ownerMemberId
+            ? s.ownerMemberId === me.id
+            : me.role === 'owner' || s.payerMemberId === me.id
+        }
         submitLabel={t('form.save')}
         cancelHref="/services"
         initial={{
@@ -54,6 +60,7 @@ export default async function EditServicePage({ params }: { params: Promise<{ id
           autoPay: s.autoPay,
           seasonal: s.seasonal,
           customSplits: getCustomSplits(hh.id, s.id),
+          personal: !!s.ownerMemberId,
         }}
       />
     </div>

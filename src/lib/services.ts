@@ -11,6 +11,7 @@ import {
 } from '@/db/schema';
 import { ulid } from '@/lib/ids';
 import { getMember } from '@/lib/members';
+import { ownerCondition, type Scope } from '@/lib/scope';
 
 export type ServiceWithType = Service & { type: ServiceType };
 
@@ -36,21 +37,26 @@ export function createServiceType(
     icon: input.icon ?? 'receipt',
     sortOrder: 500,
     isBuiltin: false,
+    personalByDefault: false,
   };
   db.insert(serviceType).values(row).run();
   return row;
 }
 
+/**
+ * A household's services. Household ones only unless the scope asks for a
+ * member's personal ones too (see Scope).
+ */
 export function listServices(
   householdId: string,
-  opts: { includeInactive?: boolean } = {},
+  opts: { includeInactive?: boolean } & Scope = {},
   db: Db = getDb(),
 ): ServiceWithType[] {
   const rows = db
     .select()
     .from(service)
     .innerJoin(serviceType, eq(service.typeSlug, serviceType.slug))
-    .where(eq(service.householdId, householdId))
+    .where(and(eq(service.householdId, householdId), ownerCondition(service.ownerMemberId, opts)))
     .orderBy(asc(serviceType.sortOrder), asc(service.name))
     .all();
   return rows
@@ -107,6 +113,8 @@ export interface ServiceInput {
   autoPay?: boolean;
   /** memberId → weight; replaces existing custom splits when provided. */
   customSplits?: Record<string, number>;
+  /** Personal to this member (only they see it; not split). Set on create; see setServiceOwner. */
+  ownerMemberId?: string | null;
 }
 
 /** A payer from another household would leak data across households; refuse it. */
@@ -131,6 +139,7 @@ export function createService(
   const id = ulid();
   const { customSplits, ...rest } = input;
   assertPayerInHousehold(householdId, rest.payerMemberId, db);
+  assertPayerInHousehold(householdId, rest.ownerMemberId, db);
   db.insert(service)
     .values({
       id,
@@ -144,7 +153,9 @@ export function createService(
       usageLimitMonthly: rest.usageLimitMonthly ?? null,
       seasonal: rest.seasonal ?? SEASONAL_TYPES.includes(rest.typeSlug),
       splitMode: rest.splitMode ?? 'equal',
-      payerMemberId: rest.payerMemberId ?? null,
+      // A personal service is paid by its owner.
+      payerMemberId: rest.ownerMemberId ?? rest.payerMemberId ?? null,
+      ownerMemberId: rest.ownerMemberId ?? null,
       colour: rest.colour ?? '#0a84ff',
       isActive: rest.isActive ?? true,
       notes: rest.notes ?? null,
@@ -164,8 +175,13 @@ export function updateService(
   input: Partial<ServiceInput>,
   db: Db = getDb(),
 ): ServiceWithType {
-  if (!getService(householdId, id, db)) throw new Error('Service not found');
+  const existing = getService(householdId, id, db);
+  if (!existing) throw new Error('Service not found');
+  // Who owns it changes only through setServiceOwner (its bills and shares move too).
   const { customSplits, ...rest } = input;
+  delete rest.ownerMemberId;
+  // A personal service is always paid by its owner.
+  if (existing.ownerMemberId) rest.payerMemberId = existing.ownerMemberId;
   assertPayerInHousehold(householdId, rest.payerMemberId, db);
   db.update(service)
     .set({

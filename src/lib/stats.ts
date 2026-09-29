@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, inArray, lte, ne, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, isNull, lte, ne, sql } from 'drizzle-orm';
 import { getDb, type Db } from '@/db/client';
 import { bill, member, share, type Bill, type Member, type Share } from '@/db/schema';
 import { type BillListItem, listBills } from '@/lib/bills';
@@ -12,6 +12,7 @@ import {
   monthBounds,
 } from '@/lib/periods';
 import { listServices, type ServiceWithType } from '@/lib/services';
+import { ownerCondition, type Scope } from '@/lib/scope';
 import { shareDueDate } from '@/lib/instalments';
 
 export interface ServiceTotal {
@@ -25,12 +26,13 @@ export interface MonthRow {
   byService: Record<string, number>;
 }
 
-/** Bills whose billing period overlaps [start, end]. */
+/** Bills whose billing period overlaps [start, end]: household bills unless the scope says otherwise. */
 export function billsOverlapping(
   householdId: string,
   start: string,
   end: string,
   db: Db = getDb(),
+  scope: Scope = {},
 ): Bill[] {
   return db
     .select()
@@ -40,17 +42,29 @@ export function billsOverlapping(
         eq(bill.householdId, householdId),
         lte(bill.periodStart, end),
         gte(bill.periodEnd, start),
+        ownerCondition(bill.ownerMemberId, scope),
       ),
     )
     .all();
 }
 
 /** Accrued cost per month per service, pro-rata by days, for the given months. */
-export function monthlySeries(householdId: string, months: string[], db: Db = getDb()): MonthRow[] {
+export function monthlySeries(
+  householdId: string,
+  months: string[],
+  db: Db = getDb(),
+  scope: Scope = {},
+): MonthRow[] {
   const first = months[0];
   const last = months[months.length - 1];
   if (!first || !last) return [];
-  const bills = billsOverlapping(householdId, monthBounds(first).start, monthBounds(last).end, db);
+  const bills = billsOverlapping(
+    householdId,
+    monthBounds(first).start,
+    monthBounds(last).end,
+    db,
+    scope,
+  );
   const rows = new Map<string, MonthRow>(
     months.map((m) => [m, { month: m, total: 0, byService: {} }]),
   );
@@ -71,11 +85,12 @@ export function totalsForRange(
   start: string,
   end: string,
   db: Db = getDb(),
+  scope: Scope = {},
 ): { total: number; byService: ServiceTotal[] } {
   const services = new Map(
-    listServices(householdId, { includeInactive: true }, db).map((s) => [s.id, s]),
+    listServices(householdId, { includeInactive: true, ...scope }, db).map((s) => [s.id, s]),
   );
-  const bills = billsOverlapping(householdId, start, end, db);
+  const bills = billsOverlapping(householdId, start, end, db, scope);
   const byId = new Map<string, number>();
   let total = 0;
   for (const b of bills) {
@@ -296,7 +311,7 @@ export function hasAnyBills(householdId: string, db: Db = getDb()): boolean {
     db
       .select({ id: bill.id })
       .from(bill)
-      .where(eq(bill.householdId, householdId))
+      .where(and(eq(bill.householdId, householdId), isNull(bill.ownerMemberId)))
       .limit(1)
       .get() !== undefined
   );

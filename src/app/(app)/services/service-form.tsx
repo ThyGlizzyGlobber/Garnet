@@ -23,6 +23,8 @@ export interface ServiceFormValues {
   autoPay: boolean;
   seasonal: boolean;
   customSplits: Record<string, number>;
+  /** Just for the member filling in the form (only they see it; not split). */
+  personal: boolean;
 }
 
 export function ServiceForm({
@@ -34,17 +36,25 @@ export function ServiceForm({
   cadences,
   splitModes,
   sharedHousehold,
+  canChangePersonal = true,
   submitLabel,
   cancelHref,
 }: {
   action: FormAction;
   initial: ServiceFormValues;
-  types: { slug: string; label: string; defaultUnit: string | null }[];
+  types: {
+    slug: string;
+    label: string;
+    defaultUnit: string | null;
+    personalByDefault?: boolean;
+  }[];
   units: { key: string; label: string }[];
   members: { id: string; name: string }[];
   cadences: readonly string[];
   splitModes: readonly string[];
   sharedHousehold: boolean;
+  /** Whether this member may switch it between household and personal. */
+  canChangePersonal?: boolean;
   submitLabel: string;
   cancelHref: string;
 }) {
@@ -53,6 +63,8 @@ export function ServiceForm({
   const [usageUnit, setUsageUnit] = useState(initial.usageUnit);
   const [splitMode, setSplitMode] = useState(initial.splitMode);
   const [name, setName] = useState(initial.name);
+  const [personal, setPersonal] = useState(initial.personal);
+  const [personalTouched, setPersonalTouched] = useState(false);
 
   return (
     <ActionForm
@@ -78,6 +90,9 @@ export function ServiceForm({
                   if (ty) {
                     setUsageUnit(ty.defaultUnit ?? '');
                     if (!name) setName(ty.label);
+                    // A new car rego or car insurance is usually one person's own.
+                    if (!initial.id && !personalTouched && sharedHousehold)
+                      setPersonal(!!ty.personalByDefault);
                   }
                 }}
               >
@@ -208,6 +223,33 @@ export function ServiceForm({
           </Card>
 
           {sharedHousehold && (
+            <Card className="flex flex-col gap-3">
+              <label
+                className={`flex items-start gap-3 text-sm font-medium ${canChangePersonal ? '' : 'opacity-60'}`}
+              >
+                <input
+                  type="checkbox"
+                  name="personal"
+                  checked={personal}
+                  disabled={!canChangePersonal}
+                  onChange={(e) => {
+                    setPersonal(e.target.checked);
+                    setPersonalTouched(true);
+                  }}
+                  className="mt-0.5 size-5 accent-accent"
+                />
+                <span>
+                  {t('personal')}
+                  <span className="block text-xs font-normal text-fg-muted">
+                    {t('personalHint')}
+                  </span>
+                </span>
+              </label>
+              {!canChangePersonal && personal && <input type="hidden" name="personal" value="on" />}
+            </Card>
+          )}
+
+          {sharedHousehold && !personal && (
             <Card className="flex flex-col gap-4">
               <h2 className="font-semibold">{t('splitting')}</h2>
               <Field label={t('payer')} hint={t('payerHint')}>
@@ -248,7 +290,7 @@ export function ServiceForm({
               )}
             </Card>
           )}
-          {!sharedHousehold && (
+          {(!sharedHousehold || personal) && (
             <>
               <input type="hidden" name="splitMode" value="equal" />
               <input type="hidden" name="payerMemberId" value="" />

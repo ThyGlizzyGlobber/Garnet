@@ -5,6 +5,7 @@ import type { StoredExtraction } from '@/ingest/pipeline';
 import { billDate } from '@/lib/bill-month';
 import { minorUnitDigits } from '@/lib/format';
 import { amountWords, matchesAll, monthWords, searchTokens } from '@/lib/search';
+import { inScope, type Scope } from '@/lib/scope';
 
 export type ReviewItem = SourceDocument & {
   extraction: StoredExtraction | null;
@@ -50,11 +51,23 @@ function parse(json: string | null): StoredExtraction | null {
   }
 }
 
+/**
+ * The household's documents, newest first. A document that became (or acted
+ * on) a member's personal bill is only listed for that member (see Scope).
+ */
 export function listDocuments(
   householdId: string,
-  opts: { status?: SourceDocument['status'] } = {},
+  opts: { status?: SourceDocument['status'] } & Scope = {},
   db: Db = getDb(),
 ): ReviewItem[] {
+  const owners = new Map(
+    db
+      .select({ id: bill.id, owner: bill.ownerMemberId })
+      .from(bill)
+      .where(and(eq(bill.householdId, householdId), isNotNull(bill.ownerMemberId)))
+      .all()
+      .map((r) => [r.id, r.owner]),
+  );
   const rows = db
     .select({
       doc: sourceDocument,
@@ -97,6 +110,10 @@ export function listDocuments(
         date,
       };
     })
+    .filter((d) => {
+      const billId = d.billId ?? d.extraction?.billId;
+      return inScope((billId && owners.get(billId)) || null, opts);
+    })
     .sort((a, b) => b.date.localeCompare(a.date) || b.receivedAt.localeCompare(a.receivedAt));
 }
 
@@ -104,8 +121,9 @@ export function getReviewItem(
   householdId: string,
   id: string,
   db: Db = getDb(),
+  scope: Scope = { everyone: true },
 ): ReviewItem | null {
-  return listDocuments(householdId, {}, db).find((d) => d.id === id) ?? null;
+  return listDocuments(householdId, scope, db).find((d) => d.id === id) ?? null;
 }
 
 export function documentCounts(

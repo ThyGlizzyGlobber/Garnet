@@ -127,7 +127,8 @@
       "markPaidProvider": "Mark paid to provider",
       "markUnpaidProvider": "Mark not paid to provider",
       "sourceDocument": "Source file",
-      "viewSource": "View"
+      "viewSource": "View",
+      "personalNote": "A personal bill: only you can see it, it isn't split, and it stays out of the household's figures. It counts on your own dashboard (Home → Mine)."
     },
     "shares": {
       "title": "Shares",
@@ -208,7 +209,8 @@
       "document": "View file",
       "shares": "{paid}/{total} shares paid",
       "upload": "Upload bill",
-      "sharesBar": "{paid} of {total} shares paid"
+      "sharesBar": "{paid} of {total} shares paid",
+      "onlyYou": "Only you"
     },
     "searchResults": "{count, plural, =0 {No bills match} one {# bill matches} other {# bills match}} “{q}”",
     "clearSearch": "Clear",
@@ -253,7 +255,12 @@
       "allYears": "All years",
       "inInbox": "{count, plural, one {# match} other {# matches}} in the Inbox"
     },
-    "filterResults": "{count, plural, =0 {No bills match these filters} one {# bill matches} other {# bills match}}"
+    "filterResults": "{count, plural, =0 {No bills match these filters} one {# bill matches} other {# bills match}}",
+    "whose": {
+      "all": "Everything",
+      "household": "Household",
+      "mine": "Just mine"
+    }
   },
   "services": {
     "title": "Services",
@@ -314,7 +321,9 @@
       "usageLimit": "Usage limit per month ({unit})",
       "usageLimitHint": "Optional. Bills are compared against it per day, so quarterly bills compare fairly. Leave empty for no limit.",
       "seasonal": "Changes with the seasons",
-      "seasonalHint": "Heating, cooling or solar make some months cost more than others. Bills are then compared with the same time last year, and you're told before a costly season starts."
+      "seasonalHint": "Heating, cooling or solar make some months cost more than others. Bills are then compared with the same time last year, and you're told before a costly season starts.",
+      "personal": "Just for me",
+      "personalHint": "A personal service, like your own car rego: only you see it and its bills, it isn't split, and it stays out of the household's figures."
     },
     "nextBill": "Next bill about {amount} · due {date}",
     "noHistory": "No bills yet",
@@ -327,7 +336,14 @@
       "cadence": "{cadence}",
       "perDay": "{amount} / day"
     },
-    "edit": "Edit"
+    "edit": "Edit",
+    "onlyYou": "Only you",
+    "personal": {
+      "title": "Just you",
+      "body": "Your personal services. Nobody else sees them, and they aren't counted in the household's figures.",
+      "lastTitle": "Last bill",
+      "last": "due {date}"
+    }
   },
   "members": {
     "title": "Members",
@@ -1259,5 +1275,61 @@
       "points": ["Questions about this notice go to the operator of this installation."]
     },
     "back": "Back to the app"
+  },
+  "personal": {
+    "toggle": {
+      "household": "Household",
+      "mine": "Mine",
+      "label": "Household or your own view"
+    },
+    "greeting": "Hey, {name}.",
+    "line": "Your {month} so far: {amount}, all in.",
+    "onlyYou": "Only you",
+    "month": {
+      "title": "You, {month} so far",
+      "householdShort": "shared",
+      "vsLast": "vs last month",
+      "noLast": "No last month yet",
+      "shares": "Household share",
+      "personal": "Personal bills"
+    },
+    "owe": {
+      "title": "Your shares",
+      "toPay": "To pay",
+      "settled": "All settled",
+      "owedToYou": "{amount} owed to you",
+      "paidOfYear": "{pct}% of your {label} shares paid"
+    },
+    "year": {
+      "title": "{label} so far",
+      "shares": "Household share {amount}",
+      "personal": "Personal {amount}"
+    },
+    "chart": {
+      "title": "What you pay each month",
+      "hint": "Your share of the household's bills plus your personal bills, spread over the months they cover",
+      "detail": "Household share {shares} · Personal {personal}"
+    },
+    "bills": {
+      "title": "Your personal bills",
+      "intro": "Things only you pay, like car rego or car insurance. They're kept out of the household's figures and nobody else sees them.",
+      "addService": "Add a personal service",
+      "none": "Nothing to pay right now.",
+      "overdue": "{days, plural, one {# day} other {# days}} overdue",
+      "due": "due {date}",
+      "add": "Add a bill",
+      "upload": "Upload a bill"
+    },
+    "ranking": {
+      "title": "Where your money goes, {label}",
+      "empty": "Nothing yet this year.",
+      "personal": "yours",
+      "share": "your share"
+    },
+    "services": {
+      "title": "Your services",
+      "add": "Add",
+      "none": "None yet. Car rego or car insurance you upload or forward is set up here automatically."
+    }
   }
 }

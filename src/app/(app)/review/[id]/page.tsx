@@ -16,16 +16,19 @@ import { addressOf, trustTarget } from '@/lib/sender-auth';
 
 export default async function ReviewItemPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { hh, date } = await pageContext();
+  const { hh, me, date } = await pageContext();
   const t = await getTranslations('review');
-  const d = getReviewItem(hh.id, id);
+  const d = getReviewItem(hh.id, id, undefined, { viewer: me.id });
   if (!d) notFound();
   const r = d.extraction?.result ?? null;
-  const services = listServices(hh.id);
+  const services = listServices(hh.id, { viewer: me.id });
+  const tb = await getTranslations('bills');
   const digits = minorUnitDigits(r?.bill.currency ?? hh.currency);
   const major = (m: number | null | undefined) =>
     m === null || m === undefined ? '' : (m / 10 ** digits).toFixed(digits);
-  const suggested = r ? (r.bill.serviceId ?? matchService(hh.id, r)) : null;
+  const suggested = r
+    ? (r.bill.serviceId ?? matchService(hh.id, r, undefined, { viewer: me.id }))
+    : null;
   const isPdf = (d.mimeType ?? '').includes('pdf') || d.path.endsWith('.pdf');
   const isPhoto = isImageFile(d.mimeType, d.path);
   const canReview = d.status !== 'extracted';
@@ -40,7 +43,7 @@ export default async function ReviewItemPage({ params }: { params: Promise<{ id:
       documentId={d.id}
       services={services.map((s) => ({
         id: s.id,
-        name: s.name,
+        name: s.ownerMemberId ? `${s.name} · ${tb('tile.onlyYou')}` : s.name,
         provider: s.provider,
         usageUnit: s.usageUnit,
       }))}

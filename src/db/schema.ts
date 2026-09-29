@@ -151,6 +151,12 @@ export const serviceType = sqliteTable('service_type', {
   icon: text('icon').notNull().default('receipt'),
   sortOrder: integer('sort_order').notNull().default(100),
   isBuiltin: integer('is_builtin', { mode: 'boolean' }).notNull().default(false),
+  /**
+   * Usually one person's own, not the household's (car rego, car insurance): a
+   * new service of this type set up from a member's upload or forward is
+   * personal to that member.
+   */
+  personalByDefault: integer('personal_by_default', { mode: 'boolean' }).notNull().default(false),
 });
 
 export const CADENCES = [
@@ -192,6 +198,12 @@ export const service = sqliteTable(
     splitMode: text('split_mode', { enum: SPLIT_MODES }).notNull().default('equal'),
     /** Member who pays the provider; their own share is auto-marked paid. */
     payerMemberId: text('payer_member_id').references(() => member.id, { onDelete: 'set null' }),
+    /**
+     * Set when the service is one member's own (their car rego): only they see
+     * it, it isn't split, and its bills stay out of every household figure.
+     * Null = a household service. Bills carry a copy (bill.owner_member_id).
+     */
+    ownerMemberId: text('owner_member_id').references(() => member.id),
     colour: text('colour').notNull().default('#0a84ff'),
     isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
     /**
@@ -215,6 +227,7 @@ export const service = sqliteTable(
   (t) => [
     index('service_type_idx').on(t.typeSlug),
     index('service_household_idx').on(t.householdId),
+    index('service_owner_idx').on(t.ownerMemberId),
   ],
 );
 
@@ -267,6 +280,8 @@ export const sourceDocument = sqliteTable(
     senderDomain: text('sender_domain'),
     /** A valid DKIM signature aligned with the From domain (checked by the app). */
     senderVerified: integer('sender_verified', { mode: 'boolean' }),
+    /** The member who uploaded it or forwarded it from their own address, when known. */
+    memberId: text('member_id').references(() => member.id, { onDelete: 'set null' }),
     status: text('status', { enum: DOCUMENT_STATUSES }).notNull().default('unprocessed'),
     /** Raw extractor output kept for the review queue and re-parse. */
     extractionJson: text('extraction_json'),
@@ -289,6 +304,8 @@ export const bill = sqliteTable(
     serviceId: text('service_id')
       .notNull()
       .references(() => service.id),
+    /** Copy of the service's owner: a personal bill, seen only by that member. */
+    ownerMemberId: text('owner_member_id').references(() => member.id),
     sourceDocumentId: text('source_document_id').references(() => sourceDocument.id),
     amountMinor: integer('amount_minor').notNull(),
     currency: text('currency').notNull(),
@@ -353,6 +370,7 @@ export const bill = sqliteTable(
     index('bill_household_idx').on(t.householdId),
     index('bill_period_idx').on(t.periodStart),
     index('bill_due_idx').on(t.dueDate),
+    index('bill_owner_idx').on(t.ownerMemberId),
   ],
 );
 

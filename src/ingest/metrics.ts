@@ -25,7 +25,7 @@ export function isReadingMetrics(householdId: string): boolean {
 
 /** Receipts and notices that don't have their printed date yet (they sit under their arrival month). */
 export function documentsMissingDates(householdId: string, db: Db = getDb()): SourceDocument[] {
-  return listDocuments(householdId, { status: 'notice' }, db).filter(
+  return listDocuments(householdId, { status: 'notice', everyone: true }, db).filter(
     (d) => d.extraction && !d.extraction.documentDate && !d.billId,
   );
 }

@@ -10,11 +10,17 @@ import { listServices } from '@/lib/services';
 import { createServiceAction } from '../actions';
 import { ServiceForm } from '../service-form';
 
-export default async function NewServicePage() {
+export default async function NewServicePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ personal?: string }>;
+}) {
   const { hh, me } = await pageContext();
   const t = await getTranslations('services');
   const types = listServiceTypes();
-  const first = types[0]!;
+  // From the personal dashboard: start on a kind of service that's usually one person's own.
+  const personal = hh.splitMode === 'shared' && !!(await searchParams).personal;
+  const first = (personal ? types.find((ty) => ty.personalByDefault) : undefined) ?? types[0]!;
   const used = listServices(hh.id, { includeInactive: true }).map((s) => s.colour);
   const colour =
     TYPE_COLOUR[first.slug] && !used.includes(TYPE_COLOUR[first.slug]!)
@@ -32,7 +38,7 @@ export default async function NewServicePage() {
         splitModes={SPLIT_MODES}
         sharedHousehold={hh.splitMode === 'shared'}
         submitLabel={t('form.create')}
-        cancelHref="/services"
+        cancelHref={personal ? '/?view=mine' : '/services'}
         initial={{
           typeSlug: first.slug,
           name: first.label,
@@ -50,6 +56,7 @@ export default async function NewServicePage() {
           autoPay: false,
           seasonal: SEASONAL_TYPES.includes(first.slug),
           customSplits: {},
+          personal: personal || (hh.splitMode === 'shared' && first.personalByDefault),
         }}
       />
     </div>

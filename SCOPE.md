@@ -99,6 +99,12 @@ Key properties:
 - "Mark as paid" + payment reference generation from the bill payer's stored payment details (PayID/BSB, IBAN, Venmo, etc. — configurable per member)
 - Reminder nudges for unpaid shares (in-app for Prototype 1)
 
+### Personal services and dashboards (owner, 2026-09-29)
+
+- A member can keep their own services (car rego, car insurance…) in the household's install: a **personal** service is seen only by that member (admins included), isn't split, and its bills stay out of every household figure (totals, charts, projections, the wall, area comparisons, other members' lists and emails).
+- Car rego and car insurance that a member uploads or forwards become theirs automatically (a per-type setting in the catalog); anything else is household. Any service can be switched between household and personal on its page: its owner hands it back; an admin or its payer can make a household service their own. Refused once a housemate has paid a share of one of its bills.
+- Home has a **Household · Mine** switch in households that split bills. "Mine" shows what the member pays, all in: their share of household bills plus their personal bills, kept apart — this month, this financial year, a 12-month trend, where the money goes, what they owe, and their personal bills and services.
+
 ### Projections
 
 - Next-bill estimate per service from recent cycles, seasonally aware (winter gas ≠ summer gas)
@@ -181,6 +187,7 @@ The alpha household is in Australia, but the alpha build is the version most lik
 - No personal inbox access, ever: bills arrive at an address the app owns.
 - **Internet-facing:** reachable through a Cloudflare Tunnel (no router ports opened). HTTPS-only cookies, rate-limited sign-in and PIN attempts, single-use expiring invites, no member names shown before sign-in. A Cloudflare Access policy can sit in front as an extra gate.
 - **Household isolation:** every query is scoped to the signed-in member's household; one household can never read another's data.
+- **Personal services:** within a household, a member's personal services, their bills and the documents behind them are shown only to that member; other members get "not found" even with a direct link.
 - **Operator visibility:** the owner of the install can technically see every household's data. Alpha testers are told this up front.
 - The app never holds credentials that control the NAS (updates go through a request file and a host cron job).
 

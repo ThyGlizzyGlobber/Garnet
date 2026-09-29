@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
 import { getDb, type Db } from '@/db/client';
 import {
   bill,
@@ -137,7 +137,8 @@ export function householdMonthly(
     .select({ b: bill, typeSlug: service.typeSlug })
     .from(bill)
     .innerJoin(service, eq(bill.serviceId, service.id))
-    .where(eq(bill.householdId, householdId))
+    // Household bills only: a member's personal bills aren't the household's.
+    .where(and(eq(bill.householdId, householdId), isNull(bill.ownerMemberId)))
     .all();
   const metrics = rows.length
     ? db

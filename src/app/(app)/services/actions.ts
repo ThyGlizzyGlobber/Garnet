@@ -8,9 +8,16 @@ import { CADENCES, SPLIT_MODES } from '@/db/schema';
 import type { ActionState } from '@/components/ui/form';
 import { optStr, str, zodToState } from '@/lib/actions';
 import { requireMember } from '@/lib/auth/session';
-import { refreshAnomalies } from '@/lib/bills';
+import { refreshAnomalies, setServiceOwner } from '@/lib/bills';
+import { visibleTo } from '@/lib/scope';
 import { listMembers } from '@/lib/members';
-import { createService, createServiceType, updateService, type ServiceInput } from '@/lib/services';
+import {
+  createService,
+  createServiceType,
+  getService,
+  updateService,
+  type ServiceInput,
+} from '@/lib/services';
 import { UNITS } from '@/lib/units';
 
 const schema = z.object({
@@ -89,21 +96,38 @@ export async function createServiceAction(_prev: ActionState, fd: FormData): Pro
   const me = await requireMember();
   const r = read(me.householdId, fd);
   if (!r.ok) return r.state;
+  // "Just for me": the member creating it owns it.
+  const personal = fd.get('personal') === 'on';
+  let id: string;
   try {
-    createService(me.householdId, { ...r.input, isActive: true });
+    id = createService(me.householdId, {
+      ...r.input,
+      isActive: true,
+      ownerMemberId: personal ? me.id : null,
+    }).id;
   } catch (e) {
     return { error: (e as Error).message };
   }
   revalidatePath('/services');
-  redirect('/services');
+  redirect(personal ? `/services/${id}` : '/services');
 }
 
 export async function updateServiceAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
   const me = await requireMember();
   const id = str(fd, 'id');
+  const existing = getService(me.householdId, id);
+  if (!existing || !visibleTo(existing.ownerMemberId, me.id)) return { error: 'Service not found' };
   const r = read(me.householdId, fd);
   if (!r.ok) return r.state;
+  const personal = fd.get('personal') === 'on';
   try {
+    // Household ↔ personal: only its owner hands it back; only an admin or its
+    // payer can make a household service their own. Its bills move with it.
+    if (personal !== !!existing.ownerMemberId) {
+      if (!canChangePersonal(me, existing))
+        return { error: 'Only an admin or the person who pays it can make it personal' };
+      setServiceOwner(me.householdId, id, personal ? me.id : null);
+    }
     updateService(me.householdId, id, r.input);
     // Seasonal on/off changes how its bills are judged Unusual.
     refreshAnomalies(me.householdId, id);
@@ -112,6 +136,15 @@ export async function updateServiceAction(_prev: ActionState, fd: FormData): Pro
   }
   revalidatePath('/services');
   redirect(`/services/${id}`);
+}
+
+/** May this member switch the service between household and personal? */
+function canChangePersonal(
+  me: { id: string; role: string },
+  svc: { ownerMemberId: string | null; payerMemberId: string | null },
+): boolean {
+  if (svc.ownerMemberId) return svc.ownerMemberId === me.id;
+  return me.role === 'owner' || svc.payerMemberId === me.id;
 }
 
 export async function createServiceTypeAction(fd: FormData): Promise<void> {

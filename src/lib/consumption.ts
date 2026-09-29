@@ -248,7 +248,7 @@ export function figureChanges(
   db: Db = getDb(),
 ): Map<string, Change> {
   const out = new Map<string, Change>();
-  const all = listBills(householdId, {}, db);
+  const all = listBills(householdId, { everyone: true }, db);
   const current = all.find((b) => b.id === billId);
   if (!current) return out;
   const earlier = all

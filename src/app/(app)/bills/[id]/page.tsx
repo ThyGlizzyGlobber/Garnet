@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { visibleTo } from '@/lib/scope';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { Badge, Card, LinkButton, PageHeader } from '@/components/ui';
@@ -26,7 +27,9 @@ export default async function BillPage({ params }: { params: Promise<{ id: strin
   const { hh, me, money, date, today } = await pageContext();
   const t = await getTranslations('bills');
   const b = getBill(hh.id, id);
-  if (!b) notFound();
+  // Another member's personal bill doesn't exist, as far as anyone else can tell.
+  if (!b || !visibleTo(b.ownerMemberId, me.id)) notFound();
+  const personal = !!b.ownerMemberId;
   const overdue = !b.paidToProviderAt && b.dueDate < today;
   const payer = b.shares.find((s) => s.paidMethod === 'payer')?.member;
   const byInstalments = paysByInstalments(b);
@@ -113,6 +116,7 @@ export default async function BillPage({ params }: { params: Promise<{ id: strin
             ) : (
               <Badge tone="warning">{t('detail.unpaid')}</Badge>
             )}
+            {personal && <Badge>{t('tile.onlyYou')}</Badge>}
             <Badge>{t(`source.${b.source}`)}</Badge>
             {b.isAnomaly && <Badge tone="warning">{t('anomaly')}</Badge>}
           </div>
@@ -170,7 +174,11 @@ export default async function BillPage({ params }: { params: Promise<{ id: strin
       {b.instalments.length > 0 && (
         <PaymentPlan
           bill={b}
-          canChoose={me.role === 'owner' || b.service.payerMemberId === me.id}
+          canChoose={
+            personal
+              ? b.ownerMemberId === me.id
+              : me.role === 'owner' || b.service.payerMemberId === me.id
+          }
           today={today}
           money={money}
           date={date}
@@ -178,7 +186,13 @@ export default async function BillPage({ params }: { params: Promise<{ id: strin
         />
       )}
 
-      {hh.splitMode === 'shared' && (
+      {personal && (
+        <p className="mt-4 rounded-card bg-surface-2 px-5 py-3 text-sm text-fg-muted">
+          {t('detail.personalNote')}
+        </p>
+      )}
+
+      {hh.splitMode === 'shared' && !personal && (
         <Card className="mt-4">
           <h2 className="font-semibold">{t('shares.title')}</h2>
           {payer && (

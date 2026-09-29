@@ -14,6 +14,7 @@ import {
 } from '@/db/schema';
 import type { BillInstalmentOption } from '@/ingest/extractors/types';
 import { fullPaymentOpen, instalmentDueDate } from '@/lib/instalments';
+import { ownerCondition, type Scope } from '@/lib/scope';
 import { todayIn } from '@/lib/dates';
 import { ulid } from '@/lib/ids';
 import { getHousehold } from '@/lib/households';
@@ -106,6 +107,7 @@ export function createBill(householdId: string, input: BillInput, db: Db = getDb
         id,
         householdId,
         serviceId: input.serviceId,
+        ownerMemberId: svc.ownerMemberId,
         sourceDocumentId: input.sourceDocumentId ?? null,
         amountMinor: input.amountMinor,
         currency,
@@ -176,6 +178,8 @@ function insertShares(
   now: string,
   instalments: Pick<BillInstalment, 'seq' | 'dueDate' | 'amountMinor'>[] = [],
 ) {
+  // A personal service's bills belong to its owner alone: nothing to split.
+  if (svc.ownerMemberId) return;
   const members = listMembers(householdId, tx);
   const byId = new Map(members.map((m) => [m.id, m]));
   const customWeights =
@@ -305,9 +309,10 @@ export function getBill(householdId: string, id: string, db: Db = getDb()): Bill
   return { ...b, service: svc, shares, instalments: listInstalments([id], db) };
 }
 
+/** A household's bills, newest first. Household bills only unless the scope says otherwise. */
 export function listBills(
   householdId: string,
-  opts: { serviceId?: string; limit?: number } = {},
+  opts: { serviceId?: string; limit?: number } & Scope = {},
   db: Db = getDb(),
 ): BillListItem[] {
   let q = db
@@ -318,6 +323,10 @@ export function listBills(
       and(
         eq(bill.householdId, householdId),
         opts.serviceId ? eq(bill.serviceId, opts.serviceId) : undefined,
+        // One service's bills: the caller already chose a service it may see.
+        opts.serviceId && !opts.viewer && !opts.owner
+          ? undefined
+          : ownerCondition(bill.ownerMemberId, opts),
       ),
     )
     .orderBy(desc(bill.periodStart), desc(bill.createdAt))
@@ -393,6 +402,10 @@ export function updateBill(
   db.transaction((tx) => {
     const fields = { ...patch };
     delete fields.instalments;
+    const newService =
+      patch.serviceId && patch.serviceId !== existing.serviceId
+        ? getService(householdId, patch.serviceId, tx)
+        : null;
     tx.update(bill)
       .set({
         ...fields,
@@ -400,6 +413,8 @@ export function updateBill(
         ...(existing.instalments.length && !byInstalments
           ? { fullAmountMinor: merged.amountMinor, fullDueDate: merged.dueDate }
           : {}),
+        // Moved to another service: household or personal with it.
+        ...(newService ? { ownerMemberId: newService.ownerMemberId } : {}),
         updatedAt: now,
       })
       .where(and(eq(bill.householdId, householdId), eq(bill.id, id)))
@@ -709,6 +724,77 @@ export function billForNotice(
 }
 
 /** Bills with an unresolved provider alert, newest first. */
-export function billsWithAlerts(householdId: string, db: Db = getDb()): BillListItem[] {
-  return listBills(householdId, {}, db).filter((b) => b.alertKind);
+export function billsWithAlerts(
+  householdId: string,
+  scope: Scope = {},
+  db: Db = getDb(),
+): BillListItem[] {
+  return listBills(householdId, scope, db).filter((b) => b.alertKind);
+}
+
+/**
+ * Make a service one member's own (or the household's again). Its bills move
+ * with it: personal bills lose their shares, household bills are split again.
+ * Refused once a housemate has paid a share of one of its bills.
+ */
+export function setServiceOwner(
+  householdId: string,
+  serviceId: string,
+  ownerMemberId: string | null,
+  db: Db = getDb(),
+): ServiceWithType {
+  const svc = getService(householdId, serviceId, db);
+  if (!svc) throw new Error('Service not found');
+  if (svc.ownerMemberId === ownerMemberId) return svc;
+  const hh = getHousehold(householdId, db)!;
+  if (ownerMemberId && !listMembers(householdId, db).some((m) => m.id === ownerMemberId))
+    throw new Error('Not a member of this household');
+  const bills = db
+    .select()
+    .from(bill)
+    .where(and(eq(bill.householdId, householdId), eq(bill.serviceId, serviceId)))
+    .all();
+  const ids = bills.map((b) => b.id);
+  const paid = ids.length
+    ? db
+        .select()
+        .from(share)
+        .where(inArray(share.billId, ids))
+        .all()
+        .some((s) => s.paidAt && s.paidMethod !== 'payer')
+    : false;
+  if (paid)
+    throw new Error(
+      'Housemates have paid shares of its bills, so it has to stay a household service',
+    );
+  const now = new Date().toISOString();
+  db.transaction((tx) => {
+    tx.update(service)
+      .set({
+        ownerMemberId,
+        ...(ownerMemberId ? { payerMemberId: ownerMemberId } : {}),
+        updatedAt: now,
+      })
+      .where(and(eq(service.householdId, householdId), eq(service.id, serviceId)))
+      .run();
+    if (!ids.length) return;
+    tx.update(bill).set({ ownerMemberId, updatedAt: now }).where(inArray(bill.id, ids)).run();
+    tx.delete(share).where(inArray(share.billId, ids)).run();
+    if (ownerMemberId || hh.splitMode !== 'shared') return;
+    const moved = getService(householdId, serviceId, tx)!;
+    const instalments = listInstalments(ids, tx);
+    for (const b of bills)
+      insertShares(
+        tx,
+        householdId,
+        b.id,
+        moved,
+        { ...b, currency: b.currency },
+        hh.paymentReferenceTemplate,
+        hh.locale,
+        now,
+        b.paymentPlan === 'instalments' ? instalments.filter((i) => i.billId === b.id) : [],
+      );
+  });
+  return getService(householdId, serviceId, db)!;
 }

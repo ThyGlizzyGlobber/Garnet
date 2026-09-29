@@ -287,7 +287,10 @@ export async function notifyBillCreated(
       });
     }
   } else {
-    for (const m of listMembers(householdId, db))
+    // A personal bill is only ever mentioned to its owner.
+    for (const m of listMembers(householdId, db).filter(
+      (x) => !b.ownerMemberId || x.id === b.ownerMemberId,
+    ))
       recipients.push({
         m,
         build: () => ({
@@ -325,7 +328,11 @@ export async function notifyServiceCreated(
     payer: payer?.name ?? t('serviceCreated.nobody'),
   };
   let sent = 0;
-  for (const m of listMembers(householdId, db).filter((x) => x.role === 'owner')) {
+  // Admins check a new household service; a personal one is its owner's to check.
+  const recipients = listMembers(householdId, db).filter((x) =>
+    svc.ownerMemberId ? x.id === svc.ownerMemberId : x.role === 'owner',
+  );
+  for (const m of recipients) {
     const ok = await sendOnce(
       hh,
       m,
@@ -370,8 +377,10 @@ export async function notifyBillAlert(
     amount: f.money(b.amountMinor, b.currency),
     due: f.day(b.dueDate),
   };
-  const members = listMembers(householdId, db).filter(
-    (m) => m.role === 'owner' || m.id === b.service.payerMemberId,
+  const members = listMembers(householdId, db).filter((m) =>
+    b.ownerMemberId
+      ? m.id === b.ownerMemberId
+      : m.role === 'owner' || m.id === b.service.payerMemberId,
   );
   let sent = 0;
   for (const m of members) {

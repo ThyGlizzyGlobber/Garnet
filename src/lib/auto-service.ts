@@ -2,7 +2,9 @@ import { getDb, type Db } from '@/db/client';
 import type { Cadence } from '@/db/schema';
 import type { ExtractedBill } from '@/ingest/extractors/types';
 import { daysInclusive } from '@/lib/dates';
+import { getHousehold } from '@/lib/households';
 import { listMembers } from '@/lib/members';
+import type { Scope } from '@/lib/scope';
 import { nextPaletteColour, TYPE_COLOUR } from '@/lib/palette';
 import {
   createService,
@@ -83,7 +85,7 @@ export function promoteServiceType(
   if (!type) return svc;
   const other = types.find((t) => t.slug === 'other');
   const namedAfterType = svc.name.trim().toLowerCase() === (other?.label ?? 'Other').toLowerCase();
-  const taken = listServices(householdId, { includeInactive: true }, db).some(
+  const taken = listServices(householdId, { includeInactive: true, everyone: true }, db).some(
     (s) => s.id !== svc.id && s.name.toLowerCase() === type.label.toLowerCase(),
   );
   return updateService(
@@ -108,12 +110,23 @@ export interface AutoServiceResult {
 export function serviceForNewProvider(
   householdId: string,
   bill: ExtractedBill,
-  opts: { payerMemberId?: string | null; trustedDomain?: string | null },
+  opts: {
+    payerMemberId?: string | null;
+    trustedDomain?: string | null;
+    /** The member the bill came from: a type that's usually personal becomes theirs. */
+    member?: string | null;
+    /** Services it may reuse (see documentScope); all by default. */
+    scope?: Scope;
+  },
   db: Db = getDb(),
 ): AutoServiceResult | null {
   const provider = cleanProviderName(bill.provider ?? '');
   if (!provider || !bill.periodStart || !bill.periodEnd) return null;
-  const all = listServices(householdId, { includeInactive: true }, db);
+  const all = listServices(
+    householdId,
+    { includeInactive: true, ...(opts.scope ?? { everyone: true }) },
+    db,
+  );
   // A service for the same provider (a cancelled one is switched back on) is
   // reused rather than duplicated, but only when exactly one fits; otherwise
   // a person picks.
@@ -130,6 +143,11 @@ export function serviceForNewProvider(
   const types = listServiceTypes(db);
   const type =
     types.find((t) => t.slug === bill.serviceType) ?? types.find((t) => t.slug === 'other')!;
+  // Car rego, car insurance: the member's own, in a household that splits bills.
+  const owner =
+    type.personalByDefault && opts.member && getHousehold(householdId, db)?.splitMode === 'shared'
+      ? opts.member
+      : null;
   const name = all.some((s) => s.name.toLowerCase() === type.label.toLowerCase())
     ? `${type.label} (${provider})`
     : type.label;
@@ -148,7 +166,8 @@ export function serviceForNewProvider(
       cadence: cadenceFromPeriod(bill.periodStart, bill.periodEnd),
       usageUnit: bill.usageUnit ?? type.defaultUnit ?? null,
       splitMode: 'equal',
-      payerMemberId: payer,
+      payerMemberId: owner ?? payer,
+      ownerMemberId: owner,
       colour: TYPE_COLOUR[type.slug] ?? nextPaletteColour(all.map((s) => s.colour)),
       autoPay: bill.autoPay ?? false,
       trustedSenders: opts.trustedDomain ? [opts.trustedDomain] : [],

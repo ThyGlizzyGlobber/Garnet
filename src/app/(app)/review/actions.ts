@@ -1,5 +1,6 @@
 'use server';
 
+import { visibleTo } from '@/lib/scope';
 import { promoteServiceType } from '@/lib/auto-service';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
@@ -64,7 +65,11 @@ export async function approveReviewAction(_prev: ActionState, fd: FormData): Pro
   if (!parsed.success) return zodToState(parsed.error);
   const v = parsed.data;
   const doc = getDocument(hh.id, v.documentId);
-  if (!doc) return { error: 'Document not found' };
+  if (!doc || !getReviewItem(hh.id, doc.id, undefined, { viewer: me.id }))
+    return { error: 'Document not found' };
+  const chosenService = getService(hh.id, v.serviceId);
+  if (!chosenService || !visibleTo(chosenService.ownerMemberId, me.id))
+    return { error: 'Service not found' };
   const amountMinor = parseMoneyToMinor(v.amount, hh.currency);
   if (amountMinor === null)
     return {
@@ -130,7 +135,8 @@ export async function approveReviewAction(_prev: ActionState, fd: FormData): Pro
 
 export async function ignoreDocumentAction(fd: FormData): Promise<void> {
   const me = await requireMember();
-  setDocumentStatus(me.householdId, str(fd, 'documentId'), 'ignored', undefined);
+  if (getReviewItem(me.householdId, str(fd, 'documentId'), undefined, { viewer: me.id }))
+    setDocumentStatus(me.householdId, str(fd, 'documentId'), 'ignored', undefined);
   revalidatePath('/review');
   redirect('/review');
 }
@@ -139,8 +145,11 @@ export async function ignoreDocumentAction(fd: FormData): Promise<void> {
 export async function readAsBillAction(fd: FormData): Promise<void> {
   const me = await requireMember();
   const id = str(fd, 'documentId');
-  if (!getDocument(me.householdId, id)) redirect('/review');
-  const outcome = await processDocument(me.householdId, id, undefined, { asBill: true });
+  if (!getReviewItem(me.householdId, id, undefined, { viewer: me.id })) redirect('/review');
+  const outcome = await processDocument(me.householdId, id, undefined, {
+    asBill: true,
+    by: me.id,
+  });
   revalidatePath('/review');
   revalidatePath('/bills');
   redirect(
@@ -151,7 +160,7 @@ export async function readAsBillAction(fd: FormData): Promise<void> {
 export async function reprocessDocumentAction(fd: FormData): Promise<void> {
   const me = await requireMember();
   const id = str(fd, 'documentId');
-  if (!getDocument(me.householdId, id)) redirect('/review');
+  if (!getReviewItem(me.householdId, id, undefined, { viewer: me.id })) redirect('/review');
   const outcome = await processDocument(me.householdId, id);
   revalidatePath('/review');
   revalidatePath('/bills');
@@ -164,7 +173,7 @@ export async function reprocessDocumentAction(fd: FormData): Promise<void> {
 export async function reprocessAllAction(): Promise<void> {
   const me = await requireMember();
   // Only what's waiting: re-reading a notice would re-flag a bill someone already sorted.
-  for (const d of listDocuments(me.householdId)) {
+  for (const d of listDocuments(me.householdId, { viewer: me.id })) {
     if (d.status !== 'needs_review' && d.status !== 'unprocessed') continue;
     await processDocument(me.householdId, d.id);
   }
@@ -193,9 +202,10 @@ export async function uploadBillAction(_prev: ActionState, fd: FormData): Promis
     buffer,
     originalFilename: file.name,
     mimeType: file.type || null,
+    memberId: me.id,
   });
   if (duplicate) {
-    const existing = listDocuments(me.householdId).find((d) => d.id === doc.id);
+    const existing = listDocuments(me.householdId, { viewer: me.id }).find((d) => d.id === doc.id);
     if (existing?.billId) redirect(`/bills/${existing.billId}`);
     redirect(`/review/${doc.id}`);
   }

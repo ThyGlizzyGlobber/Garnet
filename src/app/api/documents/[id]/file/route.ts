@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { currentMember } from '@/lib/auth/session';
 import { getDocument, readDocument } from '@/ingest/archive';
+import { getReviewItem } from '@/lib/review';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,7 +11,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   if (!me) return new NextResponse('Unauthorized', { status: 401 });
   const { id } = await params;
   const doc = getDocument(me.householdId, id);
-  if (!doc) return new NextResponse('Not found', { status: 404 });
+  // Another member's personal bill (or its receipt) isn't theirs to open.
+  if (!doc || !getReviewItem(me.householdId, id, undefined, { viewer: me.id }))
+    return new NextResponse('Not found', { status: 404 });
   const body = readDocument(doc);
   const type =
     doc.mimeType ?? (doc.path.endsWith('.pdf') ? 'application/pdf' : 'application/octet-stream');

@@ -14,12 +14,14 @@ import { billEntries, entryOverdue, filterBills, type BillEntry } from '@/lib/bi
 import { listDocuments, searchDocuments } from '@/lib/review';
 
 type Filter = 'all' | 'unpaid' | 'overdue' | 'unusual' | 'paid';
+/** Household bills, my personal bills, or both. */
+type Whose = 'all' | 'household' | 'mine';
 const FILTERS: Filter[] = ['all', 'unpaid', 'overdue', 'unusual', 'paid'];
 
 export default async function BillsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; f?: string; s?: string; y?: string }>;
+  searchParams: Promise<{ q?: string; f?: string; s?: string; y?: string; o?: string }>;
 }) {
   const params = await searchParams;
   const q = (params.q ?? '').trim();
@@ -28,8 +30,15 @@ export default async function BillsPage({
     : 'all';
   const { hh, me, money, date, today } = await pageContext();
   const t = await getTranslations('bills');
-  const all = listBills(hh.id);
-  const services = listServices(hh.id, { includeInactive: true }).filter((svc) =>
+  // The household's bills and this member's own (nobody else's personal bills).
+  const everything = listBills(hh.id, { viewer: me.id });
+  const hasPersonal = everything.some((b) => b.ownerMemberId);
+  const whose: Whose =
+    hasPersonal && (params.o === 'mine' || params.o === 'household') ? params.o : 'all';
+  const all = everything.filter((b) =>
+    whose === 'mine' ? b.ownerMemberId : whose === 'household' ? !b.ownerMemberId : true,
+  );
+  const services = listServices(hh.id, { includeInactive: true, viewer: me.id }).filter((svc) =>
     all.some((b) => b.serviceId === svc.id),
   );
   const serviceId = services.some((svc) => svc.id === params.s) ? params.s! : null;
@@ -37,7 +46,7 @@ export default async function BillsPage({
     .sort()
     .reverse();
   const year = years.includes(params.y ?? '') ? params.y! : null;
-  const hasServices = listServices(hh.id).length > 0;
+  const hasServices = listServices(hh.id, { viewer: me.id }).length > 0;
   const address = billsAddress(hh);
   const { entries, tokens } = filterBills(
     all,
@@ -52,9 +61,16 @@ export default async function BillsPage({
   const total = entries.reduce((sum, e) => sum + e.amountMinor, 0);
   const unpaid = entries.filter((e) => !e.paidAt).reduce((sum, e) => sum + e.amountMinor, 0);
   // Links that change one filter and keep the rest.
-  const href = (change: { f?: Filter; s?: string | null; y?: string | null; q?: string }) => {
-    const next = { f: filter, s: serviceId, y: year, q, ...change };
+  const href = (change: {
+    f?: Filter;
+    s?: string | null;
+    y?: string | null;
+    q?: string;
+    o?: Whose;
+  }) => {
+    const next = { f: filter, s: serviceId, y: year, q, o: whose, ...change };
     const u = new URLSearchParams();
+    if (next.o !== 'all') u.set('o', next.o);
     if (next.f && next.f !== 'all') u.set('f', next.f);
     if (next.s) u.set('s', next.s);
     if (next.y) u.set('y', next.y);
@@ -62,8 +78,10 @@ export default async function BillsPage({
     const qs = u.toString();
     return qs ? `/bills?${qs}` : '/bills';
   };
-  const filtered = filter !== 'all' || !!serviceId || !!year || !!q;
-  const inboxMatches = q ? searchDocuments(listDocuments(hh.id), q, hh.locale).docs.length : 0;
+  const filtered = filter !== 'all' || !!serviceId || !!year || !!q || whose !== 'all';
+  const inboxMatches = q
+    ? searchDocuments(listDocuments(hh.id, { viewer: me.id }), q, hh.locale).docs.length
+    : 0;
   const chip = (on: boolean) =>
     `rounded-full px-4 py-2 text-sm font-semibold transition ${on ? 'bg-accent text-accent-fg' : 'bg-surface-2 text-fg-muted hover:text-fg'}`;
 
@@ -113,6 +131,15 @@ export default async function BillsPage({
               {t('search.submit')}
             </button>
           </form>
+          {hasPersonal && (
+            <div className="flex flex-wrap items-center gap-2">
+              {(['all', 'household', 'mine'] as const).map((o) => (
+                <Link key={o} href={href({ o })} className={chip(whose === o)}>
+                  {t(`whose.${o}`)}
+                </Link>
+              ))}
+            </div>
+          )}
           <div className="flex flex-wrap items-center gap-2">
             {FILTERS.map((nf) => (
               <Link key={nf} href={href({ f: nf })} className={chip(filter === nf)}>
@@ -287,6 +314,7 @@ export default async function BillsPage({
                       </span>
                       <span className="flex items-center gap-2">
                         {b.alertKind && <Badge tone="danger">{t(`alert.${b.alertKind}`)}</Badge>}
+                        {b.ownerMemberId && <Badge>{t('tile.onlyYou')}</Badge>}
                         {b.isAnomaly && <Badge tone="warning">{t('anomaly')}</Badge>}
                         {b.externalRef && (
                           <span className="font-mono text-fg-muted">

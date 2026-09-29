@@ -405,6 +405,66 @@ export async function seedDemo(db: Db = getDb()) {
     },
     db,
   );
+  // Personal services: Alex's car rego and Jordan's car insurance. Each is seen
+  // only by its owner and stays out of the household's figures.
+  const rego = createService(
+    hh.id,
+    {
+      typeSlug: 'vehicle_registration',
+      name: 'Car rego',
+      provider: 'Example Roads',
+      cadence: 'annual',
+      ownerMemberId: alex.id,
+      colour: PALETTE[5]!.light,
+    },
+    db,
+  );
+  createBill(
+    hh.id,
+    {
+      serviceId: rego.id,
+      amountMinor: 89400,
+      periodStart: '2026-08-15',
+      periodEnd: '2027-08-14',
+      issueDate: '2026-07-20',
+      dueDate: '2026-08-14',
+      source: 'manual',
+      externalRef: 'REGO-2026',
+      paidToProviderAt: paid('2026-08-10'),
+    },
+    db,
+  );
+  const carInsurance = createService(
+    hh.id,
+    {
+      typeSlug: 'car_insurance',
+      name: 'Car insurance',
+      provider: 'Example Insure',
+      cadence: 'monthly',
+      ownerMemberId: jordan.id,
+      colour: PALETTE[7]!.light,
+    },
+    db,
+  );
+  for (const [start, end, paidOn] of [
+    ['2026-07-05', '2026-08-04', '2026-07-05'],
+    ['2026-08-05', '2026-09-04', '2026-08-05'],
+    ['2026-09-05', '2026-10-04', null],
+  ] as const)
+    createBill(
+      hh.id,
+      {
+        serviceId: carInsurance.id,
+        amountMinor: 11250,
+        periodStart: start,
+        periodEnd: end,
+        dueDate: start,
+        source: 'manual',
+        externalRef: `CI-${start.slice(0, 7)}`,
+        paidToProviderAt: paidOn ? paid(paidOn) : null,
+      },
+      db,
+    );
   void sam;
   // Settle everything before the current cycle so the demo shows a realistic "who owes what".
   const settled = db

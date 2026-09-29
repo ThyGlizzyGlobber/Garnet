@@ -17,7 +17,7 @@ export default async function ReviewPage({
 }: {
   searchParams: Promise<{ all?: string; f?: string; q?: string }>;
 }) {
-  const { hh, date, money } = await pageContext();
+  const { hh, me, date, money } = await pageContext();
   const t = await getTranslations('review');
   const tb = await getTranslations('billsAddress');
   const address = billsAddress(hh);
@@ -28,7 +28,7 @@ export default async function ReviewPage({
     : all === '1'
       ? 'all'
       : 'review';
-  const found = searchDocuments(listDocuments(hh.id), q, hh.locale);
+  const found = searchDocuments(listDocuments(hh.id, { viewer: me.id }), q, hh.locale);
   const tokens = found.tokens;
   const docs = found.docs.filter((d) =>
     filter === 'all'

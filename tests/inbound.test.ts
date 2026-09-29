@@ -517,7 +517,7 @@ describe('provider notices', () => {
     const [doc] = listDocuments(hh.id, {}, db);
     expect(doc?.status).toBe('notice');
     expect(after.alertDocumentId).toBe(doc?.id);
-    expect(billsWithAlerts(hh.id, db).map((x) => x.id)).toEqual([b.id]);
+    expect(billsWithAlerts(hh.id, {}, db).map((x) => x.id)).toEqual([b.id]);
   });
 
   it('mark the bill paid and clear the flag when the provider confirms payment', async () => {

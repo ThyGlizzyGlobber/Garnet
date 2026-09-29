@@ -1,4 +1,5 @@
 import { and, eq } from 'drizzle-orm';
+import type { Scope } from '@/lib/scope';
 import { getDb, type Db } from '@/db/client';
 import { account, bill, sourceDocument, type SourceDocument } from '@/db/schema';
 import { createBill, type BillDetail } from '@/lib/bills';
@@ -59,6 +60,40 @@ export interface StoredExtraction {
   documentDate?: string;
 }
 
+/**
+ * The member a document came from: whoever uploaded it, or the member whose
+ * address a signed forward came from. Null for mail straight from a provider.
+ */
+export function actingMember(
+  householdId: string,
+  doc: Partial<SourceDocument>,
+  db: Db = getDb(),
+): string | null {
+  if (doc.memberId) return doc.memberId;
+  if (!doc.senderVerified) return null;
+  const address = addressOf(doc.emailFrom ?? null);
+  if (!address) return null;
+  return (
+    listMembers(householdId, db).find(
+      (m) => m.email?.toLowerCase() === address || memberAccountEmail(m.accountId, db) === address,
+    )?.id ?? null
+  );
+}
+
+/**
+ * The services a document may land on: the household's, plus the personal
+ * ones of the member it came from. Mail straight from a provider may reach any
+ * member's personal service (the trust rules still decide whether it acts).
+ */
+export function documentScope(
+  householdId: string,
+  doc: Partial<SourceDocument>,
+  db: Db = getDb(),
+): Scope {
+  const member = actingMember(householdId, doc, db);
+  return member ? { viewer: member } : { everyone: true };
+}
+
 export function buildInput(
   householdId: string,
   text: string,
@@ -75,7 +110,7 @@ export function buildInput(
         : null,
     locale: hh?.locale ?? 'en-AU',
     defaultCurrency: hh?.currency ?? 'AUD',
-    services: listServices(householdId, {}, db).map((s) => ({
+    services: listServices(householdId, documentScope(householdId, doc, db), db).map((s) => ({
       id: s.id,
       name: s.name,
       provider: s.provider,
@@ -145,6 +180,8 @@ export interface ReadOptions {
    * an upload, since a person vouches for it.
    */
   asBill?: boolean;
+  /** The member who said so: it's theirs when nobody else is known to have sent it. */
+  by?: string | null;
 }
 
 async function readAndRoute(
@@ -156,7 +193,14 @@ async function readAndRoute(
   const found = getDocument(householdId, documentId, db);
   if (!found) throw new Error('Document not found');
   // senderVerified null = brought in by the household (uploads); see mayActFor.
-  const doc = opts.asBill ? { ...found, senderVerified: null } : found;
+  const doc = opts.asBill
+    ? {
+        ...found,
+        senderVerified: null,
+        // Who it came from still decides which personal services it may reach.
+        memberId: actingMember(householdId, found, db) ?? opts.by ?? null,
+      }
+    : found;
   const env = getEnv();
   // A damaged or unsupported file must still land in the review queue, never vanish.
   let text = '';
@@ -302,7 +346,7 @@ async function readAndRoute(
   let serviceId =
     best.bill.serviceId && getService(householdId, best.bill.serviceId, db)
       ? best.bill.serviceId
-      : matchService(householdId, best, db);
+      : matchService(householdId, best, db, documentScope(householdId, doc, db));
   let newService: string | null = null;
   if (!serviceId) {
     // No service for this provider yet: set one up from the bill, when the
@@ -417,13 +461,17 @@ async function readAndRoute(
   };
 }
 
-/** Match by provider name (case-insensitive, either containing the other) then by service type when unique. */
+/**
+ * Match by provider name (case-insensitive, either containing the other) then
+ * by service type when unique, among the services in scope (see documentScope).
+ */
 export function matchService(
   householdId: string,
   result: ExtractionResult,
   db: Db = getDb(),
+  scope: Scope = { everyone: true },
 ): string | null {
-  const services = listServices(householdId, {}, db);
+  const services = listServices(householdId, scope, db);
   const p = result.bill.provider.toLowerCase();
   const byProvider = services.filter(
     (s) =>
@@ -506,7 +554,11 @@ function applyNotice(
 ): PipelineOutcome {
   const label = NOTICE_LABEL[kind];
   const address = addressOf(doc.emailFrom);
-  const services = listServices(householdId, { includeInactive: true }, db);
+  const services = listServices(
+    householdId,
+    { includeInactive: true, ...documentScope(householdId, doc, db) },
+    db,
+  );
   // By name (the AI's provider, or the provider named in the text) only when the
   // household itself brought the document in: an upload, or a member's forward.
   // Otherwise the sender's own domain must belong to the provider.
@@ -610,9 +662,11 @@ function applyReceipt(
   store: (status: PipelineOutcome['status'], reason: string, result: null, attempts: []) => void,
   db: Db,
 ): PipelineOutcome {
-  const services = listServices(householdId, { includeInactive: true }, db).filter((s) =>
-    providerNameMatches(s.provider, receipt.provider),
-  );
+  const services = listServices(
+    householdId,
+    { includeInactive: true, ...documentScope(householdId, doc, db) },
+    db,
+  ).filter((s) => providerNameMatches(s.provider, receipt.provider));
   const allowed = services.filter((s) => mayActFor(householdId, doc, s, db));
   const refs = receipt.invoices.map((i) => `#${i.ref}`).join(', ');
   if (!allowed.length) {
@@ -781,17 +835,17 @@ function autoServiceFor(
   bill: ExtractionResult['bill'],
   db: Db,
 ) {
-  if (doc.senderVerified === null) return serviceForNewProvider(householdId, bill, {}, db);
+  const member = actingMember(householdId, doc, db);
+  const scope = documentScope(householdId, doc, db);
+  // An upload: the admin pays unless it's usually personal (then it's the uploader's own).
+  if (doc.senderVerified === null)
+    return serviceForNewProvider(householdId, bill, { member, scope }, db);
   if (!doc.senderVerified) return null;
   const address = addressOf(doc.emailFrom);
-  if (address && householdEmails(householdId, db).has(address)) {
-    const payer = listMembers(householdId, db).find(
-      (m) => m.email === address || memberAccountEmail(m.accountId, db) === address,
-    );
-    return serviceForNewProvider(householdId, bill, { payerMemberId: payer?.id ?? null }, db);
-  }
+  if (address && householdEmails(householdId, db).has(address))
+    return serviceForNewProvider(householdId, bill, { payerMemberId: member, member, scope }, db);
   if (!isFreemail(doc.senderDomain) && senderMatchesProvider(doc.senderDomain, bill.provider))
-    return serviceForNewProvider(householdId, bill, { trustedDomain: doc.senderDomain }, db);
+    return serviceForNewProvider(householdId, bill, { trustedDomain: doc.senderDomain, scope }, db);
   return null;
 }
 

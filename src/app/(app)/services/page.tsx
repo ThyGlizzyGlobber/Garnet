@@ -20,6 +20,7 @@ import { listServices, listServiceTypes } from '@/lib/services';
 import { listUnits, unitLabel } from '@/lib/units';
 import { Sparkline } from '@/components/charts/sparkline';
 import { monthlySeries } from '@/lib/stats';
+import { listBills } from '@/lib/bills';
 import { lastMonths } from '@/lib/periods';
 import { monthOf } from '@/lib/dates';
 import { createServiceTypeAction } from './actions';
@@ -34,7 +35,7 @@ function tint(colour: string) {
 }
 
 export default async function ServicesPage() {
-  const { hh, money, date, today } = await pageContext();
+  const { hh, me, money, date, today } = await pageContext();
   const t = await getTranslations('services');
   const services = listServices(hh.id, { includeInactive: true });
   const members = new Map(listMembers(hh.id).map((m) => [m.id, m.name]));
@@ -43,6 +44,75 @@ export default async function ServicesPage() {
     projectMonth(hh.id, nextMonth(today)).services.map((p) => [p.service.id, p]),
   );
   const history = monthlySeries(hh.id, lastMonths(monthOf(today), 12));
+  // This member's own services (nobody else sees them), with their latest bill.
+  const personal = listServices(hh.id, { includeInactive: true, owner: me.id });
+  const personalHistory = monthlySeries(hh.id, lastMonths(monthOf(today), 12), undefined, {
+    owner: me.id,
+  });
+
+  const tileFor = (
+    s: (typeof services)[number],
+    next: { amount: string; line: string; history: number[] },
+  ) => {
+    const swatch = `light-dark(${s.colour}, ${darkVariant(s.colour)})`;
+    return (
+      <Link
+        key={s.id}
+        href={`/services/${s.id}`}
+        className="glass lift flex min-h-52 flex-col justify-between rounded-card p-5 text-fg"
+        style={tint(s.colour)}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <span className="flex items-center gap-3">
+            <span
+              className="grid size-10 place-items-center rounded-full bg-surface-2"
+              style={{ color: swatch }}
+            >
+              <Icon name={s.type.icon} width={18} height={18} />
+            </span>
+            <span className="flex flex-col leading-tight">
+              <span className="text-[11px] font-semibold tracking-wide text-fg-muted uppercase">
+                {s.type.label}
+              </span>
+              <span className="font-display text-base font-semibold">{s.name}</span>
+            </span>
+          </span>
+          <span className="flex flex-col items-end gap-1">
+            {!s.isActive && <Badge>{t('inactive')}</Badge>}
+            {s.ownerMemberId ? (
+              <Badge>{t('onlyYou')}</Badge>
+            ) : (
+              hh.splitMode === 'shared' && (
+                <Badge tone="accent">{t(`form.splitModes.${s.splitMode}`)}</Badge>
+              )
+            )}
+          </span>
+        </div>
+        <div className="mt-4">
+          <span className="text-xs font-semibold text-fg-muted">
+            {s.ownerMemberId ? t('personal.lastTitle') : t('tile.next')}
+          </span>
+          <p
+            className="font-display text-[34px] leading-none font-semibold tracking-tight tabular-nums"
+            style={{ color: swatch }}
+          >
+            {next.amount}
+          </p>
+          <p className="mt-1 text-xs text-fg-muted">{next.line}</p>
+        </div>
+        <div className="mt-3 -mx-1">
+          <Sparkline values={next.history} colour={s.colour} height={36} />
+        </div>
+        <p className="mt-2 truncate text-xs text-fg-muted">
+          {s.provider} · {t(`form.cadences.${s.cadence}`)}
+          {s.usageUnit && ` · ${unitLabel(s.usageUnit)}`}
+          {hh.splitMode === 'shared' &&
+            !s.ownerMemberId &&
+            ` · ${s.payerMemberId ? t('tile.payer', { name: members.get(s.payerMemberId) ?? '?' }) : t('tile.noPayer')}`}
+        </p>
+      </Link>
+    );
+  };
 
   return (
     <>
@@ -60,65 +130,13 @@ export default async function ServicesPage() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {services.map((s) => {
             const p = proj.get(s.id);
-            const swatch = `light-dark(${s.colour}, ${darkVariant(s.colour)})`;
-            return (
-              <Link
-                key={s.id}
-                href={`/services/${s.id}`}
-                className="glass lift flex min-h-52 flex-col justify-between rounded-card p-5 text-fg"
-                style={tint(s.colour)}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <span className="flex items-center gap-3">
-                    <span
-                      className="grid size-10 place-items-center rounded-full bg-surface-2"
-                      style={{ color: swatch }}
-                    >
-                      <Icon name={s.type.icon} width={18} height={18} />
-                    </span>
-                    <span className="flex flex-col leading-tight">
-                      <span className="text-[11px] font-semibold tracking-wide text-fg-muted uppercase">
-                        {s.type.label}
-                      </span>
-                      <span className="font-display text-base font-semibold">{s.name}</span>
-                    </span>
-                  </span>
-                  <span className="flex flex-col items-end gap-1">
-                    {!s.isActive && <Badge>{t('inactive')}</Badge>}
-                    {hh.splitMode === 'shared' && (
-                      <Badge tone="accent">{t(`form.splitModes.${s.splitMode}`)}</Badge>
-                    )}
-                  </span>
-                </div>
-                <div className="mt-4">
-                  <span className="text-xs font-semibold text-fg-muted">{t('tile.next')}</span>
-                  <p
-                    className="font-display text-[34px] leading-none font-semibold tracking-tight tabular-nums"
-                    style={{ color: swatch }}
-                  >
-                    {p?.nextBill ? money(p.nextBill.amountMinor) : '—'}
-                  </p>
-                  <p className="mt-1 text-xs text-fg-muted">
-                    {p?.nextBill
-                      ? `${t('tile.due', { date: date(p.nextBill.dueDate, 'short') })} · ${t('tile.perDay', { amount: money(Math.round(p.perDay)) })}`
-                      : t('tile.noHistory')}
-                  </p>
-                </div>
-                <div className="mt-3 -mx-1">
-                  <Sparkline
-                    values={history.map((r) => r.byService[s.id] ?? 0)}
-                    colour={s.colour}
-                    height={36}
-                  />
-                </div>
-                <p className="mt-2 truncate text-xs text-fg-muted">
-                  {s.provider} · {t(`form.cadences.${s.cadence}`)}
-                  {s.usageUnit && ` · ${unitLabel(s.usageUnit)}`}
-                  {hh.splitMode === 'shared' &&
-                    ` · ${s.payerMemberId ? t('tile.payer', { name: members.get(s.payerMemberId) ?? '?' }) : t('tile.noPayer')}`}
-                </p>
-              </Link>
-            );
+            return tileFor(s, {
+              amount: p?.nextBill ? money(p.nextBill.amountMinor) : '—',
+              line: p?.nextBill
+                ? `${t('tile.due', { date: date(p.nextBill.dueDate, 'short') })} · ${t('tile.perDay', { amount: money(Math.round(p.perDay)) })}`
+                : t('tile.noHistory'),
+              history: history.map((r) => r.byService[s.id] ?? 0),
+            });
           })}
           <Link
             href="/services/new"
@@ -130,6 +148,24 @@ export default async function ServicesPage() {
             <span className="text-sm font-semibold">{t('add')}</span>
           </Link>
         </div>
+      )}
+      {personal.length > 0 && (
+        <section className="mt-8">
+          <h2 className="font-display text-lg font-semibold">{t('personal.title')}</h2>
+          <p className="mb-3 text-xs text-fg-muted">{t('personal.body')}</p>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {personal.map((s) => {
+              const last = listBills(hh.id, { serviceId: s.id, limit: 1 })[0];
+              return tileFor(s, {
+                amount: last ? money(last.amountMinor, last.currency) : '—',
+                line: last
+                  ? t('personal.last', { date: date(last.dueDate, 'short') })
+                  : t('tile.noHistory'),
+                history: personalHistory.map((r) => r.byService[s.id] ?? 0),
+              });
+            })}
+          </div>
+        </section>
       )}
       <Card className="mt-6">
         <h2 className="font-display font-semibold">{t('types.title')}</h2>

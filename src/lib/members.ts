@@ -1,6 +1,6 @@
 import { and, asc, count, eq } from 'drizzle-orm';
 import { getDb, type Db } from '@/db/client';
-import { member, share, type Member } from '@/db/schema';
+import { member, service, share, sourceDocument, type Member } from '@/db/schema';
 import { ulid } from '@/lib/ids';
 
 export function listMembers(householdId: string, db: Db = getDb()): Member[] {
@@ -122,6 +122,12 @@ export function deleteMember(householdId: string, id: string, db: Db = getDb()):
   const n = db.select({ n: count() }).from(share).where(eq(share.memberId, id)).get()?.n ?? 0;
   if (n > 0)
     throw new Error('This member has bill shares. Set a move-out date instead of deleting.');
+  // Their personal services would otherwise have nobody to belong to (or show to everyone).
+  const own = db.select({ n: count() }).from(service).where(eq(service.ownerMemberId, id)).get();
+  if ((own?.n ?? 0) > 0)
+    throw new Error('This member has personal services. Set a move-out date instead of deleting.');
+  // Documents they uploaded stay, without their name.
+  db.update(sourceDocument).set({ memberId: null }).where(eq(sourceDocument.memberId, id)).run();
   db.delete(member)
     .where(and(eq(member.householdId, householdId), eq(member.id, id)))
     .run();

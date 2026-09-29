@@ -20,6 +20,8 @@ export interface ArchiveInput {
   /** Set for mail that arrived at a household bills address. */
   senderDomain?: string | null;
   senderVerified?: boolean | null;
+  /** The member who uploaded it. */
+  memberId?: string | null;
 }
 
 export function sha256(buffer: Buffer): string {
@@ -89,6 +91,7 @@ export function archiveDocument(
     emailMessageId: input.emailMessageId ?? null,
     senderDomain: input.senderDomain ?? null,
     senderVerified: input.senderVerified ?? null,
+    memberId: input.memberId ?? null,
     status: 'unprocessed',
     extractionJson: null,
     createdAt: receivedAt,

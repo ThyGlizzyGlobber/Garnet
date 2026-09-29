@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { visibleTo } from '@/lib/scope';
 import { getTranslations } from 'next-intl/server';
 import { PageHeader } from '@/components/ui';
 import { getBill } from '@/lib/bills';
@@ -11,10 +12,10 @@ import { BillForm } from '../../bill-form';
 
 export default async function EditBillPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { hh } = await pageContext();
+  const { hh, me } = await pageContext();
   const t = await getTranslations('bills');
   const b = getBill(hh.id, id);
-  if (!b) notFound();
+  if (!b || !visibleTo(b.ownerMemberId, me.id)) notFound();
   const digits = minorUnitDigits(b.currency);
   const major = (minor: number | null) =>
     minor === null ? '' : (minor / 10 ** digits).toFixed(digits);
@@ -24,9 +25,9 @@ export default async function EditBillPage({ params }: { params: Promise<{ id: s
       <PageHeader title={t('editTitle')} />
       <BillForm
         action={updateBillAction}
-        services={listServices(hh.id, { includeInactive: true }).map((s) => ({
+        services={listServices(hh.id, { includeInactive: true, viewer: me.id }).map((s) => ({
           id: s.id,
-          name: s.name,
+          name: s.ownerMemberId ? `${s.name} · ${t('tile.onlyYou')}` : s.name,
           provider: s.provider,
           usageUnit: s.usageUnit,
           cadence: s.cadence,

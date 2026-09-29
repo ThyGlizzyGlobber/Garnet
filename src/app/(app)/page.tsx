@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { PersonalView } from './personal-view';
 import { getTranslations } from 'next-intl/server';
 import { Icon } from '@/components/app/icons';
 import { TrendLine } from '@/components/charts/trend-line';
@@ -37,16 +38,28 @@ import { toggleSharePaidAction } from './bills/actions';
 const swatch = (c: string) => ({ background: `light-dark(${c}, ${darkVariant(c)})` });
 const tile = 'glass lift rounded-card p-5 sm:p-6';
 
-export default async function HomePage() {
-  const { hh, me, money, date, today } = await pageContext();
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ view?: string }>;
+}) {
+  const ctx = await pageContext();
+  const { hh, me, money, date, today } = ctx;
   const t = await getTranslations('dashboard');
   const shared = hh.splitMode === 'shared';
+  // Household · Mine: in a household that splits bills, each member also has
+  // their own view (their shares plus their personal bills).
+  const mineView = shared && (await searchParams).view === 'mine';
+  const toggle = shared ? (
+    <ViewToggle mine={mineView} labels={await getTranslations('personal')} />
+  ) : null;
+  if (mineView) return <PersonalView ctx={ctx} toggle={toggle} />;
 
   if (!hasAnyBills(hh.id)) {
     const hasServices = listServices(hh.id).length > 0;
     return (
       <>
-        <PageHeader title={t('greeting', { name: me.name })} subtitle={hh.name} />
+        <PageHeader title={t('greeting', { name: me.name })} subtitle={hh.name} action={toggle} />
         <EmptyState
           title={t('empty.title')}
           body={hasServices ? t('empty.body') : t('empty.noServices')}
@@ -91,9 +104,10 @@ export default async function HomePage() {
   const mineSum = summariseReminders(mine);
   const settled = shared ? settlementRate(hh.id, s.thisMonth.month) : null;
   const reviewCount = documentCounts(hh.id).needs_review;
-  const alerts = billsWithAlerts(hh.id);
+  // Banners: household bills, and the viewer's own personal ones.
+  const alerts = billsWithAlerts(hh.id, { viewer: me.id });
   // Bills offering instalments that nobody has chosen a plan for (the payer or an admin chooses).
-  const planChoices = listBills(hh.id).filter(
+  const planChoices = listBills(hh.id, { viewer: me.id }).filter(
     (b) =>
       planUndecided(b) &&
       !b.paidToProviderAt &&
@@ -178,7 +192,8 @@ export default async function HomePage() {
                     })}
           </span>
         </h1>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {toggle}
           <span className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-fg">
             {thisMonthName}
           </span>
@@ -688,6 +703,31 @@ export default async function HomePage() {
         )}
       </div>
     </>
+  );
+}
+
+/** Household · Mine switch at the top of Home. */
+function ViewToggle({
+  mine,
+  labels,
+}: {
+  mine: boolean;
+  labels: (key: 'toggle.household' | 'toggle.mine' | 'toggle.label') => string;
+}) {
+  const seg = (on: boolean) =>
+    `rounded-full px-4 py-1.5 text-sm font-semibold transition ${on ? 'bg-accent text-accent-fg' : 'text-fg-muted hover:text-fg'}`;
+  return (
+    <nav
+      aria-label={labels('toggle.label')}
+      className="glass flex items-center gap-1 rounded-full p-1"
+    >
+      <Link href="/" className={seg(!mine)} aria-current={!mine ? 'page' : undefined}>
+        {labels('toggle.household')}
+      </Link>
+      <Link href="/?view=mine" className={seg(mine)} aria-current={mine ? 'page' : undefined}>
+        {labels('toggle.mine')}
+      </Link>
+    </nav>
   );
 }
 

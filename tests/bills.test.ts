@@ -74,6 +74,7 @@ describe('service type catalog', () => {
       'building_insurance',
       'ambulance_cover',
       'vehicle_registration',
+      'car_insurance',
       'subscriptions',
       'gardening',
       'cleaning',

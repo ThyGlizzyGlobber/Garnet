@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { visibleTo } from '@/lib/scope';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { ChangeText, formatQty } from '@/components/app/usage';
@@ -20,11 +21,12 @@ import { areaComparison } from '@/lib/regional';
 /** A service at a glance: how much it uses and how that compares, then its bills. */
 export default async function ServicePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { hh, money, date, today } = await pageContext();
+  const { hh, me, money, date, today } = await pageContext();
   const t = await getTranslations('usage');
   const ts = await getTranslations('services');
   const svc = getService(hh.id, id);
-  if (!svc) notFound();
+  // Another member's personal service doesn't exist, as far as anyone else can tell.
+  if (!svc || !visibleTo(svc.ownerMemberId, me.id)) notFound();
   const history = usageHistory(hh.id, svc.id);
   const c = compareUsage(hh.id, svc.id);
   const unit = unitLabel(c?.unit ?? svc.usageUnit);
@@ -97,7 +99,7 @@ export default async function ServicePage({ params }: { params: Promise<{ id: st
     <div className="mx-auto max-w-2xl">
       <PageHeader
         title={svc.name}
-        subtitle={`${svc.provider} · ${svc.type.label}`}
+        subtitle={`${svc.provider} · ${svc.type.label}${svc.ownerMemberId ? ` · ${ts('onlyYou')}` : ''}`}
         action={
           <LinkButton href={`/services/${svc.id}/edit`} variant="secondary">
             {ts('edit')}

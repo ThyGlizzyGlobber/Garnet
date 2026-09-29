@@ -10,14 +10,18 @@ import { BillForm } from '../bill-form';
 export default async function NewBillPage({
   searchParams,
 }: {
-  searchParams: Promise<{ service?: string }>;
+  searchParams: Promise<{ service?: string; personal?: string }>;
 }) {
-  const { hh, today } = await pageContext();
+  const { hh, me, today } = await pageContext();
   const t = await getTranslations('bills');
-  const services = listServices(hh.id);
+  // The household's services and this member's own.
+  const services = listServices(hh.id, { viewer: me.id });
   if (services.length === 0) redirect('/services/new');
-  const { service } = await searchParams;
-  const first = services.find((s) => s.id === service) ?? services[0]!;
+  const { service, personal } = await searchParams;
+  const first =
+    services.find((s) => s.id === service) ??
+    (personal ? services.find((s) => s.ownerMemberId) : undefined) ??
+    services[0]!;
   return (
     <div className="mx-auto max-w-xl">
       <PageHeader title={t('new')} />
@@ -25,7 +29,7 @@ export default async function NewBillPage({
         action={createBillAction}
         services={services.map((s) => ({
           id: s.id,
-          name: s.name,
+          name: s.ownerMemberId ? `${s.name} · ${t('tile.onlyYou')}` : s.name,
           provider: s.provider,
           usageUnit: s.usageUnit,
           cadence: s.cadence,
@@ -33,7 +37,7 @@ export default async function NewBillPage({
         units={listUnits().map((u) => ({ key: u.key, label: u.label }))}
         currency={hh.currency}
         submitLabel={t('form.create')}
-        cancelHref="/bills"
+        cancelHref={personal ? '/?view=mine' : '/bills'}
         initial={{
           serviceId: first.id,
           amount: '',

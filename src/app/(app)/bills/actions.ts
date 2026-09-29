@@ -1,5 +1,8 @@
 'use server';
 
+import type { Member } from '@/db/schema';
+import { visibleTo } from '@/lib/scope';
+import { getService } from '@/lib/services';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
@@ -98,6 +101,17 @@ function toInput(
   };
 }
 
+/** A bill this member may see and act on: another member's personal bill is not found. */
+function visibleBill(me: Member, id: string) {
+  const b = getBill(me.householdId, id);
+  return b && visibleTo(b.ownerMemberId, me.id) ? b : null;
+}
+
+function visibleService(me: Member, id: string) {
+  const s = getService(me.householdId, id);
+  return s && visibleTo(s.ownerMemberId, me.id) ? s : null;
+}
+
 export async function createBillAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
   const me = await requireMember();
   const hh = getHousehold(me.householdId)!;
@@ -106,6 +120,7 @@ export async function createBillAction(_prev: ActionState, fd: FormData): Promis
   const input = toInput(parsed.data, hh.currency);
   if ('fieldErrors' in input)
     return { error: 'Please fix the highlighted fields.', fieldErrors: input.fieldErrors };
+  if (!visibleService(me, input.serviceId)) return { error: 'Service not found' };
   let id: string;
   try {
     id = createBill(hh.id, { ...input, source: 'manual', createdByMemberId: me.id }).id;
@@ -121,13 +136,14 @@ export async function updateBillAction(_prev: ActionState, fd: FormData): Promis
   const me = await requireMember();
   const hh = getHousehold(me.householdId)!;
   const id = str(fd, 'id');
-  const existing = getBill(hh.id, id);
+  const existing = visibleBill(me, id);
   if (!existing) return { error: 'Bill not found' };
   const parsed = read(fd);
   if (!parsed.success) return zodToState(parsed.error);
   const input = toInput(parsed.data, hh.currency);
   if ('fieldErrors' in input)
     return { error: 'Please fix the highlighted fields.', fieldErrors: input.fieldErrors };
+  if (!visibleService(me, input.serviceId)) return { error: 'Service not found' };
   try {
     // Keep the original paid timestamp if it was already paid and still is.
     const paidToProviderAt = input.paidToProviderAt
@@ -143,7 +159,7 @@ export async function updateBillAction(_prev: ActionState, fd: FormData): Promis
 
 export async function deleteBillAction(fd: FormData): Promise<void> {
   const me = await requireMember();
-  deleteBillWithDocument(me.householdId, str(fd, 'id'));
+  if (visibleBill(me, str(fd, 'id'))) deleteBillWithDocument(me.householdId, str(fd, 'id'));
   revalidatePath('/bills');
   revalidatePath('/review');
   redirect('/bills');
@@ -164,6 +180,7 @@ export async function toggleSharePaidAction(fd: FormData): Promise<void> {
 export async function toggleBillPaidAction(fd: FormData): Promise<void> {
   const me = await requireMember();
   const id = str(fd, 'id');
+  if (!visibleBill(me, id)) return;
   setBillPaidToProvider(me.householdId, id, str(fd, 'paid') === 'true');
   revalidatePath(`/bills/${id}`);
   revalidatePath('/bills');
@@ -173,6 +190,7 @@ export async function toggleBillPaidAction(fd: FormData): Promise<void> {
 export async function clearBillAlertAction(fd: FormData): Promise<void> {
   const me = await requireMember();
   const id = str(fd, 'id');
+  if (!visibleBill(me, id)) return;
   clearBillAlert(me.householdId, id);
   revalidatePath(`/bills/${id}`);
   revalidatePath('/bills');
@@ -184,7 +202,7 @@ export async function setPaymentPlanAction(fd: FormData): Promise<void> {
   const me = await requireMember();
   const id = str(fd, 'id');
   const plan = str(fd, 'plan');
-  const b = getBill(me.householdId, id);
+  const b = visibleBill(me, id);
   if (!b || (plan !== 'full' && plan !== 'instalments')) return;
   if (me.role !== 'owner' && b.service.payerMemberId !== me.id) return;
   try {
@@ -201,6 +219,7 @@ export async function setPaymentPlanAction(fd: FormData): Promise<void> {
 export async function toggleInstalmentPaidAction(fd: FormData): Promise<void> {
   const me = await requireMember();
   const id = str(fd, 'id');
+  if (!visibleBill(me, id)) return;
   setInstalmentPaid(me.householdId, id, Number(str(fd, 'seq')), str(fd, 'paid') === 'true');
   revalidatePath(`/bills/${id}`);
   revalidatePath('/bills');
