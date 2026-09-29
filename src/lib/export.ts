@@ -11,6 +11,25 @@ import { getHousehold } from '@/lib/households';
 import type { Scope } from '@/lib/scope';
 import type { ZipEntry } from '@/lib/zip';
 
+/**
+ * Whose bills a member's export holds: admins, and every member when the
+ * household allows it (Settings), get the household's bills plus their own
+ * personal ones; otherwise a member gets just their own personal bills.
+ * Another member's personal bills are never in anyone's export.
+ */
+export function exportScope(
+  me: { id: string; role: string },
+  hh: { membersCanExport: boolean },
+): Scope {
+  return me.role === 'owner' || hh.membersCanExport ? { viewer: me.id } : { owner: me.id };
+}
+
+/** May this member download the household's bills (not just their own)? */
+export const canExportHousehold = (
+  me: { role: string },
+  hh: { membersCanExport: boolean },
+): boolean => me.role === 'owner' || hh.membersCanExport;
+
 /** CSV with quoting where needed. */
 export function csv(rows: (string | number | null | undefined)[][]): string {
   return (

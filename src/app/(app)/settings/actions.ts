@@ -33,6 +33,7 @@ const schema = z.object({
   weekStartsOn: z.coerce.number().int().min(0).max(6),
   splitMode: z.enum(['shared', 'single']),
   paymentReferenceTemplate: z.string().min(1, 'Required').max(60),
+  membersCanExport: z.boolean(),
 });
 
 export async function updateSettingsAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
@@ -46,6 +47,7 @@ export async function updateSettingsAction(_prev: ActionState, fd: FormData): Pr
     weekStartsOn: str(fd, 'weekStartsOn'),
     splitMode: str(fd, 'splitMode'),
     paymentReferenceTemplate: str(fd, 'paymentReferenceTemplate'),
+    membersCanExport: fd.get('membersCanExport') === 'on',
   });
   if (!parsed.success) return zodToState(parsed.error);
   try {

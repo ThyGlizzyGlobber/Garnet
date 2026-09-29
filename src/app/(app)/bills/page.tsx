@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { canExportHousehold } from '@/lib/export';
 import { getTranslations } from 'next-intl/server';
 import { ForwardAddress } from '@/components/app/forward-address';
 import { Icon } from '@/components/app/icons';
@@ -98,17 +99,17 @@ export default async function BillsPage({
           <span className="flex items-center gap-2">
             {/* Everything, zipped: spreadsheets plus every bill's file, filed by year,
                 month and service. Admins get the household's; anyone, their own. */}
-            {(me.role === 'owner' ? everything.length > 0 : hasPersonal) && (
+            {(canExportHousehold(me, hh) ? everything.length > 0 : hasPersonal) && (
               <a
                 href="/api/export?kind=zip"
                 download
-                title={t(me.role === 'owner' ? 'downloadHint' : 'downloadMineHint')}
-                aria-label={t(me.role === 'owner' ? 'download' : 'downloadMine')}
+                title={t(canExportHousehold(me, hh) ? 'downloadHint' : 'downloadMineHint')}
+                aria-label={t(canExportHousehold(me, hh) ? 'download' : 'downloadMine')}
                 className="glass inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-fg hover:bg-surface-2"
               >
                 <Icon name="download" width={16} height={16} />
                 <span className="hidden sm:inline">
-                  {t(me.role === 'owner' ? 'download' : 'downloadMine')}
+                  {t(canExportHousehold(me, hh) ? 'download' : 'downloadMine')}
                 </span>
               </a>
             )}

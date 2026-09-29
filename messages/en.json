@@ -443,11 +443,13 @@
       "locale": "Locale",
       "timezone": "Timezone",
       "fiscalYearStartMonth": "Financial year starts in",
-      "weekStartsOn": "Week starts on"
+      "weekStartsOn": "Week starts on",
+      "membersCanExport": "Everyone can download the household's bills"
     },
     "hints": {
       "splitMode": "Switching to single stops new bills being split. Existing shares are kept.",
-      "paymentReferenceTemplate": "Placeholders: {service}, {period}, {member}, {ref}. Trimmed to 18 characters."
+      "paymentReferenceTemplate": "Placeholders: {service}, {period}, {member}, {ref}. Trimmed to 18 characters.",
+      "membersCanExport": "Lets every member download the zip of the household's bills and their files (Bills → Download everything), not just admins. Personal bills are only ever in their owner's download."
     },
     "splitModes": {
       "shared": "split between members",

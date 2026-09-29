@@ -36,6 +36,8 @@ export interface HouseholdInput {
   isDemo?: boolean;
   /** Share anonymised figures with area comparisons (default on). */
   shareRegional?: boolean;
+  /** Members may download the household's bills, not just admins (default on). */
+  membersCanExport?: boolean;
 }
 
 export function createHousehold(input: HouseholdInput, db: Db = getDb()): Household {
@@ -60,6 +62,7 @@ export function createHousehold(input: HouseholdInput, db: Db = getDb()): Househ
     longitude: null,
     locationUpdatedAt: null,
     shareRegional: input.shareRegional ?? true,
+    membersCanExport: input.membersCanExport ?? true,
     createdAt: now,
     updatedAt: now,
   };

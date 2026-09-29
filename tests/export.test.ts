@@ -7,9 +7,9 @@ import { openDb, type Db } from '@/db/client';
 import { runMigrations } from '@/db/migrate';
 import { archiveDocument, documentPath, getDocument, setDocumentStatus } from '@/ingest/archive';
 import { processDocument } from '@/ingest/pipeline';
-import { exportEntries } from '@/lib/export';
+import { canExportHousehold, exportEntries, exportScope } from '@/lib/export';
 import { filedDocuments, monthFolder, refileDocuments, safeSegment } from '@/lib/filing';
-import { createHousehold } from '@/lib/households';
+import { createHousehold, updateHousehold } from '@/lib/households';
 import { createMember } from '@/lib/members';
 import { createService, updateService } from '@/lib/services';
 import { zipBuffer } from '@/lib/zip';
@@ -268,5 +268,34 @@ describe('the export zip', () => {
       `${root}/2026/07 July/Vehicle registration (Sam, personal)/2026-07-21 Vehicle registration - Sam Roads.pdf`,
     ]);
     expect(theirs.some((k) => k.includes('Council rates'))).toBe(false);
+  });
+});
+
+describe('who can download the household’s bills', () => {
+  it('is everyone by default; an admin can keep it to admins', async () => {
+    const { hh, jo, sam, upload } = setup();
+    expect(hh.membersCanExport).toBe(true);
+    await upload(jo.id, notice('City of Riverside', 'council_rates', '2026-08-11'));
+    await upload(sam.id, notice('Sam Roads', 'vehicle_registration', '2026-07-21'));
+    const pdfs = async (scope: ReturnType<typeof exportScope>) =>
+      [...unzip(await zipBuffer(exportEntries(hh.id, scope, '2026-09-29', db).entries)).keys()]
+        .filter((k) => k.endsWith('.pdf'))
+        .map((k) => k.split('/').at(-2));
+
+    // Sam, a member: the household's bills and their own.
+    expect(canExportHousehold(sam, hh)).toBe(true);
+    expect(await pdfs(exportScope(sam, hh))).toEqual([
+      'Vehicle registration (Sam, personal)',
+      'Council rates',
+    ]);
+
+    const adminsOnly = updateHousehold(hh.id, { membersCanExport: false }, db);
+    expect(canExportHousehold(sam, adminsOnly)).toBe(false);
+    expect(canExportHousehold(jo, adminsOnly)).toBe(true);
+    // Now only their own personal bills; the admin still gets the household's (not Sam's).
+    expect(await pdfs(exportScope(sam, adminsOnly))).toEqual([
+      'Vehicle registration (Sam, personal)',
+    ]);
+    expect(await pdfs(exportScope(jo, adminsOnly))).toEqual(['Council rates']);
   });
 });

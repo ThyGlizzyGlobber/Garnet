@@ -22,6 +22,7 @@ export function SettingsForm({
     weekStartsOn: number;
     splitMode: 'shared' | 'single';
     paymentReferenceTemplate: string;
+    membersCanExport: boolean;
   };
   timezones: string[];
   months: string[];
@@ -70,6 +71,20 @@ export function SettingsForm({
               defaultValue={initial.paymentReferenceTemplate}
             />
           </Field>
+          <label className="flex items-start gap-3 text-sm font-medium">
+            <input
+              type="checkbox"
+              name="membersCanExport"
+              defaultChecked={initial.membersCanExport}
+              className="mt-0.5 size-5 accent-accent"
+            />
+            <span>
+              {t('fields.membersCanExport')}
+              <span className="block text-xs font-normal text-fg-muted">
+                {t('hints.membersCanExport')}
+              </span>
+            </span>
+          </label>
         </Card>
         <Card className="flex flex-col gap-4">
           <h2 className="font-semibold">{t('region')}</h2>

@@ -41,6 +41,11 @@ export const household = sqliteTable(
     paymentReferenceTemplate: text('payment_reference_template')
       .notNull()
       .default('{service} {period} {member}'),
+    /**
+     * Members (not just admins) may download the household's bills and files
+     * (the zip export). Their own personal bills they can always download.
+     */
+    membersCanExport: integer('members_can_export', { mode: 'boolean' }).notNull().default(true),
     /** The fictional demo household; "Exit demo" deletes it. */
     isDemo: integer('is_demo', { mode: 'boolean' }).notNull().default(false),
     /**

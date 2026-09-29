@@ -6,7 +6,7 @@ import { getHousehold } from '@/lib/households';
 import { fiscalYearBounds } from '@/lib/periods';
 import { memberLedger } from '@/lib/stats';
 import { todayIn } from '@/lib/dates';
-import { csv, exportEntries } from '@/lib/export';
+import { canExportHousehold, csv, exportEntries, exportScope } from '@/lib/export';
 import { zipResponseStream } from '@/lib/zip';
 
 export const dynamic = 'force-dynamic';
@@ -15,8 +15,9 @@ export const dynamic = 'force-dynamic';
  * Exports.
  *   /api/export?kind=zip                             — everything, zipped: spreadsheets plus every
  *                                                      source file, filed by year/month/service
- *                                                      (admins: the household's bills and their own
- *                                                      personal ones; members: their personal ones)
+ *                                                      (the household's bills and your own personal
+ *                                                      ones; members get only their own when the
+ *                                                      household keeps exports to admins)
  *   /api/export?kind=member&member=<id>&fy=<label>  — one member's shares for a financial year
  *                                                      (default: current), plus their personal bills
  *   /api/export?kind=bills                           — every bill (the household's and your own), as CSV
@@ -36,8 +37,7 @@ export async function GET(req: Request) {
     `Content-Disposition: attachment; filename="${base}.csv"`.slice('Content-Disposition: '.length);
 
   if (kind === 'zip') {
-    const scope = me.role === 'owner' ? { viewer: me.id } : { owner: me.id };
-    const { folder, entries } = exportEntries(hh.id, scope, today);
+    const { folder, entries } = exportEntries(hh.id, exportScope(me, hh), today);
     return new NextResponse(zipResponseStream(entries), {
       headers: {
         'Content-Type': 'application/zip',
@@ -48,7 +48,8 @@ export async function GET(req: Request) {
   }
 
   if (kind === 'bills') {
-    if (me.role !== 'owner') return new NextResponse('Owner only', { status: 403 });
+    if (!canExportHousehold(me, hh))
+      return new NextResponse('Only admins can download the household’s bills', { status: 403 });
     const rows = listBills(hh.id, { viewer: me.id }).map((b) => [
       b.periodStart,
       b.periodEnd,

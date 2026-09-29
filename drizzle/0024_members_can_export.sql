@@ -1,0 +1,1 @@
+ALTER TABLE `household` ADD `members_can_export` integer DEFAULT true NOT NULL;

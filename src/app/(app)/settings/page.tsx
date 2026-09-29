@@ -152,6 +152,7 @@ export default async function SettingsPage() {
               weekStartsOn: hh.weekStartsOn,
               splitMode: hh.splitMode,
               paymentReferenceTemplate: hh.paymentReferenceTemplate,
+              membersCanExport: hh.membersCanExport,
             }}
           />
           <Card className="flex flex-col gap-3" id="appearance">
