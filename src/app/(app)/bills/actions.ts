@@ -1,5 +1,6 @@
 'use server';
 
+import { refileDocuments } from '@/lib/filing';
 import type { Member } from '@/db/schema';
 import { visibleTo } from '@/lib/scope';
 import { getService } from '@/lib/services';
@@ -150,6 +151,8 @@ export async function updateBillAction(_prev: ActionState, fd: FormData): Promis
       ? (existing.paidToProviderAt ?? input.paidToProviderAt)
       : null;
     updateBill(hh.id, id, { ...input, paidToProviderAt });
+    // A new date or service can mean a new folder for its files.
+    refileDocuments(hh.id);
   } catch (e) {
     return { error: (e as Error).message };
   }

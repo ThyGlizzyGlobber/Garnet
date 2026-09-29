@@ -1,5 +1,6 @@
 'use server';
 
+import { refileDocuments } from '@/lib/filing';
 import { visibleTo } from '@/lib/scope';
 import { promoteServiceType } from '@/lib/auto-service';
 import { revalidatePath } from 'next/cache';
@@ -127,6 +128,7 @@ export async function approveReviewAction(_prev: ActionState, fd: FormData): Pro
     json = undefined;
   }
   setDocumentStatus(hh.id, doc.id, 'extracted', json);
+  refileDocuments(hh.id);
   notifyInBackground(notifyBillCreated(hh.id, billId, { except: me.id }));
   revalidatePath('/review');
   revalidatePath('/bills');

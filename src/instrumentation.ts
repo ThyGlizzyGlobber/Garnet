@@ -37,6 +37,10 @@ export async function register() {
       `[bills] Unusual flags re-checked with rule v${ANOMALY_RULE_VERSION}: ${changed} changed`,
     );
   }
+  // Every bill's file (and its receipts) filed by year, month and service.
+  const { refileAll } = await import('./lib/filing');
+  const filed = refileAll();
+  if (filed) console.log(`[filing] filed ${filed} document(s) by year, month and service`);
   if (env.DEMO_MODE) {
     const { seedDemo } = await import('./db/seed');
     const result = await seedDemo();

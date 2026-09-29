@@ -80,7 +80,8 @@ describe('deleting a bill', () => {
     const hh = setup();
     const doc = upload(hh.id);
     const { billId } = await processDocument(hh.id, doc.id, db);
-    const file = documentPath(doc);
+    // Filed by year, month and service once it became a bill.
+    const file = documentPath(getDocument(hh.id, doc.id, db)!);
     expect(fs.existsSync(file)).toBe(true);
 
     deleteBillWithDocument(hh.id, billId!, db);

@@ -193,7 +193,7 @@
       "paidToProvider": "Already paid to the provider"
     },
     "anomaly": "Unusual",
-    "download": "Download all bills (CSV)",
+    "download": "Download everything",
     "tile": {
       "instalment": "Instalment {n} of {of}",
       "paidProvider": "Paid",
@@ -260,7 +260,10 @@
       "all": "Everything",
       "household": "Household",
       "mine": "Just mine"
-    }
+    },
+    "downloadHint": "A zip of every bill: spreadsheets for your accountant plus each bill's file, filed by year, month and service",
+    "downloadMine": "Download my bills",
+    "downloadMineHint": "A zip of your personal bills: a spreadsheet plus each bill's file, filed by year, month and service"
   },
   "services": {
     "title": "Services",

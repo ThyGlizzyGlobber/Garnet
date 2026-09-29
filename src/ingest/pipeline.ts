@@ -1,4 +1,5 @@
 import { and, eq } from 'drizzle-orm';
+import { refileDocuments } from '@/lib/filing';
 import type { Scope } from '@/lib/scope';
 import { getDb, type Db } from '@/db/client';
 import { account, bill, sourceDocument, type SourceDocument } from '@/db/schema';
@@ -158,6 +159,8 @@ export async function processDocument(
 ): Promise<PipelineOutcome> {
   const before = storedExtraction(getDocument(householdId, documentId, db));
   const outcome = await readAndRoute(householdId, documentId, db, opts);
+  // A new bill (or a receipt for one): file it where it belongs straight away.
+  if (outcome.billId) refileDocuments(householdId, db);
   // Remember what it turned out to be (and, for a notice, the bill it changed)
   // for the inbox filters and the review page.
   const doc = getDocument(householdId, documentId, db);

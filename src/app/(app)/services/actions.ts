@@ -1,5 +1,6 @@
 'use server';
 
+import { refileDocuments } from '@/lib/filing';
 import { parseSenderList } from '@/lib/sender-auth';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
@@ -131,6 +132,8 @@ export async function updateServiceAction(_prev: ActionState, fd: FormData): Pro
     updateService(me.householdId, id, r.input);
     // Seasonal on/off changes how its bills are judged Unusual.
     refreshAnomalies(me.householdId, id);
+    // A renamed service (or one made personal) files its bills under the new name.
+    refileDocuments(me.householdId);
   } catch (e) {
     return { error: (e as Error).message };
   }

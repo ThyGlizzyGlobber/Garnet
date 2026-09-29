@@ -1,6 +1,7 @@
 import { getEnv, isImapConfigured } from '@/lib/env';
 import { pollMailbox, type PollResult } from '@/ingest/imap/poller';
 import { settleAutoPaidBills } from '@/lib/autopay';
+import { refileAll } from '@/lib/filing';
 import { sendDueReminders, sendSeasonAhead } from '@/lib/notifications';
 import { retryBusyReads } from '@/ingest/pipeline';
 import { syncWeather } from '@/lib/weather';
@@ -49,6 +50,9 @@ export function startReminders(): void {
       .then((n) => n && console.log(`[reminders] sent ${n}`))
       .then(() => sendSeasonAhead())
       .then((n) => n && console.log(`[seasons] sent ${n} season-ahead email(s)`))
+      // Bills edited, services renamed, bills moved: keep the NAS filing in step.
+      .then(() => refileAll())
+      .then((n) => n && console.log(`[filing] filed ${n} document(s)`))
       .catch((e) => console.error('[reminders]', (e as Error).message))
       .finally(() => {
         busy = false;

@@ -96,12 +96,20 @@ export default async function BillsPage({
         }
         action={
           <span className="flex items-center gap-2">
-            {me.role === 'owner' && all.length > 0 && (
+            {/* Everything, zipped: spreadsheets plus every bill's file, filed by year,
+                month and service. Admins get the household's; anyone, their own. */}
+            {(me.role === 'owner' ? everything.length > 0 : hasPersonal) && (
               <a
-                href="/api/export?kind=bills"
-                className="glass hidden items-center rounded-full px-4 py-2 text-sm font-semibold text-fg hover:bg-surface-2 sm:inline-flex"
+                href="/api/export?kind=zip"
+                download
+                title={t(me.role === 'owner' ? 'downloadHint' : 'downloadMineHint')}
+                aria-label={t(me.role === 'owner' ? 'download' : 'downloadMine')}
+                className="glass inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-fg hover:bg-surface-2"
               >
-                {t('download')}
+                <Icon name="download" width={16} height={16} />
+                <span className="hidden sm:inline">
+                  {t(me.role === 'owner' ? 'download' : 'downloadMine')}
+                </span>
               </a>
             )}
             <LinkButton href="/bills/upload" variant="secondary">
