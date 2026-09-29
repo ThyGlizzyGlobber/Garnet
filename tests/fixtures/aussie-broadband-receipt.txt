@@ -16,5 +16,5 @@ Payment Total: $129.00
 Payment Method: Credit Card
 Receipt No: 00000-P-EXAMPLERECEIPT000
 Invoice Amount
-INVOICE #60097874 $129.00
+INVOICE #50000002 $129.00
 $129.00	Total:

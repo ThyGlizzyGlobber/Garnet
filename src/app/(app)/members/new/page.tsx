@@ -6,10 +6,11 @@ import { createMemberAction } from '../actions';
 import { listMembers } from '@/lib/members';
 import { nextPaletteColour } from '@/lib/palette';
 import { MemberForm } from '../member-form';
+import { isAdmin } from '@/lib/roles';
 
 export default async function NewMemberPage() {
   const { hh, me, today } = await pageContext();
-  if (me.role !== 'owner') redirect('/members');
+  if (!isAdmin(me)) redirect('/members');
   const t = await getTranslations('members');
   return (
     <div className="mx-auto max-w-xl">

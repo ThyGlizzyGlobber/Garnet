@@ -10,7 +10,7 @@ export function toUtcMs(date: string): number {
   return Date.parse(`${date}T00:00:00Z`);
 }
 
-export function fromUtcMs(ms: number): string {
+function fromUtcMs(ms: number): string {
   return new Date(ms).toISOString().slice(0, 10);
 }
 
@@ -34,6 +34,11 @@ export function overlapDays(
 
 export function addDays(date: string, days: number): string {
   return fromUtcMs(toUtcMs(date) + days * DAY_MS);
+}
+
+/** The calendar date an instant (ISO timestamp) falls on in the given IANA timezone. */
+export function dayIn(instant: string, timeZone: string): string {
+  return todayIn(timeZone, new Date(instant));
 }
 
 /** Today's calendar date in the given IANA timezone. */

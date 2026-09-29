@@ -11,7 +11,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import type { ActionState } from '@/components/ui/form';
-import { optStr, str, zodToState } from '@/lib/actions';
+import { errorText, fieldErrors, optStr, str, zodToState } from '@/lib/actions';
 import { requireMember } from '@/lib/auth/session';
 import {
   clearBillAlert,
@@ -29,13 +29,14 @@ import { isIsoDate } from '@/lib/dates';
 import { parseMoneyToMinor } from '@/lib/format';
 import { getHousehold } from '@/lib/households';
 import { notifyBillCreated, notifyInBackground } from '@/lib/notifications';
+import { canChoosePlan } from '@/lib/instalments';
 
-const isoDate = z.string().refine(isIsoDate, 'Use a valid date');
+const isoDate = z.string().refine(isIsoDate, 'validDate');
 
 const schema = z
   .object({
-    serviceId: z.string().min(1, 'Choose a service'),
-    amount: z.string().min(1, 'Enter the amount'),
+    serviceId: z.string().min(1, 'chooseService'),
+    amount: z.string().min(1, 'enterAmount'),
     tax: z.string(),
     taxLabel: z.string(),
     periodStart: isoDate,
@@ -50,11 +51,11 @@ const schema = z
   })
   .refine((v) => v.periodEnd >= v.periodStart, {
     path: ['periodEnd'],
-    message: 'Period end is before its start',
+    message: 'periodOrder',
   })
   .refine((v) => v.issueDate === '' || isIsoDate(v.issueDate), {
     path: ['issueDate'],
-    message: 'Use a valid date',
+    message: 'validDate',
   });
 
 function read(fd: FormData) {
@@ -80,13 +81,12 @@ function toInput(
   currency: string,
 ): Omit<BillInput, 'source'> | { fieldErrors: Record<string, string> } {
   const amountMinor = parseMoneyToMinor(v.amount, currency);
-  if (amountMinor === null || amountMinor < 0)
-    return { fieldErrors: { amount: 'Enter a valid amount' } };
+  if (amountMinor === null || amountMinor < 0) return { fieldErrors: { amount: 'validAmount' } };
   const taxMinor = v.tax ? parseMoneyToMinor(v.tax, currency) : null;
-  if (v.tax && taxMinor === null) return { fieldErrors: { tax: 'Enter a valid amount' } };
+  if (v.tax && taxMinor === null) return { fieldErrors: { tax: 'validAmount' } };
   const usage = v.usageQuantity ? Number(v.usageQuantity) : null;
   if (v.usageQuantity && !Number.isFinite(usage))
-    return { fieldErrors: { usageQuantity: 'Enter a number' } };
+    return { fieldErrors: { usageQuantity: 'enterNumber' } };
   return {
     serviceId: v.serviceId,
     amountMinor,
@@ -122,9 +122,9 @@ export async function createBillAction(_prev: ActionState, fd: FormData): Promis
   const parsed = read(fd);
   if (!parsed.success) return zodToState(parsed.error);
   const input = toInput(parsed.data, hh.currency);
-  if ('fieldErrors' in input)
-    return { error: 'Please fix the highlighted fields.', fieldErrors: input.fieldErrors };
-  if (!visibleService(me, input.serviceId)) return { error: 'Service not found' };
+  if ('fieldErrors' in input) return fieldErrors(input.fieldErrors);
+  if (!visibleService(me, input.serviceId))
+    return { error: (await errorText())('serviceNotFound') };
   let id: string;
   try {
     id = createBill(hh.id, { ...input, source: 'manual', createdByMemberId: me.id }).id;
@@ -141,13 +141,20 @@ export async function updateBillAction(_prev: ActionState, fd: FormData): Promis
   const hh = getHousehold(me.householdId)!;
   const id = str(fd, 'id');
   const existing = visibleBill(me, id);
-  if (!existing) return { error: 'Bill not found' };
+  const te = await errorText();
+  if (!existing) return { error: te('billNotFound') };
   const parsed = read(fd);
   if (!parsed.success) return zodToState(parsed.error);
   const input = toInput(parsed.data, hh.currency);
-  if ('fieldErrors' in input)
-    return { error: 'Please fix the highlighted fields.', fieldErrors: input.fieldErrors };
-  if (!visibleService(me, input.serviceId)) return { error: 'Service not found' };
+  if ('fieldErrors' in input) return fieldErrors(input.fieldErrors);
+  const target = visibleService(me, input.serviceId);
+  if (!target) return { error: te('serviceNotFound') };
+  // One bill can't slip between the household and someone's own services;
+  // "Whose is it?" moves a whole service and its bills, with its own checks.
+  if ((target.ownerMemberId ?? null) !== (existing.ownerMemberId ?? null))
+    return {
+      fieldErrors: { serviceId: te('sameOwner') },
+    };
   try {
     // Keep the original paid timestamp if it was already paid and still is.
     const paidToProviderAt = input.paidToProviderAt
@@ -164,8 +171,7 @@ export async function updateBillAction(_prev: ActionState, fd: FormData): Promis
       mayChangeOwner(hh.id, me, svc)
     ) {
       const r = answerOwnership(hh.id, svc.id, me, whose);
-      if (!r.ok && r.reason !== 'not-found')
-        return { error: r.reason ?? 'Couldn’t change whose it is' };
+      if (!r.ok && r.reason !== 'not-found') return { error: r.reason ?? te('whoseFailed') };
       revalidatePath('/');
       revalidatePath('/services');
     }
@@ -225,7 +231,7 @@ export async function setPaymentPlanAction(fd: FormData): Promise<void> {
   const plan = str(fd, 'plan');
   const b = visibleBill(me, id);
   if (!b || (plan !== 'full' && plan !== 'instalments')) return;
-  if (me.role !== 'owner' && b.service.payerMemberId !== me.id) return;
+  if (!canChoosePlan(me, b)) return;
   try {
     setPaymentPlan(me.householdId, id, plan);
   } catch (e) {

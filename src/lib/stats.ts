@@ -11,6 +11,7 @@ import {
   lastMonths,
   monthBounds,
 } from '@/lib/periods';
+import { isActiveOn } from '@/lib/members';
 import { listServices, type ServiceWithType } from '@/lib/services';
 import { ownerCondition, type Scope } from '@/lib/scope';
 import { shareDueDate } from '@/lib/instalments';
@@ -27,7 +28,7 @@ export interface MonthRow {
 }
 
 /** Bills whose billing period overlaps [start, end]: household bills unless the scope says otherwise. */
-export function billsOverlapping(
+function billsOverlapping(
   householdId: string,
   start: string,
   end: string,
@@ -163,9 +164,7 @@ export function dashboardSummary(
     .slice(0, 8);
   const anomalies = all.filter((b) => b.isAnomaly).slice(0, 5);
   const members = db.select().from(member).where(eq(member.householdId, householdId)).all();
-  const activeMemberCount = members.filter(
-    (m) => m.activeFrom <= today && (!m.activeTo || m.activeTo >= today),
-  ).length;
+  const activeMemberCount = members.filter((m) => isActiveOn(m, today)).length;
   const daysSoFar = daysInclusive(mb.start, today);
   const costPerPersonPerDay =
     activeMemberCount > 0 && thisMonth.total > 0
@@ -186,7 +185,7 @@ export function dashboardSummary(
   };
 }
 
-export type LedgerShare = Share & { bill: Bill; service: ServiceWithType; payer: Member | null };
+type LedgerShare = Share & { bill: Bill; service: ServiceWithType; payer: Member | null };
 
 export interface MemberLedger {
   member: Member;
@@ -194,6 +193,11 @@ export interface MemberLedger {
   paidThisFy: number;
   totalThisFy: number;
   unpaid: LedgerShare[];
+  /** Paid of this year's shares, as a percentage (0 with none). */
+  paidPct: number;
+  /** Every share, latest due first. */
+  all: LedgerShare[];
+  /** The latest 20 of them. */
   recent: LedgerShare[];
   /** Amount others still owe this member for bills they paid. */
   owedToMe: number;
@@ -275,6 +279,12 @@ export function memberLedger(
     paidThisFy: inFy.filter((s) => s.paidAt).reduce((s, x) => s + x.amountMinor, 0),
     totalThisFy: inFy.reduce((s, x) => s + x.amountMinor, 0),
     unpaid,
+    paidPct: (() => {
+      const total = inFy.reduce((s, x) => s + x.amountMinor, 0);
+      const paid = inFy.filter((s) => s.paidAt).reduce((s, x) => s + x.amountMinor, 0);
+      return total > 0 ? Math.round((paid / total) * 100) : 0;
+    })(),
+    all: mine,
     recent: mine.slice(0, 20),
     owedToMe: [...byMember.values()].reduce((s, x) => s + x, 0),
     owedToMeBy: [...byMember.entries()]
@@ -283,24 +293,29 @@ export function memberLedger(
   };
 }
 
-/** Per-member unpaid totals, for the wall and the dashboard's who-owes-what strip. */
+/**
+ * Per-member unpaid totals, for the wall and the dashboard's who-owes-what
+ * strip. `overdue`: one of their unpaid shares is past its due date (given `today`).
+ */
 export function householdBalances(
   householdId: string,
   db: Db = getDb(),
-): { member: Member; owed: number; unpaidCount: number }[] {
+  today?: string,
+): { member: Member; owed: number; unpaidCount: number; overdue: boolean }[] {
   const members = db.select().from(member).where(eq(member.householdId, householdId)).all();
   const rows = db
     .select()
     .from(share)
-    .where(eq(share.householdId, householdId))
-    .all()
-    .filter((s) => !s.paidAt);
+    .innerJoin(bill, eq(share.billId, bill.id))
+    .where(and(eq(share.householdId, householdId), isNull(share.paidAt)))
+    .all();
   return members.map((m) => {
-    const mine = rows.filter((s) => s.memberId === m.id);
+    const mine = rows.filter((r) => r.share.memberId === m.id);
     return {
       member: m,
-      owed: mine.reduce((s, x) => s + x.amountMinor, 0),
+      owed: mine.reduce((s, r) => s + r.share.amountMinor, 0),
       unpaidCount: mine.length,
+      overdue: !!today && mine.some((r) => shareDueDate(r.share, r.bill) < today),
     };
   });
 }

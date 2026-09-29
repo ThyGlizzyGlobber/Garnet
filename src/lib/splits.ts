@@ -1,6 +1,30 @@
 import { daysInclusive, overlapDays } from './dates';
 
-export interface SplitMember {
+/** Percentages may be off by this much from 100 (rounding in what people type). */
+const PERCENT_SLACK = 0.05;
+
+/**
+ * Why a split someone entered can't be saved, or null: percentages must add up
+ * to 100, and set amounts need at least one person paying something. (The
+ * maths itself reads percentages as proportions, so older data still splits.)
+ */
+export function splitProblem(
+  mode: SplitInput['splitMode'],
+  settings: { percents?: Record<string, number>; amounts?: Record<string, number> },
+): { kind: 'percent-total'; total: number } | { kind: 'no-amounts' } | null {
+  if (mode === 'percent') {
+    const total = Object.values(settings.percents ?? {}).reduce((s, v) => s + v, 0);
+    const rounded = Math.round(total * 100) / 100;
+    return Math.abs(rounded - 100) < PERCENT_SLACK
+      ? null
+      : { kind: 'percent-total', total: rounded };
+  }
+  if (mode === 'fixed' && !Object.values(settings.amounts ?? {}).some((a) => a > 0))
+    return { kind: 'no-amounts' };
+  return null;
+}
+
+interface SplitMember {
   id: string;
   splitWeight: number;
   activeFrom: string;
@@ -11,10 +35,10 @@ export interface SplitInput {
   amountMinor: number;
   periodStart: string;
   periodEnd: string;
-  splitMode: 'equal' | 'weighted' | 'custom' | 'percent' | 'fixed';
+  splitMode: 'equal' | 'weighted' | 'percent' | 'fixed';
   members: SplitMember[];
   /**
-   * 'custom' (ratios) and 'percent': each member's weight or percentage.
+   * 'percent': each member's percentage (read as proportions).
    * Members missing from the map pay nothing.
    */
   customWeights?: Record<string, number>;
@@ -63,7 +87,6 @@ export function computeShares(input: SplitInput): ShareResult[] {
       case 'weighted':
         basisWeight = m.splitWeight;
         break;
-      case 'custom':
       case 'percent':
         basisWeight = input.customWeights?.[m.id] ?? 0;
         break;

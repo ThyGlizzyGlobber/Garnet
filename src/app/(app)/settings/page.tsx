@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { Card, PageHeader } from '@/components/ui';
 import { Icon } from '@/components/app/icons';
+import { IconDisc } from '@/components/ui/colour';
 import { Ring } from '@/components/ui/ring';
 import { aiAllowance } from '@/lib/usage';
 import { listMembers } from '@/lib/members';
@@ -32,6 +33,7 @@ import {
 } from '@/lib/location';
 import { householdClimate } from '@/lib/seasons';
 import { latestRegionalChoice, regionalEnabled } from '@/lib/regional';
+import { isAdmin } from '@/lib/roles';
 
 export default async function SettingsPage() {
   const { hh, me } = await pageContext();
@@ -81,16 +83,11 @@ export default async function SettingsPage() {
   ];
   return (
     <div className="mx-auto max-w-6xl">
-      <PageHeader title={t('title')} subtitle={me.role === 'owner' ? undefined : t('ownerOnly')} />
+      <PageHeader title={t('title')} subtitle={isAdmin(me) ? undefined : t('ownerOnly')} />
 
       <section className="glass mb-4 flex flex-wrap items-center gap-6 rounded-card bg-accent-soft p-5">
         <div className="flex min-w-0 items-center gap-4">
-          <span
-            className="glow-disc size-14"
-            style={{ color: 'var(--color-accent)', ['--glow' as string]: 'var(--color-accent)' }}
-          >
-            <Icon name="home" width={24} height={24} />
-          </span>
+          <IconDisc icon="home" colour="var(--color-accent)" variant="glow" size={56} />
           <span className="flex min-w-0 flex-col leading-tight">
             <span className="truncate font-display text-2xl font-semibold">{hh.name}</span>
             <span className="text-xs text-fg-muted">
@@ -139,7 +136,7 @@ export default async function SettingsPage() {
       <div className="grid items-start gap-4 lg:grid-cols-2">
         <div className="flex flex-col gap-4">
           <SettingsForm
-            readOnly={me.role !== 'owner'}
+            readOnly={!isAdmin(me)}
             timezones={Intl.supportedValuesOf('timeZone')}
             months={months}
             days={days}
@@ -171,7 +168,7 @@ export default async function SettingsPage() {
               ))}
             </form>
           </Card>
-          {demo && me.role === 'owner' && (
+          {demo && isAdmin(me) && (
             <Card className="flex flex-col gap-3 border-warning/40 bg-warning-soft">
               <h2 className="font-display font-semibold">{t('demo.title')}</h2>
               <p className="text-xs text-fg-muted">{t('demo.body')}</p>
@@ -200,7 +197,7 @@ export default async function SettingsPage() {
             ) : (
               <p className="text-sm text-fg-muted">{tl('none')}</p>
             )}
-            {me.role === 'owner' && (
+            {isAdmin(me) && (
               <LocationForm
                 withData={withData}
                 initial={{
@@ -210,7 +207,7 @@ export default async function SettingsPage() {
                 }}
               />
             )}
-            {me.role === 'owner' && place && (
+            {isAdmin(me) && place && (
               <div>
                 <InlineAction action={removeLocationAction} label={tl('remove')} variant="ghost" />
               </div>
@@ -227,7 +224,7 @@ export default async function SettingsPage() {
                 <li>{ts('shared')}</li>
                 <li>{ts('never')}</li>
               </ul>
-              {me.role === 'owner' ? (
+              {isAdmin(me) ? (
                 <form action={saveSharingAction} className="flex flex-col gap-3">
                   <label className="flex items-start gap-3 text-sm font-medium">
                     <input
@@ -273,11 +270,11 @@ export default async function SettingsPage() {
             <div id="bills-address">
               <BillsAddressCard
                 address={address}
-                replaceAction={me.role === 'owner' ? replaceBillsAddressAction : undefined}
+                replaceAction={isAdmin(me) ? replaceBillsAddressAction : undefined}
               />
             </div>
           )}
-          {me.role === 'owner' && isLlmConfigured(env) && (missing > 0 || reading) && (
+          {isAdmin(me) && isLlmConfigured(env) && (missing > 0 || reading) && (
             <Card className="flex flex-col gap-2">
               <SectionTitle icon="sparkle">{t('metrics.title')}</SectionTitle>
               <p className="text-sm text-fg-muted">
@@ -302,10 +299,16 @@ export default async function SettingsPage() {
               </Link>
             </SectionTitle>
             <dl className="mt-2 grid grid-cols-2 gap-2 text-sm">
-              <dt className="text-fg-muted">{t('system.dataDir')}</dt>
-              <dd className="truncate font-mono text-xs">{env.DATA_DIR}</dd>
-              <dt className="text-fg-muted">{t('system.mailbox')}</dt>
-              <dd>{isImapConfigured(env) ? t('system.configured') : t('system.notConfigured')}</dd>
+              {operator && (
+                <>
+                  <dt className="text-fg-muted">{t('system.dataDir')}</dt>
+                  <dd className="truncate font-mono text-xs">{env.DATA_DIR}</dd>
+                  <dt className="text-fg-muted">{t('system.mailbox')}</dt>
+                  <dd>
+                    {isImapConfigured(env) ? t('system.configured') : t('system.notConfigured')}
+                  </dd>
+                </>
+              )}
               <dt className="text-fg-muted">{t('system.llm')}</dt>
               <dd>{isLlmConfigured(env) ? t('system.configured') : t('system.notConfigured')}</dd>
               <dt className="text-fg-muted">{t('system.demoMode')}</dt>
@@ -322,12 +325,7 @@ export default async function SettingsPage() {
 function SectionTitle({ icon, children }: { icon: string; children: React.ReactNode }) {
   return (
     <h2 className="flex items-center gap-3 font-display font-semibold">
-      <span
-        className="glow-disc size-9"
-        style={{ color: 'var(--color-accent)', ['--glow' as string]: 'var(--color-accent)' }}
-      >
-        <Icon name={icon} width={16} height={16} />
-      </span>
+      <IconDisc icon={icon} colour="var(--color-accent)" variant="glow" size={36} />
       {children}
     </h2>
   );

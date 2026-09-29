@@ -21,6 +21,30 @@ export function darkVariant(light: string): string {
   return darkByLight.get(light.toLowerCase()) ?? light;
 }
 
+/**
+ * A stored colour as a CSS value that follows the light/dark scheme. Use this
+ * for every service or member colour drawn on screen.
+ */
+export function colourCss(light: string): string {
+  return `light-dark(${light}, ${darkVariant(light)})`;
+}
+
+/**
+ * A tile tinted with a service or member colour: the colour mixed into the
+ * solid surface (a stronger top fading down) with a matching rim.
+ */
+export function tintStyle(light: string, strength: 'strong' | 'soft' = 'strong') {
+  const c = colourCss(light);
+  const [top, bottom, rim] = strength === 'strong' ? [30, 10, 45] : [22, 6, 40];
+  return {
+    background: `linear-gradient(160deg, color-mix(in srgb, ${c} ${top}%, var(--color-surface-solid)), color-mix(in srgb, ${c} ${bottom}%, var(--color-surface-solid)))`,
+    borderColor: `color-mix(in srgb, ${c} ${rim}%, transparent)`,
+  };
+}
+
+/** The first palette colour: the default for anything new before a colour is picked. */
+export const DEFAULT_COLOUR = PALETTE[0]!.light;
+
 /** Pick the first palette colour not already in use, cycling only when all eight are taken. */
 export function nextPaletteColour(used: string[]): string {
   const taken = new Set(used.map((c) => c.toLowerCase()));

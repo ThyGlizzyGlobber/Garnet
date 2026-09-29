@@ -13,9 +13,9 @@ import {
   type Share,
 } from '@/db/schema';
 import type { BillInstalmentOption } from '@/ingest/extractors/types';
-import { fullPaymentOpen, instalmentDueDate } from '@/lib/instalments';
+import { fullPaymentOpen, instalmentDueDate, planLock } from '@/lib/instalments';
 import { ownerCondition, type Scope } from '@/lib/scope';
-import { todayIn } from '@/lib/dates';
+import { addDays, todayIn } from '@/lib/dates';
 import { ulid } from '@/lib/ids';
 import { getHousehold } from '@/lib/households';
 import { listMembers } from '@/lib/members';
@@ -47,7 +47,7 @@ export interface BillInput {
   instalments?: BillInstalmentOption[] | null;
 }
 
-export type ShareWithMember = Share & { member: Member };
+type ShareWithMember = Share & { member: Member };
 export type BillDetail = Bill & {
   service: ServiceWithType;
   shares: ShareWithMember[];
@@ -625,9 +625,10 @@ export function setPaymentPlan(
         .run();
     return getBill(householdId, billId, db)!;
   }
-  if (b.shares.some((s) => s.paidAt && s.paidMethod !== 'payer'))
+  const lock = planLock(b);
+  if (lock === 'shares')
     throw new Error('Someone has already paid their share, so the payment plan is locked');
-  if (b.paidToProviderAt || b.instalments.some((i) => i.paidToProviderAt))
+  if (lock === 'provider')
     throw new Error(
       'A payment to the provider is already recorded. Undo it first to change the plan',
     );
@@ -718,9 +719,7 @@ export function billForNotice(
     .orderBy(desc(bill.dueDate))
     .all();
   if (kind === 'payment_received') return bills.find((b) => !b.paidToProviderAt) ?? null;
-  const horizon = new Date(Date.parse(`${today}T00:00:00Z`) + 14 * 86_400_000)
-    .toISOString()
-    .slice(0, 10);
+  const horizon = addDays(today, 14);
   return bills.find((b) => b.dueDate <= horizon) ?? bills[bills.length - 1] ?? null;
 }
 

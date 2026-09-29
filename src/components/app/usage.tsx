@@ -1,20 +1,10 @@
+import { SAME_BAND } from '@/lib/averages';
 import type { Change } from '@/lib/consumption';
 
 /**
  * Small building blocks for showing usage. Deliberately plain: the numbers and
  * wording live here and in lib/consumption, so a redesign only swaps markup.
  */
-
-/** Below this, a change reads as "about the same". */
-export const SAME_BAND = 0.02;
-
-/** 191.3 → "191", 11.04 → "11", 3.456 → "3.5", 0.4457 → "0.45" (quantities, not money). */
-export function formatQty(n: number, locale: string): string {
-  const a = Math.abs(n);
-  return new Intl.NumberFormat(locale, {
-    maximumFractionDigits: a >= 100 ? 0 : a >= 1 ? 1 : 2,
-  }).format(n);
-}
 
 export type ChangeWords = { more: string; less: string; same: string };
 

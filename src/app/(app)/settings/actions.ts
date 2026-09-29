@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import type { ActionState } from '@/components/ui/form';
-import { str, zodToState } from '@/lib/actions';
+import { fieldErrors, str, zodToState } from '@/lib/actions';
 import { requireMember, requireOperator, requireOwner, signOut } from '@/lib/auth/session';
 import { replaceAlias } from '@/lib/bills-address';
 import { getHousehold, updateHousehold } from '@/lib/households';
@@ -23,16 +23,16 @@ import {
 } from '@/lib/location';
 
 const schema = z.object({
-  name: z.string().min(1, 'Required').max(60),
-  currency: z.string().regex(/^[A-Za-z]{3}$/, 'Use a 3-letter currency code'),
-  locale: z.string().min(2, 'Required'),
+  name: z.string().min(1, 'required').max(60),
+  currency: z.string().regex(/^[A-Za-z]{3}$/, 'currencyCode'),
+  locale: z.string().min(2, 'required'),
   timezone: z
     .string()
-    .refine((tz) => Intl.supportedValuesOf('timeZone').includes(tz), 'Unknown timezone'),
+    .refine((tz) => Intl.supportedValuesOf('timeZone').includes(tz), 'unknownTimezone'),
   fiscalYearStartMonth: z.coerce.number().int().min(1).max(12),
   weekStartsOn: z.coerce.number().int().min(0).max(6),
   splitMode: z.enum(['shared', 'single']),
-  paymentReferenceTemplate: z.string().min(1, 'Required').max(60),
+  paymentReferenceTemplate: z.string().min(1, 'required').max(60),
   membersCanExport: z.boolean(),
 });
 
@@ -129,8 +129,7 @@ export async function readMissingMetricsAction(): Promise<void> {
 export async function saveLocationAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
   const me = await requireOwner();
   const postalCode = str(fd, 'postalCode');
-  if (!postalCode)
-    return { fieldErrors: { postalCode: 'Type your postcode or suburb and pick it' } };
+  if (!postalCode) return fieldErrors({ postalCode: 'pickPostcode' });
   try {
     setHouseholdLocation(me.householdId, {
       country: str(fd, 'country'),
@@ -175,9 +174,14 @@ export async function saveSharingAction(fd: FormData): Promise<void> {
   revalidatePath('/');
 }
 
-/** "Got it" on the dashboard notice that area comparisons are on. */
+/**
+ * "Got it" on the dashboard notice that area comparisons are on. Only records
+ * the acknowledgement while sharing is still on: a stale tab must not turn it
+ * back on after another admin turned it off.
+ */
 export async function acknowledgeSharingAction(): Promise<void> {
   const me = await requireOwner();
-  setRegionalSharing(me.householdId, true, 'acknowledged', me.id);
+  if (getHousehold(me.householdId)?.shareRegional)
+    setRegionalSharing(me.householdId, true, 'acknowledged', me.id);
   revalidatePath('/');
 }

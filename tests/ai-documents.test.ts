@@ -272,6 +272,38 @@ describe('the pipeline acting on what the AI says a document is', () => {
     expect(getBill(hh.id, bill.id, db)?.paidToProviderAt).toBe('2026-09-15T00:00:00Z');
     expect(getService(hh.id, svc.id, db)?.autoPay).toBe(true);
   });
+
+  it('sends a statement in credit to a person instead of failing to save it', async () => {
+    const { hh } = setup();
+    scriptAi({
+      ...base,
+      document_type: 'bill',
+      provider: 'AGL',
+      service_type: 'electricity',
+      bill: {
+        amount: -45.2,
+        currency: 'AUD',
+        tax_amount: null,
+        tax_label: null,
+        period_start: '2026-09-01',
+        period_end: '2026-11-30',
+        issue_date: null,
+        due_date: '2026-12-15',
+        usage_quantity: null,
+        usage_unit: null,
+        invoice_number: 'CR-1',
+        account_number: null,
+        auto_pay: null,
+        previous_payment: null,
+        metrics: [],
+        instalments: null,
+      },
+    });
+    const out = await processDocument(hh.id, doc(hh.id, TEXT).id, db);
+    expect(out.status).toBe('needs_review');
+    expect(out.result?.warnings).toContain('The amount is a credit (below zero)');
+    expect(listBills(hh.id, {}, db).map((b) => b.externalRef)).toEqual(['INV-7']);
+  });
 });
 
 describe('when the AI reader fails', () => {

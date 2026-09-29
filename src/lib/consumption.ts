@@ -2,6 +2,7 @@ import { and, eq, inArray } from 'drizzle-orm';
 import { getDb, type Db } from '@/db/client';
 import { billMetric, type BillMetric } from '@/db/schema';
 import { listBills, type BillListItem } from '@/lib/bills';
+import { closestYearBefore, mean } from '@/lib/averages';
 import { daysInclusive, toUtcMs } from '@/lib/dates';
 import { getService, listServices } from '@/lib/services';
 import { convertUnit } from '@/lib/units';
@@ -19,7 +20,7 @@ import { convertUnit } from '@/lib/units';
 /** Days in a month on average, for turning per-day figures into "per month". */
 export const DAYS_PER_MONTH = 365 / 12;
 
-export interface UsagePart {
+interface UsagePart {
   key: string;
   label: string;
   quantity: number;
@@ -77,9 +78,6 @@ const change = (from: number, to: number): Change => ({
   to,
   pct: from === 0 ? null : (to - from) / from,
 });
-
-const midpoint = (p: { periodStart: string; periodEnd: string }) =>
-  (toUtcMs(p.periodStart) + toUtcMs(p.periodEnd)) / 2;
 
 /** Figures that are usage in their own right, not a total or a comparison. */
 const isUsagePart = (m: BillMetric) =>
@@ -184,13 +182,8 @@ export function compareUsage(
 
   const prev = earlier.at(-1);
   // The bill whose middle falls closest to a year before the latest's, within six weeks.
-  const target = midpoint(latest) - 365 * 86_400_000;
-  const yearAgo = earlier
-    .map((p) => ({ p, off: Math.abs(midpoint(p) - target) }))
-    .filter((x) => x.off <= 45 * 86_400_000)
-    .sort((a, b) => a.off - b.off)[0]?.p;
+  const yearAgo = closestYearBefore(latest, earlier);
   const recent = earlier.slice(-4);
-  const mean = (xs: number[]) => xs.reduce((s, x) => s + x, 0) / xs.length;
 
   const svc = getService(householdId, serviceId, db);
   const limitPerDay = svc?.usageLimitMonthly ? svc.usageLimitMonthly / DAYS_PER_MONTH : null;

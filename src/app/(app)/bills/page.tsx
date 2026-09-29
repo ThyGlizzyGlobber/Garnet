@@ -2,16 +2,26 @@ import Link from 'next/link';
 import { canExportHousehold } from '@/lib/export';
 import { getTranslations } from 'next-intl/server';
 import { ForwardAddress } from '@/components/app/forward-address';
+import { SearchBar } from '@/components/app/search-bar';
 import { Icon } from '@/components/app/icons';
-import { Badge, EmptyState, LinkButton, PageHeader } from '@/components/ui';
+import {
+  Badge,
+  Chip,
+  DownloadButton,
+  EmptyState,
+  Figure,
+  LinkButton,
+  PageHeader,
+  Tile,
+} from '@/components/ui';
+import { IconDisc, Swatch } from '@/components/ui/colour';
 import { billsAddress } from '@/lib/bills-address';
 import { listBills } from '@/lib/bills';
 import { pageContext } from '@/lib/context';
-import { darkVariant } from '@/lib/palette';
 import { listServices } from '@/lib/services';
 import { Highlight } from '@/components/app/highlight';
-import { monthLabel } from '@/lib/bill-month';
-import { billEntries, entryOverdue, filterBills, type BillEntry } from '@/lib/bill-search';
+import { groupByMonth } from '@/lib/bill-month';
+import { billEntries, entryOverdue, filterBills } from '@/lib/bill-search';
 import { listDocuments, searchDocuments } from '@/lib/review';
 
 type Filter = 'all' | 'unpaid' | 'overdue' | 'unusual' | 'paid';
@@ -29,7 +39,7 @@ export default async function BillsPage({
   const filter: Filter = (FILTERS as string[]).includes(params.f ?? '')
     ? (params.f as Filter)
     : 'all';
-  const { hh, me, money, date, today } = await pageContext();
+  const { hh, me, money, date, month, today } = await pageContext();
   const t = await getTranslations('bills');
   // The household's bills and this member's own (nobody else's personal bills).
   const everything = listBills(hh.id, { viewer: me.id });
@@ -56,9 +66,7 @@ export default async function BillsPage({
   );
   // Grouped by month, newest first: the month a bill belongs to (see billMonth),
   // or, paid by instalments, the month each instalment is due.
-  const groups = new Map<string, BillEntry[]>();
-  for (const e of [...entries].sort((a, c) => c.date.localeCompare(a.date)))
-    groups.set(e.date.slice(0, 7), [...(groups.get(e.date.slice(0, 7)) ?? []), e]);
+  const groups = groupByMonth(entries, (e) => e.date);
   const total = entries.reduce((sum, e) => sum + e.amountMinor, 0);
   const unpaid = entries.filter((e) => !e.paidAt).reduce((sum, e) => sum + e.amountMinor, 0);
   // Links that change one filter and keep the rest.
@@ -83,8 +91,6 @@ export default async function BillsPage({
   const inboxMatches = q
     ? searchDocuments(listDocuments(hh.id, { viewer: me.id }), q, hh.locale).docs.length
     : 0;
-  const chip = (on: boolean) =>
-    `rounded-full px-4 py-2 text-sm font-semibold transition ${on ? 'bg-accent text-accent-fg' : 'bg-surface-2 text-fg-muted hover:text-fg'}`;
 
   return (
     <>
@@ -100,18 +106,12 @@ export default async function BillsPage({
             {/* Everything, zipped: spreadsheets plus every bill's file, filed by year,
                 month and service. Admins get the household's; anyone, their own. */}
             {(canExportHousehold(me, hh) ? everything.length > 0 : hasPersonal) && (
-              <a
+              <DownloadButton
                 href="/api/export?kind=zip"
-                download
+                label={t(canExportHousehold(me, hh) ? 'download' : 'downloadMine')}
                 title={t(canExportHousehold(me, hh) ? 'downloadHint' : 'downloadMineHint')}
-                aria-label={t(canExportHousehold(me, hh) ? 'download' : 'downloadMine')}
-                className="glass inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-fg hover:bg-surface-2"
-              >
-                <Icon name="download" width={16} height={16} />
-                <span className="hidden sm:inline">
-                  {t(canExportHousehold(me, hh) ? 'download' : 'downloadMine')}
-                </span>
-              </a>
+                icon={<Icon name="download" width={16} height={16} />}
+              />
             )}
             <LinkButton href="/bills/upload" variant="secondary">
               {t('tile.upload')}
@@ -124,67 +124,57 @@ export default async function BillsPage({
 
       {all.length > 0 && (
         <div className="mb-5 flex flex-col gap-3">
-          <form action="/bills" className="flex gap-2">
-            {filter !== 'all' && <input type="hidden" name="f" value={filter} />}
-            {serviceId && <input type="hidden" name="s" value={serviceId} />}
-            {year && <input type="hidden" name="y" value={year} />}
-            <input
-              type="search"
-              name="q"
-              defaultValue={q}
-              placeholder={t('search.placeholder')}
-              aria-label={t('search.label')}
-              className="min-w-0 flex-1 rounded-full border border-border-strong bg-surface-2 px-4 py-2 text-sm outline-none focus:border-accent"
-            />
-            <button type="submit" className={chip(false)}>
-              {t('search.submit')}
-            </button>
-          </form>
+          <SearchBar
+            action="/bills"
+            q={q}
+            keep={{ f: filter !== 'all' ? filter : null, s: serviceId, y: year }}
+            placeholder={t('search.placeholder')}
+            label={t('search.label')}
+            submit={t('search.submit')}
+          />
           {hasPersonal && (
             <div className="flex flex-wrap items-center gap-2">
               {(['all', 'household', 'mine'] as const).map((o) => (
-                <Link key={o} href={href({ o })} className={chip(whose === o)}>
-                  {t(`whose.${o}`)}
-                </Link>
+                <Chip key={o} href={href({ o })} active={whose === o}>
+                  {t(`whoseFilter.${o}`)}
+                </Chip>
               ))}
             </div>
           )}
           <div className="flex flex-wrap items-center gap-2">
             {FILTERS.map((nf) => (
-              <Link key={nf} href={href({ f: nf })} className={chip(filter === nf)}>
+              <Chip key={nf} href={href({ f: nf })} active={filter === nf}>
                 {t(`filters.${nf}`)}
-              </Link>
+              </Chip>
             ))}
           </div>
           {services.length > 1 && (
             <div className="flex flex-wrap items-center gap-2">
-              <Link href={href({ s: null })} className={chip(!serviceId)}>
+              <Chip href={href({ s: null })} active={!serviceId}>
                 {t('search.allServices')}
-              </Link>
+              </Chip>
               {services.map((svc) => (
-                <Link
+                <Chip
                   key={svc.id}
                   href={href({ s: svc.id })}
-                  className={`${chip(serviceId === svc.id)} flex items-center gap-2`}
+                  active={serviceId === svc.id}
+                  className="flex items-center gap-2"
                 >
-                  <span
-                    className="size-2.5 rounded-sm"
-                    style={{ background: `light-dark(${svc.colour}, ${darkVariant(svc.colour)})` }}
-                  />
+                  <Swatch colour={svc.colour} />
                   {svc.name}
-                </Link>
+                </Chip>
               ))}
             </div>
           )}
           {years.length > 1 && (
             <div className="flex flex-wrap items-center gap-2">
-              <Link href={href({ y: null })} className={chip(!year)}>
+              <Chip href={href({ y: null })} active={!year}>
                 {t('search.allYears')}
-              </Link>
+              </Chip>
               {years.map((y) => (
-                <Link key={y} href={href({ y })} className={chip(year === y)}>
+                <Chip key={y} href={href({ y })} active={year === y}>
                   {y}
-                </Link>
+                </Chip>
               ))}
             </div>
           )}
@@ -230,10 +220,10 @@ export default async function BillsPage({
           }
         />
       ) : (
-        [...groups.entries()].map(([m, items]) => (
+        groups.map(([m, items]) => (
           <section key={m} className="mb-6">
             <h2 className="mb-3 flex flex-wrap items-baseline gap-x-3 font-display text-lg font-semibold">
-              <Highlight text={monthLabel(m, hh.locale)} tokens={tokens} />
+              <Highlight text={month(m, 'long-year')} tokens={tokens} />
               <span className="font-sans text-xs font-normal text-fg-muted">
                 {t('summary.count', { count: items.length })} ·{' '}
                 {money(items.reduce((sum, e) => sum + e.amountMinor, 0))}
@@ -243,33 +233,28 @@ export default async function BillsPage({
               {items.map((e) => {
                 const b = e.bill;
                 const overdue = entryOverdue(e, today);
-                const swatch = `light-dark(${b.service.colour}, ${darkVariant(b.service.colour)})`;
-                const sourceLabel =
-                  b.extractor === 'review'
-                    ? t('tile.source.review')
-                    : b.source === 'manual'
-                      ? t('tile.source.manual')
-                      : t(`tile.source.${b.source}`, {
-                          pct: Math.round((b.confidence ?? 0) * 100),
-                        });
+                const sourceLabel = t(
+                  `tile.source.${b.extractor === 'review' ? 'review' : b.source}`,
+                );
                 const shares = b.sharesByInstalment[e.instalment?.seq ?? 0];
                 const sharePct = shares?.count
                   ? Math.round((shares.paid / shares.count) * 100)
                   : null;
                 return (
-                  <Link
+                  <Tile
                     key={e.key}
                     href={`/bills/${b.id}${e.instalment ? '#plan' : ''}`}
-                    className={`glass lift flex flex-col gap-3 rounded-card p-5 text-fg ${overdue ? 'bg-danger-soft' : ''}`}
+                    tone={overdue ? 'danger' : 'plain'}
+                    className="flex flex-col gap-3"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <span className="flex items-center gap-3">
-                        <span
-                          className="glow-disc size-11"
-                          style={{ color: swatch, ['--glow' as string]: swatch }}
-                        >
-                          <Icon name={b.service.type.icon} width={20} height={20} />
-                        </span>
+                        <IconDisc
+                          icon={b.service.type.icon}
+                          colour={b.service.colour}
+                          variant="glow"
+                          size={44}
+                        />
                         <span className="flex flex-col leading-tight">
                           <span className="font-display font-semibold">
                             <Highlight text={b.service.name} tokens={tokens} />
@@ -288,9 +273,9 @@ export default async function BillsPage({
                       )}
                     </div>
                     <div>
-                      <p className="font-display text-[32px] leading-none font-semibold tracking-tight tabular-nums">
+                      <Figure size="sm" className="tracking-tight">
                         <Highlight text={money(e.amountMinor, b.currency)} tokens={tokens} />
-                      </p>
+                      </Figure>
                       <p className="mt-1.5 text-xs text-fg-muted">
                         {e.instalment
                           ? t('tile.instalment', { n: e.instalment.seq, of: e.instalment.of })
@@ -298,7 +283,7 @@ export default async function BillsPage({
                               start: date(b.periodStart, 'short'),
                               end: date(b.periodEnd, 'short'),
                             })}{' '}
-                        · {t('due')} {date(e.dueDate, 'short')}
+                        · {t('tile.due', { date: date(e.dueDate, 'short') })}
                       </p>
                     </div>
                     {hh.splitMode === 'shared' && sharePct !== null && (
@@ -332,7 +317,7 @@ export default async function BillsPage({
                         )}
                       </span>
                     </div>
-                  </Link>
+                  </Tile>
                 );
               })}
             </div>

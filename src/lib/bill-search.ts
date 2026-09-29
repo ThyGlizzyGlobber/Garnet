@@ -14,7 +14,7 @@ export interface BillFilters {
 }
 
 /** Everything a person might type to find a bill, lower case. */
-export function billHaystack(b: BillListItem, locale: string, today: string): string {
+function billHaystack(b: BillListItem, locale: string, today: string): string {
   const digits = minorUnitDigits(b.currency);
   // The bill's own month, and every month its period covers (a quarterly bill
   // for Jul–Sep turns up for "August").

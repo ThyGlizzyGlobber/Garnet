@@ -5,9 +5,9 @@ import { usePathname } from 'next/navigation';
 import { Icon } from './icons';
 import type { NavItem } from './shell';
 
-export function NavLinks({ items, variant }: { items: NavItem[]; variant: 'segment' }) {
+/** The floating segmented tab bar's links (the active one filled with the accent). */
+export function NavLinks({ items }: { items: NavItem[] }) {
   const pathname = usePathname();
-  void variant;
   return (
     <>
       {items.map((item) => {

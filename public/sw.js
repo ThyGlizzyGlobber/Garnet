@@ -1,5 +1,7 @@
 // Minimal service worker: network first, fall back to the last cached copy of
 // a page so the dashboard still opens when the NAS is briefly unreachable.
+// The sign-in and unlock screens delete this cache (ForgetOfflinePages in
+// src/components/app/pwa.tsx), so keep the name in step with it.
 const CACHE = 'hud-v1';
 self.addEventListener('install', (e) => {
   self.skipWaiting();

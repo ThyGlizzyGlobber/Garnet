@@ -1,8 +1,8 @@
-import { and, asc, eq, gte, lte } from 'drizzle-orm';
+import { and, asc, eq } from 'drizzle-orm';
 import { getDb, type Db } from '@/db/client';
-import { bill, projection, type Bill, type Cadence, type Member } from '@/db/schema';
+import { bill, type Bill, type Cadence, type Member } from '@/db/schema';
+import { costPerDay, mean } from '@/lib/averages';
 import { addDays, daysInclusive, monthOf } from '@/lib/dates';
-import { ulid } from '@/lib/ids';
 import { listMembers } from '@/lib/members';
 import { addMonths, allocateToMonths, monthBounds } from '@/lib/periods';
 import { listServices, splitSettings, type ServiceWithType } from '@/lib/services';
@@ -36,7 +36,7 @@ export interface MonthProjection {
   computedAt: string;
 }
 
-export const CADENCE_DAYS: Record<Cadence, number | null> = {
+const CADENCE_DAYS: Record<Cadence, number | null> = {
   weekly: 7,
   fortnightly: 14,
   monthly: 30,
@@ -46,13 +46,7 @@ export const CADENCE_DAYS: Record<Cadence, number | null> = {
   irregular: null,
 };
 
-function perDay(b: Pick<Bill, 'amountMinor' | 'periodStart' | 'periodEnd'>): number {
-  return b.amountMinor / Math.max(1, daysInclusive(b.periodStart, b.periodEnd));
-}
-
-function mean(xs: number[]): number {
-  return xs.reduce((s, x) => s + x, 0) / xs.length;
-}
+const perDay = costPerDay;
 
 /**
  * Daily cost estimate for one service in a target month.
@@ -130,7 +124,10 @@ export function nextBillGuess(
   return { periodStart, periodEnd, dueDate, amountMinor: Math.round(perDayMinor * len) };
 }
 
-/** Project a month for every active service and cache the per-service rows. */
+/**
+ * Project a month for every active service. Worked out on every read (cheap,
+ * never stale); nothing is stored.
+ */
 export function projectMonth(
   householdId: string,
   month: string,
@@ -182,38 +179,6 @@ export function projectMonth(
       basisCount: est.basisCount,
       nextBill: nextBillGuess(latest, svc.cadence, est.perDay),
     });
-    db.insert(projection)
-      .values({
-        id: ulid(),
-        householdId,
-        serviceId: svc.id,
-        periodMonth: month,
-        estimatedMinor: monthMinor,
-        currency: latest?.currency ?? 'XXX',
-        method: est.method,
-        inputsJson: JSON.stringify({
-          perDay: est.perDay,
-          basisCount: est.basisCount,
-          knownMinor,
-          knownDays,
-        }),
-        computedAt: now,
-      })
-      .onConflictDoUpdate({
-        target: [projection.serviceId, projection.periodMonth],
-        set: {
-          estimatedMinor: monthMinor,
-          method: est.method,
-          inputsJson: JSON.stringify({
-            perDay: est.perDay,
-            basisCount: est.basisCount,
-            knownMinor,
-            knownDays,
-          }),
-          computedAt: now,
-        },
-      })
-      .run();
   }
   const totalMinor = rows.reduce((s, r) => s + r.monthMinor, 0);
   // Set-aside: split each service's estimate the way its bills would be split for this month.
@@ -243,24 +208,4 @@ export function projectMonth(
 /** The month after the current one, which is what "set aside" is for. */
 export function nextMonth(today: string): string {
   return addMonths(monthOf(today), 1);
-}
-
-/** Cached projections for a range of months (for the chart's estimate bars). */
-export function cachedProjections(
-  householdId: string,
-  fromMonth: string,
-  toMonth: string,
-  db: Db = getDb(),
-) {
-  return db
-    .select()
-    .from(projection)
-    .where(
-      and(
-        eq(projection.householdId, householdId),
-        gte(projection.periodMonth, fromMonth),
-        lte(projection.periodMonth, toMonth),
-      ),
-    )
-    .all();
 }

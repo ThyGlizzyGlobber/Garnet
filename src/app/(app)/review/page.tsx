@@ -1,12 +1,29 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
-import { Badge, Card, EmptyState, LinkButton, List, ListRow, PageHeader } from '@/components/ui';
+import { ForwardAddress } from '@/components/app/forward-address';
+import { SearchBar } from '@/components/app/search-bar';
+import {
+  Badge,
+  Card,
+  Chip,
+  EmptyState,
+  LinkButton,
+  List,
+  ListRow,
+  PageHeader,
+} from '@/components/ui';
 import { InlineAction } from '@/components/ui/form';
 import { billsAddress } from '@/lib/bills-address';
 import { pageContext } from '@/lib/context';
-import { documentCounts, listDocuments, plainReason, searchDocuments } from '@/lib/review';
+import {
+  documentCounts,
+  listDocuments,
+  plainReason,
+  searchDocuments,
+  STATUS_TONE,
+} from '@/lib/review';
 import { Highlight } from '@/components/app/highlight';
-import { monthLabel } from '@/lib/bill-month';
+import { groupByMonth } from '@/lib/bill-month';
 import { reprocessAllAction } from './actions';
 
 type Filter = 'review' | 'bills' | 'receipts' | 'other' | 'all';
@@ -17,9 +34,8 @@ export default async function ReviewPage({
 }: {
   searchParams: Promise<{ all?: string; f?: string; q?: string }>;
 }) {
-  const { hh, me, date, money } = await pageContext();
+  const { hh, me, date, money, month } = await pageContext();
   const t = await getTranslations('review');
-  const tb = await getTranslations('billsAddress');
   const address = billsAddress(hh);
   const { all, f, q: rawQ } = await searchParams;
   const q = (rawQ ?? '').trim();
@@ -44,24 +60,14 @@ export default async function ReviewPage({
   const counts = documentCounts(hh.id);
   // Grouped by the month each document belongs to (its bill's month, or the
   // date printed on it), not the day it arrived. listDocuments sorts newest first.
-  const groups = new Map<string, typeof docs>();
-  for (const d of docs) {
-    const m = d.date.slice(0, 7);
-    groups.set(m, [...(groups.get(m) ?? []), d]);
-  }
+  const groups = groupByMonth(docs, (d) => d.date);
   const link = (key: Filter) => {
     const u = new URLSearchParams();
     if (key !== 'review') u.set('f', key);
     if (q) u.set('q', q);
     return u.size ? `/review?${u}` : '/review';
   };
-  const tone = {
-    needs_review: 'warning',
-    extracted: 'success',
-    ignored: 'neutral',
-    unprocessed: 'accent',
-    notice: 'neutral',
-  } as const;
+  const tone = STATUS_TONE;
 
   return (
     <>
@@ -77,31 +83,17 @@ export default async function ReviewPage({
           </LinkButton>
         }
       />
-      {address && (
-        <p className="mb-4 text-sm text-fg-muted">
-          {tb('short', { address: '' })}
-          <Link href="/settings" className="font-mono text-xs text-accent">
-            {address}
-          </Link>
-        </p>
-      )}
-      <form action="/review" className="mb-3 flex gap-2">
-        {filter !== 'review' && <input type="hidden" name="f" value={filter} />}
-        <input
-          type="search"
-          name="q"
-          defaultValue={q}
+      {address && <ForwardAddress address={address} />}
+      <div className="mb-3">
+        <SearchBar
+          action="/review"
+          q={q}
+          keep={{ f: filter !== 'review' ? filter : null }}
           placeholder={t('search.placeholder')}
-          aria-label={t('search.label')}
-          className="min-w-0 flex-1 rounded-full border border-border-strong bg-surface-2 px-4 py-2 text-sm outline-none focus:border-accent"
+          label={t('search.label')}
+          submit={t('search.submit')}
         />
-        <button
-          type="submit"
-          className="rounded-full bg-surface-2 px-4 py-2 text-sm font-semibold text-fg-muted hover:text-fg"
-        >
-          {t('search.submit')}
-        </button>
-      </form>
+      </div>
       {q && (
         <p className="mb-3 flex flex-wrap gap-x-3 text-sm text-fg-muted">
           {t('search.results', { count: docs.length, q })}
@@ -112,13 +104,9 @@ export default async function ReviewPage({
       )}
       <div className="mb-4 flex flex-wrap items-center gap-2 text-sm">
         {FILTERS.map((key) => (
-          <Link
-            key={key}
-            href={link(key)}
-            className={`rounded-full px-3.5 py-1.5 font-medium ${filter === key ? 'bg-accent text-accent-fg' : 'bg-surface-2 text-fg-muted'}`}
-          >
+          <Chip key={key} href={link(key)} active={filter === key}>
             {t(`filter.${key}`)}
-          </Link>
+          </Chip>
         ))}
         <span className="flex-1" />
         <InlineAction
@@ -141,15 +129,15 @@ export default async function ReviewPage({
           action={<LinkButton href="/bills/upload">{t('upload')}</LinkButton>}
         />
       ) : (
-        [...groups.entries()].map(([m, items]) => (
+        groups.map(([m, items]) => (
           <section key={m} className="mb-6">
             <h2 className="mb-2 font-display text-lg font-semibold">
-              <Highlight text={monthLabel(m, hh.locale)} tokens={tokens} />
+              <Highlight text={month(m, 'long-year')} tokens={tokens} />
             </h2>
             <List>
               {items.map((d) => {
                 const r = d.extraction?.result;
-                const arrivedLater = d.receivedAt.slice(0, 7) !== d.date.slice(0, 7);
+                const arrivedLater = d.arrived.slice(0, 7) !== d.date.slice(0, 7);
                 const why = plainReason(d.extraction);
                 return (
                   // Anything that belongs with a bill opens that bill's one page.

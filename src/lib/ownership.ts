@@ -5,6 +5,7 @@ import { actingMember } from '@/lib/acting-member';
 import { setServiceOwner } from '@/lib/bills';
 import { getService, listServices, type ServiceWithType } from '@/lib/services';
 import { visibleTo } from '@/lib/scope';
+import { isAdmin } from '@/lib/roles';
 
 /**
  * "Who's this for?" A service set up automatically from someone's bill is
@@ -31,7 +32,7 @@ export function asksMember(
 ): boolean {
   if (!svc.ownerAskedAt || svc.ownerConfirmedAt) return false;
   if (!visibleTo(svc.ownerMemberId, me.id)) return false;
-  return svc.setUpByMemberId ? svc.setUpByMemberId === me.id : me.role === 'owner';
+  return svc.setUpByMemberId ? svc.setUpByMemberId === me.id : isAdmin(me);
 }
 
 /** The services this member should say "mine or the household's" about. */
@@ -101,35 +102,39 @@ export function confirmOwnership(householdId: string, serviceId: string, db: Db 
 }
 
 /**
- * The members who brought any of this service's bills in: whoever uploaded a
- * bill's file, or forwarded it from their own address.
+ * Who brought each of this service's bills in: the member who uploaded its file,
+ * forwarded it from their own address or entered it by hand, or null when
+ * nobody is known to have (mail straight from the provider, older entries).
  */
-export function broughtInBy(householdId: string, serviceId: string, db: Db = getDb()): Set<string> {
-  const docs = db
+function billBringers(householdId: string, serviceId: string, db: Db): (string | null)[] {
+  return db
     .select({
+      createdBy: bill.createdByMemberId,
       memberId: sourceDocument.memberId,
       senderVerified: sourceDocument.senderVerified,
       emailFrom: sourceDocument.emailFrom,
     })
     .from(bill)
-    .innerJoin(sourceDocument, eq(sourceDocument.id, bill.sourceDocumentId))
+    .leftJoin(sourceDocument, eq(sourceDocument.id, bill.sourceDocumentId))
     .where(and(eq(bill.householdId, householdId), eq(bill.serviceId, serviceId)))
-    .all();
-  const who = new Set<string>();
-  for (const d of docs) {
-    const m = actingMember(householdId, d, db);
-    if (m) who.add(m);
-  }
-  return who;
+    .all()
+    .map((d) => actingMember(householdId, d, db) ?? d.createdBy);
+}
+
+/** The members who brought any of this service's bills in (upload or forward). */
+export function broughtInBy(householdId: string, serviceId: string, db: Db = getDb()): Set<string> {
+  return new Set(billBringers(householdId, serviceId, db).filter((m): m is string => !!m));
 }
 
 /**
  * May this member switch a service between household and personal? Its owner
  * can hand a personal one back. A household one can be made theirs by whoever
- * set it up or brought any of its bills in (upload or forward); only when
- * nobody is known to have (set up by hand, or mail straight from the provider)
- * can an admin or its payer. (Whoever is being asked "Who's this for?" may
- * answer either way.) `broughtIn` is `broughtInBy()` for the service.
+ * set it up, or by whoever brought every one of its bills in (their own rego,
+ * uploaded each year); bringing in one bill of the household's electricity is
+ * not enough. Only when nobody is known to have set it up or brought a bill in
+ * (set up by hand, or mail straight from the provider) can an admin or its
+ * payer. (Whoever is being asked "Who's this for?" may answer either way.)
+ * `bills` is who brought each of its bills in (null: nobody known).
  */
 export function canChangeOwner(
   me: { id: string; role: string },
@@ -138,12 +143,13 @@ export function canChangeOwner(
     payerMemberId: string | null;
     setUpByMemberId?: string | null;
   },
-  broughtIn: Set<string> = new Set(),
+  bills: (string | null)[] = [],
 ): boolean {
   if (svc.ownerMemberId) return svc.ownerMemberId === me.id;
-  if (svc.setUpByMemberId === me.id || broughtIn.has(me.id)) return true;
-  if (svc.setUpByMemberId || broughtIn.size) return false;
-  return me.role === 'owner' || svc.payerMemberId === me.id;
+  if (svc.setUpByMemberId === me.id) return true;
+  if (bills.length > 0 && bills.every((m) => m === me.id)) return true;
+  if (svc.setUpByMemberId || bills.some((m) => m !== null)) return false;
+  return isAdmin(me) || svc.payerMemberId === me.id;
 }
 
 /** `canChangeOwner()` for a stored service, working out who brought its bills in. */
@@ -161,5 +167,5 @@ export function mayChangeOwner(
   >,
   db: Db = getDb(),
 ): boolean {
-  return canChangeOwner(me, svc, broughtInBy(householdId, svc.id, db)) || asksMember(svc, me);
+  return canChangeOwner(me, svc, billBringers(householdId, svc.id, db)) || asksMember(svc, me);
 }

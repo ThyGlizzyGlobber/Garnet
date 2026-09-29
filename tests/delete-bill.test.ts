@@ -101,7 +101,7 @@ describe('deleting a bill', () => {
     const hh = setup();
     const invoice = upload(hh.id);
     const { billId } = await processDocument(hh.id, invoice.id, db);
-    const other = upload(hh.id, `${INVOICE}\n`.replaceAll('59259831', '59259832'));
+    const other = upload(hh.id, `${INVOICE}\n`.replaceAll('50000001', '59259832'));
     const second = await processDocument(hh.id, other.id, db);
     setBillAlert(hh.id, second.billId!, 'payment_failed', invoice.id, db);
     deleteBillWithDocument(hh.id, billId!, db);

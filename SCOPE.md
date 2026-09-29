@@ -77,7 +77,7 @@ Key properties:
 - **Zero setup for households:** each household gets a unique bills address on the owner's domain. Members forward each bill to it from their own inbox as it arrives (owner decision 2026-09-28, after asking a non-technical tester: forwarding fits day-to-day life; nobody changes the email on their provider accounts). No mailbox credentials, no forwarding rules. **Upload a bill** takes a PDF directly.
 - The single-mailbox IMAP poller built for our household stays available as an operator option, but the per-household address is the primary path.
 
-- **Raw bills are kept forever** on the NAS (`inbox/` folder) — audit trail and re-parse source. From a forwarded email only its PDF attachments are kept; an email with no PDF is kept as the bill itself.
+- **Raw bills are kept** on the NAS (`inbox/` folder, filed by year, month and service) — audit trail and re-parse source; deleting a bill deletes its file. From a forwarded email only its PDF attachments are kept; an email with no PDF is kept as the bill itself.
 - **LLM extraction** (Anthropic API) turns any bill layout into `{provider, service_type, amount, billing_period, due_date, usage + units}` plus every other figure on the bill (usage by tariff, readings, charges, rates, averages, comparisons) with one prompt — no per-provider parser maintenance. Volume is ~10–30 calls/month (cents).
 - The extractor is an **interface**, not a hard dependency: the AI reader reads every document (no per-provider templates ship; the slot for one remains), manual queue last. Swapping or adding extraction methods later (local LLM, CDR APIs) touches config, not architecture.
 - Anything unparseable becomes a "needs review" card with a pre-filled manual-entry form — the system degrades gracefully, never silently misses a bill.
@@ -97,13 +97,13 @@ Key properties:
 - Configurable split ratios per service (default: equal)
 - Per-member ledger: what you owe this cycle, what you've paid, running balance
 - "Mark as paid" + payment reference generation from the bill payer's stored payment details (PayID/BSB, IBAN, Venmo, etc. — configurable per member)
-- Reminder nudges for unpaid shares (in-app for Prototype 1)
+- Reminder nudges for unpaid shares (in the app and by email)
 
 ### Personal services and dashboards (owner, 2026-09-29)
 
 - A member can keep their own services (car rego, car insurance…) in the household's install: a **personal** service is seen only by that member (admins included), isn't split, and its bills stay out of every household figure (totals, charts, projections, the wall, area comparisons, other members' lists and emails).
-- Car rego and car insurance that a member uploads or forwards become theirs automatically (a per-type setting in the catalog); anything else is household. Any service can be switched between household and personal on its page: its owner hands it back; an admin or its payer can make a household service their own. Refused once a housemate has paid a share of one of its bills.
-- Home has a **Household · Mine** switch in households that split bills. "Mine" shows what the member pays, all in: their share of household bills plus their personal bills, kept apart — this month, this financial year, a 12-month trend, where the money goes, what they owe, and their personal bills and services.
+- Car rego, car insurance, roadside assistance, gym and vehicle repairs that a member uploads or forwards are guessed to be theirs (a per-type setting in the catalog); anything else is guessed to be the household's, and whoever brought the bill in is asked "Who's this for?" once. Any service can be switched between household and personal from its bill or its page: its owner hands it back; a household one can be made someone's own by whoever set it up or brought every one of its bills in, and by an admin or its payer only when nobody is known to have. Refused once a housemate has paid a share of one of its bills.
+- Home has a **Household · Mine** switch in households with more than one member. "Mine" shows what the member pays, all in: their share of household bills plus their personal bills, kept apart — this month, this financial year, a 12-month trend, where the money goes, what they owe, and their personal bills and services.
 
 ### Projections
 
@@ -171,8 +171,8 @@ The alpha household is in Australia, but the alpha build is the version most lik
 ## 8. Data model (sketch)
 
 - **Household** — one per household: name, currency, locale, timezone, fiscal-year start, week start, bills address, AI usage this month
-- **Account** — a person who can sign in: email, display name, Google ID (optional), operator flag
-- **Member** — a person in a household's splits: name, role (admin/member), linked account (empty until the invite is accepted), PIN hash (set by the member), split weights, active date range (move-in/out pro-rating), payment details as ordered label/value pairs
+- **Account** — a person who can sign in: email, display name, Google ID (optional); operators are the accounts named in `OPERATOR_EMAILS`
+- **Member** — a person in a household's splits: name, role (admin/member), linked account (empty until the invite is accepted), PIN hash (set by the member), active date range (move-in/out pro-rating), payment details as ordered label/value pairs
 - **Invite** — household × email → token (hashed), expiry, accepted_at; plus a per-household join code
 - **Trusted device / session** — account × device, created by a full sign-in; unlocked by PIN afterwards
 - **Service** — type (internet/electricity/gas/water/rent/custom), provider, billing cadence, default split
@@ -183,7 +183,7 @@ The alpha household is in Australia, but the alpha build is the version most lik
 
 ## 9. Privacy & security notes
 
-- All bill data stays on the owner's NAS; only extracted bill _text_ is sent to the LLM API for parsing.
+- All bill data stays on the owner's NAS; only extracted bill _text_ is sent to the LLM API for parsing, except scans and photos (no text layer), which are sent as the file.
 - No personal inbox access, ever: bills arrive at an address the app owns.
 - **Internet-facing:** reachable through a Cloudflare Tunnel (no router ports opened). HTTPS-only cookies, rate-limited sign-in and PIN attempts, single-use expiring invites, no member names shown before sign-in. A Cloudflare Access policy can sit in front as an extra gate.
 - **Household isolation:** every query is scoped to the signed-in member's household; one household can never read another's data.
@@ -218,7 +218,7 @@ After ~2 billing cycles with our household:
 11. **Community template parsers** — declarative rules so other households add providers without a release
 12. **Open Banking / CDR payment confirmation** — close the "did they actually pay" loop automatically
 13. **Product metrics** — % of bills auto-parsed, time saved, money tracked; logged from the alpha onward for the pitch deck
-14. **Seasons, weather and regional insights** — season-aware flags and forecasts, household postcode, weather-adjusted usage, and opt-in pooled area figures. Full scope (proposed, awaiting sign-off): [SCOPE-seasons-weather-regions.md](SCOPE-seasons-weather-regions.md)
+14. **Seasons, weather and regional insights** — season-aware flags and forecasts, household postcode, weather-adjusted usage, and opt-in pooled area figures. Full scope (approved and built, S1–S4): [SCOPE-seasons-weather-regions.md](SCOPE-seasons-weather-regions.md)
 
 ## 12. Open questions
 

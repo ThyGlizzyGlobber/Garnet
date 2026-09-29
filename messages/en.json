@@ -1,7 +1,8 @@
 {
   "app": {
     "name": "Home Utilities",
-    "tagline": "Bills in, totals out, everyone knows their share."
+    "description": "Household utilities dashboard",
+    "shortName": "Utilities"
   },
   "nav": {
     "home": "Home",
@@ -13,7 +14,6 @@
     "ledger": "Ledger",
     "wall": "Wall display",
     "review": "Review queue",
-    "status": "Ingestion status",
     "addBill": "Add bill",
     "search": "Search bills, providers, invoice numbers"
   },
@@ -34,8 +34,6 @@
       "timezone": "Timezone",
       "fiscalYearStartMonth": "Financial year starts in",
       "ownerName": "Your name",
-      "pin": "PIN",
-      "pinConfirm": "Confirm PIN",
       "activeFrom": "Living here since"
     },
     "placeholders": {
@@ -45,7 +43,6 @@
       "householdName": "Shown at the top of every screen and on the wall display.",
       "splitMode": "You can change this later in Settings.",
       "fiscalYearStartMonth": "Annual totals run from this month. July for an Australian financial year, January for a calendar year.",
-      "pin": "4–8 digits. Used to log in on any device.",
       "activeFrom": "Bills before this date won’t include you. A rough date is fine.",
       "location": "Your postcode tells the app your seasons (and later your weather). Just the postcode, never your address; you can add it later in Settings."
     },
@@ -97,20 +94,13 @@
     "edit": "Edit",
     "delete": "Delete bill",
     "deleteConfirm": "Delete this bill completely? Its shares, its figures and the PDF or email it came from are removed too. This cannot be undone.",
-    "due": "due",
     "overdue": "Overdue",
-    "sharesPaid": "{paid}/{total} paid",
     "empty": {
       "title": "No bills yet",
       "body": "Add your first bill by hand, or wait for the mailbox to pick one up once ingestion is set up.",
       "noServices": "Create a service first, then add bills against it.",
       "addService": "Add a service",
       "noMatch": "No matching bills"
-    },
-    "source": {
-      "manual": "Entered by hand",
-      "template": "Read from the bill",
-      "llm": "Read from the bill"
     },
     "detail": {
       "amount": "Amount",
@@ -126,8 +116,6 @@
       "paidToProviderAt": "Paid on",
       "markPaidProvider": "Mark paid to provider",
       "markUnpaidProvider": "Mark not paid to provider",
-      "sourceDocument": "Source file",
-      "viewSource": "View",
       "personalNote": "A personal bill: only you can see it, it isn't split, and it stays out of the household's figures. It counts on your own dashboard (Home → Mine).",
       "paidOn": "Paid on {date}",
       "dueOn": "Due {date}",
@@ -170,7 +158,6 @@
       "lockedShares": "Someone has paid their share, so the plan can't change now.",
       "lockedProvider": "A payment to the provider is recorded. Undo it to change the plan.",
       "paidOn": "Paid {date}",
-      "due": "Due",
       "overdue": "Overdue",
       "markPaid": "Mark paid to {provider}",
       "undo": "Undo",
@@ -204,12 +191,11 @@
         "mine": "Just mine"
       },
       "whoseHints": {
-        "household": "Everyone sees it and it’s split",
-        "mine": "Only you see it, not split",
-        "householdNoSplit": "Everyone in the house sees it",
-        "mineNoSplit": "Only you see it"
+        "household": "{split, select, yes {Everyone sees it and it’s split} other {Everyone in the house sees it}}",
+        "mine": "{split, select, yes {Only you see it, not split} other {Only you see it}}"
       },
-      "whoseNote": "This applies to the whole service and all its bills."
+      "whoseNote": "This applies to the whole service and all its bills.",
+      "taxLabelPlaceholder": "GST / VAT"
     },
     "anomaly": "Unusual",
     "download": "Download everything",
@@ -225,11 +211,10 @@
         "llm": "Read from the bill",
         "review": "Confirmed in review"
       },
-      "document": "View file",
-      "shares": "{paid}/{total} shares paid",
       "upload": "Upload bill",
       "sharesBar": "{paid} of {total} shares paid",
-      "onlyYou": "Only you"
+      "onlyYou": "Only you",
+      "due": "due {date}"
     },
     "searchResults": "{count, plural, =0 {No bills match} one {# bill matches} other {# bills match}} “{q}”",
     "clearSearch": "Clear",
@@ -277,24 +262,18 @@
     "filterResults": "{count, plural, =0 {No bills match these filters} one {# bill matches} other {# bills match}}",
     "whose": {
       "title": "Who's this for?",
-      "bodyMine": "{service} is set up as yours: only you see it, and it isn't split. Is that right, or is it the household's?",
-      "bodyHousehold": "{service} is set up as the household's: everyone sees it and it's split. Is it the household's, or just yours?",
+      "bodyMine": "{split, select, yes {{service} is set up as yours: only you see it, and it isn't split. Is that right, or is it the household's?} other {{service} is set up as yours: only you see it, and it stays out of the household's figures. Is that right, or is it the household's?}}",
+      "bodyHousehold": "{split, select, yes {{service} is set up as the household's: everyone sees it and it's split. Is it the household's, or just yours?} other {{service} is set up as the household's: everyone in the house sees it. Is it the household's, or just yours?}}",
       "mine": "Just mine",
       "household": "The household's",
       "label": "Whose",
-      "isMine": "Yours: only you see it, and it isn't split",
-      "isHousehold": "The household's: split between everyone",
+      "isMine": "{split, select, yes {Yours: only you see it, and it isn't split} other {Yours: only you see it}}",
+      "isHousehold": "{split, select, yes {The household's: split between everyone} other {The household's: everyone in the house sees it}}",
       "makeHousehold": "Make it the household's",
       "makeMine": "Make it just mine",
-      "confirmHousehold": "Make {service} the household's? Everyone will see it and its bills, and they'll be split between you.",
-      "confirmMine": "Make {service} just yours? Only you will see it and its bills, and they won't be split.",
-      "lockedShares": "Housemates have paid shares of its bills, so it stays the household’s.",
-      "bodyMineNoSplit": "{service} is set up as yours: only you see it, and it stays out of the household's figures. Is that right, or is it the household's?",
-      "bodyHouseholdNoSplit": "{service} is set up as the household's: everyone in the house sees it. Is it the household's, or just yours?",
-      "isMineNoSplit": "Yours: only you see it",
-      "isHouseholdNoSplit": "The household's: everyone in the house sees it",
-      "confirmHouseholdNoSplit": "Make {service} the household's? Everyone in the house will see it and its bills.",
-      "confirmMineNoSplit": "Make {service} just yours? Only you will see it and its bills, and they'll stay out of the household's figures."
+      "confirmHousehold": "{split, select, yes {Make {service} the household's? Everyone will see it and its bills, and they'll be split between you.} other {Make {service} the household's? Everyone in the house will see it and its bills.}}",
+      "confirmMine": "{split, select, yes {Make {service} just yours? Only you will see it and its bills, and they won't be split.} other {Make {service} just yours? Only you will see it and its bills, and they'll stay out of the household's figures.}}",
+      "lockedShares": "Housemates have paid shares of its bills, so it stays the household’s."
     },
     "downloadHint": "A zip of every bill: spreadsheets for your accountant plus each bill's file, filed by year, month and service",
     "downloadMine": "Download my bills",
@@ -318,6 +297,11 @@
       "viewPhoto": "View photo",
       "viewEmail": "View email",
       "turn": "Turn page ↻"
+    },
+    "whoseFilter": {
+      "all": "All",
+      "household": "The household's",
+      "mine": "Just mine"
     }
   },
   "services": {
@@ -333,7 +317,7 @@
     },
     "types": {
       "title": "Service types",
-      "body": "Built-in types cover the usual utilities. Add your own for anything else (cleaning, streaming, strata).",
+      "body": "The kinds of service every household can choose from. For anything not listed, choose Other and give the service its own name.",
       "label": "New type",
       "placeholder": "Streaming",
       "unit": "Usage unit",
@@ -371,8 +355,7 @@
         "equal": "Split evenly",
         "percent": "By percentage",
         "fixed": "Set amounts",
-        "weighted": "By member weight",
-        "custom": "By percentage"
+        "weighted": "By member weight"
       },
       "trustedSenders": "Trusted bill senders",
       "trustedSendersHint": "Email domains (provider.com.au) or exact addresses whose signed bills are added automatically. Personal mailbox domains like gmail.com can only be added as a full address. Bills forwarded by household members are always accepted.",
@@ -384,7 +367,9 @@
       "seasonalHint": "Heating, cooling or solar make some months cost more than others. Bills are then compared with the same time last year, and you're told before a costly season starts.",
       "personal": "Just for me",
       "personalHint": "A personal service, like your own car rego: only you see it and its bills, it isn't split, and it stays out of the household's figures.",
-      "splitAdminsOnly": "Only an admin can change how it’s split or who pays it."
+      "splitAdminsOnly": "Only an admin can change how it’s split or who pays it.",
+      "providerPlaceholder": "Aussie Broadband",
+      "trustedSendersPlaceholder": "provider.com.au"
     },
     "nextBill": "Next bill about {amount} · due {date}",
     "noHistory": "No bills yet",
@@ -448,7 +433,8 @@
       },
       "latest": "Latest bill: {amount}",
       "newMembers": "Someone who moves in later isn’t included until an admin gives them a part."
-    }
+    },
+    "unusual": "Unusual"
   },
   "members": {
     "title": "Members",
@@ -469,11 +455,6 @@
       "cancel": "Cancel",
       "name": "Name",
       "colour": "Colour",
-      "pin": "PIN",
-      "pinHint": "4–8 digits.",
-      "newPin": "New PIN",
-      "newPinHint": "Leave blank to keep the current PIN.",
-      "pinConfirm": "Confirm PIN",
       "residency": "Residency",
       "activeFrom": "Moved in",
       "activeFromHint": "Shares are pro-rated from this date.",
@@ -503,18 +484,17 @@
       "sendNew": "Send a new invitation",
       "link": "Invitation link",
       "code": "Code",
-      "copy": "Copy",
-      "copied": "Copied",
       "emailed": "Emailed to {email}.",
       "emailFailed": "The email couldn't be sent ({reason}). Copy the link instead.",
       "notShown": "The link and code are only shown right after an invitation is created. Send a new invitation to get fresh ones; the old ones stop working.",
       "joined": "{name} has joined.",
-      "cta": "Invite"
+      "cta": "Invite",
+      "notInDemo": "demo households don't send email",
+      "tooMany": "too many invitations sent in the last hour"
     },
     "removeAccess": {
       "cta": "Remove access",
-      "confirm": "Remove {name}'s access? Their bills and shares stay; they can no longer sign in to this household.",
-      "done": "Access removed."
+      "confirm": "Remove {name}'s access? Their bills and shares stay; they can no longer sign in to this household."
     },
     "devices": {
       "title": "Signed-in devices",
@@ -637,22 +617,14 @@
       "ofLimit": "of {limit} this month"
     }
   },
-  "health": {
-    "ok": "OK"
-  },
   "dashboard": {
     "greeting": "Hey, {name}.",
-    "addBill": "Add bill",
     "empty": {
       "title": "Nothing to show yet",
       "body": "Add your first bill and the dashboard fills in: monthly totals, your share, upcoming due dates and trends.",
       "noServices": "Create a service first, then add a bill against it.",
       "addBill": "Add a bill",
       "addService": "Add a service"
-    },
-    "overdue": {
-      "title": "{count, plural, one {# overdue bill} other {# overdue bills}}",
-      "by": "{days, plural, one {# day overdue} other {# days overdue}}"
     },
     "tiles": {
       "thisMonth": "{month} so far",
@@ -665,33 +637,23 @@
       "owedToYou": "{amount} owed to you",
       "perPersonDay": "Per person per day",
       "perPersonDayHint": "{count, plural, one {# member} other {# members}} this month",
-      "fiscalYear": "Year {label} to date",
-      "fiscalYearHint": "Since {from}",
-      "owedToYouTile": "Owed to you",
-      "owedBy": "{list}",
-      "nobodyOwes": "Nobody owes you",
       "paidOfYear": "{pct}% of your {label} shares paid"
     },
     "chart": {
       "title": "Monthly cost by service",
-      "hint": "Bills spread across the months they cover, so a quarterly bill shows as three months."
+      "hint": "Bills spread across the months they cover, so a quarterly bill shows as three months.",
+      "range": "12 mo"
     },
     "ranking": {
       "title": "Cost by service, {label}",
       "empty": "No bills in this financial year yet."
     },
     "upcoming": {
-      "title": "Coming up",
-      "empty": "Nothing due. Nice.",
-      "today": "Due today",
-      "inDays": "{days, plural, one {Due tomorrow} other {Due in # days}}",
-      "expected": "Expected"
+      "empty": "Nothing due. Nice."
     },
     "balances": {
       "title": "Who owes what",
-      "settled": "Everyone is settled up.",
       "you": "you",
-      "bills": "{count, plural, one {# bill} other {# bills}}",
       "pending": "Pending",
       "overdue": "Overdue",
       "settledChip": "Settled",
@@ -700,21 +662,19 @@
     },
     "anomaly": {
       "title": "Unusual bills",
-      "badge": "Unusual",
       "empty": "No unusual bills. Anything far above or below the usual cost per day shows here."
     },
     "reviewBanner": "{count, plural, one {# bill needs review} other {# bills need review}}",
     "reviewLink": "Open review queue",
     "greetingLine": {
       "level": "{month} is tracking level.",
-      "up": "{month} is running {pct} above August.",
+      "up": "{month} is running {pct} above last month.",
       "down": "{month} is running {pct} under last month.",
       "first": "Your first month on the board."
     },
     "setAside": {
       "title": "Set aside for {month}",
       "each": "each",
-      "household": "{amount} household estimate",
       "method": {
         "seasonal": "Seasonal: same month last year, adjusted for drift",
         "recent": "Average of the last 3 bills per service",
@@ -728,10 +688,6 @@
       "title": "Your reminders",
       "overdue": "{count, plural, one {# share overdue} other {# shares overdue}} · {amount}",
       "soon": "{count, plural, one {# share due this week} other {# shares due this week}} · {amount}",
-      "clear": "Nothing due from you this week.",
-      "payTo": "Pay {name}",
-      "dueIn": "{days, plural, =0 {due today} one {due tomorrow} other {due in # days}}",
-      "overdueBy": "{days, plural, one {# day overdue} other {# days overdue}}",
       "open": "Open ledger"
     },
     "nextDue": {
@@ -739,7 +695,6 @@
       "yourShare": "your share {amount}",
       "markPaid": "Mark my share paid",
       "paid": "Your share is paid",
-      "noShare": "Not split with you",
       "none": "Nothing due",
       "viewBill": "View bill",
       "instalment": "Instalment {n} of {of}"
@@ -794,7 +749,6 @@
       "paidFy": "Paid this year",
       "ofTotal": "of {total} in shares",
       "paidRing": "paid",
-      "owedToYouBy": "{name} {amount}",
       "nobody": "Nobody owes you right now"
     },
     "unpaid": {
@@ -802,7 +756,6 @@
       "empty": "Nothing to pay. You're all square.",
       "payTo": "Pay {name}",
       "noPayer": "No payer set for this service",
-      "ref": "ref {ref}",
       "overdue": "Overdue",
       "instalment": "instalment {n} · due {date}",
       "markPaid": "Mark paid",
@@ -812,14 +765,12 @@
       "title": "History",
       "paidProvider": "Paid the provider",
       "paidOn": "Paid {date}",
-      "unpaid": "Unpaid",
-      "month": "{month}"
+      "unpaid": "Unpaid"
     },
     "download": "Download statement (CSV)"
   },
   "wall": {
     "empty": "No bills yet",
-    "thisMonth": "{month}",
     "nextDue": "Next due",
     "overdueBy": "{days, plural, one {# day overdue} other {# days overdue}}",
     "dueToday": "Due today",
@@ -828,8 +779,6 @@
     "whoOwes": "Who owes what",
     "settled": "settled",
     "footer": "Financial year {label}: {total}",
-    "setAside": "Set aside {amount} each for {month}",
-    "legendMore": "+{count} more",
     "back": "Back to dashboard",
     "chart": "Last 12 months",
     "settledLabel": "Settled",
@@ -869,25 +818,20 @@
     "footnote": "Every bill file is kept permanently in the data directory's inbox folder, so a bill can always be re-read later. From a forwarded email only its PDFs (or photos) are kept; an email without them is kept as the bill itself.",
     "detail": {
       "untitled": "Document",
-      "viewBill": "View bill",
-      "confidence": "{pct}% via {extractor}",
-      "warnings": "Extractor notes",
       "noPreview": "No text could be read from this file.",
       "alreadyBill": "This document already became a bill.",
       "reprocess": "Re-run extraction",
       "ignore": "Not a bill",
       "ignoreConfirm": "Move this to Other emails? It's kept, and you can move it back with “It's a bill”.",
       "openFile": "Open file",
-      "attempts": "Extractors tried",
-      "attemptError": "error: {error}",
-      "attemptNone": "no result",
       "noticeTitle": "This isn't a bill",
       "noticeBody": "It was read as a receipt or notice from the provider and filed away, so there's nothing to fill in.",
-      "noticeBill": "See the bill it updated",
       "addAnyway": "Or type the bill in yourself",
       "ignoredBody": "Someone marked this as not a bill, so it's filed under Other emails.",
       "readAsBill": "It's a bill",
-      "readAsBillHint": "Wrongly filed? “It's a bill” has the AI read it again as a bill (one AI read) and adds it. If some details can't be read, you'll get the form to finish it."
+      "readAsBillHint": "Wrongly filed? “It's a bill” has the AI read it again as a bill (one AI read) and adds it. If some details can't be read, you'll get the form to finish it.",
+      "untitledDocument": "document",
+      "untitledPhoto": "photo"
     },
     "form": {
       "approve": "Create bill",
@@ -961,14 +905,12 @@
       "pollNow": "Poll now"
     },
     "extractors": {
-      "title": "Extractors (in order)",
       "ready": "Ready",
       "needsKey": "Needs ANTHROPIC_API_KEY",
       "threshold": "Results below {pct}% confidence go to the review queue.",
       "aiUsage": "AI reads this month: {used} of {limit}. After that, new documents wait in the review queue until next month.",
       "aiUsageUncapped": "AI reads this month: {used} (no monthly cap for the operator's household)."
     },
-    "demoOn": "Demo data",
     "weather": {
       "title": "Weather",
       "off": "Off",
@@ -986,6 +928,9 @@
       "sharing": "Households sharing (with a postcode)",
       "figures": "Area figures kept",
       "hint": "Recomputed every six hours. A figure is only kept when at least {k} households stand behind it, so small installs show none."
+    },
+    "reading": {
+      "title": "Reading bills"
     }
   },
   "code": {
@@ -1046,7 +991,6 @@
     "current": "Current PIN",
     "newPin": "New PIN",
     "change": "Change PIN",
-    "changed": "PIN changed.",
     "wrongCurrent": "Current PIN is wrong."
   },
   "invite": {
@@ -1247,9 +1191,7 @@
     "change": "Change",
     "save": "Save location",
     "remove": "Remove location",
-    "saved": "Location saved.",
     "none": "No location yet. Seasons are worked out from your timezone until you add one.",
-    "summary": "{place} · {region}",
     "southern": "Southern hemisphere",
     "northern": "Northern hemisphere",
     "tropical": "Tropics (wet and dry seasons)",
@@ -1304,7 +1246,9 @@
       "adjustedMore": "Adjusted for the weather, {pct}% more.",
       "adjustedLess": "Adjusted for the weather, {pct}% less.",
       "adjustedSame": "Adjusted for the weather, about the same.",
-      "explains": "The weather explains {pct}% of how this bill changes."
+      "explains": "The weather explains {pct}% of how this bill changes.",
+      "sentence": "{against}: {change}{weather}.",
+      "weatherClause": "; {text}"
     }
   },
   "sharing": {
@@ -1399,9 +1343,7 @@
     },
     "contact": {
       "title": "Contact",
-      "points": [
-        "Questions about this notice go to the operator of this installation."
-      ]
+      "points": ["Questions about this notice go to the operator of this installation."]
     },
     "back": "Back to the app"
   },
@@ -1460,5 +1402,47 @@
       "add": "Add",
       "none": "None yet. Car rego or car insurance you upload or forward is set up here automatically."
     }
+  },
+  "errors": {
+    "fixFields": "Please fix the highlighted fields.",
+    "required": "Required",
+    "validDate": "Use a valid date",
+    "validAmount": "Enter a valid amount",
+    "enterAmount": "Enter the amount",
+    "enterNumber": "Enter a number",
+    "numberAboveZero": "Enter a number above zero",
+    "aboveZero": "Must be above zero",
+    "validEmail": "Enter a valid email",
+    "pickColour": "Pick a colour",
+    "chooseService": "Choose a service",
+    "chooseType": "Choose a type",
+    "unknownUnit": "Unknown unit",
+    "periodOrder": "Period end is before its start",
+    "moveOrder": "Move-out is before move-in",
+    "householdName": "Give your household a name",
+    "currencyCode": "Use a 3-letter currency code",
+    "yourName": "Your name is required",
+    "unknownTimezone": "Unknown timezone",
+    "unknownPostcode": "We don't know postcode {postcode}. Try your suburb or town instead.",
+    "pickPostcode": "Type your postcode or suburb and pick it",
+    "billNotFound": "Bill not found",
+    "serviceNotFound": "Service not found",
+    "documentNotFound": "Document not found",
+    "memberNotFound": "Member not found",
+    "sameOwner": "Choose a service with the same owner, or change whose it is",
+    "whoseFailed": "Couldn’t change whose it is",
+    "makePersonal": "Only the person who brought its bills in can make it personal",
+    "editOthers": "Only admins can edit other members.",
+    "uploadType": "Choose a PDF, a photo, or an HTML or text file.",
+    "uploadSize": "File is larger than 25 MB.",
+    "uploadRate": "That’s a lot of uploads in an hour. Try again a little later.",
+    "percentFor": "Enter a percentage for {name}",
+    "percentTotal": "The percentages add up to {total}%, not 100%.",
+    "amountFor": "Enter an amount for {name}, or leave it blank",
+    "amountNeeded": "Enter an amount for at least one person, or split it evenly."
+  },
+  "common": {
+    "copy": "Copy",
+    "copied": "Copied"
   }
 }

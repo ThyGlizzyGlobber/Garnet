@@ -3,31 +3,20 @@ import { getTranslations } from 'next-intl/server';
 import { Badge, LinkButton, PageHeader } from '@/components/ui';
 import { Ring } from '@/components/ui/ring';
 import { pageContext } from '@/lib/context';
-import { inviteState, latestInvites } from '@/lib/invites';
-import { listMembers } from '@/lib/members';
-import { darkVariant } from '@/lib/palette';
+import { joinStatus, latestInvites } from '@/lib/invites';
+import { isActiveOn, listMembers } from '@/lib/members';
+import { tintStyle } from '@/lib/palette';
+import { Avatar } from '@/components/ui/colour';
 import { fiscalYearBounds } from '@/lib/periods';
 import { memberLedger } from '@/lib/stats';
-
-/** The member's colour mixed into the tile, as service tiles do with theirs. */
-function tint(colour: string) {
-  const c = `light-dark(${colour}, ${darkVariant(colour)})`;
-  return {
-    background: `linear-gradient(160deg, color-mix(in srgb, ${c} 22%, var(--color-surface-solid)), color-mix(in srgb, ${c} 6%, var(--color-surface-solid)))`,
-    borderColor: `color-mix(in srgb, ${c} 40%, transparent)`,
-  };
-}
-
-const avatar = (colour: string) => ({
-  background: `linear-gradient(135deg, light-dark(${colour}, ${darkVariant(colour)}), var(--color-accent))`,
-});
+import { isAdmin } from '@/lib/roles';
 
 export default async function MembersPage() {
   const { hh, me, date, today, money } = await pageContext();
   const t = await getTranslations('members');
   const members = listMembers(hh.id);
   const invites = latestInvites(hh.id);
-  const admin = me.role === 'owner';
+  const admin = isAdmin(me);
   const shared = hh.splitMode === 'shared';
   const fy = fiscalYearBounds(today, hh.fiscalYearStartMonth);
 
@@ -40,30 +29,16 @@ export default async function MembersPage() {
       />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {members.map((m) => {
-          const active = m.activeFrom <= today && (!m.activeTo || m.activeTo >= today);
+          const active = isActiveOn(m, today);
           const canEdit = admin || me.id === m.id;
-          const status = m.accountId
-            ? 'joined'
-            : inviteState(invites.get(m.id)) === 'pending'
-              ? 'pending'
-              : inviteState(invites.get(m.id)) === 'expired'
-                ? 'expired'
-                : 'none';
+          const status = joinStatus(m, invites.get(m.id));
           const ledger = shared ? memberLedger(hh.id, m.id, today, hh.fiscalYearStartMonth) : null;
-          const pct =
-            ledger && ledger.totalThisFy > 0
-              ? Math.round((ledger.paidThisFy / ledger.totalThisFy) * 100)
-              : null;
+          const pct = ledger && ledger.totalThisFy > 0 ? ledger.paidPct : null;
           const body = (
             <>
               <div className="flex items-start justify-between gap-3">
                 <span className="flex min-w-0 items-center gap-3">
-                  <span
-                    className="grid size-11 shrink-0 place-items-center rounded-full text-base font-bold text-white shadow-inner"
-                    style={avatar(m.colour)}
-                  >
-                    {m.name.slice(0, 1).toUpperCase()}
-                  </span>
+                  <Avatar name={m.name} colour={m.colour} className="size-11 text-base" />
                   <span className="flex min-w-0 flex-col leading-tight">
                     <span className="truncate font-display text-base font-semibold">
                       {m.name}{' '}
@@ -80,7 +55,7 @@ export default async function MembersPage() {
                   </span>
                 </span>
                 <span className="flex flex-col items-end gap-1">
-                  {m.role === 'owner' && <Badge tone="accent">{t('owner')}</Badge>}
+                  {isAdmin(m) && <Badge tone="accent">{t('owner')}</Badge>}
                   {!active && <Badge>{t('inactive')}</Badge>}
                   {admin && status !== 'joined' && (
                     <Badge tone={status === 'pending' ? 'warning' : 'neutral'}>
@@ -138,12 +113,12 @@ export default async function MembersPage() {
               key={m.id}
               href={`/members/${m.id}/edit`}
               className={`${className} lift`}
-              style={tint(m.colour)}
+              style={tintStyle(m.colour, 'soft')}
             >
               {body}
             </Link>
           ) : (
-            <div key={m.id} className={className} style={tint(m.colour)}>
+            <div key={m.id} className={className} style={tintStyle(m.colour, 'soft')}>
               {body}
             </div>
           );

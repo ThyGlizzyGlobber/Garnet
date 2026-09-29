@@ -1,0 +1,11 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "project": [
+    "src/**/*.{ts,tsx,css}",
+    "scripts/**/*.ts",
+    "tests/**/*.ts",
+    "deploy/**/*.js",
+    "*.{ts,mts,mjs}"
+  ],
+  "ignore": ["deploy/email-worker/worker.d.ts"]
+}

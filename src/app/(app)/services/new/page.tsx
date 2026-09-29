@@ -11,6 +11,7 @@ import { nextPaletteColour, TYPE_COLOUR } from '@/lib/palette';
 import { listServices } from '@/lib/services';
 import { createServiceAction } from '../actions';
 import { ServiceForm } from '../service-form';
+import { isAdmin } from '@/lib/roles';
 
 export default async function NewServicePage({
   searchParams,
@@ -47,7 +48,7 @@ export default async function NewServicePage({
           splitWeight: m.splitWeight,
         }))}
         split={{
-          canEdit: me.role === 'owner',
+          canEdit: isAdmin(me),
           currency: hh.currency,
           locale: hh.locale,
           latestMinor: null,

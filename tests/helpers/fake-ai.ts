@@ -69,7 +69,7 @@ function readFixture(t: string): AiOutput | null {
       usage_quantity: null,
       usage_unit: null,
       invoice_number: t.match(/Invoice Number: (\d+)/)?.[1] ?? null,
-      account_number: '14809800',
+      account_number: '12345678',
       auto_pay: true,
       previous_payment: { due_date: '2026-05-28', amount_due: 129, amount_received: received },
       metrics: [],

@@ -2,13 +2,15 @@ import { getDb, type Db } from '@/db/client';
 import { rotateDocument } from './rotate';
 import type { SourceDocument } from '@/db/schema';
 import { billsMissingMetrics, saveBillMetrics } from '@/lib/metrics';
+import { dayIn } from '@/lib/dates';
+import { getHousehold } from '@/lib/households';
 import { listDocuments } from '@/lib/review';
 import { AI_READ, aiAllowance, recordUsage } from '@/lib/usage';
 import { getDocument, readDocument, setDocumentStatus } from './archive';
 import { fallbackExtractors } from './extractors';
 import type { ExtractionResult } from './extractors/types';
 import { buildInput, runExtractors } from './pipeline';
-import { scanFor } from './scan';
+import { hasNoText, scanFor } from './scan';
 import { extractText } from './text';
 
 /**
@@ -49,7 +51,7 @@ async function readWithAi(
   } catch {
     return undefined;
   }
-  const found = text.trim().length < 20 ? await scanFor(doc) : null;
+  const found = hasNoText(text) ? await scanFor(doc) : null;
   const file = found && 'file' in found ? found.file : null;
   const input = { ...buildInput(householdId, text, doc, db), file };
   if (!fallbackExtractors.some((e) => e.canHandle(input))) return undefined;
@@ -67,6 +69,7 @@ export async function readMissingMetrics(
 ): Promise<{ read: number; withFigures: number; dated: number }> {
   const out = { read: 0, withFigures: 0, dated: 0 };
   if (running.has(householdId)) return out;
+  const tz = getHousehold(householdId, db)?.timezone ?? 'UTC';
   running.add(householdId);
   try {
     for (const b of billsMissingMetrics(householdId, db)) {
@@ -89,7 +92,7 @@ export async function readMissingMetrics(
       const date = best?.document?.date ?? best?.bill.issueDate;
       // No date printed: keep it under its arrival day, and don't read it again.
       const stored = JSON.parse(doc.extractionJson) as Record<string, unknown>;
-      stored.documentDate = date || doc.receivedAt.slice(0, 10);
+      stored.documentDate = date || dayIn(doc.receivedAt, tz);
       setDocumentStatus(householdId, doc.id, doc.status, JSON.stringify(stored), db);
       if (date) out.dated++;
     }

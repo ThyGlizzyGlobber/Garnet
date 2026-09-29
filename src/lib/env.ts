@@ -104,7 +104,6 @@ const envSchema = z.object({
   UPDATE_GITHUB_TOKEN: z.string().optional(),
   UPDATE_WORKFLOW: z.string().default('release.yml'),
   UPDATE_BRANCH: z.string().default('main'),
-  LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
 });
 
 export type Env = z.infer<typeof envSchema>;

@@ -72,7 +72,7 @@ export function BillForm({
         <>
           {initial.id && <input type="hidden" name="id" value={initial.id} />}
           {locked && (
-            <p className="rounded-xl bg-warning/10 px-4 py-3 text-sm text-warning">
+            <p className="rounded-xl bg-warning-soft px-4 py-3 text-sm text-warning">
               {t('lockedNote')}
             </p>
           )}
@@ -115,7 +115,7 @@ export function BillForm({
                       <span className="text-sm">
                         <span className="block font-semibold">{t(`whoseOptions.${w}`)}</span>
                         <span className="block text-xs text-fg-muted">
-                          {t(`whoseHints.${w}${whose.split ? '' : 'NoSplit'}`)}
+                          {t(`whoseHints.${w}`, { split: whose.split ? 'yes' : 'no' })}
                         </span>
                       </span>
                     </label>
@@ -153,7 +153,11 @@ export function BillForm({
                 />
               </Field>
               <Field label={t('taxLabel')} error={errors.taxLabel}>
-                <Input name="taxLabel" defaultValue={initial.taxLabel} placeholder="GST / VAT" />
+                <Input
+                  name="taxLabel"
+                  defaultValue={initial.taxLabel}
+                  placeholder={t('taxLabelPlaceholder')}
+                />
               </Field>
             </div>
           </Card>

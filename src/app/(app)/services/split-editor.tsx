@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { formatMoney, parseMoneyToMinor } from '@/lib/format';
-import { computeShares } from '@/lib/splits';
+import { computeShares, splitProblem } from '@/lib/splits';
 
 export interface SplitMemberOption {
   id: string;
@@ -46,8 +46,7 @@ function evenPercents(ids: string[]): Record<string, string> {
 export function SplitEditor(p: SplitEditorProps) {
   const t = useTranslations('services.split');
   const ids = p.members.map((m) => m.id);
-  // Older "custom weights" read as percentages of the same proportions.
-  const [mode, setMode] = useState(p.initialMode === 'custom' ? 'percent' : p.initialMode);
+  const [mode, setMode] = useState(p.initialMode);
   const stored = Object.values(p.percents).reduce((s, v) => s + v, 0);
   const [percents, setPercents] = useState<Record<string, string>>(() =>
     stored > 0
@@ -64,13 +63,15 @@ export function SplitEditor(p: SplitEditorProps) {
       .formatToParts(0)
       .find((x) => x.type === 'currency')?.value ?? p.currency;
 
-  // Only the modes worth offering: the older ones only while a service still uses them.
-  const modes = p.modes
-    .filter((m) => m === 'equal' || m === 'percent' || m === 'fixed' || m === p.initialMode)
-    .filter((m) => m !== 'custom');
+  // Only the modes worth offering: weighted only while a service still uses it.
+  const modes = p.modes.filter(
+    (m) => m === 'equal' || m === 'percent' || m === 'fixed' || m === p.initialMode,
+  );
 
   const pctTotal = round2(ids.reduce((s, id) => s + (Number(percents[id]) || 0), 0));
-  const pctOk = Math.abs(pctTotal - 100) < 0.05;
+  const pctOk = !splitProblem('percent', {
+    percents: Object.fromEntries(ids.map((id) => [id, Number(percents[id]) || 0])),
+  });
   const fixed = Object.fromEntries(
     ids.flatMap((id) => {
       const v = amounts[id]?.trim();

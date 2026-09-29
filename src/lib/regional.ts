@@ -11,6 +11,7 @@ import {
 } from '@/db/schema';
 import { daysInclusive } from '@/lib/dates';
 import { getEnv } from '@/lib/env';
+import { toMajor } from '@/lib/format';
 import { getHousehold } from '@/lib/households';
 import { ulid } from '@/lib/ids';
 import { lookupPostcode } from '@/lib/location';
@@ -31,10 +32,9 @@ import { toCanonical } from '@/lib/units';
 /** Bump when the privacy notice about sharing changes; recorded with every choice. */
 export const PRIVACY_NOTICE_VERSION = '2026-09-29';
 
-export type AreaLevel = 'postcode' | 'region' | 'state' | 'country';
-export const AREA_LEVELS: AreaLevel[] = ['postcode', 'region', 'state', 'country'];
+type AreaLevel = 'postcode' | 'region' | 'state' | 'country';
 
-export type Metric = 'cost_per_day' | 'usage_per_day' | 'rate' | 'supply_per_day' | 'solar_per_day';
+type Metric = 'cost_per_day' | 'usage_per_day' | 'rate' | 'supply_per_day' | 'solar_per_day';
 
 /** Months of history pooled. */
 const POOL_MONTHS = 36;
@@ -49,7 +49,7 @@ export function sizeBand(activeMembers: number): string {
 }
 
 /** The areas a household belongs to, finest first, with names for display. */
-export function householdAreas(hh: Household): { level: AreaLevel; area: string; name: string }[] {
+function householdAreas(hh: Household): { level: AreaLevel; area: string; name: string }[] {
   if (!hh.country || !hh.postalCode) return [];
   const pc = lookupPostcode(hh.country, hh.postalCode);
   const out: { level: AreaLevel; area: string; name: string }[] = [
@@ -128,7 +128,7 @@ interface MonthValues {
  * units), usage per day (canonical unit), supply charge per day, solar export
  * per day. Several services of one type (two meters) add up.
  */
-export function householdMonthly(
+function householdMonthly(
   householdId: string,
   db: Db = getDb(),
   sinceMonth?: string,
@@ -221,7 +221,8 @@ function metricsOf(
       out.push({
         metric: 'rate',
         unit: `${currency}/${v.usageUnit}`,
-        value: v.cost / 100 / v.usage,
+        // Rates are major units per unit of usage (0.2953 AUD/kWh), like bill figures.
+        value: toMajor(v.cost, currency) / v.usage,
       });
   }
   if (v.supply !== undefined)
@@ -309,7 +310,7 @@ export function computeRegionalStats(
   return { households: homes.length, rows: rows.length };
 }
 
-export interface AreaFigure {
+interface AreaFigure {
   median: number;
   p25: number;
   p75: number;

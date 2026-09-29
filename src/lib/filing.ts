@@ -4,6 +4,7 @@ import { and, eq } from 'drizzle-orm';
 import { getDb, type Db } from '@/db/client';
 import { bill, member, service, sourceDocument, type SourceDocument } from '@/db/schema';
 import { billDate } from '@/lib/bill-month';
+import { dayIn } from '@/lib/dates';
 import { getHousehold } from '@/lib/households';
 import { dataPaths } from '@/lib/paths';
 import { inScope, type Scope } from '@/lib/scope';
@@ -22,7 +23,7 @@ import { inScope, type Scope } from '@/lib/scope';
  * inbox/households/<household>/. Names are safe on Windows, macOS and Linux.
  */
 
-export type FiledKind = 'bill' | 'receipt' | 'notice';
+type FiledKind = 'bill' | 'receipt' | 'notice';
 
 export interface FiledDocument {
   doc: SourceDocument;
@@ -118,7 +119,7 @@ export function filedDocuments(
     const kind: FiledKind = asSource ? 'bill' : x.code === 'receipt' ? 'receipt' : 'notice';
     // A bill is filed under its own date; a receipt or notice under the date on it.
     const date =
-      kind === 'bill' ? billDate(row.b) : (x.documentDate ?? doc.receivedAt.slice(0, 10));
+      kind === 'bill' ? billDate(row.b) : (x.documentDate ?? dayIn(doc.receivedAt, hh.timezone));
     const serviceName = row.b.ownerMemberId
       ? `${row.svc.name} (${row.owner ?? 'personal'}, personal)`
       : row.svc.name;
@@ -163,7 +164,7 @@ export function uniquePaths(files: FiledDocument[]): Map<string, string> {
 }
 
 /** The household's folder on the NAS: its name, plus its id so two "Smith Household"s never share one. */
-export function householdFolder(h: { id: string; name: string }): string {
+function householdFolder(h: { id: string; name: string }): string {
   return `households/${safeSegment(h.name, 60)} (${h.id.slice(-6)})`;
 }
 

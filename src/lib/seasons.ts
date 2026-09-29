@@ -126,7 +126,7 @@ function seasonEnd(startMonth: string, hemisphere: Hemisphere, climate: Climate)
  * bill's value spread evenly over its own period), and how much of the window
  * the bills cover (0–1).
  */
-export function windowPerDay(
+function windowPerDay(
   bills: Pick<BillListItem, 'id' | 'periodStart' | 'periodEnd'>[],
   start: string,
   end: string,
@@ -171,7 +171,7 @@ export interface SeasonNotice {
 }
 
 /** Days before a season change that the notice appears. */
-export const NOTICE_DAYS = 28;
+const NOTICE_DAYS = 28;
 /** Last year's bills must cover this share of both seasons. */
 const MIN_COVERAGE = 0.6;
 /** Changes smaller than this aren't worth a notice. */

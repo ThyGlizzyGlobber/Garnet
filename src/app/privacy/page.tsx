@@ -3,7 +3,9 @@ import { getTranslations } from 'next-intl/server';
 import { getEnv } from '@/lib/env';
 import { PRIVACY_NOTICE_VERSION } from '@/lib/regional';
 
-export const metadata = { title: 'How your data is used' };
+export async function generateMetadata() {
+  return { title: (await getTranslations('privacy'))('title') };
+}
 
 const SECTIONS = ['stored', 'who', 'area', 'services', 'where', 'choices', 'contact'] as const;
 

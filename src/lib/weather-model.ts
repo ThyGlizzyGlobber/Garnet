@@ -2,6 +2,7 @@ import { and, eq, inArray, isNotNull } from 'drizzle-orm';
 import { getDb, type Db } from '@/db/client';
 import { bill, billMetric } from '@/db/schema';
 import { usageHistory, type UsagePeriod } from '@/lib/consumption';
+import { closestYearBefore } from '@/lib/averages';
 import { getHousehold } from '@/lib/households';
 import { householdCell, weatherNormals } from '@/lib/weather';
 
@@ -33,8 +34,8 @@ export interface WeatherPoint {
   value: number;
 }
 
-export const MIN_BILLS = 6;
-export const MIN_R2 = 0.5;
+const MIN_BILLS = 6;
+const MIN_R2 = 0.5;
 
 /** Solve a small linear system (Gaussian elimination); null if singular. */
 function solve(a: number[][], b: number[]): number[] | null {
@@ -115,7 +116,7 @@ export function expected(fit: WeatherFit, hddPerDay: number, cddPerDay: number):
 }
 
 /** Good enough to show to people. */
-export function qualifies(fit: WeatherFit | null, points: WeatherPoint[]): fit is WeatherFit {
+function qualifies(fit: WeatherFit | null, points: WeatherPoint[]): fit is WeatherFit {
   if (!fit || fit.bills < MIN_BILLS || fit.r2 < MIN_R2) return false;
   const load = points.map((p) => p.hddPerDay + p.cddPerDay);
   // The bills must span different weather (at least two seasons).
@@ -283,13 +284,7 @@ export function weatherAdjusted(
   const periods = sw.periods.filter((p) => value(p) !== null);
   const latest = periods.at(-1);
   if (!latest) return null;
-  const mid = (p: { periodStart: string; periodEnd: string }) =>
-    (Date.parse(p.periodStart) + Date.parse(p.periodEnd)) / 2;
-  const target = mid(latest) - 365 * 86_400_000;
-  const lastYear = periods
-    .slice(0, -1)
-    .filter((p) => Math.abs(mid(p) - target) <= 45 * 86_400_000)
-    .sort((a, b) => Math.abs(mid(a) - target) - Math.abs(mid(b) - target))[0];
+  const lastYear = closestYearBefore(latest, periods.slice(0, -1));
   const other = lastYear ?? periods.at(-2);
   if (!other) return null;
   const expL = expected(fit, latest.hddPerDay, latest.cddPerDay);

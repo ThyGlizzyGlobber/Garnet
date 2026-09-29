@@ -3,14 +3,14 @@ import { getTranslations } from 'next-intl/server';
 import { Badge, Card, PageHeader } from '@/components/ui';
 import { InlineAction } from '@/components/ui/form';
 import { pageContext } from '@/lib/context';
-import { minorUnitDigits } from '@/lib/format';
-import { getReviewItem, plainReason } from '@/lib/review';
+import { fileView } from '@/lib/bill-files';
+import { formatMinorPlain } from '@/lib/format';
+import { getReviewItem, plainReason, STATUS_TONE } from '@/lib/review';
 import { listServices } from '@/lib/services';
 import { listUnits } from '@/lib/units';
 import { matchService } from '@/ingest/pipeline';
 import { ignoreDocumentAction, readAsBillAction, reprocessDocumentAction } from '../actions';
 import { ReviewForm } from './review-form';
-import { isImageFile } from '@/ingest/scan';
 import { addressOf, trustTarget } from '@/lib/sender-auth';
 
 export default async function ReviewItemPage({ params }: { params: Promise<{ id: string }> }) {
@@ -25,14 +25,13 @@ export default async function ReviewItemPage({ params }: { params: Promise<{ id:
   const r = d.extraction?.result ?? null;
   const services = listServices(hh.id, { viewer: me.id });
   const tb = await getTranslations('bills');
-  const digits = minorUnitDigits(r?.bill.currency ?? hh.currency);
+  // Amounts as the form's inputs expect them ("129.00").
   const major = (m: number | null | undefined) =>
-    m === null || m === undefined ? '' : (m / 10 ** digits).toFixed(digits);
+    m === null || m === undefined ? '' : formatMinorPlain(m, r?.bill.currency ?? hh.currency);
   const suggested = r
     ? (r.bill.serviceId ?? matchService(hh.id, r, undefined, { viewer: me.id }))
     : null;
-  const isPdf = (d.mimeType ?? '').includes('pdf') || d.path.endsWith('.pdf');
-  const isPhoto = isImageFile(d.mimeType, d.path);
+  const view = fileView(d);
   const canReview = d.status !== 'extracted';
   // A receipt or provider notice: nothing to fill in, so say what happened instead.
   const isNotice = d.status === 'notice' || d.status === 'ignored';
@@ -79,17 +78,7 @@ export default async function ReviewItemPage({ params }: { params: Promise<{ id:
         subtitle={`${t(`kind.${d.kind}`)} · ${date(d.receivedAt)}${d.emailFrom ? ` · ${d.emailFrom}` : ''}`}
       />
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <Badge
-          tone={
-            d.status === 'needs_review'
-              ? 'warning'
-              : d.status === 'extracted'
-                ? 'success'
-                : 'neutral'
-          }
-        >
-          {t(`status.${d.status}`)}
-        </Badge>
+        <Badge tone={STATUS_TONE[d.status]}>{t(`status.${d.status}`)}</Badge>
         {why.kind !== 'none' && !isNotice && (
           <span className="text-sm text-fg-muted">
             {why.kind === 'check' ? t('why.check') : why.text}
@@ -100,17 +89,17 @@ export default async function ReviewItemPage({ params }: { params: Promise<{ id:
         <Card
           className={`min-h-[60vh] overflow-hidden p-0 ${isNotice ? 'order-2 lg:order-none' : ''}`}
         >
-          {isPdf ? (
+          {view === 'pdf' ? (
             <iframe
               src={`/api/documents/${d.id}/file`}
-              title={d.originalFilename ?? 'document'}
+              title={d.originalFilename ?? t('detail.untitledDocument')}
               className="h-[75vh] w-full"
             />
-          ) : isPhoto ? (
+          ) : view === 'photo' ? (
             // eslint-disable-next-line @next/next/no-img-element -- archived file, served as-is
             <img
               src={`/api/documents/${d.id}/file`}
-              alt={d.originalFilename ?? 'photo'}
+              alt={d.originalFilename ?? t('detail.untitledPhoto')}
               className="max-h-[75vh] w-full object-contain"
             />
           ) : (

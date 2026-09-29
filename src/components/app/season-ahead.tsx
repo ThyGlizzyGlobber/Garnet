@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
-import { monthLabel } from '@/lib/bill-month';
+import { formatMonth } from '@/lib/format';
 import { seasonNoticeText } from '@/lib/season-text';
 import type { SeasonNotice } from '@/lib/seasons';
 
@@ -26,7 +26,7 @@ export async function SeasonAhead({
   const t = await getTranslations('seasons');
   const tr = (key: string, vars?: Record<string, string | number>) =>
     t(key as Parameters<typeof t>[0], vars as Parameters<typeof t>[1]);
-  const f = { money, month: (ym: string) => monthLabel(ym, locale) };
+  const f = { money, month: (ym: string) => formatMonth(ym, locale, 'long-year') };
   return (
     <section className={`glass rounded-card p-5 ${className}`} aria-label={t('heading')}>
       <h2 className="text-xs font-semibold tracking-wide text-fg-muted uppercase">

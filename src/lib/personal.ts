@@ -24,6 +24,12 @@ export interface PersonalSummary {
   month: string;
   thisMonth: SpendSplit;
   lastMonth: SpendSplit;
+  /** This month against last (a fraction), or null with nothing last month. */
+  vsLastMonth: number | null;
+  /** How much of this month is shares of household bills, as a percentage (0–100). */
+  householdPct: number;
+  /** Shares of this year's household bills paid, as a percentage (100 with none). */
+  paidPct: number;
   fiscalYear: { label: string } & SpendSplit;
   /** The last 12 months, oldest first. */
   series: ({ month: string } & SpendSplit)[];
@@ -40,7 +46,7 @@ export interface PersonalSummary {
   upcoming: (BillListItem & { daysUntilDue: number; dueMinor: number })[];
 }
 
-export interface SpendSplit {
+interface SpendSplit {
   /** My shares of household bills. */
   shares: number;
   /** My personal bills. */
@@ -153,23 +159,27 @@ export function personalSummary(
     })
     .sort((a, b) => a.daysUntilDue - b.daysUntilDue);
 
+  const thisMonth = inMonth(month);
+  const lastMonth = inMonth(addMonths(month, -1));
+  const sharesThisFy = ledger?.totalThisFy ?? 0;
+  const sharesPaidThisFy = ledger?.paidThisFy ?? 0;
   return {
     month,
-    thisMonth: inMonth(month),
-    lastMonth: inMonth(addMonths(month, -1)),
+    thisMonth,
+    lastMonth,
+    vsLastMonth: lastMonth.total > 0 ? (thisMonth.total - lastMonth.total) / lastMonth.total : null,
+    householdPct: thisMonth.total
+      ? 100 - Math.round((thisMonth.personal / thisMonth.total) * 100)
+      : 100,
+    paidPct: sharesThisFy ? Math.round((sharesPaidThisFy / sharesThisFy) * 100) : 100,
     fiscalYear: { label: fy.label, ...split(fyShares, fyPersonal) },
     series,
     byService,
     owed: ledger?.owed ?? 0,
     owedToMe: ledger?.owedToMe ?? 0,
-    sharesPaidThisFy: ledger?.paidThisFy ?? 0,
-    sharesThisFy: ledger?.totalThisFy ?? 0,
+    sharesPaidThisFy,
+    sharesThisFy,
     personalServices: listServices(householdId, { owner: memberId }, db),
     upcoming,
   };
-}
-
-/** Does this member have anything personal yet? (Shows the personal side of things.) */
-export function hasPersonalServices(householdId: string, memberId: string, db: Db = getDb()) {
-  return listServices(householdId, { owner: memberId, includeInactive: true }, db).length > 0;
 }

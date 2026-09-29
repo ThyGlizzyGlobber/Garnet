@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Card, Field, Input, Select, Textarea } from '@/components/ui';
 import { ActionForm, type FormAction } from '@/components/ui/form';
-import { SERVICE_CATEGORIES } from '@/lib/service-categories';
+import { groupTypes } from '@/lib/service-categories';
 import { SplitEditor, type SplitMemberOption } from './split-editor';
 
 /** How it's split, for the form: what's stored, and what admins need to change it. */
@@ -81,11 +81,7 @@ export function ServiceForm({
 }) {
   const t = useTranslations('services.form');
   const tc = useTranslations('services.categories');
-  // Types grouped (Utilities, Home, Health, Vehicle, Lifestyle, Other), in catalog order within each.
-  const groups = SERVICE_CATEGORIES.map((c) => ({
-    category: c,
-    types: types.filter((ty) => (ty.category ?? 'other') === c),
-  })).filter((g) => g.types.length);
+  const groups = groupTypes(types);
   const [typeSlug, setTypeSlug] = useState(initial.typeSlug);
   const [usageUnit, setUsageUnit] = useState(initial.usageUnit);
   const [name, setName] = useState(initial.name);
@@ -146,7 +142,7 @@ export function ServiceForm({
                 <Input
                   name="provider"
                   defaultValue={initial.provider}
-                  placeholder="Aussie Broadband"
+                  placeholder={t('providerPlaceholder')}
                   required
                 />
               </Field>
@@ -234,7 +230,7 @@ export function ServiceForm({
               <Input
                 name="trustedSenders"
                 defaultValue={initial.trustedSenders}
-                placeholder="provider.com.au"
+                placeholder={t('trustedSendersPlaceholder')}
                 autoComplete="off"
               />
             </Field>

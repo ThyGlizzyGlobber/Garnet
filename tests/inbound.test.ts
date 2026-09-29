@@ -365,7 +365,7 @@ describe('automatic bills from a bills address', () => {
         '',
         fs
           .readFileSync(path.join(process.cwd(), 'tests/fixtures/aussie-broadband.txt'), 'utf8')
-          .replaceAll('59259831', ref),
+          .replaceAll('50000001', ref),
       ].join('\r\n'),
     );
 

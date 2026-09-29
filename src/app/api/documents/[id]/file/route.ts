@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { currentMember } from '@/lib/auth/session';
 import { getDocument, readDocument } from '@/ingest/archive';
+import { contentDisposition } from '@/lib/request';
 import { getReviewItem } from '@/lib/review';
 
 export const dynamic = 'force-dynamic';
@@ -21,7 +22,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   return new NextResponse(new Uint8Array(body), {
     headers: {
       'Content-Type': type.startsWith('message/') ? 'text/plain; charset=utf-8' : type,
-      'Content-Disposition': `inline; filename="${(doc.originalFilename ?? 'document').replace(/"/g, '')}"`,
+      'Content-Disposition': contentDisposition('inline', doc.originalFilename ?? 'document'),
       'Cache-Control': 'private, no-cache',
       // Only our own review page may frame it. Anything but a PDF (HTML email
       // bodies, text) runs in a sandbox: no scripts, no forms, its own origin.

@@ -274,12 +274,6 @@ export function Icon({ name, ...props }: { name: string } & ComponentProps<'svg'
           <path d="M12 5v14M5 12h14" />
         </svg>
       );
-    case 'check':
-      return (
-        <svg {...base} {...props}>
-          <path d="m5 12 5 5L20 7" />
-        </svg>
-      );
     default:
       return (
         <svg {...base} {...props}>

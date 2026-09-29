@@ -24,7 +24,7 @@ export interface ArchiveInput {
   memberId?: string | null;
 }
 
-export function sha256(buffer: Buffer): string {
+function sha256(buffer: Buffer): string {
   return createHash('sha256').update(buffer).digest('hex');
 }
 
@@ -138,7 +138,7 @@ export function setDocumentStatus(
 /**
  * Forwarded emails used to be kept as "envelopes" beside their PDFs. They're no
  * longer stored, so remove any left from before (row and file). Only envelopes
- * no bill points at; safe to run on every start.
+ * no bill points at. A one-off upgrade step (src/worker/startup.ts).
  */
 export function purgeEmailEnvelopes(db: Db = getDb()): number {
   const envelopes = db
@@ -154,12 +154,7 @@ export function purgeEmailEnvelopes(db: Db = getDb()): number {
     .all();
   let removed = 0;
   for (const doc of envelopes) {
-    const used = db
-      .select({ id: bill.id })
-      .from(bill)
-      .where(or(eq(bill.sourceDocumentId, doc.id), eq(bill.alertDocumentId, doc.id)))
-      .get();
-    if (used) continue;
+    if (billUses(doc.id, db)) continue;
     db.delete(sourceDocument).where(eq(sourceDocument.id, doc.id)).run();
     fs.rmSync(documentPath(doc), { force: true });
     removed++;
@@ -177,13 +172,20 @@ function billUses(docId: string, db: Db): boolean {
 }
 
 /** Remove a document for good, row and file, unless a bill still uses it. */
-export function deleteDocument(householdId: string, id: string, db: Db = getDb()): boolean {
+/** Where a scan's file is kept exactly as it arrived, once it has been turned upright. */
+export function originalPath(doc: Pick<SourceDocument, 'id' | 'path'>): string {
+  return path.join(dataPaths().root, 'originals', `${doc.id}${path.extname(doc.path)}`);
+}
+
+function deleteDocument(householdId: string, id: string, db: Db = getDb()): boolean {
   const doc = getDocument(householdId, id, db);
   if (!doc || billUses(doc.id, db)) return false;
   db.delete(sourceDocument)
     .where(and(eq(sourceDocument.householdId, householdId), eq(sourceDocument.id, id)))
     .run();
   fs.rmSync(documentPath(doc), { force: true });
+  // The file as it arrived goes too: deleting a bill deletes its file (owner).
+  fs.rmSync(originalPath(doc), { force: true });
   return true;
 }
 
@@ -211,7 +213,8 @@ export function deleteBillWithDocument(
 
 /**
  * Documents left behind by bills deleted before deleting a bill removed its
- * document too: marked "Bill created" but no bill uses them. Safe on every start.
+ * document too: marked "Bill created" but no bill uses them. A one-off upgrade
+ * step (src/worker/startup.ts).
  */
 export function purgeOrphanedBillDocuments(db: Db = getDb()): number {
   const created = db

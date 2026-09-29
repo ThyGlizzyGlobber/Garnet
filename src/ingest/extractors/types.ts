@@ -86,7 +86,7 @@ export interface ExtractedMetric {
 export type DocumentKind =
   'bill' | 'payment_receipt' | 'payment_failed' | 'overdue_notice' | 'payment_received' | 'other';
 
-export interface DocumentInfo {
+interface DocumentInfo {
   kind: DocumentKind;
   provider: string | null;
   /** The date printed on the document (for a forward, the original's). */

@@ -9,7 +9,7 @@ export function getAccount(id: string, db: Db = getDb()): Account | null {
   return db.select().from(account).where(eq(account.id, id)).get() ?? null;
 }
 
-export function getAccountByEmail(email: string, db: Db = getDb()): Account | null {
+function getAccountByEmail(email: string, db: Db = getDb()): Account | null {
   return (
     db
       .select()
@@ -64,13 +64,6 @@ export function signInAccount(
   return row;
 }
 
-export function renameAccount(id: string, name: string, db: Db = getDb()): void {
-  db.update(account)
-    .set({ name: name.trim(), updatedAt: new Date().toISOString() })
-    .where(eq(account.id, id))
-    .run();
-}
-
 /** Members linked to an account, oldest first. The alpha UI uses the first one. */
 export function membershipsFor(accountId: string, db: Db = getDb()): Member[] {
   return db
@@ -110,18 +103,40 @@ export function linkMember(
 }
 
 /**
- * Every address a household's members use: their sign-in emails and the
- * addresses their invitations went to. A signed bill forwarded from one of
- * these is the household's own doing, so it needs no per-service trust.
+ * Each member of a household with the addresses they use, lowercased: the one
+ * their invitation went to and their sign-in email.
  */
-export function householdEmails(householdId: string, db: Db = getDb()): Set<string> {
-  const rows = db
-    .select({ memberEmail: member.email, accountEmail: account.email })
+function memberAddresses(householdId: string, db: Db): { memberId: string; addresses: string[] }[] {
+  return db
+    .select({ memberId: member.id, memberEmail: member.email, accountEmail: account.email })
     .from(member)
     .leftJoin(account, eq(member.accountId, account.id))
     .where(eq(member.householdId, householdId))
-    .all();
-  return new Set(
-    rows.flatMap((r) => [r.memberEmail, r.accountEmail]).filter((e): e is string => !!e),
+    .all()
+    .map((r) => ({
+      memberId: r.memberId,
+      addresses: [r.memberEmail, r.accountEmail]
+        .filter((e): e is string => !!e)
+        .map((e) => e.toLowerCase()),
+    }));
+}
+
+/**
+ * Every address a household's members use. A signed bill forwarded from one
+ * of these is the household's own doing, so it needs no per-service trust.
+ */
+export function householdEmails(householdId: string, db: Db = getDb()): Set<string> {
+  return new Set(memberAddresses(householdId, db).flatMap((m) => m.addresses));
+}
+
+/** The member who uses this (lowercased) address, or null. */
+export function memberByAddress(householdId: string, address: string, db: Db = getDb()) {
+  return (
+    memberAddresses(householdId, db).find((m) => m.addresses.includes(address))?.memberId ?? null
   );
+}
+
+/** A member's sign-in email; null until they've joined (emails only go to joined members). */
+export function signInEmail(m: Pick<Member, 'accountId'>, db: Db = getDb()): string | null {
+  return m.accountId ? (getAccount(m.accountId, db)?.email ?? null) : null;
 }

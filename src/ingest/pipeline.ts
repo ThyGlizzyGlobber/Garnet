@@ -1,41 +1,29 @@
 import { and, eq } from 'drizzle-orm';
-import { rotateDocument } from './rotate';
-import { refileDocuments } from '@/lib/filing';
-import type { Scope } from '@/lib/scope';
 import { getDb, type Db } from '@/db/client';
 import { bill, sourceDocument, type SourceDocument } from '@/db/schema';
 import { actingMember } from '@/lib/acting-member';
+import { promoteServiceType, serviceForNewProvider, typeFits } from '@/lib/auto-service';
 import { createBill, type BillDetail } from '@/lib/bills';
 import { getEnv, isLlmConfigured } from '@/lib/env';
+import { refileDocuments } from '@/lib/filing';
 import { getHousehold } from '@/lib/households';
+import { saveBillMetrics } from '@/lib/metrics';
+import { classifyNotice, classifySubject, looksLikeBill } from '@/lib/notices';
+import { notifyBillCreated, notifyInBackground, notifyServiceCreated } from '@/lib/notifications';
+import { sameProvider } from '@/lib/provider-match';
+import type { Scope } from '@/lib/scope';
+import { addressOf, isTrustedSender, trustTarget } from '@/lib/sender-auth';
 import { getService, listServices, listServiceTypes, updateService } from '@/lib/services';
+import { aiAllowance, AI_READ, recordUsage } from '@/lib/usage';
 import { getDocument, readDocument, setDocumentStatus } from './archive';
 import { fallbackExtractors, templateExtractors } from './extractors';
-import type { ScanFile } from './extractors/types';
-import { scanFor } from './scan';
 import { isTransientAiError } from './extractors/llm/anthropic';
-import type {
-  DocumentKind,
-  ExtractionInput,
-  ExtractionResult,
-  Extractor,
-} from './extractors/types';
+import type { ExtractionInput, ExtractionResult, Extractor, ScanFile } from './extractors/types';
+import { applyDocument, applyNotice, applyPaymentHints } from './payments';
+import { rotateDocument } from './rotate';
+import { hasNoText, scanFor } from './scan';
 import { extractText } from './text';
-import { aiAllowance, AI_READ, recordUsage } from '@/lib/usage';
-import { householdEmails } from '@/lib/accounts';
-import { addressOf, isFreemail, isTrustedSender, trustTarget } from '@/lib/sender-auth';
-import { classifyNotice, classifySubject, looksLikeBill, type NoticeKind } from '@/lib/notices';
-import { senderMatchesProvider } from '@/lib/provider-match';
-import { billForNotice, setBillAlert, clearBillAlert, setBillPaidToProvider } from '@/lib/bills';
-import { todayIn } from '@/lib/dates';
-import {
-  notifyBillAlert,
-  notifyBillCreated,
-  notifyInBackground,
-  notifyServiceCreated,
-} from '@/lib/notifications';
-import { promoteServiceType, serviceForNewProvider, typeFits } from '@/lib/auto-service';
-import { saveBillMetrics } from '@/lib/metrics';
+import { documentScope, isProvidersDomain, mayActFor, standingOf } from './trust';
 
 export interface PipelineOutcome {
   documentId: string;
@@ -62,22 +50,6 @@ export interface StoredExtraction {
   documentDate?: string;
 }
 
-export { actingMember };
-
-/**
- * The services a document may land on: the household's, plus the personal
- * ones of the member it came from. Mail straight from a provider may reach any
- * member's personal service (the trust rules still decide whether it acts).
- */
-export function documentScope(
-  householdId: string,
-  doc: Partial<SourceDocument>,
-  db: Db = getDb(),
-): Scope {
-  const member = actingMember(householdId, doc, db);
-  return member ? { viewer: member } : { everyone: true };
-}
-
 export function buildInput(
   householdId: string,
   text: string,
@@ -92,8 +64,8 @@ export function buildInput(
       doc.emailFrom || doc.emailSubject
         ? { from: doc.emailFrom ?? null, subject: doc.emailSubject ?? null }
         : null,
-    locale: hh?.locale ?? 'en-AU',
-    defaultCurrency: hh?.currency ?? 'AUD',
+    locale: hh?.locale ?? getEnv().DEFAULT_LOCALE,
+    defaultCurrency: hh?.currency ?? getEnv().DEFAULT_CURRENCY,
     services: listServices(householdId, documentScope(householdId, doc, db), db).map((s) => ({
       id: s.id,
       name: s.name,
@@ -131,6 +103,14 @@ export async function runExtractors(
 }
 
 /**
+ * Documents being read right now. The worker and the pages are separate
+ * bundles in one process, so this lives on globalThis: a second read of the
+ * same file (inbound mail, "Re-read", a busy retry) never makes a second bill.
+ */
+const shared = globalThis as unknown as { __hudReading?: Set<string> };
+const reading = (shared.__hudReading ??= new Set<string>());
+
+/**
  * Full pipeline for an archived document: text → extractors → bill or review.
  * Low-confidence, unmatched-service, and duplicate results never become bills silently.
  */
@@ -140,7 +120,39 @@ export async function processDocument(
   db: Db = getDb(),
   opts: ReadOptions = {},
 ): Promise<PipelineOutcome> {
-  const before = storedExtraction(getDocument(householdId, documentId, db));
+  const current = getDocument(householdId, documentId, db);
+  if (!current) throw new Error('Document not found');
+  // Already a bill: reading it again would only make it a duplicate of itself.
+  if (current.status === 'extracted' || reading.has(documentId)) {
+    const made = db
+      .select({ id: bill.id })
+      .from(bill)
+      .where(and(eq(bill.householdId, householdId), eq(bill.sourceDocumentId, documentId)))
+      .get();
+    return {
+      documentId,
+      status: current.status === 'extracted' ? 'extracted' : 'needs_review',
+      reason: current.status === 'extracted' ? 'already-read' : 'being-read',
+      result: null,
+      billId: made?.id,
+    };
+  }
+  reading.add(documentId);
+  try {
+    return await readAndFile(householdId, documentId, current, db, opts);
+  } finally {
+    reading.delete(documentId);
+  }
+}
+
+async function readAndFile(
+  householdId: string,
+  documentId: string,
+  current: SourceDocument,
+  db: Db,
+  opts: ReadOptions,
+): Promise<PipelineOutcome> {
+  const before = storedExtraction(current);
   const outcome = await readAndRoute(householdId, documentId, db, opts);
   // A new bill (or a receipt for one): file it where it belongs straight away.
   if (outcome.billId) refileDocuments(householdId, db);
@@ -222,7 +234,7 @@ async function readAndRoute(
   }
   // No text layer: a scan or photo is read from the file itself by the AI reader.
   let scan: ScanFile | null = null;
-  if (text.trim().length < 20) {
+  if (hasNoText(text)) {
     const found = await scanFor(doc);
     if (found && 'problem' in found) {
       store('needs_review', found.problem, null, []);
@@ -384,11 +396,12 @@ async function readAndRoute(
   // Mail to a household bills address can come from anyone who learns it. Only a
   // signed message from a sender trusted for this service becomes a bill by
   // itself; everything else waits for one click in the review queue.
-  if (doc.senderVerified !== null) {
+  const standing = standingOf(householdId, doc, db);
+  if (standing === 'unsigned' || standing === 'signed') {
     const svc = getService(householdId, serviceId, db)!;
     const domain = doc.senderDomain ?? 'an unknown sender';
     const address = addressOf(doc.emailFrom);
-    if (!doc.senderVerified) {
+    if (standing === 'unsigned') {
       store(
         'needs_review',
         `This email isn't signed by ${domain}, so it can't be proven to come from ${svc.provider}. If it's genuine, add it`,
@@ -402,12 +415,10 @@ async function readAndRoute(
         result: best,
       };
     }
-    // A member forwarding a bill from their own inbox is the household acting.
-    const fromMember = !!address && householdEmails(householdId, db).has(address);
-    if (!fromMember && !isTrustedSender(doc.senderDomain, svc.trustedSenders, address)) {
+    if (!isTrustedSender(doc.senderDomain, svc.trustedSenders, address)) {
       // A signed email from a domain that is plainly the provider's (agl.com.au for
       // AGL) is trusted on its first bill, with no one asked. Anything else waits.
-      if (!isFreemail(doc.senderDomain) && senderMatchesProvider(doc.senderDomain, svc.provider)) {
+      if (isProvidersDomain(doc, svc.provider)) {
         updateService(
           householdId,
           svc.id,
@@ -438,7 +449,14 @@ async function readAndRoute(
     best.bill.serviceType,
     db,
   );
-  const created = createBillFromExtraction(householdId, best, serviceId, doc.id, db);
+  let created: BillDetail;
+  try {
+    created = createBillFromExtraction(householdId, best, serviceId, doc.id, db);
+  } catch (e) {
+    // Never leave a document half-read: whatever stopped the bill, a person decides.
+    store('needs_review', `This bill couldn't be saved (${(e as Error).message})`, best, attempts);
+    return { documentId: doc.id, status: 'needs_review', reason: 'not-saved', result: best };
+  }
   store('extracted', `Created bill via ${best.extractor}`, best, attempts);
   applyPaymentHints(householdId, serviceId, best.bill, db);
   if (newService) notifyInBackground(notifyServiceCreated(householdId, newService, { db }));
@@ -467,13 +485,9 @@ export function matchService(
   scope: Scope = { everyone: true },
 ): string | null {
   const services = listServices(householdId, scope, db);
-  const p = result.bill.provider.toLowerCase();
-  const byProvider = services.filter(
-    (s) =>
-      s.provider.toLowerCase() === p ||
-      p.includes(s.provider.toLowerCase()) ||
-      s.provider.toLowerCase().includes(p),
-  );
+  const p = result.bill.provider;
+  // The same rule that decides whether a new provider needs a service of its own.
+  const byProvider = services.filter((s) => sameProvider(s.provider, p));
   if (byProvider.length) {
     // One provider can supply several things (AGL power and gas): the service
     // must also be of the bill's type. A gas bill from the household's only AGL
@@ -491,7 +505,7 @@ export function matchService(
   return byType.length === 1 ? byType[0]!.id : null;
 }
 
-export function createBillFromExtraction(
+function createBillFromExtraction(
   householdId: string,
   result: ExtractionResult,
   serviceId: string,
@@ -528,302 +542,11 @@ export function createBillFromExtraction(
   return created;
 }
 
-const NOTICE_LABEL: Record<NoticeKind, string> = {
-  payment_failed: 'Payment failed',
-  overdue: 'Overdue reminder',
-  payment_received: 'Payment received',
-};
-
 /**
- * A provider notice: find the service it's about (by a verified, trusted or
- * provider-looking sender; for bills a member forwarded, by the provider's name
- * in the text) and update that service's bill. Unverified notices change nothing.
- */
-function applyNotice(
-  householdId: string,
-  doc: SourceDocument,
-  kind: NoticeKind,
-  text: string,
-  store: (status: PipelineOutcome['status'], reason: string, result: null, attempts: []) => void,
-  db: Db,
-  providerHint?: string | null,
-): PipelineOutcome {
-  const label = NOTICE_LABEL[kind];
-  const address = addressOf(doc.emailFrom);
-  const services = listServices(
-    householdId,
-    { includeInactive: true, ...documentScope(householdId, doc, db) },
-    db,
-  );
-  // By name (the AI's provider, or the provider named in the text) only when the
-  // household itself brought the document in: an upload, or a member's forward.
-  // Otherwise the sender's own domain must belong to the provider.
-  const byName = () =>
-    (providerHint
-      ? services.find((s) => providerNameMatches(s.provider, providerHint))
-      : undefined) ??
-    services.find((s) =>
-      new RegExp(`\\b${s.provider.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(
-        `${doc.emailSubject ?? ''}\n${text.slice(0, 4000)}`,
-      ),
-    );
-  let svc: (typeof services)[number] | undefined;
-  if (doc.senderVerified === null) svc = byName();
-  else if (doc.senderVerified) {
-    const fromMember = !!address && householdEmails(householdId, db).has(address);
-    svc = fromMember
-      ? byName()
-      : services.find(
-          (s) =>
-            isTrustedSender(doc.senderDomain, s.trustedSenders, address) ||
-            (!isFreemail(doc.senderDomain) && senderMatchesProvider(doc.senderDomain, s.provider)),
-        );
-  }
-  const hh = getHousehold(householdId, db)!;
-  const target = svc ? billForNotice(householdId, svc.id, kind, todayIn(hh.timezone), db) : null;
-  if (!svc || !target) {
-    store(
-      'notice',
-      `${label} notice. ${doc.senderVerified ? "It couldn't be matched to one of your bills" : "Its sender couldn't be verified"}, so no bill was changed`,
-      null,
-      [],
-    );
-    return { documentId: doc.id, status: 'notice', reason: kind, result: null };
-  }
-  if (kind === 'payment_received') {
-    setBillPaidToProvider(householdId, target.id, true, db);
-    clearBillAlert(householdId, target.id, db);
-  } else {
-    setBillAlert(householdId, target.id, kind, doc.id, db);
-    notifyInBackground(notifyBillAlert(householdId, target.id, { db }));
-  }
-  store(
-    'notice',
-    `${label} notice from ${svc.provider}: updated the bill due ${target.dueDate}`,
-    null,
-    [],
-  );
-  return { documentId: doc.id, status: 'notice', reason: kind, result: null, billId: target.id };
-}
-
-/**
- * May this document change the household's bills for a service? Uploads (by a
- * member) and the operator's own mailbox: yes. Mail to a bills address: only
- * when signed, and from a member, a trusted sender, or the provider's own domain.
- */
-function mayActFor(
-  householdId: string,
-  doc: SourceDocument,
-  svc: { provider: string; trustedSenders: string[] },
-  db: Db,
-): boolean {
-  if (doc.senderVerified === null) return true;
-  if (!doc.senderVerified) return false;
-  const address = addressOf(doc.emailFrom);
-  if (address && householdEmails(householdId, db).has(address)) return true;
-  return (
-    isTrustedSender(doc.senderDomain, svc.trustedSenders, address) ||
-    (!isFreemail(doc.senderDomain) && senderMatchesProvider(doc.senderDomain, svc.provider))
-  );
-}
-
-const compactName = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
-
-/** "Aussie Broadband" vs "Aussie Broadband Limited": same provider. */
-function providerNameMatches(service: string, named: string): boolean {
-  const a = compactName(service);
-  const b = compactName(named);
-  if (!a || !b) return false;
-  if (a === b) return true;
-  const [short, long] = a.length <= b.length ? [a, b] : [b, a];
-  return (
-    (short.length >= 4 && long.includes(short)) || (short.length >= 3 && long.startsWith(short))
-  );
-}
-
-/** What a payment receipt says: which invoices were paid, and when. */
-interface PaymentReceipt {
-  provider: string;
-  paidDate: string;
-  totalMinor: number;
-  method: string | null;
-  invoices: { ref: string; amountMinor: number }[];
-}
-
-/** A receipt: mark each invoice it lists as paid to the provider on the receipt's date. */
-function applyReceipt(
-  householdId: string,
-  doc: SourceDocument,
-  receipt: PaymentReceipt,
-  store: (status: PipelineOutcome['status'], reason: string, result: null, attempts: []) => void,
-  db: Db,
-): PipelineOutcome {
-  const services = listServices(
-    householdId,
-    { includeInactive: true, ...documentScope(householdId, doc, db) },
-    db,
-  ).filter((s) => providerNameMatches(s.provider, receipt.provider));
-  const allowed = services.filter((s) => mayActFor(householdId, doc, s, db));
-  const refs = receipt.invoices.map((i) => `#${i.ref}`).join(', ');
-  if (!allowed.length) {
-    store(
-      'notice',
-      `Payment receipt from ${receipt.provider} (${refs}). ${services.length ? "Its sender couldn't be verified" : 'No matching service'}, so no bill was changed`,
-      null,
-      [],
-    );
-    return { documentId: doc.id, status: 'notice', reason: 'receipt', result: null };
-  }
-  const paid: string[] = [];
-  let firstBill: string | undefined;
-  for (const inv of receipt.invoices) {
-    const b = db
-      .select()
-      .from(bill)
-      .where(and(eq(bill.householdId, householdId), eq(bill.externalRef, inv.ref)))
-      .all()
-      .find((x) => allowed.some((s) => s.id === x.serviceId));
-    if (!b) continue;
-    setBillPaidToProvider(
-      householdId,
-      b.id,
-      true,
-      db,
-      `${receipt.paidDate}T00:00:00Z`,
-      inv.amountMinor || null,
-    );
-    clearBillAlert(householdId, b.id, db);
-    paid.push(`#${inv.ref}`);
-    firstBill ??= b.id;
-  }
-  store(
-    'notice',
-    paid.length
-      ? `Payment receipt from ${receipt.provider}: ${paid.join(', ')} marked paid on ${receipt.paidDate}`
-      : `Payment receipt from ${receipt.provider} for ${refs}, which isn't in the app yet`,
-    null,
-    [],
-  );
-  return {
-    documentId: doc.id,
-    status: 'notice',
-    reason: 'receipt',
-    result: null,
-    billId: firstBill,
-  };
-}
-
-/**
- * Hints on an invoice: the provider charges automatically (remember it on the
- * service), and what it says about last month's bill (paid → mark it paid;
- * nothing received → flag it overdue).
- */
-function applyPaymentHints(
-  householdId: string,
-  serviceId: string,
-  extracted: ExtractionResult['bill'],
-  db: Db,
-): void {
-  const svc = getService(householdId, serviceId, db);
-  if (!svc) return;
-  if (extracted.autoPay && !svc.autoPay) updateService(householdId, svc.id, { autoPay: true }, db);
-  const prev = extracted.previousPayment;
-  if (!prev) return;
-  const candidates = db
-    .select()
-    .from(bill)
-    .where(and(eq(bill.householdId, householdId), eq(bill.serviceId, serviceId)))
-    .all()
-    .filter(
-      (b) =>
-        b.amountMinor === prev.amountDueMinor &&
-        Math.abs(Date.parse(b.dueDate) - Date.parse(prev.dueDate)) <= 3 * 86_400_000,
-    )
-    .sort(
-      (a, b) =>
-        Math.abs(Date.parse(a.dueDate) - Date.parse(prev.dueDate)) -
-        Math.abs(Date.parse(b.dueDate) - Date.parse(prev.dueDate)),
-    );
-  const target = candidates[0];
-  if (!target) return;
-  if (prev.receivedMinor >= prev.amountDueMinor) {
-    if (!target.paidToProviderAt)
-      setBillPaidToProvider(householdId, target.id, true, db, `${prev.dueDate}T00:00:00Z`);
-    if (target.alertKind) clearBillAlert(householdId, target.id, db);
-  } else if (prev.receivedMinor === 0 && target.alertKind !== 'overdue') {
-    setBillAlert(householdId, target.id, 'overdue', null, db);
-    notifyInBackground(notifyBillAlert(householdId, target.id, { db }));
-  }
-}
-
-const DOCUMENT_NOTICE: Partial<Record<DocumentKind, NoticeKind>> = {
-  payment_failed: 'payment_failed',
-  overdue_notice: 'overdue',
-  payment_received: 'payment_received',
-};
-
-/**
- * A non-bill document as classified by the AI reader: receipts mark the named
- * invoices paid; payment notices flag or settle a bill; anything else is kept
- * as a notice. Unsure readings change nothing. Returns null to fall through
- * (an unsure "other" that still looks like a bill goes to review).
- */
-function applyDocument(
-  householdId: string,
-  doc: SourceDocument,
-  best: ExtractionResult,
-  text: string,
-  store: (
-    status: PipelineOutcome['status'],
-    reason: string,
-    result: ExtractionResult | null,
-    attempts: StoredExtraction['attempts'],
-  ) => void,
-  db: Db,
-  threshold: number,
-): PipelineOutcome | null {
-  const info = best.document!;
-  const provider = info.provider ?? best.bill.provider;
-  const sure = best.confidence >= threshold;
-  if (info.kind === 'other') {
-    if (!sure && looksLikeBill(doc.emailSubject, text)) return null;
-    store('notice', 'Not a bill (kept for reference)', null, []);
-    return { documentId: doc.id, status: 'notice', reason: 'not-a-bill', result: null };
-  }
-  if (!sure) {
-    store(
-      'notice',
-      `Looks like a ${info.kind.replace(/_/g, ' ')} from ${provider || 'a provider'}, but the reading wasn't certain enough to change any bill`,
-      null,
-      [],
-    );
-    return { documentId: doc.id, status: 'notice', reason: 'unsure', result: null };
-  }
-  const refs = info.payment?.invoiceRefs.filter(Boolean) ?? [];
-  if (info.kind === 'payment_receipt' && refs.length && provider) {
-    return applyReceipt(
-      householdId,
-      doc,
-      {
-        provider,
-        paidDate: info.payment?.date ?? doc.receivedAt.slice(0, 10),
-        totalMinor: info.payment?.amountMinor ?? 0,
-        method: null,
-        invoices: refs.map((ref) => ({ ref, amountMinor: 0 })),
-      },
-      store,
-      db,
-    );
-  }
-  const kind = DOCUMENT_NOTICE[info.kind] ?? 'payment_received';
-  return applyNotice(householdId, doc, kind, text, store, db, provider);
-}
-
-/**
- * Who may set up a new service from a bill, and with what: uploads (the payer
- * defaults to the admin), a member's forward (they're the payer), or signed
- * mail from a domain that plainly is the provider's (remembered as trusted).
- * A stranger's mail never creates a service.
+ * Who may set up a new service from a bill, and with what: the household (an
+ * upload; the payer defaults to the admin), a member's forward (they're the
+ * payer), or signed mail from a domain that plainly is the provider's
+ * (remembered as trusted). A stranger's mail never creates a service.
  */
 function autoServiceFor(
   householdId: string,
@@ -833,20 +556,22 @@ function autoServiceFor(
 ) {
   const member = actingMember(householdId, doc, db);
   const scope = documentScope(householdId, doc, db);
-  // An upload: the admin pays unless it's usually personal (then it's the uploader's own).
-  if (doc.senderVerified === null)
-    return serviceForNewProvider(householdId, bill, { member, scope }, db);
-  if (!doc.senderVerified) return null;
-  const address = addressOf(doc.emailFrom);
-  if (address && householdEmails(householdId, db).has(address))
-    return serviceForNewProvider(householdId, bill, { payerMemberId: member, member, scope }, db);
-  if (!isFreemail(doc.senderDomain) && senderMatchesProvider(doc.senderDomain, bill.provider))
-    return serviceForNewProvider(householdId, bill, { trustedDomain: doc.senderDomain, scope }, db);
-  return null;
+  switch (standingOf(householdId, doc, db)) {
+    case 'household':
+      return serviceForNewProvider(householdId, bill, { member, scope }, db);
+    case 'member':
+      return serviceForNewProvider(householdId, bill, { payerMemberId: member, member, scope }, db);
+    case 'signed':
+      return isProvidersDomain(doc, bill.provider)
+        ? serviceForNewProvider(householdId, bill, { trustedDomain: doc.senderDomain, scope }, db)
+        : null;
+    case 'unsigned':
+      return null;
+  }
 }
 
 /** A short, readable version of an Anthropic API error for the review queue. */
-export function aiProblem(error: string): string {
+function aiProblem(error: string): string {
   const message = error.match(/"message":\s*"((?:[^"\\]|\\.)*)"/)?.[1] ?? error;
   return message.length > 200 ? `${message.slice(0, 197)}…` : message;
 }
@@ -861,7 +586,7 @@ function storedExtraction(doc: SourceDocument | null): StoredExtraction | null {
 }
 
 /** Busy reads are retried after 15 min, 30 min, 1 h, 2 h, 4 h, 8 h; then a person looks. */
-export const MAX_BUSY_RETRIES = 6;
+const MAX_BUSY_RETRIES = 6;
 
 /**
  * Documents whose AI read failed only because the service was busy: read them
@@ -880,8 +605,12 @@ export async function retryBusyReads(now = new Date(), db: Db = getDb()): Promis
     if (!s || n < 1 || n > MAX_BUSY_RETRIES) continue;
     const due = Date.parse(s.processedAt) + 15 * 60_000 * 2 ** (n - 1);
     if (now.getTime() < due) continue;
-    await processDocument(doc.householdId, doc.id, db);
-    retried++;
+    try {
+      await processDocument(doc.householdId, doc.id, db);
+      retried++;
+    } catch (e) {
+      console.error(`[ingest] re-reading ${doc.id}:`, (e as Error).message);
+    }
   }
   return retried;
 }

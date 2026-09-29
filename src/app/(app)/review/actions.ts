@@ -1,33 +1,32 @@
 'use server';
 
-import { refileDocuments } from '@/lib/filing';
-import { visibleTo } from '@/lib/scope';
-import { promoteServiceType } from '@/lib/auto-service';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import type { ActionState } from '@/components/ui/form';
+import { approveDocument } from '@/ingest/approve';
 import { archiveDocument, getDocument, setDocumentStatus } from '@/ingest/archive';
 import { processDocument } from '@/ingest/pipeline';
-import { getService, updateService } from '@/lib/services';
-import { addressOf, isTrustedSender, trustTarget } from '@/lib/sender-auth';
-import { str, zodToState } from '@/lib/actions';
+import { errorText, fieldErrors, str, zodToState } from '@/lib/actions';
 import { requireMember, requireOperator } from '@/lib/auth/session';
-import { createBill } from '@/lib/bills';
 import { isIsoDate } from '@/lib/dates';
 import { parseMoneyToMinor } from '@/lib/format';
 import { getHousehold } from '@/lib/households';
-import { notifyBillCreated, notifyInBackground } from '@/lib/notifications';
-import { saveBillMetrics } from '@/lib/metrics';
+import { rateLimit } from '@/lib/rate-limit';
 import { getReviewItem, listDocuments } from '@/lib/review';
+import { visibleTo } from '@/lib/scope';
+import { getService } from '@/lib/services';
 import { pollNow } from '@/worker';
 
-const isoDate = z.string().refine(isIsoDate, 'Use a valid date');
+/** Uploads a household may make per hour (sign-up is open; files are kept for good). */
+const UPLOADS_PER_HOUR = 60;
+
+const isoDate = z.string().refine(isIsoDate, 'validDate');
 const approveSchema = z
   .object({
     documentId: z.string().min(1),
-    serviceId: z.string().min(1, 'Choose a service'),
-    amount: z.string().min(1, 'Enter the amount'),
+    serviceId: z.string().min(1, 'chooseService'),
+    amount: z.string().min(1, 'enterAmount'),
     tax: z.string(),
     taxLabel: z.string(),
     periodStart: isoDate,
@@ -41,7 +40,7 @@ const approveSchema = z
   })
   .refine((v) => v.periodEnd >= v.periodStart, {
     path: ['periodEnd'],
-    message: 'Period end is before its start',
+    message: 'periodOrder',
   });
 
 /** Confirm a reviewed extraction: create the bill from the (possibly edited) fields. */
@@ -65,71 +64,41 @@ export async function approveReviewAction(_prev: ActionState, fd: FormData): Pro
   });
   if (!parsed.success) return zodToState(parsed.error);
   const v = parsed.data;
+  const te = await errorText();
   const doc = getDocument(hh.id, v.documentId);
   if (!doc || !getReviewItem(hh.id, doc.id, undefined, { viewer: me.id }))
-    return { error: 'Document not found' };
+    return { error: te('documentNotFound') };
   const chosenService = getService(hh.id, v.serviceId);
   if (!chosenService || !visibleTo(chosenService.ownerMemberId, me.id))
-    return { error: 'Service not found' };
+    return { error: te('serviceNotFound') };
   const amountMinor = parseMoneyToMinor(v.amount, hh.currency);
-  if (amountMinor === null)
-    return {
-      error: 'Please fix the highlighted fields.',
-      fieldErrors: { amount: 'Enter a valid amount' },
-    };
-  // What the AI read stays with the bill (figures, instalments), whatever the person corrected.
-  const read = getReviewItem(hh.id, doc.id)?.extraction?.result;
+  if (amountMinor === null) return fieldErrors({ amount: 'validAmount' });
   let billId: string;
   try {
-    billId = createBill(hh.id, {
-      serviceId: v.serviceId,
-      sourceDocumentId: doc.id,
-      amountMinor,
-      currency: hh.currency,
-      taxMinor: v.tax ? parseMoneyToMinor(v.tax, hh.currency) : null,
-      taxLabel: v.taxLabel || null,
-      periodStart: v.periodStart,
-      periodEnd: v.periodEnd,
-      issueDate: v.issueDate || null,
-      dueDate: v.dueDate,
-      usageQuantity: v.usageQuantity ? Number(v.usageQuantity) : null,
-      usageUnit: v.usageUnit || null,
-      source: 'manual',
-      extractor: 'review',
-      externalRef: v.externalRef || null,
-      notes: v.notes || null,
-      createdByMemberId: me.id,
-      instalments: read?.bill.instalments ?? null,
-    }).id;
+    billId = approveDocument(
+      hh.id,
+      doc.id,
+      {
+        serviceId: v.serviceId,
+        amountMinor,
+        currency: hh.currency,
+        taxMinor: v.tax ? parseMoneyToMinor(v.tax, hh.currency) : null,
+        taxLabel: v.taxLabel || null,
+        periodStart: v.periodStart,
+        periodEnd: v.periodEnd,
+        issueDate: v.issueDate || null,
+        dueDate: v.dueDate,
+        usageQuantity: v.usageQuantity ? Number(v.usageQuantity) : null,
+        usageUnit: v.usageUnit || null,
+        externalRef: v.externalRef || null,
+        notes: v.notes || null,
+      },
+      me,
+      { trustSender: fd.get('trustSender') === 'on' },
+    ).billId;
   } catch (e) {
     return { error: (e as Error).message };
   }
-  if (read?.bill.metrics) saveBillMetrics(hh.id, billId, read.bill.metrics);
-  // The service still filed as "Other" takes the type the AI read (e.g. Council rates).
-  const chosen = getService(hh.id, v.serviceId);
-  if (chosen) promoteServiceType(hh.id, chosen, read?.bill.serviceType);
-  // "Trust future bills from this sender": only for signed mail from that domain.
-  // Personal mailboxes (gmail.com, …) are only ever trusted as the exact address.
-  const address = addressOf(doc.emailFrom);
-  const target = doc.senderVerified ? trustTarget(doc.senderDomain, address) : null;
-  if (fd.get('trustSender') === 'on' && target) {
-    const svc = getService(hh.id, v.serviceId);
-    if (svc && !isTrustedSender(doc.senderDomain, svc.trustedSenders, address))
-      updateService(hh.id, svc.id, { trustedSenders: [...svc.trustedSenders, target] });
-  }
-  // Keep the extraction record but note that a person confirmed it.
-  let json: string | undefined;
-  try {
-    const prev = doc.extractionJson
-      ? (JSON.parse(doc.extractionJson) as Record<string, unknown>)
-      : {};
-    json = JSON.stringify({ ...prev, reason: `Approved in review by ${me.name}` });
-  } catch {
-    json = undefined;
-  }
-  setDocumentStatus(hh.id, doc.id, 'extracted', json);
-  refileDocuments(hh.id);
-  notifyInBackground(notifyBillCreated(hh.id, billId, { except: me.id }));
   revalidatePath('/review');
   revalidatePath('/bills');
   redirect(`/bills/${billId}`);
@@ -195,9 +164,11 @@ export async function pollNowAction(): Promise<void> {
 export async function uploadBillAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
   const me = await requireMember();
   const file = fd.get('file');
-  if (!(file instanceof File) || file.size === 0)
-    return { error: 'Choose a PDF, a photo, or an HTML or text file.' };
-  if (file.size > 25 * 1024 * 1024) return { error: 'File is larger than 25 MB.' };
+  const te = await errorText();
+  if (!(file instanceof File) || file.size === 0) return { error: te('uploadType') };
+  if (file.size > 25 * 1024 * 1024) return { error: te('uploadSize') };
+  if (!rateLimit(`upload:${me.householdId}`, UPLOADS_PER_HOUR, 3_600_000))
+    return { error: te('uploadRate') };
   const buffer = Buffer.from(await file.arrayBuffer());
   const { doc, duplicate } = archiveDocument(me.householdId, {
     kind: 'upload',

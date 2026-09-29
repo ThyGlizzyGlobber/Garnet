@@ -25,7 +25,10 @@ import type {
  */
 const isoDate = z.string();
 
-/** Exported for tests (the schema must stay small enough for structured outputs). */
+/**
+ * Exported for tests (the schema must stay small enough for structured outputs).
+ * @public tests/ai-client.test.ts reads it through vi.importActual.
+ */
 export const outputSchema = z.object({
   document_type: z
     .enum([
@@ -204,7 +207,10 @@ function fileBlock(file: ScanFile): DocumentBlockParam | ImageBlockParam {
     : { type: 'image', source: { type: 'base64', media_type: file.mediaType, data } };
 }
 
-/** The API refused the output schema as too large or complex to compile. */
+/**
+ * The API refused the output schema as too large or complex to compile.
+ * @public tests/ai-client.test.ts reads it through vi.importActual.
+ */
 export function isSchemaTooLarge(e: unknown): boolean {
   return /grammar is too large|schema is too (large|complex)|too many strict/i.test(
     e instanceof Error ? e.message : String(e),
@@ -218,7 +224,7 @@ function jsonInstruction(): string {
 }
 
 /** The JSON object in a plain-text answer, checked against the schema. */
-export function parseJsonRecord(text: string): Output {
+function parseJsonRecord(text: string): Output {
   const start = text.indexOf('{');
   const end = text.lastIndexOf('}');
   if (start < 0 || end <= start) throw new Error('The AI answer had no JSON record');
@@ -475,6 +481,17 @@ export function toResult(
   };
   if (!bill.periodStart || !bill.periodEnd || !bill.dueDate) {
     warnings.push('A billing date could not be read (expected YYYY-MM-DD)');
+    return {
+      extractor,
+      bill,
+      confidence: Math.min(o.confidence, 0.3),
+      warnings,
+      rotation: rotationOf(o),
+    };
+  }
+  // A credit (a solar-export statement in credit, a refund) isn't a bill to split.
+  if (bill.amountMinor < 0) {
+    warnings.push('The amount is a credit (below zero)');
     return {
       extractor,
       bill,

@@ -2,6 +2,7 @@ import { getDb, type Db } from '@/db/client';
 import type { Cadence } from '@/db/schema';
 import type { ExtractedBill } from '@/ingest/extractors/types';
 import { daysInclusive } from '@/lib/dates';
+import { sameProvider } from '@/lib/provider-match';
 import { hasHousemates, listMembers } from '@/lib/members';
 import type { Scope } from '@/lib/scope';
 import { nextPaletteColour, TYPE_COLOUR } from '@/lib/palette';
@@ -12,6 +13,7 @@ import {
   updateService,
   type ServiceWithType,
 } from '@/lib/services';
+import { isAdmin } from '@/lib/roles';
 
 /**
  * A readable bill arrived from a provider the household has no service for:
@@ -42,19 +44,6 @@ export function cadenceFromPeriod(start: string, end: string): Cadence {
   if (days <= 100) return 'quarterly';
   if (days >= 330 && days <= 400) return 'annual';
   return 'irregular';
-}
-
-const compact = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
-
-export function sameProvider(a: string, b: string): boolean {
-  const x = compact(a);
-  const y = compact(b);
-  if (!x || !y) return false;
-  if (x === y) return true;
-  const [short, long] = x.length <= y.length ? [x, y] : [y, x];
-  return (
-    (short.length >= 4 && long.includes(short)) || (short.length >= 3 && long.startsWith(short))
-  );
 }
 
 /**
@@ -152,7 +141,7 @@ export function serviceForNewProvider(
   const members = listMembers(householdId, db);
   const payer =
     (opts.payerMemberId && members.find((m) => m.id === opts.payerMemberId)?.id) ??
-    members.find((m) => m.role === 'owner')?.id ??
+    members.find((m) => isAdmin(m))?.id ??
     null;
   const service = createService(
     householdId,

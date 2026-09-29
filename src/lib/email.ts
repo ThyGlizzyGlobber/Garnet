@@ -1,4 +1,4 @@
-import { appUrl, getEnv, isEmailConfigured } from '@/lib/env';
+import { getEnv, isEmailConfigured } from '@/lib/env';
 
 export interface OutgoingEmail {
   to: string;
@@ -70,7 +70,7 @@ export async function sendEmail(
   }
 }
 
-export function escapeHtml(s: string): string {
+function escapeHtml(s: string): string {
   return s.replace(
     /[&<>"']/g,
     (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!,
@@ -111,5 +111,3 @@ ${parts.footer ? `<p style="margin:16px 0 0;font-size:13px;color:#6b7280">${esca
 </div></body></html>`;
   return { to: parts.to, subject: parts.subject, text, html };
 }
-
-export { appUrl };

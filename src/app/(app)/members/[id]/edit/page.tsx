@@ -5,7 +5,7 @@ import { NewPinForm } from '@/components/app/auth-forms';
 import { Card, PageHeader } from '@/components/ui';
 import { InlineAction } from '@/components/ui/form';
 import { pageContext } from '@/lib/context';
-import { getMember, listMembers } from '@/lib/members';
+import { getMember, isLastAdmin } from '@/lib/members';
 import {
   changePinAction,
   deleteMemberAction,
@@ -19,6 +19,7 @@ import { NotifyForm } from '../../notify-form';
 import { countDevices } from '@/lib/auth/devices';
 import { authState } from '@/lib/auth/session';
 import { MemberForm } from '../../member-form';
+import { isAdmin } from '@/lib/roles';
 
 export default async function EditMemberPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -27,21 +28,20 @@ export default async function EditMemberPage({ params }: { params: Promise<{ id:
   const tp = await getTranslations('pin');
   const m = getMember(hh.id, id);
   if (!m) notFound();
-  const admin = me.role === 'owner';
+  const admin = isAdmin(me);
   const state = await authState();
   const account = state.kind === 'ok' ? state.account : null;
   const tn = await getTranslations('notify.prefs');
   const self = me.id === m.id;
   if (!admin && !self) redirect('/members');
   // A household always keeps one admin: the last one can't step down.
-  const lastAdmin =
-    m.role === 'owner' && listMembers(hh.id).filter((x) => x.role === 'owner').length <= 1;
+  const lastAdmin = isLastAdmin(hh.id, m);
   return (
     <div className="mx-auto max-w-xl">
       <PageHeader
         title={m.name}
         action={
-          admin && m.role !== 'owner' ? (
+          admin && !isAdmin(m) ? (
             <InlineAction
               action={deleteMemberAction}
               hidden={{ id: m.id }}
@@ -58,7 +58,7 @@ export default async function EditMemberPage({ params }: { params: Promise<{ id:
             {m.accountId ? `${t('status.joined')} · ${m.email ?? ''}` : t('status.none')}
           </p>
           {m.accountId ? (
-            m.role !== 'owner' && (
+            !isAdmin(m) && (
               <InlineAction
                 action={removeAccessAction}
                 hidden={{ id: m.id }}
@@ -79,14 +79,14 @@ export default async function EditMemberPage({ params }: { params: Promise<{ id:
           <div className="min-w-0">
             <h2 className="font-display font-semibold">{t('role.title')}</h2>
             <p className="text-xs text-fg-muted">
-              {m.role === 'owner'
+              {isAdmin(m)
                 ? lastAdmin
                   ? t('role.lastAdmin')
                   : t('role.isAdmin', { name: self ? t('role.you') : m.name })
                 : t('role.isMember', { name: m.name })}
             </p>
           </div>
-          {m.role === 'owner' ? (
+          {isAdmin(m) ? (
             !lastAdmin && (
               <InlineAction
                 action={setMemberRoleAction}
@@ -111,6 +111,7 @@ export default async function EditMemberPage({ params }: { params: Promise<{ id:
       <MemberForm
         action={updateMemberAction}
         sharedHousehold={hh.splitMode === 'shared'}
+        canEditResidency={admin}
         submitLabel={t('form.save')}
         cancelHref="/members"
         initial={{

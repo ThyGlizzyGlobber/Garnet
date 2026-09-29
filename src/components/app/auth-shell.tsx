@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { ForgetOfflinePages } from './pwa';
 
 /** Centred frosted window for sign-in, onboarding and invite pages. */
 export function AuthShell({
@@ -14,6 +15,7 @@ export function AuthShell({
 }) {
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-4 py-10">
+      <ForgetOfflinePages />
       <div className="window flex flex-col gap-5 p-6 sm:p-8">
         <div>
           {eyebrow && <p className="text-sm font-medium text-fg-muted">{eyebrow}</p>}
@@ -36,7 +38,7 @@ export function Notice({
   return (
     <p
       role={tone === 'danger' ? 'alert' : 'status'}
-      className={`rounded-xl px-4 py-3 text-sm font-medium ${tone === 'danger' ? 'bg-danger/10 text-danger' : 'bg-surface-2 text-fg-muted'}`}
+      className={`rounded-xl px-4 py-3 text-sm font-medium ${tone === 'danger' ? 'bg-danger-soft text-danger' : 'bg-surface-2 text-fg-muted'}`}
     >
       {children}
     </p>

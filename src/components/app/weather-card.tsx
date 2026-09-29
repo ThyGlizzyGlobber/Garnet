@@ -1,4 +1,5 @@
 import { getTranslations } from 'next-intl/server';
+import { formatWeekday } from '@/lib/format';
 import { weatherCodeKey, type WeatherWeek } from '@/lib/weather-week';
 
 /**
@@ -17,7 +18,6 @@ export async function WeatherCard({
   className?: string;
 }) {
   const t = await getTranslations('weather');
-  const dayName = new Intl.DateTimeFormat(locale, { weekday: 'short', timeZone: 'UTC' });
   const deg = (v: number | null) => (v === null ? '–' : `${Math.round(v)}°`);
   const impact = week.impact;
   return (
@@ -37,11 +37,9 @@ export async function WeatherCard({
         {week.days.map((d) => (
           <li
             key={d.date}
-            className={`rounded-xl px-1 py-2 ${d.heating ? 'bg-accent/10' : d.cooling ? 'bg-warning/10' : ''}`}
+            className={`rounded-xl px-1 py-2 ${d.heating ? 'bg-accent-soft' : d.cooling ? 'bg-warning-soft' : ''}`}
           >
-            <span className="block font-semibold">
-              {dayName.format(new Date(`${d.date}T00:00:00Z`))}
-            </span>
+            <span className="block font-semibold">{formatWeekday(d.date, locale)}</span>
             <span className="mt-1 block text-fg-muted">{t(`code.${weatherCodeKey(d.code)}`)}</span>
             <span className="mt-1 block tabular-nums">
               <span className="font-semibold">{deg(d.tempMax)}</span>{' '}

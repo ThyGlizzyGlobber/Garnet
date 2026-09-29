@@ -56,7 +56,7 @@ const receipt = {
   document_date: '2026-07-28',
   service_type: 'internet',
   bill: null,
-  payment: { date: '2026-07-28', amount: 129, currency: 'AUD', invoice_numbers: ['60097874'] },
+  payment: { date: '2026-07-28', amount: 129, currency: 'AUD', invoice_numbers: ['50000002'] },
   page_rotation: [],
   confidence: 0.96,
   notes: null,
@@ -78,7 +78,7 @@ describe('when the API refuses the schema as too large', () => {
     const r = await real.anthropicExtractor.extract(input);
     expect(calls).toEqual({ parse: 1, create: 1 });
     expect(r?.document?.kind).toBe('payment_receipt');
-    expect(r?.document?.payment?.invoiceRefs).toEqual(['60097874']);
+    expect(r?.document?.payment?.invoiceRefs).toEqual(['50000002']);
     expect(r?.document?.date).toBe('2026-07-28');
   });
 

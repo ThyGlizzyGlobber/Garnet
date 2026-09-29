@@ -21,12 +21,15 @@ export function MemberForm({
   action,
   initial,
   sharedHousehold,
+  canEditResidency = true,
   submitLabel,
   cancelHref,
 }: {
   action: FormAction;
   initial: MemberFormValues;
   sharedHousehold: boolean;
+  /** Move-in, move-out and split weight decide shares, so only admins change them. */
+  canEditResidency?: boolean;
   submitLabel: string;
   cancelHref: string;
 }) {
@@ -71,29 +74,42 @@ export function MemberForm({
               </Field>
             )}
           </Card>
-          <Card className="flex flex-col gap-4">
-            <h2 className="font-semibold">{t('residency')}</h2>
-            <div className="grid grid-cols-2 gap-3">
-              <Field label={t('activeFrom')} error={errors.activeFrom} hint={t('activeFromHint')}>
-                <Input name="activeFrom" type="date" defaultValue={initial.activeFrom} required />
-              </Field>
-              <Field label={t('activeTo')} error={errors.activeTo} hint={t('activeToHint')}>
-                <Input name="activeTo" type="date" defaultValue={initial.activeTo} />
-              </Field>
-            </div>
-            {sharedHousehold && (
-              <Field
-                label={t('splitWeight')}
-                error={errors.splitWeight}
-                hint={t('splitWeightHint')}
-              >
-                <Input name="splitWeight" inputMode="decimal" defaultValue={initial.splitWeight} />
-              </Field>
-            )}
-            {!sharedHousehold && (
+          {!canEditResidency && (
+            <>
+              <input type="hidden" name="activeFrom" value={initial.activeFrom} />
+              <input type="hidden" name="activeTo" value={initial.activeTo} />
               <input type="hidden" name="splitWeight" value={initial.splitWeight} />
-            )}
-          </Card>
+            </>
+          )}
+          {canEditResidency && (
+            <Card className="flex flex-col gap-4">
+              <h2 className="font-semibold">{t('residency')}</h2>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label={t('activeFrom')} error={errors.activeFrom} hint={t('activeFromHint')}>
+                  <Input name="activeFrom" type="date" defaultValue={initial.activeFrom} required />
+                </Field>
+                <Field label={t('activeTo')} error={errors.activeTo} hint={t('activeToHint')}>
+                  <Input name="activeTo" type="date" defaultValue={initial.activeTo} />
+                </Field>
+              </div>
+              {sharedHousehold && (
+                <Field
+                  label={t('splitWeight')}
+                  error={errors.splitWeight}
+                  hint={t('splitWeightHint')}
+                >
+                  <Input
+                    name="splitWeight"
+                    inputMode="decimal"
+                    defaultValue={initial.splitWeight}
+                  />
+                </Field>
+              )}
+              {!sharedHousehold && (
+                <input type="hidden" name="splitWeight" value={initial.splitWeight} />
+              )}
+            </Card>
+          )}
           {sharedHousehold && (
             <Card className="flex flex-col gap-3">
               <h2 className="font-semibold">{t('paymentDetails')}</h2>

@@ -3,24 +3,17 @@ import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { Icon } from '@/components/app/icons';
 import { TrendLine } from '@/components/charts/trend-line';
+import { Avatar, IconDisc, Swatch } from '@/components/ui/colour';
 import { Ring } from '@/components/ui/ring';
 import { authState, pathFor } from '@/lib/auth/session';
 import { todayIn } from '@/lib/dates';
-import { dueNow } from '@/lib/instalments';
-import { formatDate, formatMoney } from '@/lib/format';
+import { formatDate, formatMoney, formatMonth, formatWeekday, toMajor } from '@/lib/format';
+import { wallView } from '@/lib/home';
 import { getHousehold } from '@/lib/households';
-import { darkVariant } from '@/lib/palette';
-import { nextMonth, projectMonth } from '@/lib/projections';
-import { dashboardSummary, hasAnyBills, householdBalances, settlementRate } from '@/lib/stats';
 import { weatherCodeKey, weatherWeek } from '@/lib/weather-week';
 import { AutoRefresh } from './auto-refresh';
 
 export const dynamic = 'force-dynamic';
-
-const swatch = (c: string) => ({ background: `light-dark(${c}, ${darkVariant(c)})` });
-const avatar = (colour: string) => ({
-  background: `linear-gradient(135deg, light-dark(${colour}, ${darkVariant(colour)}), var(--color-accent))`,
-});
 
 /**
  * Kiosk view for an iPad on the wall. Log in once on the device; the session
@@ -35,32 +28,21 @@ export default async function WallPage() {
   const t = await getTranslations('wall');
   const today = todayIn(hh.timezone);
   const money = (m: number) => formatMoney(m, hh.currency, hh.locale);
-  const shared = hh.splitMode === 'shared';
-  const s = hasAnyBills(hh.id) ? dashboardSummary(hh.id, today, hh.fiscalYearStartMonth) : null;
-  const balances = shared ? householdBalances(hh.id) : [];
-  const next = s ? (s.overdue[0] ?? s.upcoming[0]) : undefined;
-  const proj = s ? projectMonth(hh.id, nextMonth(today)) : null;
-  const projNow = s ? projectMonth(hh.id, s.thisMonth.month) : null;
-  const settled = s && shared ? settlementRate(hh.id, s.thisMonth.month) : null;
   const monthName = (m: string, style: 'short' | 'long' = 'long') =>
-    new Intl.DateTimeFormat(hh.locale, { month: style, timeZone: 'UTC' }).format(
-      new Date(`${m}-01T00:00:00Z`),
-    );
-  const overdue = !!next && next.daysUntilDue < 0;
-  const budgetPct =
-    s && projNow && projNow.totalMinor > 0
-      ? Math.round((s.thisMonth.total / projNow.totalMinor) * 100)
-      : 0;
+    formatMonth(m, hh.locale, style);
+  const v = wallView(hh, today);
+  const s = v?.summary ?? null;
+  const next = v?.nextDue ?? null;
+  const overdue = !!next?.overdue;
   // Weather strip (scope S3): only for households with a postcode and a forecast.
   const week = weatherWeek(hh.id, today);
   const tw = await getTranslations('weather');
-  const dayName = new Intl.DateTimeFormat(hh.locale, { weekday: 'short', timeZone: 'UTC' });
-  const deg = (v: number | null) => (v === null ? '–' : `${Math.round(v)}°`);
+  const deg = (d: number | null) => (d === null ? '–' : `${Math.round(d)}°`);
   const points = s
     ? s.series.map((r) => ({
         key: r.month,
         label: monthName(r.month, 'short'),
-        value: r.total / 100,
+        value: toMajor(r.total, hh.currency),
         text: money(r.total),
       }))
     : [];
@@ -93,16 +75,16 @@ export default async function WallPage() {
           </div>
         </header>
 
-        {!s ? (
+        {!v || !s ? (
           <p className="my-auto text-center text-[3vw] text-fg-muted">{t('empty')}</p>
         ) : (
           <div className="grid flex-grow gap-[2vw] lg:grid-cols-[1.35fr_1fr]">
             <div className="flex flex-col gap-[2vw]">
               <section className="glass flex items-center gap-[2.4vw] rounded-[2.2vw] bg-accent-soft p-[2.4vw]">
-                <Ring id="wall-budget" pct={budgetPct} size={150} stroke={14}>
+                <Ring id="wall-budget" pct={v.budgetPct} size={150} stroke={14}>
                   <span className="flex flex-col items-center leading-none">
                     <span className="font-display text-[2.2vw] font-semibold tabular-nums">
-                      {budgetPct}%
+                      {v.budgetPct}%
                     </span>
                     <span className="mt-[0.3vw] text-[0.9vw] font-semibold tracking-wide text-fg-muted uppercase">
                       {monthName(s.thisMonth.month, 'short')}
@@ -117,9 +99,9 @@ export default async function WallPage() {
                   <ul className="mt-[1.2vw] flex flex-wrap gap-x-[1.8vw] gap-y-[0.4vw] text-[1.3vw] text-fg-muted">
                     {s.thisMonth.byService.slice(0, 5).map((r) => (
                       <li key={r.service.id} className="flex items-center gap-[0.6vw]">
-                        <span
+                        <Swatch
+                          colour={r.service.colour}
                           className="size-[0.9vw] rounded-[0.25vw]"
-                          style={swatch(r.service.colour)}
                         />
                         {r.service.name}{' '}
                         <span className="font-semibold text-fg tabular-nums">{money(r.minor)}</span>
@@ -131,7 +113,12 @@ export default async function WallPage() {
               <section className="glass flex flex-grow flex-col rounded-[2.2vw] p-[2vw]">
                 <span className="mb-[0.6vw] text-[1.3vw] text-fg-muted">{t('chart')}</span>
                 <div className="flex-grow">
-                  <TrendLine points={points} height={week ? 190 : 230} id="wall" />
+                  <TrendLine
+                    points={points}
+                    height={week ? 190 : 230}
+                    id="wall"
+                    label={t('chart')}
+                  />
                 </div>
               </section>
             </div>
@@ -141,34 +128,32 @@ export default async function WallPage() {
                 className={`glass flex items-center gap-[1.6vw] rounded-[2.2vw] p-[2.2vw] ${overdue ? 'border-danger/40 bg-danger-soft' : ''}`}
               >
                 {next && (
-                  <span
-                    className="glow-disc size-[5.2vw] shrink-0"
-                    style={{
-                      color: `light-dark(${next.service.colour}, ${darkVariant(next.service.colour)})`,
-                      ['--glow' as string]: `light-dark(${next.service.colour}, ${darkVariant(next.service.colour)})`,
-                    }}
-                  >
-                    <Icon name={next.service.type.icon} width={34} height={34} />
-                  </span>
+                  <IconDisc
+                    icon={next.bill.service.type.icon}
+                    colour={next.bill.service.colour}
+                    variant="glow"
+                    size="5.2vw"
+                    iconSize={34}
+                  />
                 )}
                 <div className="min-w-0">
                   <span className="text-[1.4vw] text-fg-muted">{t('nextDue')}</span>
                   {next ? (
                     <>
                       <p className="font-display text-[2.8vw] leading-[1.1] font-semibold tracking-tight">
-                        {next.service.name}{' '}
+                        {next.bill.service.name}{' '}
                         <span className="text-fg-muted tabular-nums">
-                          {money(dueNow(next).amountMinor)}
+                          {money(next.due.amountMinor)}
                         </span>
                       </p>
                       <p
                         className={`text-[1.5vw] ${overdue ? 'font-semibold text-danger' : 'text-fg-muted'}`}
                       >
                         {overdue
-                          ? t('overdueBy', { days: -next.daysUntilDue })
-                          : next.daysUntilDue === 0
+                          ? t('overdueBy', { days: -next.bill.daysUntilDue })
+                          : next.bill.daysUntilDue === 0
                             ? t('dueToday')
-                            : t('dueIn', { days: next.daysUntilDue })}
+                            : t('dueIn', { days: next.bill.daysUntilDue })}
                       </p>
                     </>
                   ) : (
@@ -179,22 +164,22 @@ export default async function WallPage() {
                 </div>
               </section>
 
-              {shared && (
+              {v.shared && (
                 <section className="glass flex flex-grow flex-col gap-[1vw] rounded-[2.2vw] p-[2.2vw]">
                   <div className="flex items-center justify-between">
                     <span className="text-[1.4vw] text-fg-muted">{t('whoOwes')}</span>
-                    {settled && settled.total > 0 && (
+                    {v.settled && v.settled.total > 0 && (
                       <span className="flex items-center gap-[0.8vw] text-[1.1vw] text-fg-muted">
                         <Ring
                           id="wall-settled"
-                          pct={settled.pct ?? 0}
+                          pct={v.settled.pct ?? 0}
                           size={54}
                           stroke={7}
                           from="var(--color-success)"
                           to="var(--color-accent-2)"
                         >
                           <span className="text-[0.85vw] font-bold tabular-nums">
-                            {settled.pct}%
+                            {v.settled.pct}%
                           </span>
                         </Ring>
                         {t('settled')}
@@ -202,18 +187,17 @@ export default async function WallPage() {
                     )}
                   </div>
                   <ul className="flex flex-col gap-[0.9vw]">
-                    {balances.map((b) => (
+                    {v.balances.map((b) => (
                       <li
                         key={b.member.id}
                         className="flex items-center justify-between text-[2vw]"
                       >
                         <span className="flex items-center gap-[1vw]">
-                          <span
-                            className="grid size-[2.6vw] place-items-center rounded-full text-[1.1vw] font-bold text-white"
-                            style={avatar(b.member.colour)}
-                          >
-                            {b.member.name.slice(0, 1).toUpperCase()}
-                          </span>
+                          <Avatar
+                            name={b.member.name}
+                            colour={b.member.colour}
+                            className="size-[2.6vw] text-[1.1vw]"
+                          />
                           {b.member.name}
                         </span>
                         <span
@@ -230,12 +214,10 @@ export default async function WallPage() {
               <section className="glass flex items-center justify-between rounded-[2.2vw] bg-accent-soft p-[1.8vw]">
                 <span className="flex flex-col">
                   <span className="text-[1.2vw] text-fg-muted">
-                    {t('setAsideLabel', { month: proj ? monthName(proj.month) : '' })}
+                    {t('setAsideLabel', { month: monthName(v.setAside.month) })}
                   </span>
                   <span className="font-display text-[2.6vw] leading-none font-semibold tabular-nums">
-                    {proj?.setAsideEach !== null && proj?.setAsideEach !== undefined
-                      ? money(proj.setAsideEach)
-                      : '—'}{' '}
+                    {v.setAside.each !== null ? money(v.setAside.each) : '—'}{' '}
                     <span className="text-[1.2vw] font-normal text-fg-muted">{t('each')}</span>
                   </span>
                 </span>
@@ -269,12 +251,10 @@ export default async function WallPage() {
               {week.days.slice(1, 7).map((d) => (
                 <li
                   key={d.date}
-                  className={`rounded-[0.8vw] py-[0.4vw] ${d.heating ? 'bg-accent/10' : d.cooling ? 'bg-warning/10' : ''}`}
+                  className={`rounded-[0.8vw] py-[0.4vw] ${d.heating ? 'bg-accent-soft' : d.cooling ? 'bg-warning-soft' : ''}`}
                 >
                   <span className="block text-[1vw] tabular-nums">
-                    <span className="font-semibold">
-                      {dayName.format(new Date(`${d.date}T00:00:00Z`))}
-                    </span>{' '}
+                    <span className="font-semibold">{formatWeekday(d.date, hh.locale)}</span>{' '}
                     {deg(d.tempMax)} <span className="text-fg-muted">{deg(d.tempMin)}</span>
                   </span>
                   <span className="block text-[0.85vw] text-fg-muted">

@@ -211,6 +211,13 @@
       "when": 1790680669157,
       "tag": "0029_split_amounts",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "6",
+      "when": 1790683346718,
+      "tag": "0030_drop_projection",
+      "breakpoints": true
     }
   ]
 }

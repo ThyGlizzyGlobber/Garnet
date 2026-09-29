@@ -12,9 +12,9 @@ const AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const ISSUERS = ['https://accounts.google.com', 'accounts.google.com'];
 
-export const GOOGLE_CALLBACK_PATH = '/api/auth/google/callback';
+const GOOGLE_CALLBACK_PATH = '/api/auth/google/callback';
 
-export function googleRedirectUri(env: Env = getEnv()): string {
+function googleRedirectUri(env: Env = getEnv()): string {
   return `${appUrl(env)}${GOOGLE_CALLBACK_PATH}`;
 }
 

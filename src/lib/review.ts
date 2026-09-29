@@ -3,6 +3,8 @@ import { getDb, type Db } from '@/db/client';
 import { bill, sourceDocument, type SourceDocument } from '@/db/schema';
 import type { StoredExtraction } from '@/ingest/pipeline';
 import { billDate } from '@/lib/bill-month';
+import { dayIn } from '@/lib/dates';
+import { getHousehold } from '@/lib/households';
 import { minorUnitDigits } from '@/lib/format';
 import { amountWords, matchesAll, monthWords, searchTokens } from '@/lib/search';
 import { inScope, type Scope } from '@/lib/scope';
@@ -22,12 +24,14 @@ export type ReviewItem = SourceDocument & {
    * date printed on it, or, only when neither is known, the day it arrived.
    */
   date: string;
+  /** The day it arrived, in the household's time zone (YYYY-MM-DD). */
+  arrived: string;
 };
 
 /** Inbox filters: what a document turned out to be. */
-export type DocumentCategory = 'bill' | 'receipt' | 'other';
+type DocumentCategory = 'bill' | 'receipt' | 'other';
 
-export function documentCategory(
+function documentCategory(
   status: SourceDocument['status'],
   extraction: StoredExtraction | null,
 ): DocumentCategory {
@@ -63,9 +67,10 @@ function parse(json: string | null): StoredExtraction | null {
  */
 export function listDocuments(
   householdId: string,
-  opts: { status?: SourceDocument['status'] } & Scope = {},
+  opts: { status?: SourceDocument['status']; id?: string } & Scope = {},
   db: Db = getDb(),
 ): ReviewItem[] {
+  const tz = getHousehold(householdId, db)?.timezone ?? 'UTC';
   const billOwners = new Map(
     db
       .select({ id: bill.id, owner: bill.ownerMemberId })
@@ -89,6 +94,7 @@ export function listDocuments(
       and(
         eq(sourceDocument.householdId, householdId),
         opts.status ? eq(sourceDocument.status, opts.status) : undefined,
+        opts.id ? eq(sourceDocument.id, opts.id) : undefined,
       ),
     )
     .orderBy(desc(sourceDocument.receivedAt))
@@ -97,6 +103,7 @@ export function listDocuments(
     .map((r) => {
       const extraction = parse(r.doc.extractionJson);
       const read = extraction?.result?.bill;
+      const arrived = dayIn(r.doc.receivedAt, tz);
       const date = r.billId
         ? billDate({
             issueDate: r.issueDate,
@@ -107,13 +114,14 @@ export function listDocuments(
         : (extraction?.documentDate ??
           (read?.periodStart && read.periodEnd && read.dueDate
             ? billDate({ ...read, issueDate: read.issueDate ?? null })
-            : r.doc.receivedAt.slice(0, 10)));
+            : arrived));
       return {
         ...r.doc,
         extraction,
         billId: r.billId,
         category: documentCategory(r.doc.status, extraction),
         date,
+        arrived,
         linkedBillId:
           r.billId ??
           (extraction?.billId && billOwners.has(extraction.billId) ? extraction.billId : null),
@@ -145,7 +153,7 @@ export function getReviewItem(
   db: Db = getDb(),
   scope: Scope = { everyone: true },
 ): ReviewItem | null {
-  return listDocuments(householdId, scope, db).find((d) => d.id === id) ?? null;
+  return listDocuments(householdId, { ...scope, id }, db)[0] ?? null;
 }
 
 export function documentCounts(
@@ -221,3 +229,12 @@ export function searchDocuments(
     tokens,
   };
 }
+
+/** The badge colour for a document's status, the same wherever it's shown. */
+export const STATUS_TONE = {
+  needs_review: 'warning',
+  extracted: 'success',
+  ignored: 'neutral',
+  unprocessed: 'accent',
+  notice: 'neutral',
+} as const satisfies Record<SourceDocument['status'], string>;

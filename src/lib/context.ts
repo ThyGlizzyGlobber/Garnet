@@ -1,7 +1,14 @@
 import type { Household, Member } from '@/db/schema';
 import { requireMember } from '@/lib/auth/session';
 import { todayIn } from '@/lib/dates';
-import { formatDate, formatMoney } from '@/lib/format';
+import {
+  formatDate,
+  formatDateTime,
+  formatMonth,
+  formatMoney,
+  formatPercent,
+  formatQty,
+} from '@/lib/format';
 import { getHousehold } from '@/lib/households';
 
 /**
@@ -16,8 +23,8 @@ export async function pageContext() {
     hh,
     me,
     today: todayIn(hh.timezone),
-    money: (minor: number, currency: string = hh.currency) =>
-      formatMoney(minor, currency, hh.locale),
+    money: (minor: number, currency: string = hh.currency, opts?: { whole?: boolean }) =>
+      formatMoney(minor, currency, hh.locale, opts),
     date: (iso: string | null | undefined, style: 'short' | 'medium' | 'long' = 'medium') =>
       iso
         ? formatDate(
@@ -27,6 +34,17 @@ export async function pageContext() {
             style,
           )
         : '',
+    /** An instant, in the household's time zone ("29/9/26, 9:41 pm"). */
+    dateTime: (iso: string | null | undefined) =>
+      iso ? formatDateTime(iso, hh.locale, hh.timezone) : '',
+    /** "2026-09" → "Sep" / "September" / "September 2026". */
+    month: (month: string, style: 'short' | 'long' | 'long-year' = 'long') =>
+      formatMonth(month, hh.locale, style),
+    /** 0.12 → "12%"; signed: "+12%", "-8%", "±0%". */
+    pct: (fraction: number, opts?: { signed?: boolean }) =>
+      formatPercent(fraction, hh.locale, opts),
+    /** Usage quantities (not money). */
+    qty: (n: number) => formatQty(n, hh.locale),
   };
 }
 

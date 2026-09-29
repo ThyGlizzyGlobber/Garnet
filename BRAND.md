@@ -104,12 +104,19 @@ Every tile carries at least one visual element besides text:
 - **Ring** (`Ring`): progress with a gradient stroke accent → accent-2 and a
   soft glow; centre holds the figure. Budget, shares settled.
 - **Arc** (`Arc`): half-gauge with an end cap; figure sits below it. Your share.
-- **Area chart** (`AreaStack`): smoothed, stacked by service, gradient fills,
-  glowing total line, opaque tooltip. Never a dual axis.
-- **Sparkline**: 12-month trend, no axes, in the service colour.
+- **Trend line** (`TrendLine`): one smooth line with a gradient area, a glow,
+  point dots and a callout on the latest value; the service breakdown lives in
+  the tooltip and the ranking, never in stacked layers. Never a dual axis.
+- **Sparkline** (`Sparkline`, plain SVG): 12-month trend, no axes, in the
+  service colour.
 - **Forecast strip**: pill bars, first solid accent, the rest hatched.
-- **Glow disc** (`.glow-disc`): product-style icon disc with a coloured halo.
-- **Avatars**: initial on a gradient from the member colour to the accent.
+- **Icon discs** (`IconDisc`): `glow` (product-style disc with a coloured halo,
+  `.glow-disc`), `soft` (the icon in colour on a quiet disc) or `filled` (a
+  solid square in the service colour, for list rows).
+- **Avatars** (`Avatar`): initial on a gradient from the member colour to the accent.
+- Building blocks for all of these live in `src/components/ui` (`Tile`,
+  `Figure`, `Banner`, `Chip`, `Swatch`, `Avatar`, `IconDisc`); colours go
+  through `colourCss`/`tintStyle` in `src/lib/palette.ts`, never raw hex.
 - Bars, tracks and chips use `--color-surface-2` as the recessive track.
 
 ## 6. Layout & navigation
@@ -133,8 +140,9 @@ without entry animation. Everything respects `prefers-reduced-motion`.
 ## 8. Iconography
 
 Inline stroke icons at 1.8–2.2 px, round caps, 18–26 px, from
-`src/components/app/icons.tsx`. Service types map to: internet wifi,
-electricity bolt, gas flame, water drop, rent home, other receipt. No emoji.
+`src/components/app/icons.tsx`. Each service type names its icon in the
+catalog (`service_type.icon`: wifi, bolt, flame, drop, home, landmark, shield,
+car, …; a test checks every type's icon exists). No emoji.
 
 ## 9. Accessibility
 

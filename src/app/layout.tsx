@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { JetBrains_Mono, Manrope, Outfit } from 'next/font/google';
 import { NextIntlClientProvider } from 'next-intl';
-import { getLocale, getMessages } from 'next-intl/server';
+import { getLocale, getMessages, getTranslations } from 'next-intl/server';
 import { RegisterServiceWorker } from '@/components/app/pwa';
 import { Scene } from '@/components/app/scene';
 import { getTheme } from '@/lib/theme';
@@ -16,22 +16,26 @@ const mono = JetBrains_Mono({
   weight: ['400', '500'],
 });
 
-export const metadata: Metadata = {
-  title: 'Home Utilities',
-  description: 'Household utilities dashboard',
-  robots: { index: false, follow: false },
-  manifest: '/manifest.webmanifest',
-  appleWebApp: { capable: true, statusBarStyle: 'black-translucent', title: 'Utilities' },
-  icons: { icon: '/icon.svg', apple: '/icon-192.png' },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('app');
+  return {
+    title: t('name'),
+    description: t('description'),
+    robots: { index: false, follow: false },
+    manifest: '/manifest.webmanifest',
+    appleWebApp: { capable: true, statusBarStyle: 'black-translucent', title: t('shortName') },
+    icons: { icon: '/icon.svg', apple: '/icon-192.png' },
+  };
+}
 
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
+  // The browser's own chrome: keep in step with --color-bg in globals.css.
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#ece7df' },
-    { media: '(prefers-color-scheme: dark)', color: '#171b22' },
+    { media: '(prefers-color-scheme: light)', color: '#e9e4dc' },
+    { media: '(prefers-color-scheme: dark)', color: '#12151b' },
   ],
 };
 

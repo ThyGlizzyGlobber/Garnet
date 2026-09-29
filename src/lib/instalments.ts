@@ -1,4 +1,5 @@
 import type { Bill, BillInstalment } from '@/db/schema';
+import { isAdmin } from '@/lib/roles';
 
 /** A bill with the instalments it offers (in order); empty when it offers none. */
 export type WithInstalments = Pick<Bill, 'amountMinor' | 'dueDate' | 'paymentPlan'> & {
@@ -8,6 +9,34 @@ export type WithInstalments = Pick<Bill, 'amountMinor' | 'dueDate' | 'paymentPla
 /** The household has chosen to pay this bill by instalments. */
 export const paysByInstalments = (b: WithInstalments): boolean =>
   b.paymentPlan === 'instalments' && b.instalments.length > 0;
+
+/**
+ * Who chooses how a bill is paid (in full or by instalments): for a personal
+ * bill its owner; for the household's, an admin or the service's payer.
+ */
+export function canChoosePlan(
+  me: { id: string; role: string },
+  b: { ownerMemberId: string | null; service: { payerMemberId: string | null } },
+): boolean {
+  return b.ownerMemberId
+    ? b.ownerMemberId === me.id
+    : isAdmin(me) || b.service.payerMemberId === me.id;
+}
+
+/**
+ * Why the payment plan can no longer be switched, or null: switching re-splits
+ * the bill, so not once a housemate has paid a share ('shares') or a payment
+ * to the provider is recorded ('provider').
+ */
+export function planLock(b: {
+  paidToProviderAt: string | null;
+  shares: { paidAt: string | null; paidMethod: string | null }[];
+  instalments: { paidToProviderAt: string | null }[];
+}): 'shares' | 'provider' | null {
+  if (b.shares.some((s) => s.paidAt && s.paidMethod !== 'payer')) return 'shares';
+  if (b.paidToProviderAt || b.instalments.some((i) => i.paidToProviderAt)) return 'provider';
+  return null;
+}
 
 /** The bill offers instalments and nobody has said yet how they'll pay it. */
 export const planUndecided = (b: WithInstalments): boolean =>

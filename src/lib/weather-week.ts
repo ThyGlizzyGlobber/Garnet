@@ -11,7 +11,7 @@ import {
 } from '@/lib/weather';
 import { serviceWeather } from '@/lib/weather-model';
 
-export interface WeatherWeekDay {
+interface WeatherWeekDay {
   date: string;
   tempMin: number | null;
   tempMax: number | null;

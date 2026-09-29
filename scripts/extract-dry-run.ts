@@ -1,43 +1,56 @@
 /**
- * Dry-run the extractor pipeline on local bill files. No database writes.
+ * Dry-run the reader on local bill files. No writes to the household database.
  *   npm run extract:dry-run -- sample-bills/*.pdf
- *   npm run extract:dry-run -- --llm sample-bills/some-bill.pdf   (only the AI reader)
- *   npm run extract:dry-run -- --json ...                          (machine-readable)
+ *   npm run extract:dry-run -- --json ...          (machine-readable)
+ * Needs ANTHROPIC_API_KEY: the AI reader is the only extractor. Scans and photos
+ * (no text layer) are sent as files, exactly as the pipeline does.
  */
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
-import { allExtractors, fallbackExtractors } from '@/ingest/extractors';
+import { openDb } from '@/db/client';
+import { runMigrations } from '@/db/migrate';
+import { allExtractors } from '@/ingest/extractors';
 import { runExtractors } from '@/ingest/pipeline';
+import { hasNoText, scanFile } from '@/ingest/scan';
 import { extractText } from '@/ingest/text';
 import { getEnv } from '@/lib/env';
+import { listServiceTypes } from '@/lib/services';
 
 async function main() {
   const args = process.argv.slice(2);
   const json = args.includes('--json');
-  const llmOnly = args.includes('--llm');
   const files = args.filter((a) => !a.startsWith('--'));
   if (files.length === 0) {
-    console.error('Usage: npm run extract:dry-run -- [--llm] [--json] <file...>');
+    console.error('Usage: npm run extract:dry-run -- [--json] <file...>');
     process.exit(2);
   }
   const env = getEnv();
-  const extractors = llmOnly ? fallbackExtractors : allExtractors;
   const services = tryLoadServices();
+  const serviceTypes = catalogTypes();
   const out: unknown[] = [];
   for (const file of files) {
     const buffer = fs.readFileSync(file);
-    const text = await extractText(buffer, null, path.basename(file));
+    const name = path.basename(file);
+    const text = await extractText(buffer, null, name);
+    const scan = hasNoText(text) ? await scanFile(buffer, null, name) : null;
+    if (scan && 'problem' in scan) {
+      out.push({ file, textChars: text.length, verdict: `REVIEW: ${scan.problem}` });
+      if (!json) console.log(`\n=== ${file}\nverdict: REVIEW: ${scan.problem}`);
+      continue;
+    }
     const input = {
       text,
-      filename: path.basename(file),
+      filename: name,
       email: null,
       locale: env.DEFAULT_LOCALE,
       defaultCurrency: env.DEFAULT_CURRENCY,
       services,
-      serviceTypes: ['internet', 'electricity', 'gas', 'water', 'rent', 'other'],
+      serviceTypes,
+      file: scan?.file ?? null,
     };
     const { best, attempts } = await runExtractors(input, {
-      extractors,
+      extractors: allExtractors,
       threshold: env.EXTRACTOR_CONFIDENCE_THRESHOLD,
     });
     const verdict = !best
@@ -45,9 +58,9 @@ async function main() {
       : best.confidence >= env.EXTRACTOR_CONFIDENCE_THRESHOLD
         ? 'AUTO'
         : 'REVIEW (low confidence)';
-    out.push({ file, textChars: text.length, verdict, attempts, result: best });
+    out.push({ file, textChars: text.length, sentAsFile: !!scan, verdict, attempts, result: best });
     if (!json) {
-      console.log(`\n=== ${file} (${text.length} chars of text)`);
+      console.log(`\n=== ${file} (${scan ? 'sent as a file' : `${text.length} chars of text`})`);
       console.log(`verdict: ${verdict}`);
       for (const a of attempts)
         console.log(
@@ -80,6 +93,20 @@ function tryLoadServices() {
     }));
   } catch {
     return [];
+  }
+}
+
+/** The built-in service types, from a throwaway database the migrations fill in. */
+function catalogTypes(): string[] {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hud-dry-run-'));
+  try {
+    runMigrations(dir);
+    const { sqlite, db } = openDb(dir);
+    const slugs = listServiceTypes(db).map((t) => t.slug);
+    sqlite.close();
+    return slugs;
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
   }
 }
 

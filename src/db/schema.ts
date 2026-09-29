@@ -180,10 +180,10 @@ export type Cadence = (typeof CADENCES)[number];
 /**
  * How a household service's bills are split: equal, percent (service_split
  * weights are percentages), fixed (service_split amounts per bill; the rest
- * shared evenly). weighted (members' own weights) and custom (ratios) are
- * older modes still honoured; 0029 turned custom into percent.
+ * shared evenly). weighted (members' own split weights) is an older mode kept
+ * for services that still use it; 0029 turned the old "custom" ratios into percent.
  */
-export const SPLIT_MODES = ['equal', 'percent', 'fixed', 'weighted', 'custom'] as const;
+export const SPLIT_MODES = ['equal', 'percent', 'fixed', 'weighted'] as const;
 export type SplitMode = (typeof SPLIT_MODES)[number];
 
 export const service = sqliteTable(
@@ -254,7 +254,7 @@ export const service = sqliteTable(
   ],
 );
 
-/** Per-member split: percentages ('percent'), amounts ('fixed') or ratios ('custom'). */
+/** Per-member split: percentages ('percent') or amounts per bill ('fixed'). */
 export const serviceSplit = sqliteTable(
   'service_split',
   {
@@ -396,6 +396,9 @@ export const bill = sqliteTable(
     index('bill_period_idx').on(t.periodStart),
     index('bill_due_idx').on(t.dueDate),
     index('bill_owner_idx').on(t.ownerMemberId),
+    // The Inbox and document clean-ups look bills up by the file they came from.
+    index('bill_source_document_idx').on(t.sourceDocumentId),
+    index('bill_alert_document_idx').on(t.alertDocumentId),
   ],
 );
 
@@ -457,25 +460,6 @@ export const share = sqliteTable(
     index('share_member_idx').on(t.memberId),
     index('share_household_idx').on(t.householdId),
   ],
-);
-
-export const projection = sqliteTable(
-  'projection',
-  {
-    id: text('id').primaryKey(),
-    householdId: householdId(),
-    serviceId: text('service_id')
-      .notNull()
-      .references(() => service.id, { onDelete: 'cascade' }),
-    /** YYYY-MM in the household timezone. */
-    periodMonth: text('period_month').notNull(),
-    estimatedMinor: integer('estimated_minor').notNull(),
-    currency: text('currency').notNull(),
-    method: text('method').notNull(),
-    inputsJson: text('inputs_json'),
-    computedAt: text('computed_at').notNull(),
-  },
-  (t) => [uniqueIndex('projection_service_month_unique').on(t.serviceId, t.periodMonth)],
 );
 
 /**
@@ -732,4 +716,3 @@ export type WeatherForecast = typeof weatherForecast.$inferSelect;
 export type NewBill = typeof bill.$inferInsert;
 export type Share = typeof share.$inferSelect;
 export type BillInstalment = typeof billInstalment.$inferSelect;
-export type Projection = typeof projection.$inferSelect;

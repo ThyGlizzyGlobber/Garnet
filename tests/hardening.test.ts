@@ -13,7 +13,7 @@ import { countDevices, findDevice, forgetOtherDevices, trustDevice } from '@/lib
 import { resetEnvCache } from '@/lib/env';
 import { createHousehold } from '@/lib/households';
 import { IP_LIMITS, ipAllowed, resetRateLimits } from '@/lib/rate-limit';
-import { safeNext } from '@/lib/request';
+import { contentDisposition, readBodyCapped, safeNext } from '@/lib/request';
 import { AI_READ, aiAllowance, recordUsage, usageCount } from '@/lib/usage';
 
 let dir: string;
@@ -69,6 +69,33 @@ describe('safeNext', () => {
     null,
     undefined,
   ])('rejects %s', (input) => expect(safeNext(input)).toBeNull());
+});
+
+describe('download names', () => {
+  it('keep any file name without breaking the header', () => {
+    const v = contentDisposition('attachment', 'Rates – 2026 “final” 🏠.pdf');
+    // Node refuses header values outside Latin-1; this must not throw.
+    expect(() => new Headers({ 'Content-Disposition': v })).not.toThrow();
+    expect(v).toBe(
+      `attachment; filename="Rates _ 2026 _final_ _.pdf"; filename*=UTF-8''Rates%20%E2%80%93%202026%20%E2%80%9Cfinal%E2%80%9D%20%F0%9F%8F%A0.pdf`,
+    );
+  });
+});
+
+describe('request bodies from unauthenticated callers', () => {
+  const post = (body: BodyInit, headers: Record<string, string> = {}) =>
+    new Request('http://x/api', { method: 'POST', body, headers, duplex: 'half' } as RequestInit);
+  it('are read up to the limit and no further', async () => {
+    expect((await readBodyCapped(post('hello'), 10))?.toString()).toBe('hello');
+    expect(await readBodyCapped(post('x'.repeat(11)), 10)).toBeNull();
+    // No Content-Length (streamed): still stops at the limit.
+    const stream = new ReadableStream({
+      pull(c) {
+        c.enqueue(new Uint8Array(8));
+      },
+    });
+    expect(await readBodyCapped(post(stream), 64)).toBeNull();
+  });
 });
 
 describe('per-network limits', () => {

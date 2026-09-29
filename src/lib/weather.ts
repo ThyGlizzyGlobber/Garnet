@@ -40,7 +40,7 @@ export function coolingDegrees(tempMean: number, base = getEnv().WEATHER_CDD_BAS
 }
 
 /** Final history (archive) overrides provisional recent days; never the other way round. */
-export function storeDays(
+function storeDays(
   cell: string,
   days: DailyWeather[],
   source: 'archive' | 'recent',
@@ -76,7 +76,7 @@ export function storeDays(
   return stored;
 }
 
-export function replaceForecast(cell: string, days: DailyWeather[], db: Db = getDb()): void {
+function replaceForecast(cell: string, days: DailyWeather[], db: Db = getDb()): void {
   const now = new Date().toISOString();
   db.transaction((tx) => {
     tx.delete(weatherForecast).where(eq(weatherForecast.cell, cell)).run();
@@ -98,12 +98,7 @@ export function replaceForecast(cell: string, days: DailyWeather[], db: Db = get
   });
 }
 
-export function weatherDays(
-  cell: string,
-  from: string,
-  to: string,
-  db: Db = getDb(),
-): WeatherDay[] {
+function weatherDays(cell: string, from: string, to: string, db: Db = getDb()): WeatherDay[] {
   return db
     .select()
     .from(weatherDay)
@@ -122,7 +117,7 @@ export function forecastFor(cell: string, from: string, db: Db = getDb()) {
 }
 
 /** Degree-days and solar energy summed over a period, when every day has weather. */
-export function periodWeather(
+function periodWeather(
   cell: string,
   from: string,
   to: string,
@@ -151,7 +146,7 @@ export interface MonthNormal {
 }
 
 /** Years of history kept for "normal" weather. */
-export const NORMAL_YEARS = 10;
+const NORMAL_YEARS = 10;
 
 /**
  * Normal weather per calendar month (1–12) for a map square, from the stored
@@ -197,7 +192,7 @@ export function weatherNormals(cell: string, db: Db = getDb()): Map<number, Mont
 }
 
 /** Fill degree-days on a household's bills whose whole period now has weather. */
-export function fillBillWeather(householdId: string, db: Db = getDb()): number {
+function fillBillWeather(householdId: string, db: Db = getDb()): number {
   const hh = db.select().from(household).where(eq(household.id, householdId)).get();
   const cell = hh && householdCell(hh);
   if (!cell) return 0;

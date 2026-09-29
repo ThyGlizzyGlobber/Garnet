@@ -55,10 +55,7 @@ export function splitView(
     .where(and(eq(bill.householdId, householdId), eq(bill.serviceId, svc.id)))
     .orderBy(desc(bill.periodStart))
     .get();
-  const weights =
-    svc.splitMode === 'percent' || svc.splitMode === 'custom'
-      ? getCustomSplits(householdId, svc.id, db)
-      : {};
+  const weights = svc.splitMode === 'percent' ? getCustomSplits(householdId, svc.id, db) : {};
   const weightTotal = Object.values(weights).reduce((s, v) => s + v, 0);
   const percents = Object.fromEntries(
     Object.entries(weights).map(([id, w]) => [
@@ -84,7 +81,7 @@ export function splitView(
   const parts: SplitPart[] = members.map((m) => ({
     member: m,
     setting:
-      svc.splitMode === 'percent' || svc.splitMode === 'custom'
+      svc.splitMode === 'percent'
         ? { kind: 'percent', value: percents[m.id] ?? 0 }
         : svc.splitMode === 'fixed'
           ? fixed[m.id] !== undefined

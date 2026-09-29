@@ -28,17 +28,18 @@ export interface TrendPoint {
  */
 export function TrendLine({
   points,
-  colour = '#5b6f82',
+  /** A stored service colour, or any CSS colour; the accent by default. */
+  colour = 'var(--color-accent)',
   height = 240,
   id = 'trend',
-  label = 'Monthly household cost',
+  label,
 }: {
   points: TrendPoint[];
   colour?: string;
   height?: number;
   id?: string;
-  /** Accessible name for the chart. */
-  label?: string;
+  /** Accessible name for the chart (callers pass it from messages). */
+  label: string;
 }) {
   const dark = useDarkMode();
   const c = seriesColour(colour, dark);

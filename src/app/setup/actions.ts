@@ -5,28 +5,25 @@ import { z } from 'zod';
 import type { ActionState } from '@/components/ui/form';
 import { membershipsFor } from '@/lib/accounts';
 import { requireAccount, setActiveMember } from '@/lib/auth/session';
-import { str, zodToState } from '@/lib/actions';
-import { getDb } from '@/db/client';
+import { errorText, str, zodToState } from '@/lib/actions';
 import { isIsoDate } from '@/lib/dates';
-import { createHousehold } from '@/lib/households';
-import { hasPostcodeData, lookupPostcode, setHouseholdLocation } from '@/lib/location';
-import { createMember } from '@/lib/members';
-import { setRegionalSharing } from '@/lib/regional';
+import { hasPostcodeData, lookupPostcode } from '@/lib/location';
+import { setUpHousehold } from '@/lib/setup';
 
 const schema = z
   .object({
-    householdName: z.string().min(1, 'Give your household a name').max(60),
-    currency: z.string().regex(/^[A-Za-z]{3}$/, 'Use a 3-letter currency code'),
-    locale: z.string().min(2, 'Required'),
-    timezone: z.string().min(1, 'Required'),
+    householdName: z.string().min(1, 'householdName').max(60),
+    currency: z.string().regex(/^[A-Za-z]{3}$/, 'currencyCode'),
+    locale: z.string().min(2, 'required'),
+    timezone: z.string().min(1, 'required'),
     fiscalYearStartMonth: z.coerce.number().int().min(1).max(12),
     splitMode: z.enum(['shared', 'single']),
-    ownerName: z.string().min(1, 'Your name is required').max(40),
-    activeFrom: z.string().refine(isIsoDate, 'Use a valid date'),
+    ownerName: z.string().min(1, 'yourName').max(40),
+    activeFrom: z.string().refine(isIsoDate, 'validDate'),
   })
   .refine((v) => Intl.supportedValuesOf('timeZone').includes(v.timezone), {
     path: ['timezone'],
-    message: 'Unknown timezone',
+    message: 'unknownTimezone',
   });
 
 export async function completeSetup(_prev: ActionState, fd: FormData): Promise<ActionState> {
@@ -57,42 +54,24 @@ export async function completeSetup(_prev: ActionState, fd: FormData): Promise<A
   )
     return {
       fieldErrors: {
-        postalCode: `We don't know postcode ${location.postalCode}. Try your suburb or town instead.`,
+        postalCode: (await errorText())('unknownPostcode', { postcode: location.postalCode }),
       },
     };
   let ownerId: string;
   try {
-    ownerId = getDb().transaction((tx) => {
-      // Re-checked inside the transaction so two tabs can't create two households.
-      if (membershipsFor(account.id, tx).length) throw new Error('You already have a household.');
-      const hh = createHousehold(
-        {
-          name: v.householdName,
-          currency: v.currency,
-          locale: v.locale,
-          timezone: v.timezone,
-          fiscalYearStartMonth: v.fiscalYearStartMonth,
-          splitMode: v.splitMode,
-        },
-        tx,
-      );
-      if (location.postalCode) setHouseholdLocation(hh.id, location, tx);
-      const owner = createMember(
-        hh.id,
-        {
-          name: v.ownerName,
-          role: 'owner',
-          activeFrom: v.activeFrom,
-          accountId: account.id,
-          email: account.email,
-        },
-        tx,
-      );
-      // Area comparisons: on unless unticked; recorded with the notice version.
-      const share = fd.get('shareRegional') === 'on';
-      setRegionalSharing(hh.id, share, share ? 'default' : 'settings', owner.id, tx);
-      return owner.id;
-    });
+    ownerId = setUpHousehold(account, {
+      household: {
+        name: v.householdName,
+        currency: v.currency,
+        locale: v.locale,
+        timezone: v.timezone,
+        fiscalYearStartMonth: v.fiscalYearStartMonth,
+        splitMode: v.splitMode,
+      },
+      owner: { name: v.ownerName, activeFrom: v.activeFrom },
+      location: location.postalCode ? location : null,
+      shareRegional: fd.get('shareRegional') === 'on',
+    }).ownerId;
   } catch (e) {
     return { error: (e as Error).message };
   }

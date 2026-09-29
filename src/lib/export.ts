@@ -4,12 +4,16 @@ import { member, share } from '@/db/schema';
 import fs from 'node:fs';
 import { documentPath, readDocument } from '@/ingest/archive';
 import { billDate } from '@/lib/bill-month';
+import { dayIn } from '@/lib/dates';
 import { listBills } from '@/lib/bills';
 import { filedDocuments, safeSegment, uniquePaths } from '@/lib/filing';
-import { formatMinorPlain } from '@/lib/format';
+import { formatMinorPlain, formatMoney } from '@/lib/format';
 import { getHousehold } from '@/lib/households';
+import { fiscalYearBounds } from '@/lib/periods';
+import { memberLedger } from '@/lib/stats';
 import type { Scope } from '@/lib/scope';
 import type { ZipEntry } from '@/lib/zip';
+import { isAdmin } from '@/lib/roles';
 
 /**
  * Whose bills a member's export holds: admins, and every member when the
@@ -21,32 +25,30 @@ export function exportScope(
   me: { id: string; role: string },
   hh: { membersCanExport: boolean },
 ): Scope {
-  return me.role === 'owner' || hh.membersCanExport ? { viewer: me.id } : { owner: me.id };
+  return isAdmin(me) || hh.membersCanExport ? { viewer: me.id } : { owner: me.id };
 }
 
 /** May this member download the household's bills (not just their own)? */
 export const canExportHousehold = (
   me: { role: string },
   hh: { membersCanExport: boolean },
-): boolean => me.role === 'owner' || hh.membersCanExport;
+): boolean => isAdmin(me) || hh.membersCanExport;
 
-/** CSV with quoting where needed. */
+/**
+ * One CSV cell. Text that a spreadsheet would run as a formula (starting with
+ * = + - @ or a tab/return, e.g. a service name or an invoice number read off a
+ * document) gets a leading apostrophe; plain numbers like "-12.50" don't.
+ */
+function csvCell(v: string | number | null | undefined): string {
+  if (v === null || v === undefined) return '';
+  let s = String(v);
+  if (typeof v === 'string' && /^[=+\-@\t\r]/.test(s) && !/^-?\d+(\.\d+)?$/.test(s)) s = `'${s}`;
+  return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+/** CSV with quoting where needed, safe to open in a spreadsheet. */
 export function csv(rows: (string | number | null | undefined)[][]): string {
-  return (
-    rows
-      .map((r) =>
-        r
-          .map((v) =>
-            v === null || v === undefined
-              ? ''
-              : /[",\n]/.test(String(v))
-                ? `"${String(v).replace(/"/g, '""')}"`
-                : String(v),
-          )
-          .join(','),
-      )
-      .join('\n') + '\n'
-  );
+  return rows.map((r) => r.map(csvCell).join(',')).join('\n') + '\n';
 }
 
 /**
@@ -168,7 +170,7 @@ export function exportEntries(
         b.service.provider,
         billDate(b).slice(0, 7),
         whose(b.ownerMemberId),
-        f.doc.receivedAt.slice(0, 10),
+        dayIn(f.doc.receivedAt, hh.timezone),
         f.doc.originalFilename ?? f.doc.emailSubject,
       ];
     }),
@@ -293,4 +295,159 @@ export function exportEntries(
     })),
   ];
   return { folder, entries };
+}
+
+/** Every bill a member may see (the household's and their own), as one spreadsheet. */
+export function billsSpreadsheet(
+  householdId: string,
+  viewerId: string,
+  db: Db = getDb(),
+): { name: string; body: string } {
+  const hh = getHousehold(householdId, db)!;
+  const rows = listBills(householdId, { viewer: viewerId }, db).map((b) => [
+    b.periodStart,
+    b.periodEnd,
+    b.service.name,
+    b.service.provider,
+    b.service.type.label,
+    formatMinorPlain(b.amountMinor, b.currency),
+    b.currency,
+    b.taxMinor === null ? '' : formatMinorPlain(b.taxMinor, b.currency),
+    b.taxLabel ?? '',
+    b.dueDate,
+    b.paidToProviderAt ? 'paid' : 'unpaid',
+    b.usageQuantity ?? '',
+    b.usageUnit ?? '',
+    b.externalRef ?? '',
+    b.source,
+    b.isAnomaly ? 'unusual' : '',
+    b.ownerMemberId ? 'personal' : 'household',
+  ]);
+  const body = csv([
+    [
+      'period_start',
+      'period_end',
+      'service',
+      'provider',
+      'type',
+      'amount',
+      'currency',
+      'tax',
+      'tax_label',
+      'due_date',
+      'provider_payment',
+      'usage',
+      'unit',
+      'invoice',
+      'source',
+      'flag',
+      'belongs_to',
+    ],
+    ...rows,
+  ]);
+  return { name: `${hh.name} bills.csv`, body };
+}
+
+/**
+ * One member's statement: their shares for a financial year (the current one,
+ * the one starting in `fy` = "2025", or every year with `fy` = "all"), and,
+ * only when they download their own, their personal bills too.
+ */
+export function memberStatement(
+  householdId: string,
+  memberId: string,
+  viewerId: string,
+  today: string,
+  fy: string | null = null,
+  db: Db = getDb(),
+): { name: string; body: string } | null {
+  const hh = getHousehold(householdId, db);
+  const ledger = hh && memberLedger(householdId, memberId, today, hh.fiscalYearStartMonth, db);
+  if (!hh || !ledger) return null;
+  const money = (m: number) => formatMoney(m, hh.currency, hh.locale);
+  const startMonth = String(hh.fiscalYearStartMonth).padStart(2, '0');
+  const bounds = fiscalYearBounds(
+    fy && /^\d{4}$/.test(fy) ? `${fy}-${startMonth}-01` : today,
+    hh.fiscalYearStartMonth,
+  );
+  const everyYear = fy === 'all';
+  const inRange = (periodStart: string) =>
+    everyYear || (periodStart >= bounds.start && periodStart <= bounds.end);
+  const shares = ledger.all.filter((s) => inRange(s.bill.periodStart));
+  const total = shares.reduce((t, s) => t + s.amountMinor, 0);
+  const paid = shares.filter((s) => s.paidAt).reduce((t, s) => t + s.amountMinor, 0);
+  // Their personal bills too, but only in their own statement: nobody else sees them.
+  const personal =
+    memberId === viewerId
+      ? listBills(householdId, { owner: viewerId }, db).filter((b) => inRange(b.periodStart))
+      : [];
+  const personalTotal = personal.reduce((t, b) => t + b.amountMinor, 0);
+  const label = everyYear ? 'all years' : `financial year ${bounds.label}`;
+  const body = csv([
+    [`${ledger.member.name} — ${hh.name} — ${label}`],
+    [`Total shares ${money(total)}`, `Paid ${money(paid)}`],
+    [],
+    [
+      'period_start',
+      'period_end',
+      'service',
+      'provider',
+      'bill_amount',
+      'your_share',
+      'currency',
+      'days_active',
+      'due_date',
+      'paid_on',
+      'method',
+      'reference',
+      'paid_to',
+    ],
+    ...shares.map((s) => [
+      s.bill.periodStart,
+      s.bill.periodEnd,
+      s.service.name,
+      s.service.provider,
+      formatMinorPlain(s.bill.amountMinor, s.bill.currency),
+      formatMinorPlain(s.amountMinor, s.currency),
+      s.currency,
+      `${s.basisDays}/${s.periodDays}`,
+      s.dueDate ?? s.bill.dueDate,
+      s.paidAt ? s.paidAt.slice(0, 10) : '',
+      s.paidMethod ?? '',
+      s.paymentReference ?? '',
+      s.payer?.name ?? '',
+    ]),
+    ...(personal.length
+      ? [
+          [],
+          [`Personal bills ${money(personalTotal)}`],
+          [
+            'period_start',
+            'period_end',
+            'service',
+            'business',
+            'amount',
+            'currency',
+            'due_date',
+            'paid_to_business_on',
+            'invoice',
+          ],
+          ...personal.map((b) => [
+            b.periodStart,
+            b.periodEnd,
+            b.service.name,
+            b.service.provider,
+            formatMinorPlain(b.amountMinor, b.currency),
+            b.currency,
+            b.dueDate,
+            b.paidToProviderAt?.slice(0, 10) ?? '',
+            b.externalRef ?? '',
+          ]),
+        ]
+      : []),
+  ]);
+  return {
+    name: `${ledger.member.name} statement ${everyYear ? 'all years' : bounds.label}.csv`,
+    body,
+  };
 }

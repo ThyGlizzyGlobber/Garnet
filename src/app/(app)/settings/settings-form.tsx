@@ -38,7 +38,7 @@ export function SettingsForm({
         {state.error && (
           <p
             role="alert"
-            className="rounded-xl bg-danger/10 px-4 py-3 text-sm font-medium text-danger"
+            className="rounded-xl bg-danger-soft px-4 py-3 text-sm font-medium text-danger"
           >
             {state.error}
           </p>
@@ -46,7 +46,7 @@ export function SettingsForm({
         {state.ok && (
           <p
             role="status"
-            className="rounded-xl bg-success/10 px-4 py-3 text-sm font-medium text-success"
+            className="rounded-xl bg-success-soft px-4 py-3 text-sm font-medium text-success"
           >
             {t('saved')}
           </p>

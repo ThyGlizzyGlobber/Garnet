@@ -88,7 +88,7 @@ function upload(hid: string, text: string, extra: Partial<ArchiveInput> = {}) {
 describe('payment receipts', () => {
   it('mark the invoice they name as paid on the receipt date and clear any flag', async () => {
     const { hh, bill } = setup();
-    const july = bill('60097874', '2026-07-28', '2026-07-14', '2026-08-13');
+    const july = bill('50000002', '2026-07-28', '2026-07-14', '2026-08-13');
     setBillAlert(hh.id, july.id, 'payment_failed', null, db);
     const doc = upload(hh.id, RECEIPT);
     const outcome = await processDocument(hh.id, doc.id, db);
@@ -99,7 +99,7 @@ describe('payment receipts', () => {
     // The review page links the receipt to the bill it paid.
     expect(JSON.parse(getDocument(hh.id, doc.id, db)!.extractionJson!).billId).toBe(july.id);
     // …and the inbox files it under Receipts, apart from bills.
-    const invoice = upload(hh.id, INVOICE.replaceAll('59259831', '61111111'));
+    const invoice = upload(hh.id, INVOICE.replaceAll('50000001', '61111111'));
     await processDocument(hh.id, invoice.id, db);
     const byId = new Map(listDocuments(hh.id, {}, db).map((d) => [d.id, d.category]));
     expect(byId.get(doc.id)).toBe('receipt');
@@ -116,7 +116,7 @@ describe('payment receipts', () => {
 
   it('only act on emailed receipts that really come from the provider', async () => {
     const { hh, bill } = setup();
-    const july = bill('60097874', '2026-07-28', '2026-07-14', '2026-08-13');
+    const july = bill('50000002', '2026-07-28', '2026-07-14', '2026-08-13');
     const spoof = upload(hh.id, RECEIPT, {
       kind: 'pdf',
       emailFrom: 'Aussie Broadband <billing@attacker.example>',

@@ -464,40 +464,59 @@ describe('switching whose a service is, from its bill', () => {
     expect(canChangeOwner(jo, fromSam)).toBe(false);
   });
 
-  it('whoever uploaded a bill of it can switch it, even on a service they didn’t set up', () => {
+  it('whoever brought every bill in can switch it; one upload among the household’s is not enough', () => {
     const { hh, jo, sam, power } = setup();
     // Set up by hand, Jo pays: only Jo (admin, payer) can, so far.
     expect(mayChangeOwner(hh.id, sam, power, db)).toBe(false);
     expect(mayChangeOwner(hh.id, jo, power, db)).toBe(true);
-    // Sam uploads its next bill.
-    const doc = archiveDocument(
+    const upload = (serviceId: string, periodStart: string) => {
+      const doc = archiveDocument(
+        hh.id,
+        {
+          kind: 'upload',
+          buffer: Buffer.from(`bill ${Math.random()}`),
+          originalFilename: 'bill.txt',
+          mimeType: 'text/plain',
+          memberId: sam.id,
+        },
+        db,
+      ).doc;
+      createBill(
+        hh.id,
+        {
+          serviceId,
+          amountMinor: 20000,
+          periodStart,
+          periodEnd: periodStart.replace(/-01$/, '-28'),
+          dueDate: periodStart.replace(/-01$/, '-28'),
+          source: 'llm',
+          sourceDocumentId: doc.id,
+        },
+        db,
+      );
+    };
+    // Sam uploads the power's next bill: Sam can't take the household's power
+    // (its September bill isn't Sam's), and the admin no longer decides alone.
+    upload(power.id, '2026-10-01');
+    expect([...broughtInBy(hh.id, power.id, db)]).toEqual([sam.id]);
+    expect(mayChangeOwner(hh.id, sam, power, db)).toBe(false);
+    expect(mayChangeOwner(hh.id, jo, power, db)).toBe(false);
+    // A service whose every bill Sam brought in (Sam's own rego, filed as the
+    // household's): Sam can make it theirs, the admin can't.
+    const rego = createService(
       hh.id,
       {
-        kind: 'upload',
-        buffer: Buffer.from(`power bill ${Math.random()}`),
-        originalFilename: 'power.txt',
-        mimeType: 'text/plain',
-        memberId: sam.id,
-      },
-      db,
-    ).doc;
-    createBill(
-      hh.id,
-      {
-        serviceId: power.id,
-        amountMinor: 20000,
-        periodStart: '2026-10-01',
-        periodEnd: '2026-10-31',
-        dueDate: '2026-11-14',
-        source: 'llm',
-        sourceDocumentId: doc.id,
+        typeSlug: 'vehicle_registration',
+        name: 'Sam’s rego',
+        provider: 'Roads',
+        payerMemberId: jo.id,
       },
       db,
     );
-    expect([...broughtInBy(hh.id, power.id, db)]).toEqual([sam.id]);
-    expect(mayChangeOwner(hh.id, sam, power, db)).toBe(true);
-    // It came from Sam: the admin no longer gets to make it theirs.
-    expect(mayChangeOwner(hh.id, jo, power, db)).toBe(false);
+    upload(rego.id, '2026-11-01');
+    upload(rego.id, '2027-11-01');
+    expect(mayChangeOwner(hh.id, sam, rego, db)).toBe(true);
+    expect(mayChangeOwner(hh.id, jo, rego, db)).toBe(false);
   });
 });
 

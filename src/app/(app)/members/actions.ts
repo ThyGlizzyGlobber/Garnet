@@ -4,13 +4,15 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import type { ActionState } from '@/components/ui/form';
-import { str, zodToState } from '@/lib/actions';
+import { errorText, fieldErrors, str, zodToState } from '@/lib/actions';
+import { DEFAULT_COLOUR } from '@/lib/palette';
 import { getTranslations } from 'next-intl/server';
 import { hashPin, PIN_PATTERN, verifyPin } from '@/lib/auth/pin';
-import { forgetOtherDevices } from '@/lib/auth/devices';
+import { forgetOtherDevices, recordPinFailure, resetPinFailures } from '@/lib/auth/devices';
 import {
   authState,
   currentDeviceId,
+  dropDeviceCookie,
   getSession,
   requireMember,
   requireOwner,
@@ -22,21 +24,26 @@ import { inviteLink, sendInviteEmail } from '@/lib/invite-email';
 import { setNotifyPref } from '@/lib/notifications';
 import { createInvite, revokeInvites } from '@/lib/invites';
 import { createMember, deleteMember, getMember, setMemberRole, updateMember } from '@/lib/members';
+import { rateLimit } from '@/lib/rate-limit';
+import { ADMIN_ROLE, isAdmin } from '@/lib/roles';
 
-const isoDate = z.string().refine(isIsoDate, 'Use a valid date');
+/** Invitation emails a household may send per hour (the link and code still work beyond it). */
+const INVITE_EMAILS_PER_HOUR = 10;
+
+const isoDate = z.string().refine(isIsoDate, 'validDate');
 
 const schema = z
   .object({
-    name: z.string().min(1, 'Required').max(40),
-    splitWeight: z.coerce.number().positive('Must be above zero'),
+    name: z.string().min(1, 'required').max(40),
+    splitWeight: z.coerce.number().positive('aboveZero'),
     activeFrom: isoDate,
-    activeTo: z.string().refine((s) => s === '' || isIsoDate(s), 'Use a valid date'),
+    activeTo: z.string().refine((s) => s === '' || isIsoDate(s), 'validDate'),
     colour: z.string().regex(/^#[0-9a-fA-F]{6}$/),
-    email: z.string().refine((e) => e === '' || EMAIL_PATTERN.test(e), 'Enter a valid email'),
+    email: z.string().refine((e) => e === '' || EMAIL_PATTERN.test(e), 'validEmail'),
   })
   .refine((v) => v.activeTo === '' || v.activeTo >= v.activeFrom, {
     path: ['activeTo'],
-    message: 'Move-out is before move-in',
+    message: 'moveOrder',
   });
 
 function readPaymentDetails(fd: FormData) {
@@ -55,7 +62,7 @@ function read(fd: FormData) {
     splitWeight: str(fd, 'splitWeight') || '1',
     activeFrom: str(fd, 'activeFrom'),
     activeTo: str(fd, 'activeTo'),
-    colour: str(fd, 'colour') || '#0a84ff',
+    colour: str(fd, 'colour') || DEFAULT_COLOUR,
     email: str(fd, 'email').toLowerCase(),
   });
 }
@@ -72,7 +79,16 @@ async function issueInvite(
   const hh = getHousehold(me.householdId)!;
   const inviter = getMember(me.householdId, me.id)!;
   const issued = createInvite(me.householdId, memberId, { email, createdByMemberId: me.id });
-  const sent = email ? await sendInviteEmail(issued, hh, inviter) : null;
+  const t = await getTranslations('members.invite');
+  // Sign-up is open, so invitations must not become a way to mail strangers:
+  // demo households never email, and every household has an hourly cap.
+  const sent = !email
+    ? null
+    : hh.isDemo
+      ? { sent: false as const, reason: t('notInDemo') }
+      : rateLimit(`invite:${hh.id}`, INVITE_EMAILS_PER_HOUR, 3_600_000)
+        ? await sendInviteEmail(issued, hh, inviter)
+        : { sent: false as const, reason: t('tooMany') };
   const session = await getSession();
   session.flashInvite = {
     memberId,
@@ -113,22 +129,25 @@ export async function updateMemberAction(_prev: ActionState, fd: FormData): Prom
   const me = await requireMember();
   const id = str(fd, 'id');
   const target = getMember(me.householdId, id);
-  if (!target) return { error: 'Member not found' };
-  // Members edit themselves; the owner edits anyone.
-  if (me.role !== 'owner' && me.id !== id) return { error: 'Only admins can edit other members.' };
+  const te = await errorText();
+  if (!target) return { error: te('memberNotFound') };
+  // Members edit themselves; admins edit anyone.
+  if (!isAdmin(me) && me.id !== id) return { error: te('editOthers') };
   const parsed = read(fd);
   if (!parsed.success) return zodToState(parsed.error);
   const v = parsed.data;
+  const admin = isAdmin(me);
   try {
     updateMember(me.householdId, id, {
       name: v.name,
-      splitWeight: v.splitWeight,
-      activeFrom: v.activeFrom,
-      activeTo: v.activeTo || null,
       colour: v.colour,
       paymentDetails: readPaymentDetails(fd),
+      // Move-in, move-out and weight decide everyone's shares: admins only.
+      ...(admin
+        ? { splitWeight: v.splitWeight, activeFrom: v.activeFrom, activeTo: v.activeTo || null }
+        : {}),
       // The email is where invitations go; once joined, the account owns sign-in.
-      ...(!target.accountId ? { email: v.email || null } : {}),
+      ...(admin && !target.accountId ? { email: v.email || null } : {}),
     });
   } catch (e) {
     return { error: (e as Error).message };
@@ -142,7 +161,7 @@ export async function setMemberRoleAction(fd: FormData): Promise<void> {
   const me = await requireOwner();
   const id = str(fd, 'id');
   const role = str(fd, 'role');
-  if (role !== 'owner' && role !== 'member') redirect('/members');
+  if (role !== ADMIN_ROLE && role !== 'member') redirect('/members');
   try {
     setMemberRole(me.householdId, id, role);
   } catch {
@@ -169,10 +188,10 @@ export async function inviteMemberAction(_prev: ActionState, fd: FormData): Prom
   const me = await requireOwner();
   const id = str(fd, 'id');
   const target = getMember(me.householdId, id);
-  if (!target) return { error: 'Member not found' };
+  if (!target) return { error: (await errorText())('memberNotFound') };
   if (target.accountId) redirect(`/members/${id}/invite`);
   const email = str(fd, 'email').toLowerCase();
-  if (email && !EMAIL_PATTERN.test(email)) return { fieldErrors: { email: 'Enter a valid email' } };
+  if (email && !EMAIL_PATTERN.test(email)) return fieldErrors({ email: 'validEmail' });
   try {
     await issueInvite(me, id, email || target.email || null);
   } catch (e) {
@@ -189,21 +208,31 @@ export async function inviteMemberAction(_prev: ActionState, fd: FormData): Prom
 export async function removeAccessAction(fd: FormData): Promise<void> {
   const me = await requireOwner();
   const target = getMember(me.householdId, str(fd, 'id'));
-  if (!target || target.id === me.id || target.role === 'owner') redirect('/members');
+  if (!target || target.id === me.id || isAdmin(target)) redirect('/members');
   revokeInvites(me.householdId, target.id);
   updateMember(me.householdId, target.id, { accountId: null, pinHash: null });
   revalidatePath('/members');
   redirect(`/members/${target.id}/edit`);
 }
 
-/** Change your own PIN. Nobody else can. */
+/**
+ * Change your own PIN. Nobody else can. Wrong current PINs count against this
+ * browser like wrong unlocks do, so an unlocked device can't be used to guess it.
+ */
 export async function changePinAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
   const me = await requireMember();
   const t = await getTranslations('pin');
+  const s = await authState();
+  const deviceId = s.kind === 'ok' && s.account ? await currentDeviceId(s.account.id) : null;
   if (!me.pinHash || !(await verifyPin(str(fd, 'current'), me.pinHash))) {
     await new Promise((r) => setTimeout(r, 400));
+    if (deviceId && recordPinFailure(deviceId).forgotten) {
+      await dropDeviceCookie();
+      redirect('/login?reason=locked-out');
+    }
     return { fieldErrors: { current: t('wrongCurrent') } };
   }
+  if (deviceId) resetPinFailures(deviceId);
   const pin = str(fd, 'pin');
   if (!PIN_PATTERN.test(pin)) return { fieldErrors: { pin: t('invalid') } };
   if (pin !== str(fd, 'pinConfirm')) return { fieldErrors: { pinConfirm: t('mismatch') } };

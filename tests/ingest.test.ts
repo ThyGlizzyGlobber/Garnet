@@ -153,8 +153,8 @@ describe('archive + pipeline', () => {
     expect(outcome.status).toBe('extracted');
     expect(outcome.result?.extractor).toBe('llm:anthropic');
     expect(outcome.result?.bill.amountMinor).toBe(12900);
-    expect(outcome.result?.bill.externalRef).toBe('59259831');
-    expect(outcome.result?.bill.accountRef).toBe('14809800');
+    expect(outcome.result?.bill.externalRef).toBe('50000001');
+    expect(outcome.result?.bill.accountRef).toBe('12345678');
     expect(outcome.result?.bill.issueDate).toBe('2026-06-14');
     expect(getDocument(hid, doc.id, db)?.status).toBe('extracted');
     // Same invoice, different bytes → duplicate detection by invoice number.

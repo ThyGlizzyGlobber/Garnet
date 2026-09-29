@@ -5,7 +5,8 @@ import { getEnv, operatorEmails } from '@/lib/env';
 
 export const AI_READ = 'ai_read';
 
-function monthOf(now: number): string {
+/** Usage is counted per UTC calendar month (YYYY-MM). */
+function usageMonth(now: number): string {
   return new Date(now).toISOString().slice(0, 7);
 }
 
@@ -22,7 +23,7 @@ export function usageCount(
       .where(
         and(
           eq(usage.householdId, householdId),
-          eq(usage.month, monthOf(now)),
+          eq(usage.month, usageMonth(now)),
           eq(usage.kind, kind),
         ),
       )
@@ -37,7 +38,7 @@ export function recordUsage(
   now = Date.now(),
 ): void {
   db.insert(usage)
-    .values({ householdId, month: monthOf(now), kind, count: 1 })
+    .values({ householdId, month: usageMonth(now), kind, count: 1 })
     .onConflictDoUpdate({
       target: [usage.householdId, usage.month, usage.kind],
       set: { count: sql`${usage.count} + 1` },
@@ -50,7 +51,7 @@ export function recordUsage(
  * household they belong to: it's their own API key, and they test with a
  * year of bills at a time. Everyone else keeps AI_MONTHLY_LIMIT.
  */
-export function isUncapped(householdId: string, db: Db = getDb()): boolean {
+function isUncapped(householdId: string, db: Db = getDb()): boolean {
   const operators = operatorEmails();
   if (!operators.length) return false;
   return db

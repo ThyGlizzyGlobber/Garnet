@@ -37,7 +37,7 @@ export function ActionForm({
       {state.error && (
         <p
           role="alert"
-          className="rounded-xl bg-danger/10 px-4 py-3 text-sm font-medium text-danger"
+          className="rounded-xl bg-danger-soft px-4 py-3 text-sm font-medium text-danger"
         >
           {state.error}
         </p>

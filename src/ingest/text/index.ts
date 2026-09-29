@@ -18,5 +18,3 @@ export async function extractText(
     return normaliseText(buffer.toString('utf8'));
   return '';
 }
-
-export { emailToText, htmlToText, normaliseText, pdfToText };

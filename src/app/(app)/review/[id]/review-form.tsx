@@ -48,7 +48,7 @@ export function ReviewForm({
         <Card className="flex flex-col gap-4">
           <input type="hidden" name="documentId" value={documentId} />
           {noServiceMatch && (
-            <p className="rounded-xl bg-warning/10 px-4 py-3 text-sm text-warning">
+            <p className="rounded-xl bg-warning-soft px-4 py-3 text-sm text-warning">
               {t('noServiceMatch', { provider: providerHint ?? '' })}
             </p>
           )}

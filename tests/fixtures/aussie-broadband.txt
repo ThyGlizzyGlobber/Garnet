@@ -6,7 +6,7 @@ Aussie Broadband Limited ABN 29 132 090 192
 PO Box 3351, Gippsland Mail Centre VIC 3841
 Phone: 1300 880 905 Fax: 03 5562 2897
 Accounts opening hours:*Please check our website
-for the latest opening hours. Customer: Sam Example Invoice Number: 59259831
+for the latest opening hours. Customer: Sam Example Invoice Number: 50000001
 Your Aussie Broadband Tax Invoice
 Billing Period: 14 Jun 2026 - 13 Jul 2026
 Sam Example
@@ -25,8 +25,8 @@ Issue Date
 Invoice Number
 Customer Number
 14 Jun 2026
-59259831
-14809800
+50000001
+12345678
 Payment Method
 Credit Card
 You can view and download

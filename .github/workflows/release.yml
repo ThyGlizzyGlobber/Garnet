@@ -1,5 +1,6 @@
-# Every push to main: lint + typecheck + tests, then build the image and
-# publish it to GitHub Container Registry as :latest and :<commit>.
+# Every push to main: npm run check (lint, types, formatting, dead code, tests),
+# then build the image and publish it to GitHub Container Registry as :latest
+# and :<commit>.
 # The NAS pulls :latest when the owner presses Settings → Software update.
 name: Release
 

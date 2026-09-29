@@ -25,38 +25,50 @@ interface WorkerState extends WorkerStatus {
 // Survives Next.js hot reloads in dev; one poller per process.
 const g = globalThis as unknown as {
   __hudWorker?: WorkerState;
+  __hudPoll?: Promise<PollResult>;
   __hudReminders?: NodeJS.Timeout;
   __hudWeather?: NodeJS.Timeout;
   __hudRegional?: NodeJS.Timeout;
 };
 
-/** Due-date reminders: checked every 15 minutes; each reminder is sent once (notification_log). */
-export function startReminders(): void {
+/**
+ * Every 15 minutes: auto-pay, busy AI retries, due-date reminders (each sent
+ * once, notification_log), season-ahead emails and keeping the NAS filing in
+ * step. Each step has its own error handling, so one failing never stops the
+ * others.
+ */
+const QUARTER_HOURLY: { name: string; run: () => number | Promise<number>; done: string }[] = [
+  {
+    name: 'autopay',
+    run: () => settleAutoPaidBills(),
+    done: 'marked {n} bill(s) paid to the provider',
+  },
+  {
+    name: 'ingest',
+    run: () => retryBusyReads(),
+    done: 're-read {n} document(s) the AI was too busy for',
+  },
+  { name: 'reminders', run: () => sendDueReminders(), done: 'sent {n}' },
+  { name: 'seasons', run: () => sendSeasonAhead(), done: 'sent {n} season-ahead email(s)' },
+  // Bills edited, services renamed, bills moved: keep the NAS filing in step.
+  { name: 'filing', run: () => refileAll(), done: 'filed {n} document(s)' },
+];
+
+function startReminders(): void {
   if (g.__hudReminders) return;
   let busy = false;
-  const tick = () => {
+  const tick = async () => {
     if (busy) return;
     busy = true;
-    Promise.resolve()
-      .then(() => {
-        const settled = settleAutoPaidBills();
-        if (settled) console.log(`[autopay] marked ${settled} bill(s) paid to the provider`);
-        return retryBusyReads();
-      })
-      .then((n) => {
-        if (n) console.log(`[ingest] re-read ${n} document(s) the AI was too busy for`);
-        return sendDueReminders();
-      })
-      .then((n) => n && console.log(`[reminders] sent ${n}`))
-      .then(() => sendSeasonAhead())
-      .then((n) => n && console.log(`[seasons] sent ${n} season-ahead email(s)`))
-      // Bills edited, services renamed, bills moved: keep the NAS filing in step.
-      .then(() => refileAll())
-      .then((n) => n && console.log(`[filing] filed ${n} document(s)`))
-      .catch((e) => console.error('[reminders]', (e as Error).message))
-      .finally(() => {
-        busy = false;
-      });
+    for (const step of QUARTER_HOURLY) {
+      try {
+        const n = await step.run();
+        if (n) console.log(`[${step.name}] ${step.done.replace('{n}', String(n))}`);
+      } catch (e) {
+        console.error(`[${step.name}]`, (e as Error).message);
+      }
+    }
+    busy = false;
   };
   setTimeout(tick, 60_000).unref();
   g.__hudReminders = setInterval(tick, 15 * 60_000);
@@ -84,24 +96,28 @@ export function workerStatus(): WorkerStatus {
 }
 
 /** Run one poll now (used by the timer and the "poll now" button). Serialised. */
-export async function pollNow(): Promise<PollResult> {
-  const s = state();
-  if (s.running && s.lastPoll) return s.lastPoll;
-  s.running = true;
-  try {
-    const r = await pollMailbox();
-    s.lastPoll = r;
-    s.pollCount++;
-    if (r.error) s.errorCount++;
-    return r;
-  } finally {
-    s.running = false;
-    if (s.timer) s.nextPollAt = new Date(Date.now() + s.intervalSeconds * 1000).toISOString();
-  }
+export function pollNow(): Promise<PollResult> {
+  // A poll already running (even the very first): wait for it rather than start another.
+  g.__hudPoll ??= (async () => {
+    const s = state();
+    s.running = true;
+    try {
+      const r = await pollMailbox();
+      s.lastPoll = r;
+      s.pollCount++;
+      if (r.error) s.errorCount++;
+      return r;
+    } finally {
+      s.running = false;
+      if (s.timer) s.nextPollAt = new Date(Date.now() + s.intervalSeconds * 1000).toISOString();
+      g.__hudPoll = undefined;
+    }
+  })();
+  return g.__hudPoll;
 }
 
 /** Weather for households with a postcode: every 30 minutes, first run soon after start. */
-export function startWeather(): void {
+function startWeather(): void {
   if (g.__hudWeather) return;
   let busy = false;
   const tick = () => {
@@ -123,7 +139,7 @@ export function startWeather(): void {
 }
 
 /** Area figures (scope S4): recomputed every six hours, first a minute after start. */
-export function startRegional(): void {
+function startRegional(): void {
   if (g.__hudRegional) return;
   const tick = () => {
     if (!regionalEnabled()) return;
@@ -158,12 +174,4 @@ export function startWorker(): void {
   s.timer.unref();
   s.nextPollAt = new Date(Date.now() + 5_000).toISOString();
   console.log(`[worker] IMAP poller started, every ${s.intervalSeconds}s`);
-}
-
-export function stopWorker(): void {
-  const s = state();
-  if (s.timer) clearInterval(s.timer);
-  s.timer = null;
-  s.enabled = false;
-  s.nextPollAt = null;
 }

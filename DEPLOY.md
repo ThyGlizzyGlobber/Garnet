@@ -192,7 +192,7 @@ Steps:
 2. Cloudflare → `brjlabs.com` → **Email → Email Routing**: enable it (Cloudflare adds the MX/SPF records). For the subdomain style, add the subdomain under Settings.
 3. **Destination addresses**: add and verify your own email (used as `FALLBACK_TO`, and `FORWARD_OTHER_TO` for the apex style).
 4. **Email Workers → Create**: start from any template, replace the code with `deploy/email-worker/worker.js`, **Deploy**.
-5. The Worker's **Settings → Variables and Secrets**: `APP_INBOUND_URL` = `https://home.brjlabs.com/api/inbound/email`, `INBOUND_EMAIL_SECRET` (type **Secret**) = the value from step 1, `FALLBACK_TO` = your verified email, and for the apex style `FORWARD_OTHER_TO` = your verified email.
+5. The Worker's **Settings → Variables and Secrets**: `APP_INBOUND_URL` = `https://home-utilities.brjlabs.com/api/inbound/email`, `INBOUND_EMAIL_SECRET` (type **Secret**) = the value from step 1, `FALLBACK_TO` = your verified email, and for the apex style `FORWARD_OTHER_TO` = your verified email.
 6. **Routing rules**: the catch-all (apex style) or the `bills@` custom address (subdomain style) → action **Send to a Worker** → this Worker.
 7. On TrueNAS add `BILLS_ADDRESS_TEMPLATE` and `INBOUND_EMAIL_SECRET` (same value) to the app and save.
 8. Send a test: forward any bill to the address shown in Settings. It appears under Bills (or in the review queue) within a minute.
@@ -259,8 +259,7 @@ non-commercial use: once the product charges, buy their commercial plan and set
 when it last updated.
 
 **Household location.** Each household can add its postcode (Settings →
-Location, or during setup). It sets the hemisphere and seasons now and the
-local weather later (S3). Australian postcodes come from GeoNames
+Location, or during setup). It sets the hemisphere, seasons and local weather. Australian postcodes come from GeoNames
 (`reference/postcodes/`, CC BY 4.0, credited in Settings); other countries keep
 the postcode without a map point until their file is added.
 
@@ -350,11 +349,25 @@ app with an icon and keeps the last-loaded pages available offline.
 
 ```
 /data/db/utilities.sqlite          the database (WAL files beside it)
-/data/inbox/YYYY/MM/…              raw emails, PDFs and uploads, never deleted
+/data/db/utilities.pre-migrate-*   a copy from before each update's migrations (latest five)
+/data/inbox/households/<Household name> (<id>)/YYYY/MM Month/<service>/…
+                                   every bill's file with its receipts and notices
+/data/inbox/YYYY/MM/…              files as they arrived, until they're filed (or
+                                   when they aren't about a bill)
+/data/originals/<id>.<ext>         a scan exactly as it arrived, once it was turned upright
+/data/config/upgrades.json         one-off upgrade steps already run on this install
 /data/config/imap-state.json       last processed mailbox UID
 /data/config/update-request.json   present only while an update is queued
 /data/config/update-last.json      the last update request (shown in Settings)
+/data/config/demo-off.json         present once someone left demo mode
 ```
 
-Exports: Ledger → "Download statement" gives a per-member CSV; the owner can
-also download every bill from the same endpoint (`/api/export?kind=bills`).
+Bill files are kept as the audit trail; deleting a bill deletes its file (and
+its original).
+
+Exports: Bills → "Download everything" gives a zip for an accountant (a README,
+spreadsheets of bills, instalments, shares and files, and every file). Admins
+get the household's bills plus their own personal ones, and so does every
+member while "Everyone can download the household's bills" is on (Settings);
+otherwise members get just their own personal bills. Ledger → "Download
+statement" gives one member's shares for the financial year as a CSV.

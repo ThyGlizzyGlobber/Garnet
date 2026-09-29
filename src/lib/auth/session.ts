@@ -8,6 +8,7 @@ import { getHousehold } from '@/lib/households';
 import { getMemberForSession } from '@/lib/members';
 import { requestIsHttps, safeNext } from '@/lib/request';
 import { findDevice, forgetDevice, touchDevice, trustDevice } from './devices';
+import { isAdmin } from '@/lib/roles';
 
 /**
  * Two cookies:
@@ -127,7 +128,7 @@ export async function requireMember(next?: string): Promise<Member> {
 /** Household admin (stored as role "owner"). */
 export async function requireOwner(): Promise<Member> {
   const m = await requireMember();
-  if (m.role !== 'owner') redirect('/');
+  if (!isAdmin(m)) redirect('/');
   return m;
 }
 

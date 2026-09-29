@@ -4,7 +4,7 @@ import { bill, service, share, type Bill, type Share } from '@/db/schema';
 import { shareDueDate } from '@/lib/instalments';
 import { daysUntil } from '@/lib/periods';
 
-export type ReminderLevel = 'overdue' | 'due_soon' | 'upcoming';
+type ReminderLevel = 'overdue' | 'due_soon' | 'upcoming';
 
 export interface Reminder {
   share: Share;

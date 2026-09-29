@@ -25,7 +25,7 @@ function dosTime(d: Date): { time: number; date: number } {
   };
 }
 
-export async function* zipStream(entries: Iterable<ZipEntry>): AsyncGenerator<Uint8Array> {
+async function* zipStream(entries: Iterable<ZipEntry>): AsyncGenerator<Uint8Array> {
   const central: Buffer[] = [];
   let offset = 0;
   let count = 0;

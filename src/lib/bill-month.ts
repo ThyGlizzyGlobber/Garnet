@@ -20,11 +20,15 @@ export function billMonth(b: Parameters<typeof billDate>[0]): string {
   return billDate(b).slice(0, 7);
 }
 
-/** "August 2026" for a YYYY-MM key. */
-export function monthLabel(month: string, locale: string): string {
-  return new Intl.DateTimeFormat(locale, {
-    month: 'long',
-    year: 'numeric',
-    timeZone: 'UTC',
-  }).format(new Date(`${month}-01T00:00:00Z`));
+/**
+ * Items grouped by the month of their date (YYYY-MM), newest month first and
+ * newest first within a month. Bills, the Inbox and the ledger list this way.
+ */
+export function groupByMonth<T>(items: T[], dateOf: (item: T) => string): [string, T[]][] {
+  const groups = new Map<string, T[]>();
+  for (const item of [...items].sort((a, b) => dateOf(b).localeCompare(dateOf(a)))) {
+    const month = dateOf(item).slice(0, 7);
+    groups.set(month, [...(groups.get(month) ?? []), item]);
+  }
+  return [...groups.entries()];
 }

@@ -1,5 +1,5 @@
 import { getTranslations } from 'next-intl/server';
-import { CopyField } from '@/components/app/auth-forms';
+import { CopyField } from '@/components/ui/copy';
 import { Card } from '@/components/ui';
 import { InlineAction } from '@/components/ui/form';
 

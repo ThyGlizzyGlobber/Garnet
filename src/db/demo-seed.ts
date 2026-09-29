@@ -1,119 +1,13 @@
 import { getDb, type Db } from '@/db/client';
 import { hashPin } from '@/lib/auth/pin';
-import { createBill, listBills } from '@/lib/bills';
+import { createBill } from '@/lib/bills';
 import { and, eq, lt } from 'drizzle-orm';
 import { bill, share } from '@/db/schema';
-import { todayIn } from '@/lib/dates';
-import { createHousehold, isSetUp, listHouseholds } from '@/lib/households';
-import { createMember, listMembers } from '@/lib/members';
-import { createService, listServices } from '@/lib/services';
+import { createHousehold, isSetUp } from '@/lib/households';
+import { createMember } from '@/lib/members';
+import { createService } from '@/lib/services';
 import { PALETTE, TYPE_COLOUR } from '@/lib/palette';
 import { demoExited } from '@/lib/demo';
-
-/**
- * Real seed: the four Aussie Broadband invoices from sample-bills/ (values only,
- * no personal details). Requires a household; creates a minimal development one
- * if none exists so `npm run db:seed` works on a fresh checkout.
- */
-export async function seedReal(db: Db = getDb()) {
-  let hh = listHouseholds(db).find((h) => !h.isDemo);
-  if (!hh) {
-    hh = createHousehold(
-      {
-        name: 'Development Household',
-        currency: 'AUD',
-        locale: 'en-AU',
-        timezone: 'Australia/Melbourne',
-        fiscalYearStartMonth: 7,
-        splitMode: 'shared',
-      },
-      db,
-    );
-    createMember(
-      hh.id,
-      { name: 'Owner', pinHash: await hashPin('1234'), role: 'owner', activeFrom: '2025-01-01' },
-      db,
-    );
-  }
-  const members = listMembers(hh.id, db);
-  const owner = members.find((m) => m.role === 'owner') ?? members[0];
-  let internet = listServices(hh.id, { includeInactive: true }, db).find(
-    (s) => s.provider === 'Aussie Broadband',
-  );
-  if (!internet) {
-    internet = createService(
-      hh.id,
-      {
-        typeSlug: 'internet',
-        name: 'Internet',
-        provider: 'Aussie Broadband',
-        accountRef: '14809800',
-        cadence: 'monthly',
-        payerMemberId: owner?.id ?? null,
-        colour: TYPE_COLOUR.internet,
-      },
-      db,
-    );
-  }
-  const existing = new Set(
-    listBills(hh.id, { serviceId: internet.id }, db).map((b) => b.externalRef),
-  );
-  const invoices = [
-    {
-      ref: '59259831',
-      start: '2026-06-14',
-      end: '2026-07-13',
-      issued: '2026-06-14',
-      due: '2026-06-26',
-    },
-    {
-      ref: '60097874',
-      start: '2026-07-14',
-      end: '2026-08-13',
-      issued: '2026-07-14',
-      due: '2026-07-28',
-    },
-    {
-      ref: '61058821',
-      start: '2026-08-14',
-      end: '2026-09-13',
-      issued: '2026-08-14',
-      due: '2026-08-28',
-    },
-    {
-      ref: '62143961',
-      start: '2026-09-14',
-      end: '2026-10-13',
-      issued: '2026-09-14',
-      due: '2026-09-28',
-    },
-  ];
-  let added = 0;
-  for (const inv of invoices) {
-    if (existing.has(inv.ref)) continue;
-    createBill(
-      hh.id,
-      {
-        serviceId: internet.id,
-        amountMinor: 12900,
-        currency: 'AUD',
-        taxMinor: 1173,
-        taxLabel: 'GST',
-        periodStart: inv.start,
-        periodEnd: inv.end,
-        issueDate: inv.issued,
-        dueDate: inv.due,
-        source: 'manual',
-        externalRef: inv.ref,
-        paidToProviderAt: inv.due <= todayIn(hh.timezone) ? `${inv.due}T00:00:00Z` : null,
-        notes: 'Seeded from sample-bills/',
-      },
-      db,
-    );
-    added++;
-  }
-  return { household: hh.name, billsAdded: added };
-}
 
 /**
  * Fictional household for demos and screenshots. Never uses real names or numbers.

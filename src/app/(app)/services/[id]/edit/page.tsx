@@ -13,6 +13,7 @@ import { partText } from '../../split-text';
 import { listUnits } from '@/lib/units';
 import { updateServiceAction } from '../../actions';
 import { ServiceForm } from '../../service-form';
+import { isAdmin } from '@/lib/roles';
 
 export default async function EditServicePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -45,7 +46,7 @@ export default async function EditServicePage({ params }: { params: Promise<{ id
           splitWeight: m.splitWeight,
         }))}
         split={{
-          canEdit: me.role === 'owner',
+          canEdit: isAdmin(me),
           currency: hh.currency,
           locale: hh.locale,
           latestMinor: view.latestMinor,

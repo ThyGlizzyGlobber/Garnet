@@ -150,6 +150,20 @@ export function revokeInvites(householdId: string, memberId: string, db: Db = ge
     .run();
 }
 
+/**
+ * Where a member stands with signing in: joined (linked to an account), or
+ * their latest invitation is pending, has expired, or there is none.
+ */
+export function joinStatus(
+  m: { accountId: string | null },
+  latest: Invite | undefined,
+  now = Date.now(),
+): 'joined' | 'pending' | 'expired' | 'none' {
+  if (m.accountId) return 'joined';
+  const s = inviteState(latest, now);
+  return s === 'pending' || s === 'expired' ? s : 'none';
+}
+
 export function inviteState(i: Invite | undefined, now = Date.now()) {
   if (!i) return 'none' as const;
   if (i.acceptedAt) return 'accepted' as const;

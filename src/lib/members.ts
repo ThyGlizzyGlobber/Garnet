@@ -2,6 +2,8 @@ import { and, asc, count, eq } from 'drizzle-orm';
 import { getDb, type Db } from '@/db/client';
 import { member, service, share, sourceDocument, type Member } from '@/db/schema';
 import { ulid } from '@/lib/ids';
+import { DEFAULT_COLOUR } from '@/lib/palette';
+import { isAdmin } from '@/lib/roles';
 
 export function listMembers(householdId: string, db: Db = getDb()): Member[] {
   return db
@@ -12,10 +14,12 @@ export function listMembers(householdId: string, db: Db = getDb()): Member[] {
     .all();
 }
 
+/** Living there on `today`: moved in, and not yet moved out. */
+export const isActiveOn = (m: Pick<Member, 'activeFrom' | 'activeTo'>, today: string): boolean =>
+  m.activeFrom <= today && (m.activeTo === null || m.activeTo >= today);
+
 export function listActiveMembers(householdId: string, today: string, db: Db = getDb()): Member[] {
-  return listMembers(householdId, db).filter(
-    (m) => m.activeFrom <= today && (m.activeTo === null || m.activeTo >= today),
-  );
+  return listMembers(householdId, db).filter((m) => isActiveOn(m, today));
 }
 
 export function getMember(householdId: string, id: string, db: Db = getDb()): Member | null {
@@ -36,19 +40,9 @@ export function getMemberForSession(id: string, db: Db = getDb()): Member | null
   return db.select().from(member).where(eq(member.id, id)).get() ?? null;
 }
 
-export function getMemberByName(
-  householdId: string,
-  name: string,
-  db: Db = getDb(),
-): Member | null {
+function getMemberByName(householdId: string, name: string, db: Db = getDb()): Member | null {
   const wanted = name.trim().toLowerCase();
   return listMembers(householdId, db).find((m) => m.name.toLowerCase() === wanted) ?? null;
-}
-
-export function countMembers(householdId: string, db: Db = getDb()): number {
-  return (
-    db.select({ n: count() }).from(member).where(eq(member.householdId, householdId)).get()?.n ?? 0
-  );
 }
 
 export interface MemberInput {
@@ -79,7 +73,7 @@ export function createMember(householdId: string, input: MemberInput, db: Db = g
     splitWeight: input.splitWeight ?? 1,
     activeFrom: input.activeFrom,
     activeTo: input.activeTo ?? null,
-    colour: input.colour ?? '#0a84ff',
+    colour: input.colour ?? DEFAULT_COLOUR,
     notifyBills: true,
     notifyReminders: true,
     notifyProblems: true,
@@ -107,6 +101,7 @@ export function updateMember(
     .set({
       ...patch,
       ...(patch.name ? { name: patch.name.trim() } : {}),
+      ...(patch.email !== undefined ? { email: patch.email?.trim().toLowerCase() || null } : {}),
       updatedAt: new Date().toISOString(),
     })
     .where(and(eq(member.householdId, householdId), eq(member.id, id)))
@@ -128,6 +123,11 @@ export function hasHousemates(householdId: string, db: Db = getDb()): boolean {
  * household settings) or a member again. A household always keeps at least
  * one admin.
  */
+/** The household's only admin (a household always keeps one, so they can't step down). */
+export function isLastAdmin(householdId: string, m: Member, db: Db = getDb()): boolean {
+  return isAdmin(m) && listMembers(householdId, db).filter(isAdmin).length <= 1;
+}
+
 export function setMemberRole(
   householdId: string,
   id: string,
@@ -137,10 +137,8 @@ export function setMemberRole(
   const m = getMember(householdId, id, db);
   if (!m) throw new Error('Member not found');
   if (m.role === role) return m;
-  if (role === 'member') {
-    const admins = listMembers(householdId, db).filter((x) => x.role === 'owner');
-    if (admins.length <= 1) throw new Error('A household needs at least one admin');
-  }
+  if (role === 'member' && isLastAdmin(householdId, m, db))
+    throw new Error('A household needs at least one admin');
   db.update(member)
     .set({ role, updatedAt: new Date().toISOString() })
     .where(and(eq(member.householdId, householdId), eq(member.id, id)))
@@ -152,8 +150,7 @@ export function setMemberRole(
 export function deleteMember(householdId: string, id: string, db: Db = getDb()): void {
   const m = getMember(householdId, id, db);
   if (!m) return;
-  if (m.role === 'owner')
-    throw new Error('An admin can’t be deleted. Remove their admin role first.');
+  if (isAdmin(m)) throw new Error('An admin can’t be deleted. Remove their admin role first.');
   const n = db.select({ n: count() }).from(share).where(eq(share.memberId, id)).get()?.n ?? 0;
   if (n > 0)
     throw new Error('This member has bill shares. Set a move-out date instead of deleting.');

@@ -27,6 +27,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     <AppShell
       householdName={hh.name}
       memberName={me.name}
+      memberColour={me.colour}
       nav={nav}
       logoutAction={logout}
       logoutLabel={t('logout')}

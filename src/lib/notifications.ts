@@ -3,7 +3,6 @@ import { and, eq, gte, isNull, lte, sql } from 'drizzle-orm';
 import { createTranslator } from 'next-intl';
 import { getDb, type Db } from '@/db/client';
 import {
-  account,
   bill,
   billInstalment,
   member,
@@ -19,18 +18,19 @@ import { getBill } from '@/lib/bills';
 import { addDays, todayIn } from '@/lib/dates';
 import { composeEmail, sendEmail, type EmailBlock } from '@/lib/email';
 import { appUrl, getEnv } from '@/lib/env';
-import { formatDate, formatMoney } from '@/lib/format';
+import { formatDate, formatMoney, formatMonth } from '@/lib/format';
+import { signInEmail } from '@/lib/accounts';
 import { getHousehold, listHouseholds } from '@/lib/households';
 import { ulid } from '@/lib/ids';
 import { getMember, listMembers } from '@/lib/members';
 import { DAYS_PER_MONTH, usageHistory } from '@/lib/consumption';
 import { unitLabel } from '@/lib/units';
-import { monthLabel } from '@/lib/bill-month';
 import { seasonNoticeText } from '@/lib/season-text';
 import { seasonAhead } from '@/lib/seasons';
 import { getService } from '@/lib/services';
 import { daysUntil } from '@/lib/periods';
-import { shareDueDate } from '@/lib/instalments';
+import { canChoosePlan, shareDueDate } from '@/lib/instalments';
+import { isAdmin } from '@/lib/roles';
 
 /**
  * Household emails: a new bill (each person's share and how to pay it),
@@ -54,7 +54,7 @@ const t = createTranslator({ locale: 'en', messages, namespace: 'notify' });
 const QUIET_START = 8;
 const QUIET_END = 20;
 /** Days before the due date for the first reminder. */
-export const REMIND_DAYS_BEFORE = 3;
+const REMIND_DAYS_BEFORE = 3;
 /** Overdue reminders: first day overdue, then weekly, this many times. */
 const OVERDUE_REMINDERS = 3;
 
@@ -76,7 +76,7 @@ export function unsubscribeUrl(memberId: string, category: NotifyCategory): stri
 }
 
 /** For the List-Unsubscribe header: mail apps POST here for one-click stops. */
-export function oneClickUnsubscribeUrl(memberId: string, category: NotifyCategory): string {
+function oneClickUnsubscribeUrl(memberId: string, category: NotifyCategory): string {
   return unsubscribeUrl(memberId, category).replace(
     '/notifications/unsubscribe?',
     '/api/notifications/unsubscribe?',
@@ -107,14 +107,6 @@ export function setNotifyPref(
 // ─── Sending ─────────────────────────────────────────────────────────────────
 
 /** Where a member's email goes: their sign-in address. Not-yet-joined members get none. */
-function emailOf(m: Member, db: Db): string | null {
-  if (!m.accountId) return null;
-  return (
-    db.select({ email: account.email }).from(account).where(eq(account.id, m.accountId)).get()
-      ?.email ?? null
-  );
-}
-
 /**
  * Send once per (member, kind, ref): the log row is claimed first, so two
  * timers can't both send, and released if sending fails so it's retried.
@@ -129,7 +121,7 @@ async function sendOnce(
   db: Db,
 ): Promise<boolean> {
   if (hh.isDemo || !m[PREF[category]]) return false;
-  const to = emailOf(m, db);
+  const to = signInEmail(m, db);
   if (!to) return false;
   const id = ulid();
   const claimed = db
@@ -145,27 +137,32 @@ async function sendOnce(
     .onConflictDoNothing()
     .run().changes;
   if (!claimed) return false;
-  const { subject, blocks } = build();
-  const stop = unsubscribeUrl(m.id, category);
-  const email = composeEmail({
-    to,
-    subject,
-    blocks,
-    footer: t('footer', { household: hh.name, category: t(`categories.${category}`), url: stop }),
-  });
-  const res = await sendEmail({
-    ...email,
-    headers: {
-      'List-Unsubscribe': `<${oneClickUnsubscribeUrl(m.id, category)}>`,
-      'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
-    },
-  });
-  if (!res.sent) {
+  // Not sent, for whatever reason: release the claim so the next tick tries again.
+  const release = (why: string) => {
     db.delete(notificationLog).where(eq(notificationLog.id, id)).run();
-    console.warn(`[notify] ${kind} to member ${m.id} failed: ${res.reason}`);
+    console.warn(`[notify] ${kind} to member ${m.id} failed: ${why}`);
     return false;
+  };
+  try {
+    const { subject, blocks } = build();
+    const stop = unsubscribeUrl(m.id, category);
+    const email = composeEmail({
+      to,
+      subject,
+      blocks,
+      footer: t('footer', { household: hh.name, category: t(`categories.${category}`), url: stop }),
+    });
+    const res = await sendEmail({
+      ...email,
+      headers: {
+        'List-Unsubscribe': `<${oneClickUnsubscribeUrl(m.id, category)}>`,
+        'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+      },
+    });
+    return res.sent || release(res.reason);
+  } catch (e) {
+    return release((e as Error).message);
   }
-  return true;
 }
 
 function fmt(hh: Household) {
@@ -330,7 +327,7 @@ export async function notifyServiceCreated(
   let sent = 0;
   // Admins check a new household service; a personal one is its owner's to check.
   const recipients = listMembers(householdId, db).filter((x) =>
-    svc.ownerMemberId ? x.id === svc.ownerMemberId : x.role === 'owner',
+    svc.ownerMemberId ? x.id === svc.ownerMemberId : isAdmin(x),
   );
   for (const m of recipients) {
     const ok = await sendOnce(
@@ -377,11 +374,7 @@ export async function notifyBillAlert(
     amount: f.money(b.amountMinor, b.currency),
     due: f.day(b.dueDate),
   };
-  const members = listMembers(householdId, db).filter((m) =>
-    b.ownerMemberId
-      ? m.id === b.ownerMemberId
-      : m.role === 'owner' || m.id === b.service.payerMemberId,
-  );
+  const members = listMembers(householdId, db).filter((m) => canChoosePlan(m, b));
   let sent = 0;
   for (const m of members) {
     const ok = await sendOnce(
@@ -570,7 +563,7 @@ export async function sendSeasonAhead(now = new Date(), db: Db = getDb()): Promi
       if (!payer) continue;
       const text = seasonNoticeText(n, ts, {
         money: f.money,
-        month: (ym) => monthLabel(ym, hh.locale),
+        month: (ym) => formatMonth(ym, hh.locale, 'long-year'),
       });
       const ok = await sendOnce(
         hh,

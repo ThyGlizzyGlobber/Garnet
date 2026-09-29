@@ -7,8 +7,9 @@ import { openDb, type Db } from '@/db/client';
 import { runMigrations } from '@/db/migrate';
 import { archiveDocument, documentPath, getDocument, setDocumentStatus } from '@/ingest/archive';
 import { processDocument } from '@/ingest/pipeline';
-import { canExportHousehold, exportEntries, exportScope } from '@/lib/export';
+import { canExportHousehold, csv, exportEntries, exportScope, memberStatement } from '@/lib/export';
 import { filedDocuments, monthFolder, refileDocuments, safeSegment } from '@/lib/filing';
+import { createBill } from '@/lib/bills';
 import { createHousehold, updateHousehold } from '@/lib/households';
 import { createMember } from '@/lib/members';
 import { createService, updateService } from '@/lib/services';
@@ -136,6 +137,72 @@ function setup() {
   };
   return { hh, jo, sam, rates, upload };
 }
+
+describe('spreadsheets', () => {
+  it('quotes where needed and never lets text run as a formula', () => {
+    expect(csv([['a,b', 'say "hi"', null, 12]])).toBe('"a,b","say ""hi""",,12\n');
+    expect(csv([['=HYPERLINK("x")', '+1', '@SUM(A1)', '-12.50', '-', 'x']])).toBe(
+      `"'=HYPERLINK(""x"")",'+1,'@SUM(A1),-12.50,'-,x\n`,
+    );
+  });
+});
+
+describe('a member statement', () => {
+  it('lists every share of the financial year, not just the latest 20', () => {
+    const hh = createHousehold(
+      {
+        name: 'Statement',
+        currency: 'AUD',
+        locale: 'en-AU',
+        timezone: 'Australia/Melbourne',
+        fiscalYearStartMonth: 7,
+        splitMode: 'shared',
+      },
+      db,
+    );
+    const jo = createMember(hh.id, { name: 'Jo', role: 'owner', activeFrom: '2025-01-01' }, db);
+    const sam = createMember(hh.id, { name: 'Sam', activeFrom: '2025-01-01' }, db);
+    const svc = createService(
+      hh.id,
+      { typeSlug: 'rent', name: 'Rent', provider: 'Agent', payerMemberId: jo.id },
+      db,
+    );
+    // 26 fortnightly rent bills in the 2025–26 year, and one from the year before.
+    const day = (d: number) => new Date(Date.UTC(2025, 6, 1 + d)).toISOString().slice(0, 10);
+    for (let i = 0; i < 26; i++)
+      createBill(
+        hh.id,
+        {
+          serviceId: svc.id,
+          amountMinor: 100_000,
+          periodStart: day(i * 14),
+          periodEnd: day(i * 14 + 13),
+          dueDate: day(i * 14),
+          source: 'manual',
+        },
+        db,
+      );
+    createBill(
+      hh.id,
+      {
+        serviceId: svc.id,
+        amountMinor: 100_000,
+        periodStart: '2025-06-01',
+        periodEnd: '2025-06-14',
+        dueDate: '2025-06-01',
+        source: 'manual',
+      },
+      db,
+    );
+    const rows = (fy: string | null) =>
+      memberStatement(hh.id, sam.id, sam.id, '2026-06-30', fy, db)!
+        .body.split('\n')
+        .filter((l) => /^\d{4}-\d{2}-\d{2},/.test(l));
+    expect(rows(null)).toHaveLength(26);
+    expect(rows('2024')).toHaveLength(1);
+    expect(rows('all')).toHaveLength(27);
+  });
+});
 
 describe('filing names', () => {
   it('are safe everywhere and months sort in order', () => {

@@ -1,8 +1,9 @@
 # Home Utilities Dashboard — Prototype 1 (BRJ Labs)
 
-Self-hosted household utilities dashboard: ingests utility bills from a dedicated
-mailbox, totals costs per service, splits them between housemates, tracks who has
-paid, and projects upcoming bills. Runs as one Docker container on TrueNAS Scale.
+Self-hosted household bills dashboard: reads the bills each household forwards to
+its own bills address (or uploads), totals costs per service, splits them between
+housemates, tracks who has paid, and projects upcoming bills. Runs as one Docker
+container on TrueNAS Scale.
 
 **SCOPE.md is the source of truth** for scope; **BRAND.md** for look, voice and design tokens. Never contradict it. If something is ambiguous
 or a decision seems wrong, stop and ask the owner before building around it.
@@ -23,8 +24,8 @@ log below; this section is the quick orientation.
 - **Live.** TrueNAS 25.10.7 Custom App, data on the ixVolume `SSD/ix-apps/app_mounts/home-utilities/data`,
   public at `https://home-utilities.brjlabs.com` through a Cloudflare Tunnel (no Cloudflare Access policy; the
   stage 3 hardening stands in for it). Check what's installed with `curl https://home-utilities.brjlabs.com/api/health`
-  (`commit`). As of 2026-09-29 the NAS runs `f7b61d9`; the seasons work (S1–S4, wall weather strip) is pushed
-  but not yet installed. Households: the owner's Smith Household (real bills, a financial year fed in, the AI cap
+  (`commit`). On 2026-09-29 the NAS ran `ac34d58` (the seasons work is installed); the pre-redesign cleanup
+  (see the decisions log, 2026-09-29) is committed locally and not yet pushed. Households: the owner's Smith Household (real bills, a financial year fed in, the AI cap
   lifted for the operator's household) and the owner's aunt's.
 - **Email in.** Cloudflare Email Routing on brjlabs.com, apex catch-all → Worker `home-utilities-bills` →
   `/api/inbound/email` (HMAC). Households forward bills to `{alias}@brjlabs.com` (forward-only; nobody changes
@@ -48,18 +49,25 @@ log below; this section is the quick orientation.
   gives the fictional Riverside House demo ("Try the demo household", Alex, PIN 1234). The local `.env` has no
   Anthropic, Resend or Google keys, so those paths are exercised by tests with stand-ins (`tests/setup.ts` fakes the AI).
   Weather does call the real Open-Meteo API when a demo household has a postcode.
-- **Verified.** `npm run check` (366 tests), production build, every feature above in the browser on the demo
-  (except where noted in the decisions log), and live on the NAS up to `f7b61d9`: inbound email, forwarding,
-  updates, AI reading with a real key.
-- **Not yet verified live.** Seasons S1–S4 and the wall strip on the NAS; Google sign-in; the regional figures
+- **Verified.** `npm run check` (lint, types, formatting, knip dead-code check, 376 tests), production build,
+  every page of the demo in the browser after the cleanup, and live on the NAS up to `ac34d58`: inbound email,
+  forwarding, updates, AI reading with a real key.
+- **Not yet verified live.** The cleanup; Google sign-in; the regional figures
   (need 10+ sharing households in an area); the AI reading instalments off a real notice (the owner's Bendigo
   rates notice is in `sample-bills/council-rates.pdf`, a rotated scan; tests use a stand-in AI).
 - **Open items for the owner.** Product name and domain (BRAND.md lists Homebill / Housekeep / Tally); display
   type and brand mark; Open-Meteo commercial plan (`OPEN_METEO_API_KEY`) before charging anyone; the scope's §7
   privacy/legal review before non-family households (sharing is on by default by the owner's choice — see the
-  decisions log); a UI designer is planned for a dashboard redesign (all numbers come from `src/lib`).
-- **Likely next steps.** Install the seasons work on the NAS and add the household postcode; household alpha
-  (SCOPE.md §10); PDF statements; weekly/monthly digest if wanted.
+  decisions log); the `SettlementAdapter` in the hard constraints was never built (shares are tracked in
+  `src/lib`): add the thin interface or reword the constraint; the IMAP poller is legacy (bills arrive through
+  the bills-address Worker) and could be retired; the Worker's HMAC doesn't cover the recipient header (changing
+  it needs the Worker redeployed in step); documents waiting in the Inbox are visible to every member even when
+  a member uploaded them for a personal service; lib-level error messages and stored Unusual notes are still
+  English text rather than message keys.
+- **Likely next steps.** The UI/UX redesign: every screen reads its numbers from a view function in `src/lib`
+  (`home.ts`, `service-overview.ts`, `status.ts`, `personal.ts`) and draws with the primitives in
+  `src/components/ui` (Tile, Figure, Banner, Chip, Swatch, Avatar, IconDisc…), so a redesign swaps markup and
+  tokens (`globals.css`), not logic. Then the household alpha (SCOPE.md §10); PDF statements; digests.
 
 ## Hard constraints
 
@@ -114,55 +122,80 @@ log below; this section is the quick orientation.
 
 ## Tech stack
 
-Next.js 16 (App Router, Turbopack) · TypeScript 5 strict · Tailwind v4 · Recharts ·
-Drizzle ORM + better-sqlite3 · next-intl · Vitest · ESLint 9 + Prettier ·
-iron-session + bcryptjs · imapflow + mailparser + pdf-parse · @anthropic-ai/sdk ·
+Next.js 16.3.6 (App Router, Turbopack; pinned, see the decisions log) · TypeScript 5 strict · Tailwind v4 ·
+Recharts · Drizzle ORM + better-sqlite3 · next-intl · Vitest · ESLint 9 + Prettier · knip ·
+iron-session + bcryptjs · mailparser + mailauth (DKIM) + pdf-parse + pdf-lib (turning pages) + sharp (photos) ·
+imapflow (optional operator mailbox) · @anthropic-ai/sdk · Resend (email out, HTTP API) · Open-Meteo (weather) ·
 Docker multi-stage on node:22-bookworm-slim with Next standalone output, built by GitHub Actions and published to GHCR (`deploy/`).
 
 ## Commands
 
 - `npm run dev` — dev server; migrations run on start via `src/instrumentation.ts`
-- `npm run build` / `npm start` — production build (copies static + public + drizzle into `.next/standalone`) / standalone server
-- `npm run check` — lint + typecheck + tests (must pass before every commit)
-- `npm run lint` · `npm run typecheck` · `npm test` · `npm run format`
+- `npm run build` / `npm start` — production build (copies static, public, drizzle and reference into `.next/standalone`) / standalone server
+- `npm run check` — lint (no warnings) + typecheck + formatting + knip (dead code) + tests; must pass before every commit
+- `npm run lint` · `npm run typecheck` · `npm run format` · `npm run knip` · `npm test`
 - `npm run db:generate` — generate a migration from `src/db/schema.ts` changes
 - `npm run db:migrate` — apply migrations to `DATA_DIR/db/utilities.sqlite`
-- `npm run db:seed` — load the four real Aussie Broadband invoices into the existing household (creates a dev household + owner PIN 1234 if none)
 - `npm run db:seed:demo` — create the fictional "Riverside House" demo household (also runs automatically when `DEMO_MODE=true`)
-- `npm run extract:dry-run -- <file...>` — run the extractor pipeline on bill files, no DB writes (`--llm` forces the AI extractor, `--json` for machine output)
+- `npm run extract:dry-run -- <file...>` — run the AI reader on bill files (scans and photos sent as files, as the pipeline does), no writes to the household database (`--json` for machine output; needs `ANTHROPIC_API_KEY`)
 - `docker build -t brjlabs/home-utilities:local .` — build the image locally; production images come from `.github/workflows/release.yml` (GHCR)
 
 ## Layout
 
 ```
-src/app/            App Router routes: login, dashboard, bills, services, members,
-                    review, settings, wall, api/*
-src/components/     ui/ (design primitives), charts/ (Recharts wrappers)
-src/db/             schema.ts, client.ts, migrate.ts
-src/lib/            env.ts (the only process.env reader), paths.ts, format.ts,
-                    units.ts, money/splits/projections logic, auth/
-src/ingest/         imap/, archive.ts (inbox/ writer), text/ (pdf, html),
-                    extractors/ (types, pipeline, template/*, llm/anthropic)
-src/settlement/     SettlementAdapter interface + track-only adapter
-src/worker/         poller lifecycle (started from instrumentation.ts)
+src/app/            App Router routes: (app)/ (the signed-in app: Home in page.tsx with
+                    its tiles in _home/, bills, services, members, ledger, review = Inbox,
+                    settings, status), login/unlock/set-pin/welcome/setup/invite,
+                    wall, privacy, api/*. Pages only lay out; numbers come from src/lib.
+src/components/     ui/ (design primitives: Card, Tile, Figure, Banner, Chip, Badge,
+                    form fields, Ring/Arc, colour.tsx: Swatch/Avatar/IconDisc, copy),
+                    charts/ (TrendLine on Recharts, Sparkline in plain SVG),
+                    app/ (shell, nav, icons, search bar, weather card, …)
+src/db/             schema.ts, client.ts, migrate.ts, demo-seed.ts
+src/lib/            env.ts (the only process.env reader), format.ts (all formatting),
+                    roles.ts, palette.ts, view functions per screen (home.ts,
+                    service-overview.ts, status.ts, personal.ts), bills, splits,
+                    projections, consumption, seasons, weather, regional, filing,
+                    export, notifications, upgrades.ts (one-off steps), auth/
+src/ingest/         pipeline.ts (read a document → bill or Inbox), trust.ts (who a
+                    document speaks for), payments.ts (receipts, notices, hints),
+                    approve.ts (Inbox approval), archive.ts (inbox/ writer), inbound.ts
+                    (bills-address Worker), email.ts, scan.ts, rotate.ts, text/,
+                    extractors/ (types, llm/anthropic), imap/ (optional mailbox)
+src/weather/        WeatherProvider interface + Open-Meteo
+src/worker/         startup.ts (migrations, one-off steps, demo) and the timers:
+                    reminders/auto-pay/refiling (15 min), weather (30 min),
+                    area figures (6 h), optional mailbox poll
+src/i18n/           next-intl request config
 drizzle/            generated SQL migrations (committed)
-messages/           next-intl message files
-scripts/            seed, dry-run CLI
-tests/              vitest; mirrors src/ paths
-data/               local DATA_DIR (gitignored): db/, inbox/, config/
-sample-bills/       real bills for seeding + extraction tests (gitignored)
+messages/           next-intl message files (en.json)
+reference/          postcode data (GeoNames, CC BY 4.0)
+deploy/             nas-updater.sh, truenas-app.yaml, email-worker/
+scripts/            demo seed, extraction dry-run
+tests/              vitest, one file per feature (tests/setup.ts fakes the AI reader)
+data/               local DATA_DIR (gitignored): db/, inbox/, originals/, config/
+sample-bills/       real bills for extraction checks (gitignored)
+brand-identity/     design references (not app code; outside lint and knip)
 ```
 
 ## Conventions
 
 - Env is validated once in `src/lib/env.ts` (zod). Nothing else reads `process.env`.
-- Server logic lives in `src/lib`, `src/ingest`, `src/settlement`; route handlers
-  and server actions stay thin.
+- Server logic lives in `src/lib` and `src/ingest`; route handlers and server
+  actions stay thin (session, form parsing, one call, redirect). Pages read a
+  view function or lib calls and only format and lay out.
+- Formatting goes through `src/lib/format.ts` (bound per household in
+  `pageContext()`: money, date, dateTime, month, pct, qty). Colours through
+  `src/lib/palette.ts` (`colourCss`, `tintStyle`) or the tokens in `globals.css`.
+- Error messages in actions are keys in `messages/en.json` → `errors`
+  (`zodToState`, `fieldErrors`, `errorText` in `src/lib/actions.ts`).
 - Every DB change goes through a committed Drizzle migration. No ad-hoc schema edits.
 - IDs are text (ULID-style), generated in app code.
 - Extractors implement `Extractor` from `src/ingest/extractors/types.ts` and return a
   confidence in [0,1]; the pipeline routes below-threshold results to review.
-- Tests live in `tests/`, mirror `src/` paths, and must pass before every commit.
+- Tests live in `tests/` (one file per feature) and must pass before every commit.
+- One-off data fixes after a change of rule run once per install: add a step to
+  `src/worker/startup.ts` (recorded in `config/upgrades.json`), never on every start.
 - Prefer server components; client components only where interaction needs them.
 - Commit at the end of each phase only after `npm run check` passes.
 
@@ -179,12 +212,23 @@ sample-bills/       real bills for seeding + extraction tests (gitignored)
 
 ## Phases
 
-0 Scaffolding · 1 Data model + auth + manual entry + demo mode + rent as a service
+- 0 Scaffolding
+- 1 Data model + auth + manual entry + demo mode + rent as a service + member active dates
+- 2 Dashboard + anomaly flags + /wall
+- 3 Ingestion pipeline + status page + re-parse from archive + PDF-side review
+- 4 Projections + reminders + PWA + statement export + onboarding wizard + DEPLOY.md
 
-- member active dates · 2 Dashboard + anomaly flags + /wall · 3 Ingestion pipeline
-- status page + re-parse from archive + PDF-side review · 4 Projections + reminders
-- PWA + statement export + onboarding wizard + DEPLOY.md.
-  Stop and check in with the owner between phases.
+Stop and check in with the owner between phases.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->
 
 ## Decisions log
 
@@ -217,16 +261,6 @@ Append entries as `- YYYY-MM-DD — decision — why`. Do not rewrite old entrie
 - 2026-09-24 — LLM extractor uses `messages.parse` with a zod output schema and a cached system prompt; only bill _text_ is sent (max 60k chars), never the file. Model comes from `ANTHROPIC_MODEL`.
 - 2026-09-24 — Template parser fixtures are redacted copies of real invoice text (`tests/fixtures/`); real PDFs stay gitignored.
 - 2026-09-24 — Review queue lives in the header (inbox icon with count) rather than the tab bar — five tabs is the phone limit.
-
-<!-- BEGIN:nextjs-agent-rules -->
-
-# This is NOT the Next.js you know
-
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
-
-This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
-
-<!-- END:nextjs-agent-rules -->
 
 - 2026-09-24 — `npm start` runs `.next/standalone/server.js`, never `next start` — with `output: standalone`, `next start` silently 404s some routes (seen on /review and /status) while the standalone server serves them; Docker uses the same server.
 - 2026-09-24 — Standalone server chdirs into `.next/standalone`, so `npm start` makes a relative `DATA_DIR` absolute first (`$PWD/data`); Docker passes `/data` so it's unaffected.
@@ -320,3 +354,11 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - 2026-09-29 — "Who's this for?" goes to whoever brought the bill in, never the admins when that's known (owner: Lisa's ambulance cover asked Raymond-John). Services marked for asking by 0027/0028 didn't record who set them up, so the question fell back to the admins; `adoptSetUpBy()` (`src/ingest/set-up-by.ts`, every start) fills `service.set_up_by_member_id` from the service's first bill (the uploader, or the member a signed forward came from). The switch rule is tightened to match (`canChangeOwner`): a household service can be made someone's own only by whoever brought its bill in; admins or its payer only when nobody is known (for uploads the payer defaults to the admin, which had offered the admin the switch on someone else's bill).
 - 2026-09-29 — Whoever brought a bill in can say whose it is (owner: an uploaded rego couldn't be switched by the person who uploaded it). `canChangeOwner` now also allows anyone who uploaded or forwarded any of the service's bills (`broughtInBy()` in `src/lib/ownership.ts`; `mayChangeOwner()` works it out for a stored service and is the one check used by the bill page, the bill's Edit form, the service form and their actions). The service edit page had kept its own older rule (admin or payer only), which is what blocked the uploader. The bill's Edit form gains "Whose is it?" (The household's / Just mine; applies to the whole service). The "stays the household's" lock now looks at every bill of the service (`housematesPaid()`), as `setServiceOwner` always did, so neither page offers a switch it would refuse. `actingMember()` moved to `src/lib/acting-member.ts` (re-exported by the pipeline) so lib code can use it without importing the pipeline.
 - 2026-09-29 — Splits per service, set by admins (owner: rent 40/30/30 because one person has the master bedroom, water still even). Split modes are now equal, percent and fixed (set amounts); weighted (member weights) stays for services already using it, and custom weights became percentages (migration 0029, which also adds `service_split.amount_minor`). Percent: each member's percentage, must total 100 (0 or blank = doesn't pay); a member who leaves mid-period has their part shared by the others' percentages. Set amounts are per bill: those with an amount pay it (pro-rated by days living there), those left blank share the rest evenly, 0 = pays nothing; with nobody left blank, or amounts above the bill, everyone is scaled in proportion. An instalment (and a month's set-aside) is split in the proportions the amounts give the whole bill (`referenceAmountMinor`). Only admins change the split and the payer (members see who pays what, read-only; a member creating a service gets an even split and pays it). The form (`split-editor.tsx`) is a three-way switch with one field per person, a running total, and a preview of the latest bill. Saving a changed split can re-split earlier bills that no housemate has paid a share of (`resplitBills()`; a checkbox, on by default, with the count); bills with paid shares keep theirs. The service page shows a "How it's split" card (bar, each person's setting and their part of the latest bill; "Change" for admins). `splitView()` in `src/lib/split-view.ts` feeds both.
+- 2026-09-29 — Pre-redesign audit and cleanup (owner: "clean, ready for the redesign"). `npm run check` now also runs Prettier's check and knip (dead code, unused exports and dependencies; `knip.json`), and lint fails on warnings. Removed dead code (unused exports, the `Stat` primitive, `.glass-strong`, the `check` icon, the ⌘K hint that did nothing, 59 unused message keys, the write-only `projection` cache), listed `sharp` as a dependency (it was only arriving through Next), dropped `@types/bcryptjs` and `LOG_LEVEL` (read nowhere), raised `engines.node` to ≥22.12 (better-sqlite3 13 and Vitest 5 need it). Tests start and end with an empty `.vitest-data` (bill files had piled up there, ~5,400 of them). `db:seed` and its real Aussie Broadband figures are gone (real data never ships); test fixtures use fictional account and invoice numbers. `brand-identity/` is design reference, outside lint, Prettier and knip.
+- 2026-09-29 — Next.js pinned to exactly 16.3.6 (and eslint-config-next): 16.3.7 fails `next build` under Turbopack with "next/font/google queries have exactly one entry". Unpin once a later release builds.
+- 2026-09-29 — Security fixes from the audit (sign-up is open, so strangers can be admins of their own households): invitation emails capped at 10 per household per hour and never sent from demo households (the link and code still work); adding service types is operator-only (the catalog is install-wide and every type goes into the AI prompt); members can't change their own move-in, move-out or split weight (admins only, like the split); one bill can't be moved between a household service and someone's personal one from its Edit form; uploads capped at 60 per household per hour; the inbound endpoint reads at most 26 MB even without Content-Length; a stale "Got it" no longer turns area sharing back on; wrong current PINs on "Change PIN" count against the device like unlocks; a document already made into a bill can't be approved again; /status shows install-wide details (mailbox, weather service, area counts, model) and Settings the data folder only to operators; CSV cells that would run as a spreadsheet formula get a leading apostrophe; download file names are sent as RFC 6266 `filename*` (an en dash or emoji in a name used to make the file route 500); the sign-in, unlock and onboarding screens delete the service worker's offline copies of signed-in pages. Left for the owner (see Current status): the Worker HMAC not covering the recipient, and waiting Inbox documents being visible to every member.
+- 2026-09-29 — "Who can make a service theirs" tightened (supersedes the 2026-09-29 "anyone who uploaded or forwarded any of the service's bills" rule): whoever set the service up, or whoever brought **every** one of its bills in (bills entered by hand count for whoever entered them), can make it personal; bringing in one bill of the household's electricity no longer lets a member take it and its history out of the admins' sight. Admins or the payer only when nobody is known to have set it up or brought a bill in. The owner's case (a member's own rego, all uploaded by them) still works.
+- 2026-09-29 — Reading bills made sturdier: a credit (negative amount) goes to the Inbox instead of throwing, a bill that fails to save becomes an Inbox item, a document already made into a bill or being read right now is never read twice at once (a globalThis set, since the worker and pages are separate bundles), each 15-minute worker step has its own error handling (one failure used to skip reminders and filing for good), a failed notification build releases its claim, and a first mailbox poll can't start twice. Receipts and notices with no printed date are dated by their arrival day in the household's time zone (a Melbourne email before 10am on the 1st used to file under the previous month). Deleting a bill also deletes its original scan in `originals/`.
+- 2026-09-29 — One-off startup steps run once per install (`src/lib/upgrades.ts`, recorded in `config/upgrades.json`, listed in `src/worker/startup.ts`): the legacy demo flag (now only when exactly one household exists — a stray `demo.json` used to mark every household demo), the two purges, the Unusual-rule re-check (replacing `anomaly-rule.json`) and adopting who set services up. The boot-time refile is gone (the worker files a minute after start). `src/instrumentation.ts` only calls `prepareInstall()` and starts the worker. Pre-migration database copies are pruned to the latest five.
+- 2026-09-29 — Pipeline split for readability: `src/ingest/trust.ts` holds the one sender-trust rule (`standingOf`: household / member / signed / unsigned; `trustsSender`, `mayActFor`), which the bill path, notices, receipts and auto-set-up each wrote out separately; `src/ingest/payments.ts` holds receipts, provider notices and invoice payment hints; `src/ingest/approve.ts` the Inbox approval (moved out of its server action). Provider names match by one rule everywhere (`sameProvider`, `src/lib/provider-match.ts`); `matchService` used a looser substring test with no minimum length. Shared maths (`costPerDay`, `mean`, `median`, "the same time last year", the 2% "about the same" band) lives in `src/lib/averages.ts`. The member statement lists every share of the year (it stopped at the latest 20) and `fy=<start year>` / `fy=all` work; the bills spreadsheet and statement are built in `src/lib/export.ts`.
+- 2026-09-29 — Ready for the redesign: each screen reads its numbers from a view function (`homeView`/`wallView` in `src/lib/home.ts`, `serviceOverview`, `statusView`, `personalSummary`, `billFiles`) and lays them out with shared primitives (`Tile`, `TileHeader`, `Figure`, `Banner`, `Chip`, `DownloadButton` in `components/ui`; `Swatch`, `ColourBar`, `Avatar`, `IconDisc` in `components/ui/colour.tsx`; `CopyButton`/`CopyField`; `SearchBar`). Home's tiles live in `src/app/(app)/_home/`, the bill page's parts beside it. Formatting is in `format.ts` and bound in `pageContext()` (month names, percentages, date-times, quantities, whole-dollar amounts, rates). Colours go through `colourCss`/`tintStyle`/`DEFAULT_COLOUR` (`palette.ts`) and a `--color-on-colour` token; charts default to the accent token; the Sparkline is plain SVG (no Recharts on /services; each colour gets its own gradient, they used to share the first tile's). The glass, lift, hatch and glow-disc classes moved into Tailwind's components layer so utilities on the same element win — the accent, overdue and warning tints written on tiles had never shown. Admin checks go through `isAdmin` (`src/lib/roles.ts`); plan rules through `canChoosePlan`/`planLock`. Server-action errors are message keys (`errors` in en.json), the split/no-split message pairs are ICU selects, the hard-coded "above August" in Home's greeting is "above last month", and `tests/messages.test.ts` checks every message key the code uses exists (the Bills whose-filter showed a raw key). Phones: the ring tiles (Home, Mine, Ledger) stack the ring above the figure when there's no room, and the header's household name truncates; no page scrolls sideways at 375 px (Home did by 23 px).

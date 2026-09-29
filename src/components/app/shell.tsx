@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { Icon } from './icons';
+import { Avatar } from '@/components/ui/colour';
 import { NavLinks } from './nav-links';
 
 export interface NavItem {
@@ -16,6 +17,7 @@ export interface NavItem {
 export function AppShell({
   householdName,
   memberName,
+  memberColour,
   nav,
   logoutAction,
   logoutLabel,
@@ -33,6 +35,7 @@ export function AppShell({
 }: {
   householdName: string;
   memberName: string;
+  memberColour: string;
   nav: NavItem[];
   logoutAction: () => Promise<void>;
   logoutLabel: string;
@@ -54,8 +57,11 @@ export function AppShell({
     <div className="min-h-dvh px-3 pt-3 pb-32 sm:px-6 sm:pt-6">
       <div className="window mx-auto max-w-[1400px] px-4 pt-4 pb-8 sm:px-8 sm:pt-6 sm:pb-10">
         <header className="flex items-center justify-between gap-4">
-          <Link href="/" className="flex items-center gap-2.5 font-display text-lg font-bold">
-            <span className="grid size-9 place-items-center rounded-xl bg-accent text-accent-fg">
+          <Link
+            href="/"
+            className="flex min-w-0 items-center gap-2.5 font-display text-lg font-bold"
+          >
+            <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-accent text-accent-fg">
               <Icon name="home" width={19} height={19} />
             </span>
             <span className="truncate">{householdName}</span>
@@ -73,9 +79,6 @@ export function AppShell({
                 placeholder={searchLabel}
                 className="min-w-0 flex-1 bg-transparent text-sm text-fg outline-none placeholder:text-fg-muted"
               />
-              <kbd className="rounded-md bg-border-strong px-1.5 py-0.5 text-[10px] font-bold">
-                ⌘K
-              </kbd>
             </label>
           </form>
           <div className="flex items-center gap-2">
@@ -87,7 +90,7 @@ export function AppShell({
             >
               <Icon name="inbox" width={19} height={19} />
               {reviewCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 grid min-w-4 place-items-center rounded-full bg-warning px-1 text-[10px] font-bold text-bg">
+                <span className="absolute -top-0.5 -right-0.5 grid min-w-4 place-items-center rounded-full bg-warning px-1 text-[11px] font-bold text-bg">
                   {reviewCount}
                 </span>
               )}
@@ -113,9 +116,7 @@ export function AppShell({
                 title={logoutLabel}
                 className="flex h-11 items-center gap-2 rounded-full bg-surface-2 py-1 pr-3 pl-1 text-sm font-semibold hover:bg-border-strong"
               >
-                <span className="grid size-8 place-items-center rounded-full bg-gradient-to-br from-[#5b6f82] to-[#8fa6bd] text-xs font-bold text-white">
-                  {memberName.slice(0, 1).toUpperCase()}
-                </span>
+                <Avatar name={memberName} colour={memberColour} className="size-8 text-xs" />
                 {memberName}
               </button>
             </form>
@@ -132,7 +133,7 @@ export function AppShell({
       </div>
       <nav className="fixed inset-x-0 bottom-[max(16px,env(safe-area-inset-bottom))] z-10 flex justify-center px-3 sm:bottom-7">
         <div className="glass-nav flex w-full max-w-md gap-1 rounded-full p-1.5 sm:w-auto sm:max-w-none sm:gap-1.5 sm:p-2">
-          <NavLinks items={nav} variant="segment" />
+          <NavLinks items={nav} />
         </div>
       </nav>
     </div>

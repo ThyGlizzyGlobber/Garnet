@@ -2,7 +2,7 @@
  * Unit registry. Usage is stored with the unit the bill used and can be
  * converted to a canonical unit per dimension for charts and comparisons.
  */
-export type Dimension = 'energy' | 'volume' | 'data' | 'count';
+type Dimension = 'energy' | 'volume' | 'data' | 'count';
 
 export interface UnitDef {
   key: string;
@@ -35,7 +35,7 @@ const defs: UnitDef[] = [
 
 export const UNITS: ReadonlyMap<string, UnitDef> = new Map(defs.map((d) => [d.key, d]));
 
-export const CANONICAL: Record<Dimension, string> = {
+const CANONICAL: Record<Dimension, string> = {
   energy: 'kWh',
   volume: 'm3',
   data: 'GB',

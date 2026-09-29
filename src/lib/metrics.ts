@@ -22,7 +22,7 @@ export function metricKey(raw: string): string {
 }
 
 /** The unit registry's spelling when it's a known unit ("kwh" → "kWh"), else as given. */
-export function metricUnit(raw: string | null | undefined): string | null {
+function metricUnit(raw: string | null | undefined): string | null {
   const u = raw?.trim();
   if (!u) return null;
   return listUnits().find((x) => x.key.toLowerCase() === u.toLowerCase())?.key ?? u.slice(0, 30);

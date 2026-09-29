@@ -31,20 +31,27 @@ export function formatMinorPlain(minor: number, currency: string): string {
   return `${sign}${whole}.${frac}`;
 }
 
-/** Convert minor units (e.g. cents) to a display string in the given locale. */
+/** Minor units as a major-unit number (12900 AUD → 129), for charts and scales. */
+export function toMajor(minor: number, currency: string): number {
+  return minor / 10 ** minorUnitDigits(currency);
+}
+
+/**
+ * Convert minor units (e.g. cents) to a display string in the given locale.
+ * `whole` drops the minor units ("$129") for tight spaces; `compact` gives "$1.2K".
+ */
 export function formatMoney(
   minor: number,
   currency: string,
   locale: string,
-  opts: { compact?: boolean } = {},
+  opts: { compact?: boolean; whole?: boolean } = {},
 ): string {
-  const digits = minorUnitDigits(currency);
-  const major = minor / 10 ** digits;
   return new Intl.NumberFormat(locale, {
     style: 'currency',
     currency,
+    ...(opts.whole ? { maximumFractionDigits: 0, minimumFractionDigits: 0 } : {}),
     ...(opts.compact ? { notation: 'compact', maximumFractionDigits: 1 } : {}),
-  }).format(major);
+  }).format(toMajor(minor, currency));
 }
 
 /** Parse a user-typed major-unit amount ("129.00", "1,234.50", "€12,50") into minor units. */
@@ -83,6 +90,77 @@ export function formatDate(
   return new Intl.DateTimeFormat(locale, { dateStyle: style, timeZone }).format(d);
 }
 
-export function formatNumber(value: number, locale: string, maximumFractionDigits = 1): string {
-  return new Intl.NumberFormat(locale, { maximumFractionDigits }).format(value);
+/** An instant (ISO timestamp) as a short date and time in the household's time zone. */
+export function formatDateTime(iso: string | Date, locale: string, timeZone: string): string {
+  const d = typeof iso === 'string' ? new Date(iso) : iso;
+  return new Intl.DateTimeFormat(locale, {
+    dateStyle: 'short',
+    timeStyle: 'short',
+    timeZone,
+  }).format(d);
+}
+
+/** "2026-09" → "Sep" (short), "September" (long) or "September 2026" (long-year). */
+export function formatMonth(
+  month: string,
+  locale: string,
+  style: 'short' | 'long' | 'long-year' = 'long',
+): string {
+  return new Intl.DateTimeFormat(locale, {
+    month: style === 'short' ? 'short' : 'long',
+    ...(style === 'long-year' ? { year: 'numeric' } : {}),
+    timeZone: 'UTC',
+  }).format(new Date(`${month.slice(0, 7)}-01T00:00:00Z`));
+}
+
+/** "2026-09-29" → "Tue" (short) or "Tuesday" (long). */
+export function formatWeekday(day: string, locale: string, style: 'short' | 'long' = 'short') {
+  return new Intl.DateTimeFormat(locale, { weekday: style, timeZone: 'UTC' }).format(
+    new Date(`${day.slice(0, 10)}T00:00:00Z`),
+  );
+}
+
+/**
+ * A fraction as a percentage: 0.12 → "12%". `signed` shows the direction
+ * ("+12%", "-8%") and reads anything under half a percent as "±0%".
+ */
+export function formatPercent(
+  fraction: number,
+  locale: string,
+  opts: { signed?: boolean } = {},
+): string {
+  if (opts.signed && Math.abs(fraction) < 0.005) return '±0%';
+  return new Intl.NumberFormat(locale, {
+    style: 'percent',
+    maximumFractionDigits: 0,
+    ...(opts.signed ? { signDisplay: 'exceptZero' as const } : {}),
+  }).format(fraction);
+}
+
+/** Quantities, not money: 191.3 → "191", 11.04 → "11", 3.456 → "3.5", 0.4457 → "0.45". */
+export function formatQty(n: number, locale: string): string {
+  const a = Math.abs(n);
+  return new Intl.NumberFormat(locale, {
+    maximumFractionDigits: a >= 100 ? 0 : a >= 1 ? 1 : 2,
+  }).format(n);
+}
+
+/**
+ * A price per unit of usage, as bills print it: 0.2953 with "AUD/kWh" → "$0.295/kWh".
+ * `unitLabel` names the unit ("kWh", "kL").
+ */
+export function formatRate(
+  value: number,
+  unit: string,
+  locale: string,
+  unitLabel: (key: string) => string,
+  fallbackCurrency: string,
+): string {
+  const [currency, per] = unit.split('/');
+  const price = new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency: currency || fallbackCurrency,
+    maximumFractionDigits: 3,
+  }).format(value);
+  return `${price}/${unitLabel(per ?? '')}`;
 }

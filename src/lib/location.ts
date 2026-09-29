@@ -90,7 +90,7 @@ export function countryFromLocale(locale: string): string | null {
 }
 
 /** Tidy a postcode as typed: "  3550 " → "3550", "sw1a 1aa" → "SW1A 1AA". */
-export function normalisePostcode(raw: string): string {
+function normalisePostcode(raw: string): string {
   return raw.trim().replace(/\s+/g, ' ').toUpperCase();
 }
 

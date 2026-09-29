@@ -1,281 +1,137 @@
 import Link from 'next/link';
-import { hasHousemates } from '@/lib/members';
-import { ownershipQuestions } from '@/lib/ownership';
-import { PersonalView } from './personal-view';
-import { getTranslations } from 'next-intl/server';
-import { Icon } from '@/components/app/icons';
-import { TrendLine } from '@/components/charts/trend-line';
-import { Badge, Card, EmptyState, LinkButton, PageHeader } from '@/components/ui';
-import { InlineAction } from '@/components/ui/form';
-import { Arc, Ring } from '@/components/ui/ring';
-import { billsWithAlerts, getBill, listBills } from '@/lib/bills';
-import { dueNow, fullPaymentOpen, planUndecided } from '@/lib/instalments';
-import { pageContext } from '@/lib/context';
-import { darkVariant } from '@/lib/palette';
-import { addMonths } from '@/lib/periods';
-import { nextMonth, projectMonth } from '@/lib/projections';
-import { remindersFor, summariseReminders } from '@/lib/reminders';
-import { documentCounts } from '@/lib/review';
-import { listServices } from '@/lib/services';
-import { householdUsage } from '@/lib/consumption';
-import { seasonAhead } from '@/lib/seasons';
-import { weatherWeek } from '@/lib/weather-week';
-import { WeatherCard } from '@/components/app/weather-card';
 import { cookies } from 'next/headers';
-import { LOCATION_PROMPT_COOKIE } from '@/lib/location';
-import { acknowledgeSharingAction, dismissLocationPromptAction } from './settings/actions';
-import { latestRegionalChoice, regionalEnabled } from '@/lib/regional';
+import { getTranslations } from 'next-intl/server';
 import { SeasonAhead } from '@/components/app/season-ahead';
-import { unitLabel } from '@/lib/units';
-import { ChangeText, formatQty } from '@/components/app/usage';
+import { WeatherCard } from '@/components/app/weather-card';
+import { Banner, Card, Chip, EmptyState, LinkButton, PageHeader } from '@/components/ui';
+import { InlineAction } from '@/components/ui/form';
+import { pageContext } from '@/lib/context';
+import { homeView } from '@/lib/home';
+import { LOCATION_PROMPT_COOKIE } from '@/lib/location';
+import { hasHousemates } from '@/lib/members';
+import { Greeting, ViewToggle } from './_home/parts';
 import {
-  dashboardSummary,
-  hasAnyBills,
-  householdBalances,
-  memberLedger,
-  settlementRate,
-} from '@/lib/stats';
-import { toggleSharePaidAction } from './bills/actions';
+  AnomaliesTile,
+  BalancesTile,
+  ChartTile,
+  ForecastTile,
+  MonthTile,
+  NextDueTile,
+  NoticeCard,
+  PerPersonTile,
+  RankingTile,
+  SettledTile,
+  ShareTile,
+  UpcomingTile,
+  UsageTile,
+} from './_home/tiles';
+import { PersonalView } from './_home/mine';
+import { acknowledgeSharingAction, dismissLocationPromptAction } from './settings/actions';
 
-const swatch = (c: string) => ({ background: `light-dark(${c}, ${darkVariant(c)})` });
-const tile = 'glass lift rounded-card p-5 sm:p-6';
-
+/**
+ * Home: the household dashboard (or, with ?view=mine, the member's own).
+ * Every number comes from homeView() (src/lib/home.ts); this only lays out tiles.
+ */
 export default async function HomePage({
   searchParams,
 }: {
   searchParams: Promise<{ view?: string }>;
 }) {
   const ctx = await pageContext();
-  const { hh, me, money, date, today } = ctx;
+  const { hh, me, money, date, month, pct } = ctx;
   const t = await getTranslations('dashboard');
-  const shared = hh.splitMode === 'shared';
-  // Household · Mine: in a household that splits bills, each member also has
-  // their own view (their shares plus their personal bills).
+  const tp = await getTranslations('personal');
+  // Household · Mine: with housemates, each member also has their own view.
   const housemates = hasHousemates(hh.id);
   const mineView = housemates && (await searchParams).view === 'mine';
   const toggle = housemates ? (
-    <ViewToggle mine={mineView} labels={await getTranslations('personal')} />
+    <ViewToggle
+      mine={mineView}
+      labels={{
+        household: tp('toggle.household'),
+        mine: tp('toggle.mine'),
+        label: tp('toggle.label'),
+      }}
+    />
   ) : null;
   if (mineView) return <PersonalView ctx={ctx} toggle={toggle} />;
 
-  if (!hasAnyBills(hh.id)) {
-    const hasServices = listServices(hh.id).length > 0;
+  const v = homeView(hh, me, ctx.today, {
+    postcodePromptDismissed: !!(await cookies()).get(LOCATION_PROMPT_COOKIE),
+  });
+  if (v.empty)
     return (
       <>
         <PageHeader title={t('greeting', { name: me.name })} subtitle={hh.name} action={toggle} />
         <EmptyState
           title={t('empty.title')}
-          body={hasServices ? t('empty.body') : t('empty.noServices')}
+          body={v.empty.hasServices ? t('empty.body') : t('empty.noServices')}
           action={
-            <LinkButton href={hasServices ? '/bills/new' : '/services/new'}>
-              {hasServices ? t('empty.addBill') : t('empty.addService')}
+            <LinkButton href={v.empty.hasServices ? '/bills/new' : '/services/new'}>
+              {v.empty.hasServices ? t('empty.addBill') : t('empty.addService')}
             </LinkButton>
           }
         />
       </>
     );
-  }
 
-  const s = dashboardSummary(hh.id, today, hh.fiscalYearStartMonth);
-  const usage = householdUsage(hh.id);
-  const seasons = seasonAhead(hh.id, today);
-  const week = weatherWeek(hh.id, today);
   const tl = await getTranslations('location');
   const tsh = await getTranslations('sharing');
-  // Households from before area comparisons: tell the admin once that it's on.
-  const sharingNotice =
-    me.role === 'owner' &&
-    !hh.isDemo &&
-    hh.shareRegional &&
-    regionalEnabled() &&
-    !latestRegionalChoice(hh.id);
-  const askForPostcode =
-    me.role === 'owner' &&
-    !hh.isDemo &&
-    !hh.postalCode &&
-    !(await cookies()).get(LOCATION_PROMPT_COOKIE);
-  const services = listServices(hh.id);
-  const tu = await getTranslations('usage');
-  const projNow = projectMonth(hh.id, s.thisMonth.month);
-  const proj = projectMonth(hh.id, nextMonth(today));
-  const forecast = Array.from({ length: 6 }, (_, i) =>
-    projectMonth(hh.id, addMonths(s.thisMonth.month, i + 1)),
-  );
-  const ledger = shared ? memberLedger(hh.id, me.id, today, hh.fiscalYearStartMonth) : null;
-  const balances = shared ? householdBalances(hh.id) : [];
-  const mine = shared ? remindersFor(hh.id, me.id, today) : [];
-  const mineSum = summariseReminders(mine);
-  const settled = shared ? settlementRate(hh.id, s.thisMonth.month) : null;
-  const reviewCount = documentCounts(hh.id).needs_review;
-  // Banners: household bills, and the viewer's own personal ones.
-  const alerts = billsWithAlerts(hh.id, { viewer: me.id });
-  // "Who's this for?": services set up from bills this member brought in.
-  const whose = housemates ? ownershipQuestions(hh.id, me) : [];
-  // Bills offering instalments that nobody has chosen a plan for (the payer or an admin chooses).
-  const planChoices = listBills(hh.id, { viewer: me.id }).filter(
-    (b) =>
-      planUndecided(b) &&
-      !b.paidToProviderAt &&
-      (me.role === 'owner' || b.service.payerMemberId === me.id),
-  );
-
-  const monthName = (m: string, style: 'short' | 'long' = 'short') =>
-    new Intl.DateTimeFormat(hh.locale, { month: style, timeZone: 'UTC' }).format(
-      new Date(`${m}-01T00:00:00Z`),
-    );
-  const thisMonthName = monthName(s.thisMonth.month, 'long');
-  const pct = (x: number) =>
-    Math.abs(x) < 0.005
-      ? '±0%'
-      : new Intl.NumberFormat(hh.locale, {
-          style: 'percent',
-          maximumFractionDigits: 0,
-          signDisplay: 'exceptZero',
-        }).format(x);
-  const delta =
-    s.lastMonthTotal > 0 ? (s.thisMonth.total - s.lastMonthTotal) / s.lastMonthTotal : null;
-  const yoy = s.sameMonthLastYearTotal
-    ? (s.thisMonth.total - s.sameMonthLastYearTotal) / s.sameMonthLastYearTotal
-    : null;
-  const budgetPct =
-    projNow.totalMinor > 0 ? Math.round((s.thisMonth.total / projNow.totalMinor) * 100) : 0;
-  const sharePct =
-    ledger && ledger.totalThisFy > 0
-      ? Math.round((ledger.paidThisFy / ledger.totalThisFy) * 100)
-      : 0;
-
-  const serviceName = new Map(s.services.map((svc) => [svc.id, svc.name]));
-  const points = s.series.map((r) => {
-    const top = Object.entries(r.byService)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 3)
-      .map(([id, v]) => `${serviceName.get(id) ?? '?'} ${money(v)}`)
-      .join(' · ');
-    return {
-      key: r.month,
-      label: monthName(r.month),
-      value: r.total / 100,
-      text: money(r.total),
-      detail: top || undefined,
-    };
-  });
-
-  const nextBill = s.overdue[0] ?? s.upcoming[0];
-  const nextDetail = nextBill ? getBill(hh.id, nextBill.id) : null;
-  // Paid by instalments: the instalment due now, and my share of it.
-  const nextDue = nextBill ? dueNow(nextBill) : null;
-  const myShare =
-    nextDetail?.shares.find(
-      (sh) => sh.memberId === me.id && sh.instalment === (nextDue?.seq ?? 0),
-    ) ?? null;
-  // The strongest basis any service's estimate uses, for the set-aside note.
-  const projMethod =
-    (['seasonal', 'weather', 'recent', 'area', 'single'] as const).find((m) =>
-      proj.services.some((p) => p.method === m),
-    ) ?? 'none';
-  const maxForecast = Math.max(...forecast.map((f) => f.totalMinor), 1);
+  const thisMonth = month(v.month.month);
+  const change = v.month.vsLastMonth === null ? null : pct(Math.abs(v.month.vsLastMonth));
+  const reminders = v.banners.myReminders;
 
   return (
     <>
-      <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
-        <h1 className="font-display text-[32px] leading-[1.06] font-semibold tracking-tight sm:text-[42px]">
-          {t('greeting', { name: me.name })}
-          <br />
-          <span className="font-normal text-fg-muted">
-            {delta === null
-              ? t('greetingLine.first')
-              : Math.abs(delta) < 0.02
-                ? t('greetingLine.level', { month: thisMonthName })
-                : delta > 0
-                  ? t('greetingLine.up', {
-                      month: thisMonthName,
-                      pct: pct(Math.abs(delta)).replace('+', ''),
-                    })
-                  : t('greetingLine.down', {
-                      month: thisMonthName,
-                      pct: pct(Math.abs(delta)).replace('+', ''),
-                    })}
-          </span>
-        </h1>
-        <div className="flex flex-wrap items-center gap-2">
-          {toggle}
-          <span className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-fg">
-            {thisMonthName}
-          </span>
-          <Link
-            href="/bills"
-            className="rounded-full bg-surface-2 px-4 py-2 text-sm font-semibold text-fg-muted hover:text-fg"
-          >
-            {s.fiscalYear.label}
-          </Link>
-          <Link
-            href="/services"
-            className="rounded-full bg-surface-2 px-4 py-2 text-sm font-semibold text-fg-muted hover:text-fg"
-          >
-            {t('chips.services', { count: s.services.length })}
-          </Link>
-          {shared && (
-            <Link
-              href="/members"
-              className="rounded-full bg-surface-2 px-4 py-2 text-sm font-semibold text-fg-muted hover:text-fg"
-            >
-              {t('chips.members', { count: s.activeMemberCount })}
-            </Link>
-          )}
-        </div>
-      </header>
+      <Greeting
+        hello={t('greeting', { name: me.name })}
+        line={
+          v.month.level === null
+            ? t('greetingLine.first')
+            : v.month.level === 'level'
+              ? t('greetingLine.level', { month: thisMonth })
+              : t(`greetingLine.${v.month.level}`, { month: thisMonth, pct: change! })
+        }
+      >
+        {toggle}
+        <Chip active>{thisMonth}</Chip>
+        <Chip href="/bills">{v.summary.fiscalYear.label}</Chip>
+        <Chip href="/services">{t('chips.services', { count: v.summary.services.length })}</Chip>
+        {v.shared && (
+          <Chip href="/members">{t('chips.members', { count: v.summary.activeMemberCount })}</Chip>
+        )}
+      </Greeting>
 
-      {alerts.map((b) => (
-        <Link
-          key={b.id}
-          href={`/bills/${b.id}`}
-          className="mb-4 flex items-center justify-between gap-3 rounded-card bg-danger-soft px-5 py-3 text-sm font-semibold text-danger"
-        >
-          <span>
-            {t(`alertBanner.${b.alertKind}`, {
-              provider: b.service.provider,
-              due: date(b.dueDate),
-            })}
-          </span>
-          <span>{t('alertBanner.open')} →</span>
-        </Link>
+      {v.banners.alerts.map((b) => (
+        <Banner key={b.id} href={`/bills/${b.id}`} tone="danger" open={t('alertBanner.open')}>
+          {t(`alertBanner.${b.alertKind}`, { provider: b.service.provider, due: date(b.dueDate) })}
+        </Banner>
       ))}
-      {whose.map((q) => (
-        <Link
+      {v.banners.whose.map((q) => (
+        <Banner
           key={q.service.id}
           href={q.billId ? `/bills/${q.billId}#whose` : `/services/${q.service.id}/edit`}
-          className="mb-4 flex items-center justify-between gap-3 rounded-card bg-accent-soft px-5 py-3 text-sm font-semibold text-accent"
+          tone="accent"
+          open={t('whoseBanner.open')}
         >
-          <span>{t('whoseBanner.text', { service: q.service.name })}</span>
-          <span>{t('whoseBanner.open')} →</span>
-        </Link>
+          {t('whoseBanner.text', { service: q.service.name })}
+        </Banner>
       ))}
-      {planChoices.map((b) => (
-        <Link
-          key={b.id}
-          href={`/bills/${b.id}#plan`}
-          className="mb-4 flex items-center justify-between gap-3 rounded-card bg-accent-soft px-5 py-3 text-sm font-semibold text-accent"
-        >
-          <span>
-            {t(fullPaymentOpen(b, today) ? 'planBanner.text' : 'planBanner.textClosed', {
-              service: b.service.name,
-              count: b.instalments.length,
-            })}
-          </span>
-          <span>{t('planBanner.open')} →</span>
-        </Link>
+      {v.banners.plans.map(({ bill: b, fullStillOpen }) => (
+        <Banner key={b.id} href={`/bills/${b.id}#plan`} tone="accent" open={t('planBanner.open')}>
+          {t(fullStillOpen ? 'planBanner.text' : 'planBanner.textClosed', {
+            service: b.service.name,
+            count: b.instalments.length,
+          })}
+        </Banner>
       ))}
-      {reviewCount > 0 && (
-        <Link
-          href="/review"
-          className="mb-4 flex items-center justify-between rounded-card bg-warning-soft px-5 py-3 text-sm font-semibold text-warning"
-        >
-          <span>{t('reviewBanner', { count: reviewCount })}</span>
-          <span>{t('reviewLink')} →</span>
-        </Link>
+      {v.banners.waitingInInbox > 0 && (
+        <Banner href="/review" tone="warning" open={t('reviewLink')}>
+          {t('reviewBanner', { count: v.banners.waitingInInbox })}
+        </Banner>
       )}
 
-      {shared && (mineSum.overdueCount > 0 || mineSum.soonCount > 0) && (
+      {reminders && (reminders.overdueCount > 0 || reminders.soonCount > 0) && (
         <Card className="mb-4 flex flex-col gap-2 border-warning/30">
           <div className="flex items-center justify-between">
             <span className="font-display font-semibold">{t('reminders.title')}</span>
@@ -283,17 +139,20 @@ export default async function HomePage({
               {t('reminders.open')} →
             </Link>
           </div>
-          {mineSum.overdueCount > 0 && (
+          {reminders.overdueCount > 0 && (
             <p className="text-sm font-semibold text-danger">
               {t('reminders.overdue', {
-                count: mineSum.overdueCount,
-                amount: money(mineSum.overdueMinor),
+                count: reminders.overdueCount,
+                amount: money(reminders.overdueMinor),
               })}
             </p>
           )}
-          {mineSum.soonCount > 0 && (
+          {reminders.soonCount > 0 && (
             <p className="text-sm font-semibold text-warning">
-              {t('reminders.soon', { count: mineSum.soonCount, amount: money(mineSum.soonMinor) })}
+              {t('reminders.soon', {
+                count: reminders.soonCount,
+                amount: money(reminders.soonMinor),
+              })}
             </p>
           )}
         </Card>
@@ -301,517 +160,76 @@ export default async function HomePage({
 
       {/* Row 1: instruments */}
       <div
-        className={`grid gap-4 ${shared ? 'lg:grid-cols-[1.3fr_1fr_1fr]' : 'lg:grid-cols-[1.3fr_1fr]'}`}
+        className={`grid gap-4 ${v.shared ? 'lg:grid-cols-[1.3fr_1fr_1fr]' : 'lg:grid-cols-[1.3fr_1fr]'}`}
       >
-        <section className={`${tile} flex items-center gap-6 bg-accent-soft`}>
-          <Ring id="budget" pct={budgetPct} size={132} stroke={13}>
-            <span className="flex flex-col items-center leading-none">
-              <span className="font-display text-[26px] font-semibold tabular-nums">
-                {budgetPct}%
-              </span>
-              <span className="mt-1 text-[10px] font-semibold tracking-wide text-fg-muted uppercase">
-                {thisMonthName.slice(0, 3)}
-              </span>
-            </span>
-          </Ring>
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold">
-              {t('tiles.thisMonth', { month: thisMonthName })}
-            </p>
-            <p className="font-display text-[38px] leading-none font-semibold tracking-tight tabular-nums sm:text-[44px]">
-              {money(s.thisMonth.total)}
-            </p>
-            <p className="mt-2 flex flex-wrap items-center gap-2 text-xs text-fg-muted">
-              <span className="rounded-full bg-surface-2 px-2 py-0.5 font-bold text-fg">
-                {delta !== null ? pct(delta) : '—'}
-              </span>
-              {delta !== null
-                ? t('tiles.vsLastMonth', { pct: '' }).replace('  ', ' ').trim()
-                : t('tiles.noLastMonth')}
-              {yoy !== null && ` · ${t('tiles.vsLastYear', { pct: pct(yoy) })}`}
-            </p>
-            <p className="mt-1 text-xs text-fg-muted">
-              {budgetPct > 100
-                ? t('budgetRing.over')
-                : t('budgetRing.label', { month: thisMonthName })}{' '}
-              · {money(projNow.totalMinor)}
-            </p>
-          </div>
-        </section>
-
-        {shared && ledger ? (
-          <Link href="/ledger" className={`${tile} flex flex-col text-fg`}>
-            <div className="flex items-start justify-between">
-              <p className="text-sm font-semibold">{t('tiles.yourShare')}</p>
-              <Badge tone={ledger.owed > 0 ? 'warning' : 'success'}>
-                {ledger.owed > 0
-                  ? t('tiles.unpaidShares', { count: ledger.unpaid.length })
-                  : t('tiles.allSettled')}
-              </Badge>
-            </div>
-            <div className="mt-2 flex flex-col items-center">
-              <Arc
-                id="share"
-                pct={sharePct}
-                width={190}
-                stroke={13}
-                from="var(--color-accent-2)"
-                to="var(--color-accent)"
-              />
-              <span className="-mt-9 flex flex-col items-center leading-none">
-                <span
-                  className={`font-display text-[32px] font-semibold tabular-nums ${ledger.owed > 0 ? 'text-warning' : 'text-success'}`}
-                >
-                  {money(ledger.owed)}
-                </span>
-                <span className="mt-1 text-[11px] text-fg-muted">
-                  {t('tiles.owedToYou', { amount: money(ledger.owedToMe) })}
-                </span>
-              </span>
-            </div>
-            <p className="mt-3 text-center text-xs text-fg-muted">
-              {t('tiles.paidOfYear', { pct: sharePct, label: s.fiscalYear.label })}
-            </p>
-          </Link>
-        ) : (
-          <section className={`${tile} flex flex-col justify-between`}>
-            <p className="text-sm font-semibold">{t('tiles.perPersonDay')}</p>
-            <p className="font-display text-[40px] leading-none font-semibold tracking-tight tabular-nums">
-              {s.costPerPersonPerDay !== null ? money(s.costPerPersonPerDay) : '—'}
-            </p>
-            <p className="text-xs text-fg-muted">
-              {t('tiles.perPersonDayHint', { count: s.activeMemberCount })}
-            </p>
-          </section>
-        )}
-
-        <section className={`${tile} flex flex-col`}>
-          <div className="flex items-start justify-between">
-            <p className="text-sm font-semibold">{t('forecast.title')}</p>
-            <span className="text-xs text-fg-muted">{t('forecast.hint')}</span>
-          </div>
-          <div className="mt-4 flex flex-1 items-end justify-between gap-2">
-            {forecast.map((f, i) => (
-              <div key={f.month} className="flex flex-1 flex-col items-center gap-1.5">
-                <span className="text-[11px] font-semibold tabular-nums">
-                  {money(f.totalMinor, hh.currency).replace(/\.\d+$/, '')}
-                </span>
-                <div
-                  className={`w-full max-w-9 rounded-full ${i === 0 ? 'bg-accent' : 'hatch'}`}
-                  style={{
-                    height: `${Math.max(10, Math.round((f.totalMinor / maxForecast) * 90))}px`,
-                  }}
-                />
-                <span className="text-[11px] text-fg-muted">{monthName(f.month)}</span>
-              </div>
-            ))}
-          </div>
-          <p className="mt-3 text-xs text-fg-muted">
-            {t('setAside.title', { month: monthName(proj.month, 'long') })}:{' '}
-            <span className="font-semibold text-fg">
-              {proj.setAsideEach !== null
-                ? `${money(proj.setAsideEach)} ${t('setAside.each')}`
-                : money(proj.totalMinor)}
-            </span>{' '}
-            · {t(`setAside.method.${projMethod}`)}
-          </p>
-        </section>
+        <MonthTile v={v} ctx={ctx} />
+        {v.share ? <ShareTile v={v} ctx={ctx} /> : <PerPersonTile v={v} ctx={ctx} />}
+        <ForecastTile v={v} ctx={ctx} />
       </div>
 
       {/* Row 2: chart · next due · bills */}
       <div className="mt-4 grid gap-4 lg:grid-cols-[1.6fr_1fr_1fr]">
-        <section className={`${tile} flex flex-col gap-3`}>
-          <div className="flex items-start justify-between">
-            <div>
-              <h2 className="font-display text-lg font-semibold">{t('chart.title')}</h2>
-              <p className="text-xs text-fg-muted">{t('chart.hint')}</p>
-            </div>
-            <span className="rounded-full bg-surface-2 px-3 py-1 text-xs font-semibold text-fg-muted">
-              12 mo
-            </span>
-          </div>
-          <TrendLine points={points} id="dash" />
-        </section>
-
-        <section
-          className={`${tile} flex flex-col gap-2 ${nextBill && nextBill.daysUntilDue < 0 ? 'bg-danger-soft' : ''}`}
-        >
-          <div className="flex items-center justify-between">
-            <h2 className="font-display text-lg font-semibold">{t('nextDue.title')}</h2>
-            {nextBill && (
-              <span
-                className="grid size-10 place-items-center rounded-full text-white"
-                style={swatch(nextBill.service.colour)}
-              >
-                <Icon name={nextBill.service.type.icon} width={18} height={18} />
-              </span>
-            )}
-          </div>
-          {nextBill && nextDetail ? (
-            <>
-              <Link
-                href={`/bills/${nextBill.id}`}
-                className="font-display text-[24px] leading-tight font-semibold"
-              >
-                {nextBill.service.name}
-              </Link>
-              <p className="font-display text-[34px] leading-none font-semibold tracking-tight tabular-nums">
-                {money(nextDue!.amountMinor, nextBill.currency)}
-              </p>
-              {nextDue!.seq !== null && (
-                <p className="text-xs text-fg-muted">
-                  {t('nextDue.instalment', { n: nextDue!.seq, of: nextDue!.of })}
-                </p>
-              )}
-              <p className="text-sm text-fg-muted">
-                {nextBill.daysUntilDue < 0 ? (
-                  <span className="font-semibold text-danger">
-                    {t('billsTile.overdue', { days: -nextBill.daysUntilDue })}
-                  </span>
-                ) : (
-                  t('billsTile.due', { date: date(nextBill.dueDate, 'short') })
-                )}
-                {myShare &&
-                  ` · ${t('nextDue.yourShare', { amount: money(myShare.amountMinor, myShare.currency) })}`}
-              </p>
-              <div className="mt-auto pt-3">
-                {myShare && !myShare.paidAt ? (
-                  <InlineAction
-                    action={toggleSharePaidAction}
-                    hidden={{ shareId: myShare.id, billId: nextBill.id, paid: 'true' }}
-                    label={t('nextDue.markPaid')}
-                  />
-                ) : myShare ? (
-                  <Badge tone="success">{t('nextDue.paid')}</Badge>
-                ) : (
-                  <LinkButton href={`/bills/${nextBill.id}`} variant="secondary">
-                    {t('nextDue.viewBill')}
-                  </LinkButton>
-                )}
-              </div>
-            </>
-          ) : (
-            <p className="text-sm text-success">{t('nextDue.none')}</p>
-          )}
-        </section>
-
-        <section className={`${tile} flex flex-col gap-3`}>
-          <div className="flex items-center justify-between">
-            <h2 className="font-display text-lg font-semibold">{t('billsTile.title')}</h2>
-            <Link href="/bills" className="text-xs font-bold text-accent">
-              {t('billsTile.all', { count: s.upcoming.length + s.overdue.length })}
-            </Link>
-          </div>
-          {[...s.overdue, ...s.upcoming].slice(0, 5).map((b) => (
-            <Link key={b.id} href={`/bills/${b.id}`} className="flex items-center gap-3">
-              <span
-                className="grid size-9 shrink-0 place-items-center rounded-xl text-white"
-                style={swatch(b.service.colour)}
-              >
-                <Icon name={b.service.type.icon} width={16} height={16} />
-              </span>
-              <span className="flex min-w-0 flex-1 flex-col">
-                <span className="truncate text-sm font-semibold">{b.service.name}</span>
-                <span
-                  className={`truncate text-xs ${b.daysUntilDue < 0 ? 'text-danger' : b.isAnomaly ? 'text-warning' : 'text-fg-muted'}`}
-                >
-                  {b.daysUntilDue < 0
-                    ? t('billsTile.overdue', { days: -b.daysUntilDue })
-                    : b.isAnomaly
-                      ? t('billsTile.unusual', { note: b.anomalyNote ?? '' })
-                      : t('billsTile.due', { date: date(b.dueDate, 'short') })}
-                </span>
-              </span>
-              <span className="text-sm font-semibold tabular-nums">
-                {money(dueNow(b).amountMinor, b.currency)}
-              </span>
-            </Link>
-          ))}
-          {s.upcoming.length + s.overdue.length === 0 && (
-            <p className="text-sm text-fg-muted">{t('upcoming.empty')}</p>
-          )}
-        </section>
+        <ChartTile v={v} ctx={ctx} />
+        <NextDueTile v={v} ctx={ctx} />
+        <UpcomingTile v={v} ctx={ctx} />
       </div>
 
-      {/* Row 3: people · settled · ranking */}
+      {/* Row 3: people · settled · ranking, then notes and extras */}
       <div className="mt-4 grid gap-4 lg:grid-cols-[1.6fr_1fr_1fr]">
-        {shared ? (
-          <section className={`${tile} flex flex-col gap-3`}>
-            <h2 className="font-display text-lg font-semibold">{t('balances.title')}</h2>
-            {balances.map((b) => {
-              const overdue =
-                b.owed > 0 &&
-                remindersFor(hh.id, b.member.id, today).some((r) => r.level === 'overdue');
-              return (
-                <div key={b.member.id} className="flex items-center gap-3 text-sm">
-                  <span
-                    className="grid size-10 place-items-center rounded-full text-sm font-bold text-white shadow-inner"
-                    style={{
-                      background: `linear-gradient(135deg, light-dark(${b.member.colour}, ${darkVariant(b.member.colour)}), var(--color-accent))`,
-                    }}
-                  >
-                    {b.member.name.slice(0, 1).toUpperCase()}
-                  </span>
-                  <span className="flex min-w-0 flex-1 flex-col leading-tight">
-                    <span className="font-semibold">
-                      {b.member.name}{' '}
-                      {b.member.id === me.id && (
-                        <span className="font-normal text-fg-muted">({t('balances.you')})</span>
-                      )}
-                    </span>
-                    <span className="text-xs text-fg-muted">
-                      {b.owed > 0
-                        ? t('balances.owes', { amount: money(b.owed), count: b.unpaidCount })
-                        : t('balances.allSettled')}
-                    </span>
-                  </span>
-                  <Badge tone={b.owed === 0 ? 'success' : overdue ? 'danger' : 'warning'}>
-                    {b.owed === 0
-                      ? t('balances.settledChip')
-                      : overdue
-                        ? t('balances.overdue')
-                        : t('balances.pending')}
-                  </Badge>
-                </div>
-              );
-            })}
-          </section>
-        ) : (
-          <section className={tile}>
-            <h2 className="font-display text-lg font-semibold">{t('anomaly.title')}</h2>
-            <AnomalyList items={s.anomalies} money={money} empty={t('anomaly.empty')} />
-          </section>
+        {v.shared ? <BalancesTile v={v} ctx={ctx} /> : <AnomaliesTile v={v} ctx={ctx} />}
+        {v.shared && <SettledTile v={v} ctx={ctx} />}
+        <RankingTile v={v} ctx={ctx} />
+        {v.shared && v.anomalies.length > 0 && (
+          <AnomaliesTile v={v} ctx={ctx} className="lg:col-span-3" />
         )}
 
-        {shared && (
-          <section className={`${tile} flex flex-col items-center gap-2`}>
-            <h2 className="self-start font-display text-lg font-semibold">{t('settled.title')}</h2>
-            <Ring
-              id="settled"
-              pct={settled?.pct ?? 0}
-              size={140}
-              stroke={14}
-              from="var(--color-success)"
-              to="var(--color-accent-2)"
-            >
-              <span className="font-display text-[30px] font-semibold tabular-nums">
-                {settled?.pct === null || settled === null ? '—' : `${settled.pct}%`}
-              </span>
-            </Ring>
-            <span className="text-center text-xs text-fg-muted">
-              {settled && settled.total > 0
-                ? `${t('settled.count', { paid: settled.paid, total: settled.total })} · ${t('settled.hint', { month: thisMonthName })}`
-                : t('settled.none')}
-            </span>
-          </section>
+        {v.notices.sharing && (
+          <NoticeCard
+            title={tsh('notice.title')}
+            body={tsh('notice.body')}
+            className="lg:col-span-3"
+          >
+            <InlineAction action={acknowledgeSharingAction} label={tsh('notice.ok')} />
+            <LinkButton href="/settings#sharing" variant="secondary">
+              {tsh('notice.change')}
+            </LinkButton>
+            <Link href="/privacy" className="text-sm font-semibold text-accent">
+              {tsh('privacy')}
+            </Link>
+          </NoticeCard>
         )}
 
-        <section className={tile}>
-          <h2 className="font-display text-lg font-semibold">
-            {t('ranking.title', { label: s.fiscalYear.label })}
-          </h2>
-          <Ranking rows={s.fiscalYear.byService} money={money} empty={t('ranking.empty')} />
-        </section>
-
-        {shared && s.anomalies.length > 0 && (
-          <section className={`${tile} lg:col-span-3`}>
-            <h2 className="font-display text-lg font-semibold">{t('anomaly.title')}</h2>
-            <AnomalyList items={s.anomalies} money={money} empty={t('anomaly.empty')} />
-          </section>
+        {v.notices.askForPostcode && (
+          <NoticeCard title={tl('prompt.title')} body={tl('prompt.body')} className="lg:col-span-3">
+            <LinkButton href="/settings#location">{tl('prompt.action')}</LinkButton>
+            <InlineAction
+              action={dismissLocationPromptAction}
+              label={tl('prompt.dismiss')}
+              variant="ghost"
+            />
+          </NoticeCard>
         )}
 
-        {sharingNotice && (
-          <section className={`${tile} flex flex-col gap-2 lg:col-span-3`}>
-            <h2 className="font-display text-lg font-semibold">{tsh('notice.title')}</h2>
-            <p className="text-sm text-fg-muted">{tsh('notice.body')}</p>
-            <div className="flex flex-wrap items-center gap-2">
-              <InlineAction action={acknowledgeSharingAction} label={tsh('notice.ok')} />
-              <LinkButton href="/settings#sharing" variant="secondary">
-                {tsh('notice.change')}
-              </LinkButton>
-              <Link href="/privacy" className="text-sm font-semibold text-accent">
-                {tsh('privacy')}
-              </Link>
-            </div>
-          </section>
-        )}
-
-        {askForPostcode && (
-          <section className={`${tile} flex flex-col gap-2 lg:col-span-3`}>
-            <h2 className="font-display text-lg font-semibold">{tl('prompt.title')}</h2>
-            <p className="text-sm text-fg-muted">{tl('prompt.body')}</p>
-            <div className="flex flex-wrap items-center gap-2">
-              <LinkButton href="/settings#location">{tl('prompt.action')}</LinkButton>
-              <InlineAction
-                action={dismissLocationPromptAction}
-                label={tl('prompt.dismiss')}
-                variant="ghost"
-              />
-            </div>
-          </section>
-        )}
-
-        {week && (
+        {v.weather && (
           <WeatherCard
-            week={week}
+            week={v.weather}
             locale={hh.locale}
             money={(m) => money(m)}
             className="lg:col-span-3"
           />
         )}
 
-        {seasons.length > 0 && (
+        {v.seasons.length > 0 && (
           <SeasonAhead
-            notices={seasons}
+            notices={v.seasons}
             locale={hh.locale}
             money={money}
             className="lg:col-span-3"
           />
         )}
 
-        {usage.length > 0 && (
-          <section className={`${tile} lg:col-span-3`}>
-            <h2 className="font-display text-lg font-semibold">{tu('dashboard.title')}</h2>
-            <p className="text-xs text-fg-muted">{tu('dashboard.hint')}</p>
-            <ul className="mt-3 grid gap-x-8 gap-y-1 sm:grid-cols-2 lg:grid-cols-3">
-              {usage.map((u) => {
-                const svc = services.find((x) => x.id === u.serviceId);
-                if (!svc) return null;
-                return (
-                  <li key={u.serviceId}>
-                    <Link
-                      href={`/services/${u.serviceId}`}
-                      className="flex items-baseline justify-between gap-3 border-b border-border py-2 text-sm hover:text-accent"
-                    >
-                      <span className="flex items-center gap-2">
-                        <span className="size-2.5 rounded-sm" style={swatch(svc.colour)} />
-                        {svc.name}
-                      </span>
-                      <span className="text-right">
-                        <span className="font-semibold tabular-nums">
-                          {tu('perDay', {
-                            qty: formatQty(u.latest.perDay!, hh.locale),
-                            unit: unitLabel(u.unit),
-                          })}
-                        </span>
-                        <ChangeText
-                          className="block text-xs"
-                          change={u.previous?.usage}
-                          words={(pct) => ({
-                            more: tu('more', { pct }),
-                            less: tu('less', { pct }),
-                            same: tu('same'),
-                          })}
-                        />
-                        {u.limit && u.limit.usage.pct !== null && u.limit.usage.pct > 0 && (
-                          <span className="block text-xs text-warning">
-                            {tu('overLimit', { pct: Math.round(u.limit.usage.pct * 100) })}
-                          </span>
-                        )}
-                      </span>
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        )}
+        {v.usage.length > 0 && <UsageTile v={v} ctx={ctx} className="lg:col-span-3" />}
       </div>
     </>
-  );
-}
-
-/** Household · Mine switch at the top of Home. */
-function ViewToggle({
-  mine,
-  labels,
-}: {
-  mine: boolean;
-  labels: (key: 'toggle.household' | 'toggle.mine' | 'toggle.label') => string;
-}) {
-  const seg = (on: boolean) =>
-    `rounded-full px-4 py-1.5 text-sm font-semibold transition ${on ? 'bg-accent text-accent-fg' : 'text-fg-muted hover:text-fg'}`;
-  return (
-    <nav
-      aria-label={labels('toggle.label')}
-      className="glass flex items-center gap-1 rounded-full p-1"
-    >
-      <Link href="/" className={seg(!mine)} aria-current={!mine ? 'page' : undefined}>
-        {labels('toggle.household')}
-      </Link>
-      <Link href="/?view=mine" className={seg(mine)} aria-current={mine ? 'page' : undefined}>
-        {labels('toggle.mine')}
-      </Link>
-    </nav>
-  );
-}
-
-function Ranking({
-  rows,
-  money,
-  empty,
-}: {
-  rows: { service: { id: string; name: string; colour: string }; minor: number }[];
-  money: (m: number) => string;
-  empty: string;
-}) {
-  if (rows.length === 0) return <p className="mt-3 text-sm text-fg-muted">{empty}</p>;
-  const max = rows[0]!.minor;
-  return (
-    <ul className="mt-3 flex flex-col gap-3">
-      {rows.map((row) => (
-        <li key={row.service.id}>
-          <div className="flex items-center justify-between text-sm">
-            <span className="flex items-center gap-2">
-              <span className="size-2.5 rounded-sm" style={swatch(row.service.colour)} />
-              {row.service.name}
-            </span>
-            <span className="font-semibold tabular-nums">{money(row.minor)}</span>
-          </div>
-          <div className="mt-1 h-2 rounded-full bg-surface-2">
-            <div
-              className="h-2 rounded-full"
-              style={{
-                width: `${Math.max(4, Math.round((row.minor / max) * 100))}%`,
-                ...swatch(row.service.colour),
-              }}
-            />
-          </div>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function AnomalyList({
-  items,
-  money,
-  empty,
-}: {
-  items: {
-    id: string;
-    service: { name: string };
-    anomalyNote: string | null;
-    amountMinor: number;
-    currency: string;
-  }[];
-  money: (m: number, c?: string) => string;
-  empty: string;
-}) {
-  if (items.length === 0) return <p className="mt-3 text-sm text-fg-muted">{empty}</p>;
-  return (
-    <ul className="mt-2 divide-y divide-border text-sm">
-      {items.map((b) => (
-        <li key={b.id}>
-          <Link href={`/bills/${b.id}`} className="flex items-center justify-between gap-3 py-2.5">
-            <span>
-              <span className="block font-medium">{b.service.name}</span>
-              <span className="text-xs text-warning">{b.anomalyNote}</span>
-            </span>
-            <span className="font-semibold tabular-nums">{money(b.amountMinor, b.currency)}</span>
-          </Link>
-        </li>
-      ))}
-    </ul>
   );
 }

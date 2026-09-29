@@ -10,5 +10,3 @@ import type { Extractor } from './types';
 export const templateExtractors: Extractor[] = [];
 export const fallbackExtractors: Extractor[] = [anthropicExtractor];
 export const allExtractors: Extractor[] = [...templateExtractors, ...fallbackExtractors];
-
-export type { ExtractedBill, ExtractionInput, ExtractionResult, Extractor } from './types';

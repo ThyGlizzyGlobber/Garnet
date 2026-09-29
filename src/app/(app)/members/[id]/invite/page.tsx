@@ -2,19 +2,20 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { Notice } from '@/components/app/auth-shell';
-import { CopyField } from '@/components/app/auth-forms';
+import { CopyField } from '@/components/ui/copy';
 import { Card, PageHeader } from '@/components/ui';
 import { getSession } from '@/lib/auth/session';
 import { pageContext } from '@/lib/context';
 import { getMember } from '@/lib/members';
 import { inviteMemberAction } from '../../actions';
 import { InviteForm } from './invite-form';
+import { isAdmin } from '@/lib/roles';
 
 /** Admin: send an invitation, and show a just-created link and code once. */
 export default async function InviteMemberPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { hh, me } = await pageContext();
-  if (me.role !== 'owner') redirect('/members');
+  if (!isAdmin(me)) redirect('/members');
   const m = getMember(hh.id, id);
   if (!m) notFound();
   const t = await getTranslations('members.invite');

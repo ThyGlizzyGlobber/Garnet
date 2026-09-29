@@ -14,6 +14,14 @@ const MAX_PDF_BYTES = 20 * 1024 * 1024;
 const MAX_EDGE = 1568;
 const MAX_RAW_IMAGE_BYTES = 5 * 1024 * 1024;
 
+/** Less text than this and a document is treated as a scan or photo. */
+const MIN_TEXT_CHARS = 20;
+
+/** No usable text layer: the AI reader needs the file itself. */
+export function hasNoText(text: string): boolean {
+  return text.trim().length < MIN_TEXT_CHARS;
+}
+
 export function isImageFile(mime: string | null | undefined, name: string | null | undefined) {
   return (
     (mime ?? '').toLowerCase().startsWith('image/') ||
@@ -21,33 +29,43 @@ export function isImageFile(mime: string | null | undefined, name: string | null
   );
 }
 
-function isPdf(doc: Pick<SourceDocument, 'mimeType' | 'originalFilename' | 'path'>) {
-  return (
-    (doc.mimeType ?? '').includes('pdf') ||
-    /\.pdf$/i.test(doc.originalFilename ?? '') ||
-    doc.path.endsWith('.pdf')
-  );
+/** A PDF by its type or any of its names (stored path, name it arrived with). */
+export function isPdfFile(
+  mime: string | null | undefined,
+  ...names: (string | null | undefined)[]
+) {
+  return (mime ?? '').toLowerCase().includes('pdf') || names.some((n) => /\.pdf$/i.test(n ?? ''));
 }
 
 export type ScanResult = { file: ScanFile } | { problem: string } | null;
 
 /** The file to send for a document without text, a reason it can't be, or null (not a scan). */
 export async function scanFor(doc: SourceDocument): Promise<ScanResult> {
-  if (isPdf(doc)) {
-    const data = readDocument(doc);
+  const names = [doc.originalFilename, doc.path];
+  if (!isPdfFile(doc.mimeType, ...names) && !isImageFile(doc.mimeType, doc.originalFilename))
+    return null;
+  return scanFile(readDocument(doc), doc.mimeType, ...names);
+}
+
+/** As scanFor, for a file that isn't stored (the dry-run script). */
+export async function scanFile(
+  data: Buffer,
+  mime: string | null | undefined,
+  ...names: (string | null | undefined)[]
+): Promise<ScanResult> {
+  if (isPdfFile(mime, ...names)) {
     if (data.length > MAX_PDF_BYTES)
       return { problem: 'This scan is too large for the AI reader (over 20 MB)' };
     return { file: { mediaType: 'application/pdf', data } };
   }
-  if (!isImageFile(doc.mimeType, doc.originalFilename)) return null;
-  const data = readDocument(doc);
+  if (!names.some((n) => isImageFile(mime, n))) return null;
   const shrunk = await shrinkPhoto(data);
   if (shrunk) return { file: { mediaType: 'image/jpeg', data: shrunk } };
   // No image library: send supported photos as they are, when small enough.
-  const type = IMAGE_TYPES.find((t) => t === (doc.mimeType ?? '').toLowerCase());
+  const type = IMAGE_TYPES.find((t) => t === (mime ?? '').toLowerCase());
   if (type && data.length <= MAX_RAW_IMAGE_BYTES) return { file: { mediaType: type, data } };
   return {
-    problem: /heic|heif/i.test(`${doc.mimeType} ${doc.originalFilename}`)
+    problem: /heic|heif/i.test(`${mime} ${names.join(' ')}`)
       ? 'iPhone HEIC photos can’t be read yet; send the photo as a JPEG'
       : 'This photo couldn’t be prepared for the AI reader',
   };

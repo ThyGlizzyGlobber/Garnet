@@ -23,9 +23,3 @@ export function openDb(dataDir?: string) {
   const db = drizzle(sqlite, { schema });
   return { sqlite, db };
 }
-
-/** Close the shared connection (used by tests and graceful shutdown). */
-export function closeDb() {
-  instance?.sqlite.close();
-  instance = undefined;
-}

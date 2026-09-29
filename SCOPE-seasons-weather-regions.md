@@ -137,7 +137,7 @@ own legal and consent gate (§7).
 
 - A `WeatherProvider` interface (same pattern as `Extractor` and `SettlementAdapter`): `dailyHistory(lat, lon, from, to)`, `forecast(lat, lon, days)`, `climateNormals(lat, lon)`, each returning daily mean/min/max temperature, HDD/CDD at the configured bases, solar radiation (MJ/m²) and sunshine hours.
 - First provider: **Open-Meteo** (historical reanalysis, 16-day forecast, no key). Its free tier is for non-commercial use; a paid plan is needed once the product charges. **Terms to confirm (D5).** An alternative provider can be swapped in behind the interface.
-- `weather_day` cache table keyed by grid cell (lat/lon rounded to 0.1°) and date: shared by every household in the same cell, contains no personal data, filled lazily and by a nightly job. Forecasts cached 3 hours.
+- `weather_day` cache table keyed by grid cell (lat/lon rounded to 0.1°) and date: shared by every household in the same cell, contains no personal data, filled lazily and by the worker every 30 minutes. Forecasts cached 3 hours.
 - Network calls happen in the worker, never while rendering a page; pages read the cache.
 
 **Per bill**
@@ -173,10 +173,10 @@ own legal and consent gate (§7).
 **Consent**
 
 - Household-level opt-in by the admin, with a clear explanation and a link to the privacy policy: "Share anonymised usage and rates with households in your area. Nobody can see your household's bills; you'll see area averages in return." Members are told it's on (Settings shows it to everyone).
-- Withdraw at any time; the household leaves every aggregate at the next nightly run.
+- Withdraw at any time; the household leaves every aggregate at once (the figures are recomputed straight away).
 - Terms and privacy policy updated; consent recorded with time and policy version (`household_consent`: household_id, kind, version, granted_at, withdrawn_at, by_member_id).
 
-**What is pooled** (per bill, computed nightly from opted-in households)
+**What is pooled** (per bill, recomputed every six hours from sharing households)
 
 - Area keys (postcode, region, state, country), climate zone, service type, normalised provider name, billing period and month(s), days.
 - Usage per day (canonical unit), cost per day, effective rate (cost ÷ usage), tariff figures (rates, supply charge per day), solar export per day, weather-adjusted usage (S3), household size band (1, 2, 3–4, 5+ active members).
@@ -185,7 +185,7 @@ own legal and consent gate (§7).
 **How it's stored and shown**
 
 - Aggregates only: `regional_stat` (area level, area code, service type, month, metric key, n households, median, p25, p75, computed_at). Rows are written only when n ≥ k and no single household contributes more than 50% of the underlying data; otherwise the next wider area level is used.
-- The nightly job reads source bills through a single audited query; no per-household pooled rows are stored.
+- The six-hourly job reads source bills through a single audited query; no per-household pooled rows are stored.
 - Figures shown in the app (household must also be opted in to see them):
   - "Households like yours in 3550 used 11.2 kWh a day this winter; you used 12.8 (14% more)."
   - "The typical electricity rate in your area this quarter was 31.2c/kWh; yours was 34.9c."
@@ -260,7 +260,7 @@ Each phase ships behind the usual release flow (commit → GitHub release → Up
 | D4  | Countries                                                                      | Model international from the start; seed Australia only.                                                    |
 | D5  | Weather provider                                                               | Open-Meteo behind an interface; budget for its commercial plan once the product charges.                    |
 | D6  | Privacy threshold k                                                            | k = 10 households, dominance limit 50%.                                                                     |
-| D7  | Where pooled data lives                                                        | Same install, aggregate-only tables, computed nightly, no pooled per-household rows.                        |
+| D7  | Where pooled data lives                                                        | Same install, aggregate-only tables, recomputed every six hours, no pooled per-household rows.              |
 | D8  | Household size in pooled data                                                  | Size bands (1, 2, 3–4, 5+), not exact counts.                                                               |
 | D9  | Season-ahead email                                                             | Off for members, on for the payer, per service; weekly digest later.                                        |
 | D10 | Default weather-sensitive services                                             | Electricity and gas; household can switch any service on or off.                                            |
@@ -274,4 +274,4 @@ Each phase ships behind the usual release flow (commit → GitHub release → Up
 
 ---
 
-_BRJ Labs — seasons, weather and regional insights scope (proposed). Feedback and decisions to the owner before any phase starts._
+_BRJ Labs — seasons, weather and regional insights scope (approved and built, S1–S4). Changes since approval are in the CLAUDE.md decisions log._

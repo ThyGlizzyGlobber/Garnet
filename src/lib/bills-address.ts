@@ -30,7 +30,7 @@ export function generateAlias(name: string): string {
   return `${slug}-${suffix}`;
 }
 
-export function addressFor(alias: string, env: Env = getEnv()): string | null {
+function addressFor(alias: string, env: Env = getEnv()): string | null {
   return env.BILLS_ADDRESS_TEMPLATE ? env.BILLS_ADDRESS_TEMPLATE.replace('{alias}', alias) : null;
 }
 
@@ -82,7 +82,7 @@ export function replaceAlias(hh: Household, db: Db = getDb()): string {
 // ─── Worker → app signature ──────────────────────────────────────────────────
 
 /** Accept deliveries signed within five minutes either side of now. */
-export const SIGNATURE_WINDOW_S = 300;
+const SIGNATURE_WINDOW_S = 300;
 
 export function signDelivery(secret: string, timestamp: string, body: Buffer): string {
   return `sha256=${createHmac('sha256', secret).update(`${timestamp}.`).update(body).digest('hex')}`;

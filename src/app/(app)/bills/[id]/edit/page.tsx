@@ -6,7 +6,7 @@ import { getTranslations } from 'next-intl/server';
 import { PageHeader } from '@/components/ui';
 import { getBill, housematesPaid } from '@/lib/bills';
 import { pageContext } from '@/lib/context';
-import { minorUnitDigits } from '@/lib/format';
+import { formatMinorPlain } from '@/lib/format';
 import { listServices } from '@/lib/services';
 import { listUnits } from '@/lib/units';
 import { updateBillAction } from '../../actions';
@@ -18,9 +18,9 @@ export default async function EditBillPage({ params }: { params: Promise<{ id: s
   const t = await getTranslations('bills');
   const b = getBill(hh.id, id);
   if (!b || !visibleTo(b.ownerMemberId, me.id)) notFound();
-  const digits = minorUnitDigits(b.currency);
+  // Amounts as the form's inputs expect them ("129.00").
   const major = (minor: number | null) =>
-    minor === null ? '' : (minor / 10 ** digits).toFixed(digits);
+    minor === null ? '' : formatMinorPlain(minor, b.currency);
   const locked = b.shares.some((s) => s.paidAt && s.paidMethod !== 'payer');
   // Whoever brought it in can say whose it is here too (not once housemates have paid shares).
   const showWhose =

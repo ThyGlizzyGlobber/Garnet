@@ -112,7 +112,7 @@ describe('finding bills', () => {
         },
         db,
       );
-    bill(internet.id, 12900, '2026-07-14', '2026-08-13', '2026-07-26', '60097874', true);
+    bill(internet.id, 12900, '2026-07-14', '2026-08-13', '2026-07-26', '50000002', true);
     bill(internet.id, 12900, '2026-08-14', '2026-09-13', '2026-08-26', '61111111');
     bill(power.id, 41250, '2026-06-01', '2026-08-31', '2026-09-20', 'RE-9981');
     bill(power.id, 38800, '2025-06-01', '2025-08-31', '2025-09-20', 'RE-5500', true);
@@ -122,15 +122,15 @@ describe('finding bills', () => {
 
   it('by provider, month name, amount and invoice number, every word counting', () => {
     const { all } = setup();
-    expect(refs(filterBills(all, { q: 'aussie' }, ctx).bills)).toEqual(['60097874', '61111111']);
+    expect(refs(filterBills(all, { q: 'aussie' }, ctx).bills)).toEqual(['50000002', '61111111']);
     expect(refs(filterBills(all, { q: 'august 2026' }, ctx).bills)).toEqual([
-      '60097874', // Jul 14 – Aug 13 covers August
+      '50000002', // Jul 14 – Aug 13 covers August
       '61111111',
       'RE-9981',
     ]);
     expect(refs(filterBills(all, { q: '$412.50' }, ctx).bills)).toEqual(['RE-9981']);
-    expect(refs(filterBills(all, { q: '129' }, ctx).bills)).toEqual(['60097874', '61111111']);
-    expect(refs(filterBills(all, { q: '6009' }, ctx).bills)).toEqual(['60097874']);
+    expect(refs(filterBills(all, { q: '129' }, ctx).bills)).toEqual(['50000002', '61111111']);
+    expect(refs(filterBills(all, { q: '00002' }, ctx).bills)).toEqual(['50000002']);
     expect(refs(filterBills(all, { q: 'red energy 2025' }, ctx).bills)).toEqual(['RE-5500']);
     // A quarterly bill turns up for the month in the middle of its period.
     expect(refs(filterBills(all, { q: 'red july 2026' }, ctx).bills)).toEqual(['RE-9981']);
@@ -145,7 +145,7 @@ describe('finding bills', () => {
       'RE-9981',
     ]);
     expect(refs(filterBills(all, { year: '2025' }, ctx).bills)).toEqual(['RE-5500']);
-    expect(refs(filterBills(all, { status: 'paid' }, ctx).bills)).toEqual(['60097874', 'RE-5500']);
+    expect(refs(filterBills(all, { status: 'paid' }, ctx).bills)).toEqual(['50000002', 'RE-5500']);
     expect(
       refs(filterBills(all, { status: 'unpaid', serviceId: power.id, q: 'red' }, ctx).bills),
     ).toEqual(['RE-9981']);

@@ -6,10 +6,11 @@ import { parseSenderList } from '@/lib/sender-auth';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
-import { CADENCES, SPLIT_MODES } from '@/db/schema';
+import { CADENCES, SPLIT_MODES, type SplitMode } from '@/db/schema';
 import type { ActionState } from '@/components/ui/form';
-import { optStr, str, zodToState } from '@/lib/actions';
-import { requireMember } from '@/lib/auth/session';
+import { errorText, optStr, str, zodToState } from '@/lib/actions';
+import { DEFAULT_COLOUR } from '@/lib/palette';
+import { requireMember, requireOperator } from '@/lib/auth/session';
 import { refreshAnomalies, resplitBills, setServiceOwner } from '@/lib/bills';
 import { parseMoneyToMinor } from '@/lib/format';
 import { getHousehold } from '@/lib/households';
@@ -24,31 +25,39 @@ import {
   updateService,
   type ServiceInput,
 } from '@/lib/services';
+import { splitProblem } from '@/lib/splits';
 import { UNITS } from '@/lib/units';
+import { isAdmin } from '@/lib/roles';
 
 const schema = z.object({
-  typeSlug: z.string().min(1, 'Choose a type'),
-  name: z.string().min(1, 'Required').max(60),
-  provider: z.string().min(1, 'Required').max(80),
+  typeSlug: z.string().min(1, 'chooseType'),
+  name: z.string().min(1, 'required').max(60),
+  provider: z.string().min(1, 'required').max(80),
   accountRef: z.string().max(80),
   cadence: z.enum(CADENCES),
-  usageUnit: z.string().refine((u) => u === '' || UNITS.has(u), 'Unknown unit'),
+  usageUnit: z.string().refine((u) => u === '' || UNITS.has(u), 'unknownUnit'),
   usageLimit: z
     .string()
-    .refine(
-      (v) => v === '' || (Number.isFinite(Number(v)) && Number(v) > 0),
-      'Enter a number above zero',
-    ),
+    .refine((v) => v === '' || (Number.isFinite(Number(v)) && Number(v) > 0), 'numberAboveZero'),
   splitMode: z.enum(SPLIT_MODES).catch('equal'),
   payerMemberId: z.string(),
-  colour: z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Pick a colour'),
+  colour: z.string().regex(/^#[0-9a-fA-F]{6}$/, 'pickColour'),
   isActive: z.boolean(),
   notes: z.string().max(500),
 });
 
 type ReadResult = { ok: true; input: ServiceInput } | { ok: false; state: ActionState };
 
-function read(householdId: string, currency: string, fd: FormData): ReadResult {
+/**
+ * The form, checked. `current` is the service's split mode today: the older
+ * "weighted" mode can be kept but never newly chosen.
+ */
+async function read(
+  householdId: string,
+  currency: string,
+  fd: FormData,
+  current: SplitMode | null = null,
+): Promise<ReadResult> {
   const parsed = schema.safeParse({
     typeSlug: str(fd, 'typeSlug'),
     name: str(fd, 'name'),
@@ -59,12 +68,14 @@ function read(householdId: string, currency: string, fd: FormData): ReadResult {
     usageLimit: str(fd, 'usageLimit'),
     splitMode: str(fd, 'splitMode'),
     payerMemberId: str(fd, 'payerMemberId'),
-    colour: str(fd, 'colour') || '#0a84ff',
+    colour: str(fd, 'colour') || DEFAULT_COLOUR,
     isActive: fd.get('isActive') === 'on',
     notes: str(fd, 'notes'),
   });
-  if (!parsed.success) return { ok: false, state: zodToState(parsed.error) };
+  if (!parsed.success) return { ok: false, state: await zodToState(parsed.error) };
+  const te = await errorText();
   const v = parsed.data;
+  if (v.splitMode === 'weighted' && current !== 'weighted') v.splitMode = 'equal';
   const members = listMembers(householdId);
   const customSplits: Record<string, number> = {};
   const fixedAmounts: Record<string, number> = {};
@@ -74,14 +85,14 @@ function read(householdId: string, currency: string, fd: FormData): ReadResult {
       if (!raw) continue;
       const pct = Number(raw.replace('%', ''));
       if (!Number.isFinite(pct) || pct < 0)
-        return { ok: false, state: { error: `Enter a percentage for ${m.name}` } };
+        return { ok: false, state: { error: te('percentFor', { name: m.name }) } };
       if (pct > 0) customSplits[m.id] = pct;
     }
-    const total = Object.values(customSplits).reduce((s, p) => s + p, 0);
-    if (Math.abs(total - 100) >= 0.05)
+    const problem = splitProblem('percent', { percents: customSplits });
+    if (problem?.kind === 'percent-total')
       return {
         ok: false,
-        state: { error: `The percentages add up to ${Math.round(total * 100) / 100}%, not 100%.` },
+        state: { error: te('percentTotal', { total: problem.total }) },
       };
   } else if (v.splitMode === 'fixed') {
     for (const m of members) {
@@ -89,13 +100,13 @@ function read(householdId: string, currency: string, fd: FormData): ReadResult {
       if (!raw) continue;
       const minor = parseMoneyToMinor(raw, currency);
       if (minor === null || minor < 0)
-        return { ok: false, state: { error: `Enter an amount for ${m.name}, or leave it blank` } };
+        return { ok: false, state: { error: te('amountFor', { name: m.name }) } };
       fixedAmounts[m.id] = minor;
     }
-    if (!Object.values(fixedAmounts).some((a) => a > 0))
+    if (splitProblem('fixed', { amounts: fixedAmounts }))
       return {
         ok: false,
-        state: { error: 'Enter an amount for at least one person, or split it evenly.' },
+        state: { error: te('amountNeeded') },
       };
   }
   return {
@@ -156,18 +167,16 @@ function splitKey(householdId: string, id: string): string {
 export async function createServiceAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
   const me = await requireMember();
   const hh = getHousehold(me.householdId)!;
-  const r = read(me.householdId, hh.currency, fd);
+  const r = await read(me.householdId, hh.currency, fd);
   if (!r.ok) return r.state;
   // "Just for me": the member creating it owns it.
   const personal = fd.get('personal') === 'on';
-  const isAdmin = me.role === 'owner';
+  const admin = isAdmin(me);
   let id: string;
   try {
     id = createService(me.householdId, {
       // A member setting one up splits it evenly and pays it; an admin can change that.
-      ...(isAdmin
-        ? r.input
-        : { ...withoutSplit(r.input), splitMode: 'equal', payerMemberId: me.id }),
+      ...(admin ? r.input : { ...withoutSplit(r.input), splitMode: 'equal', payerMemberId: me.id }),
       isActive: true,
       ownerMemberId: personal ? me.id : null,
     }).id;
@@ -182,24 +191,25 @@ export async function updateServiceAction(_prev: ActionState, fd: FormData): Pro
   const me = await requireMember();
   const id = str(fd, 'id');
   const existing = getService(me.householdId, id);
-  if (!existing || !visibleTo(existing.ownerMemberId, me.id)) return { error: 'Service not found' };
+  const te = await errorText();
+  if (!existing || !visibleTo(existing.ownerMemberId, me.id))
+    return { error: te('serviceNotFound') };
   const hh = getHousehold(me.householdId)!;
-  const r = read(me.householdId, hh.currency, fd);
+  const r = await read(me.householdId, hh.currency, fd, existing.splitMode);
   if (!r.ok) return r.state;
   const personal = fd.get('personal') === 'on';
-  const isAdmin = me.role === 'owner';
+  const admin = isAdmin(me);
   try {
     // Household ↔ personal: only its owner hands it back; whoever brought its
     // bills in (else an admin or its payer) can make it theirs. Its bills move with it.
     if (personal !== !!existing.ownerMemberId) {
-      if (!mayChangeOwner(me.householdId, me, existing))
-        return { error: 'Only the person who brought its bills in can make it personal' };
+      if (!mayChangeOwner(me.householdId, me, existing)) return { error: te('makePersonal') };
       setServiceOwner(me.householdId, id, personal ? me.id : null);
     }
     const before = splitKey(me.householdId, id);
-    updateService(me.householdId, id, isAdmin ? r.input : withoutSplit(r.input));
+    updateService(me.householdId, id, admin ? r.input : withoutSplit(r.input));
     // A new split applies to later bills, and to earlier ones nobody has paid a share of when asked.
-    if (isAdmin && fd.get('resplit') === 'on' && splitKey(me.householdId, id) !== before)
+    if (admin && fd.get('resplit') === 'on' && splitKey(me.householdId, id) !== before)
       resplitBills(me.householdId, id);
     // Seasonal on/off changes how its bills are judged Unusual.
     refreshAnomalies(me.householdId, id);
@@ -214,10 +224,20 @@ export async function updateServiceAction(_prev: ActionState, fd: FormData): Pro
   redirect(`/services/${id}`);
 }
 
+/**
+ * Operator: add a service type. The catalog is shared by every household on the
+ * install (and every type goes into the AI reader's prompt), so households can't
+ * add to it; "Other" plus the service's own name covers anything missing.
+ */
 export async function createServiceTypeAction(fd: FormData): Promise<void> {
-  await requireMember();
-  const label = str(fd, 'label');
-  if (!label) return;
-  createServiceType({ slug: label, label, defaultUnit: optStr(fd, 'defaultUnit') });
+  await requireOperator();
+  const label = str(fd, 'label').slice(0, 40);
+  const unit = optStr(fd, 'defaultUnit');
+  if (!label || (unit && !UNITS.has(unit))) return;
+  try {
+    createServiceType({ slug: label, label, defaultUnit: unit });
+  } catch {
+    // Already in the catalog.
+  }
   revalidatePath('/services');
 }

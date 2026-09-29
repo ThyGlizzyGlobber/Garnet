@@ -141,13 +141,13 @@ describe('computeShares', () => {
     expect(byId.c?.amountMinor).toBe(2000);
   });
 
-  it('uses custom weights and drops members with no weight', () => {
+  it('uses percentages and drops members with none', () => {
     const s = computeShares({
       amountMinor: 4000,
       ...period,
-      splitMode: 'custom',
+      splitMode: 'percent',
       members: [a, b, c],
-      customWeights: { a: 3, b: 1 },
+      customWeights: { a: 75, b: 25 },
     });
     expect(s.map((x) => x.memberId).sort()).toEqual(['a', 'b']);
     expect(s.find((x) => x.memberId === 'a')?.amountMinor).toBe(3000);
@@ -211,7 +211,7 @@ describe('renderPaymentReference', () => {
       }),
     ).toBe('Internet Jul26 Bej');
     expect(
-      renderPaymentReference('{ref}', { service: 'x', period: 'y', member: 'z', ref: '59259831' }),
-    ).toBe('59259831');
+      renderPaymentReference('{ref}', { service: 'x', period: 'y', member: 'z', ref: '50000001' }),
+    ).toBe('50000001');
   });
 });

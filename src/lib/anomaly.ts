@@ -1,4 +1,4 @@
-import { daysInclusive, toUtcMs } from './dates';
+import { costPerDay, mean, median, sameTimeLastYear } from './averages';
 
 export interface AnomalyInput {
   amountMinor: number;
@@ -19,33 +19,18 @@ export interface AnomalyResult {
 }
 
 /** Minimum number of prior bills before we call anything unusual. */
-export const ANOMALY_MIN_HISTORY = 2;
+const ANOMALY_MIN_HISTORY = 2;
 /** Flag when a bill's daily cost exceeds the baseline by this factor (or is below 1/factor). */
-export const ANOMALY_THRESHOLD = 1.3;
+const ANOMALY_THRESHOLD = 1.3;
 /**
  * A seasonal service with no bill from the same time last year: winter can
  * honestly cost far more than autumn, so only a much bigger change is flagged.
  */
-export const SEASONAL_ALLOWANCE = 1.75;
-/** A last-year bill counts as "the same time" when its middle is within this many days. */
-const SAME_TIME_DAYS = 45;
+const SEASONAL_ALLOWANCE = 1.75;
 /** Year-on-year drift is bounded so one odd bill can't distort the baseline. */
 const DRIFT_BOUNDS = [0.8, 1.25] as const;
 
-const DAY_MS = 86_400_000;
-
-function perDay(b: AnomalyInput): number {
-  return b.amountMinor / Math.max(1, daysInclusive(b.periodStart, b.periodEnd));
-}
-
-function median(values: number[]): number {
-  const s = [...values].sort((a, b) => a - b);
-  const mid = Math.floor(s.length / 2);
-  return s.length % 2 ? s[mid]! : (s[mid - 1]! + s[mid]!) / 2;
-}
-
-const mean = (xs: number[]) => xs.reduce((s, x) => s + x, 0) / xs.length;
-const midpoint = (b: AnomalyInput) => (toUtcMs(b.periodStart) + toUtcMs(b.periodEnd)) / 2;
+const perDay = costPerDay;
 
 /**
  * Is a bill's cost per day out of the ordinary for its service?
@@ -72,8 +57,7 @@ export function detectAnomaly(
   if (earlier.length < ANOMALY_MIN_HISTORY) return none;
   const own = perDay(bill);
 
-  const target = midpoint(bill) - 365 * DAY_MS;
-  const lastYear = earlier.filter((p) => Math.abs(midpoint(p) - target) <= SAME_TIME_DAYS * DAY_MS);
+  const lastYear = sameTimeLastYear(bill, earlier);
   if (lastYear.length) {
     const firstLastYear = earlier.indexOf(lastYear[0]!);
     const recent = earlier.slice(-3);

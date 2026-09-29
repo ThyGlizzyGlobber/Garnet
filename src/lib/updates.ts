@@ -179,12 +179,12 @@ export function pendingUpdateRequest(dataDir?: string): UpdateRequest | null {
 }
 
 /** The most recent request, kept after the NAS has consumed it. */
-export function lastUpdateRequest(dataDir?: string): UpdateRequest | null {
+function lastUpdateRequest(dataDir?: string): UpdateRequest | null {
   return readJson<UpdateRequest>(requestPath(dataDir, LAST_REQUEST_FILE));
 }
 
 /** How long the settings page keeps watching for the new version after a request. */
-export const UPDATE_WATCH_MS = 15 * 60_000;
+const UPDATE_WATCH_MS = 15 * 60_000;
 
 /**
  * Where the last request stands: still queued for the NAS, being applied

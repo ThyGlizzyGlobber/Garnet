@@ -1,20 +1,33 @@
+# Only what `npm run build` needs goes into the build context.
 node_modules
 .next
 out
 .git
+.github
+.claude
+# runtime and test data (real bills never ship in the image)
 data
+data-demo
+data-setup
 sample-bills
+.vitest-data
+coverage
+tests
+# secrets
 .env
 .env.*
 !.env.example
-coverage
+# docs and design references (reference/postcodes/NOTICE.md must stay: attribution)
+README.md
+CLAUDE.md
+SCOPE.md
+SCOPE-*.md
+BRAND.md
+DEPLOY.md
+brand-identity
+# build and OS leftovers
+*.tsbuildinfo
 *.log
 .DS_Store
 ._*
 .smbdelete*
-README.md
-SCOPE.md
-CLAUDE.md
-.claude
-data-demo
-.vitest-data

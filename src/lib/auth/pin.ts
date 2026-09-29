@@ -2,7 +2,7 @@ import bcrypt from 'bcryptjs';
 
 export const PIN_PATTERN = /^\d{4,8}$/;
 
-export function isValidPin(pin: string): boolean {
+function isValidPin(pin: string): boolean {
   return PIN_PATTERN.test(pin);
 }
 

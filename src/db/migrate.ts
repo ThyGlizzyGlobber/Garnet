@@ -22,12 +22,24 @@ function pendingCount(sqlite: Database.Database, migrationsFolder: string): numb
   return Math.max(0, journal.entries.length - applied);
 }
 
+/** Pre-migration copies kept beside the database; older ones are deleted. */
+const KEEP_BACKUPS = 5;
+
+function pruneBackups(dbDir: string) {
+  const copies = fs
+    .readdirSync(dbDir)
+    .filter((f) => /^utilities\.pre-migrate-.+\.sqlite$/.test(f))
+    .sort(); // ISO timestamps: oldest first
+  for (const f of copies.slice(0, Math.max(0, copies.length - KEEP_BACKUPS)))
+    fs.rmSync(path.join(dbDir, f), { force: true });
+}
+
 /**
  * Apply pending Drizzle migrations from ./drizzle. Runs on app start
  * (src/instrumentation.ts) and via `npm run db:migrate`.
  *
  * Before touching an existing database it writes a consistent copy next to it
- * (db/utilities.pre-migrate-<time>.sqlite). Foreign keys are off while
+ * (db/utilities.pre-migrate-<time>.sqlite; the latest five are kept). Foreign keys are off while
  * migrations run so SQLite table rebuilds (drop + rename) never fire cascades;
  * SQLite ignores that pragma inside a transaction, so it is set before the
  * migrator's BEGIN. Afterwards foreign_key_check must come back clean or the
@@ -44,6 +56,7 @@ export function runMigrations(
       const stamp = new Date().toISOString().replace(/[:.]/g, '-');
       backup = path.join(dataPaths(dataDir).dbDir, `utilities.pre-migrate-${stamp}.sqlite`);
       sqlite.prepare('VACUUM INTO ?').run(backup);
+      pruneBackups(dataPaths(dataDir).dbDir);
     }
     sqlite.pragma('foreign_keys = OFF');
     migrate(db, { migrationsFolder });

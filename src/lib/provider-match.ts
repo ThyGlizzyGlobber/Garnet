@@ -142,3 +142,21 @@ export function senderMatchesProvider(domain: string | null, provider: string): 
     return l === first && first.length >= 4 && !GENERIC_WORDS.has(first);
   });
 }
+
+const compact = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+/**
+ * Do two provider names mean the same business? "Aussie Broadband" and "Aussie
+ * Broadband Limited" do; so do "AGL" and "AGL Energy". Short names must match
+ * from the start, so two letters never match by accident.
+ */
+export function sameProvider(a: string, b: string): boolean {
+  const x = compact(a);
+  const y = compact(b);
+  if (!x || !y) return false;
+  if (x === y) return true;
+  const [short, long] = x.length <= y.length ? [x, y] : [y, x];
+  return (
+    (short.length >= 4 && long.includes(short)) || (short.length >= 3 && long.startsWith(short))
+  );
+}

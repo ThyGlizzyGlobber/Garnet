@@ -153,44 +153,197 @@ export function List({ children }: { children: ReactNode }) {
   return <div className="glass divide-y divide-border rounded-card">{children}</div>;
 }
 
-/** Big number tile, as on the dashboard. `hero` tints it with the accent. */
-export function Stat({
-  label,
-  value,
-  hint,
-  hero,
-  tone,
+const tileTones = {
+  plain: '',
+  accent: 'bg-accent-soft',
+  danger: 'bg-danger-soft',
+};
+
+/**
+ * A dashboard tile: glass, lifting on hover. With `href` the whole tile is a
+ * link. Every tile carries one instrument or figure (BRAND.md).
+ */
+export function Tile({
+  href,
+  tone = 'plain',
   className,
+  children,
 }: {
-  label: string;
-  value: ReactNode;
-  hint?: ReactNode;
-  hero?: boolean;
-  tone?: 'warning' | 'success' | 'accent';
+  href?: string;
+  tone?: keyof typeof tileTones;
   className?: string;
+  children: ReactNode;
 }) {
-  const valueTone =
-    tone === 'warning'
-      ? 'text-warning'
-      : tone === 'success'
-        ? 'text-success'
-        : tone === 'accent'
-          ? 'text-accent'
-          : '';
+  const cls = cx('glass lift rounded-card p-5 sm:p-6', tileTones[tone], className);
+  return href ? (
+    <Link href={href} className={cx(cls, 'text-fg')}>
+      {children}
+    </Link>
+  ) : (
+    <section className={cls}>{children}</section>
+  );
+}
+
+/** A tile's heading row: title (and a line under it) with something on the right. */
+export function TileHeader({
+  title,
+  hint,
+  action,
+  small = false,
+}: {
+  title: ReactNode;
+  hint?: ReactNode;
+  action?: ReactNode;
+  /** A small label-style title (the instrument tiles) instead of a heading. */
+  small?: boolean;
+}) {
   return (
-    <Card
-      className={cx('flex flex-col gap-2', hero && 'border-accent/40 bg-accent-soft', className)}
-    >
-      <span className="text-sm font-semibold">{label}</span>
-      <span
-        className={cx(
-          'font-display text-[34px] leading-none font-semibold tracking-tight tabular-nums',
-          valueTone,
+    <div className="flex items-start justify-between gap-3">
+      <div className="min-w-0">
+        {small ? (
+          <p className="text-sm font-semibold">{title}</p>
+        ) : (
+          <h2 className="font-display text-lg font-semibold">{title}</h2>
         )}
-      >
-        {value}
+        {hint && <p className="text-xs text-fg-muted">{hint}</p>}
+      </div>
+      {action && <div className="shrink-0">{action}</div>}
+    </div>
+  );
+}
+
+const figureSizes = {
+  hero: 'text-[44px] tracking-tight',
+  xl: 'text-[38px] tracking-tight sm:text-[44px]',
+  lg: 'text-[40px] tracking-tight',
+  md: 'text-[34px] tracking-tight',
+  sm: 'text-[32px]',
+  xs: 'text-[26px]',
+};
+const figureTones = {
+  plain: '',
+  warning: 'text-warning',
+  success: 'text-success',
+  danger: 'text-danger',
+  accent: 'text-accent',
+};
+
+/** A big number: money, a percentage, a count. */
+export function Figure({
+  size = 'lg',
+  tone = 'plain',
+  className,
+  children,
+}: {
+  size?: keyof typeof figureSizes;
+  tone?: keyof typeof figureTones;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <span
+      className={cx(
+        'block font-display leading-none font-semibold tabular-nums',
+        figureSizes[size],
+        figureTones[tone],
+        className,
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
+const bannerTones = {
+  danger: 'bg-danger-soft text-danger',
+  warning: 'bg-warning-soft text-warning',
+  accent: 'bg-accent-soft text-accent',
+};
+
+/** A full-width link asking for attention (a bill problem, a question, the Inbox). */
+export function Banner({
+  href,
+  tone,
+  open,
+  children,
+}: {
+  href: string;
+  tone: keyof typeof bannerTones;
+  /** The call to action on the right ("Open", "Review"). */
+  open: string;
+  children: ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      className={cx(
+        'mb-4 flex items-center justify-between gap-3 rounded-card px-5 py-3 text-sm font-semibold',
+        bannerTones[tone],
+      )}
+    >
+      <span>{children}</span>
+      <span className="shrink-0">
+        {open} <span aria-hidden="true">→</span>
       </span>
-      {hint && <span className="text-xs text-fg-muted">{hint}</span>}
-    </Card>
+    </Link>
+  );
+}
+
+/** The pill look, for a chip that has to be another element (a submit button). */
+export const chipClass = (active = false) =>
+  cx(
+    'rounded-full px-4 py-2 text-sm font-semibold transition',
+    active ? 'bg-accent text-accent-fg' : 'bg-surface-2 text-fg-muted hover:text-fg',
+  );
+
+/** A pill: a filter, a period, a count that links somewhere. `active` fills it. */
+export function Chip({
+  href,
+  active = false,
+  className,
+  children,
+}: {
+  href?: string;
+  active?: boolean;
+  className?: string;
+  children: ReactNode;
+}) {
+  const cls = cx(chipClass(active), className);
+  return href ? (
+    <Link href={href} className={cls} aria-current={active ? 'page' : undefined}>
+      {children}
+    </Link>
+  ) : (
+    <span className={cls}>{children}</span>
+  );
+}
+
+/**
+ * A file download (an export, a statement): a plain link, not client-side
+ * navigation, styled as a secondary button. `label` is hidden on phones when
+ * an icon is given.
+ */
+export function DownloadButton({
+  href,
+  label,
+  title,
+  icon,
+}: {
+  href: string;
+  label: string;
+  title?: string;
+  icon?: ReactNode;
+}) {
+  return (
+    <a
+      href={href}
+      download
+      title={title}
+      aria-label={label}
+      className={cx(buttonBase, buttonVariants.secondary)}
+    >
+      {icon}
+      <span className={icon ? 'hidden sm:inline' : undefined}>{label}</span>
+    </a>
   );
 }

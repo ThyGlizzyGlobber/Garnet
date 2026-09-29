@@ -42,7 +42,6 @@ const counts = (file: string) => {
     bill: n('bill'),
     share: n('share'),
     paid: n('share WHERE paid_at IS NOT NULL'),
-    projection: n('projection'),
   };
   db.close();
   return out;
@@ -96,7 +95,6 @@ describe('0002_multi_household', () => {
       'source_document',
       'bill',
       'share',
-      'projection',
     ]) {
       const orphans = db
         .prepare(`SELECT count(*) AS n FROM ${table} WHERE household_id IS NOT 'H1'`)
@@ -105,6 +103,12 @@ describe('0002_multi_household', () => {
     }
     expect(db.pragma('foreign_key_check')).toEqual([]);
     expect(db.prepare('SELECT is_demo FROM household').get()).toEqual({ is_demo: 0 });
+    // 0030: the projection cache nobody read is gone.
+    expect(
+      db
+        .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'projection'")
+        .get(),
+    ).toBeUndefined();
     db.close();
   });
 

@@ -3,7 +3,7 @@
  * each type (service_type.category); custom types are "other". Kept out of the
  * schema module so client components can use it.
  */
-export const SERVICE_CATEGORIES = [
+const SERVICE_CATEGORIES = [
   'utilities',
   'home',
   'health',
@@ -12,4 +12,13 @@ export const SERVICE_CATEGORIES = [
   'other',
 ] as const;
 
-export type ServiceCategory = (typeof SERVICE_CATEGORIES)[number];
+/**
+ * Types grouped by category (Utilities, Home, Health, Vehicle, Lifestyle,
+ * Other), in catalog order within each; empty groups left out.
+ */
+export function groupTypes<T extends { category?: string | null }>(types: T[]) {
+  return SERVICE_CATEGORIES.map((category) => ({
+    category,
+    types: types.filter((ty) => (ty.category ?? 'other') === category),
+  })).filter((g) => g.types.length > 0);
+}

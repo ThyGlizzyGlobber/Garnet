@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { SERVICE_CATEGORIES } from '@/lib/service-categories';
+import { groupTypes } from '@/lib/service-categories';
 import { getTranslations } from 'next-intl/server';
 import { Icon } from '@/components/app/icons';
 import {
@@ -12,10 +12,13 @@ import {
   LinkButton,
   PageHeader,
   Select,
+  Figure,
 } from '@/components/ui';
+import { viewerIsOperator } from '@/lib/auth/session';
 import { pageContext } from '@/lib/context';
 import { listMembers } from '@/lib/members';
-import { darkVariant } from '@/lib/palette';
+import { colourCss, tintStyle } from '@/lib/palette';
+import { IconDisc } from '@/components/ui/colour';
 import { nextMonth, projectMonth } from '@/lib/projections';
 import { listServices, listServiceTypes } from '@/lib/services';
 import { listUnits, unitLabel } from '@/lib/units';
@@ -26,21 +29,13 @@ import { lastMonths } from '@/lib/periods';
 import { monthOf } from '@/lib/dates';
 import { createServiceTypeAction } from './actions';
 
-/** Tinted tile background in the service's colour, readable in both schemes. */
-function tint(colour: string) {
-  const c = `light-dark(${colour}, ${darkVariant(colour)})`;
-  return {
-    background: `linear-gradient(160deg, color-mix(in srgb, ${c} 30%, var(--color-surface-solid)), color-mix(in srgb, ${c} 10%, var(--color-surface-solid)))`,
-    borderColor: `color-mix(in srgb, ${c} 45%, transparent)`,
-  };
-}
-
 export default async function ServicesPage() {
   const { hh, me, money, date, today } = await pageContext();
   const t = await getTranslations('services');
   const services = listServices(hh.id, { includeInactive: true });
   const members = new Map(listMembers(hh.id).map((m) => [m.id, m.name]));
   const types = listServiceTypes();
+  const operator = await viewerIsOperator();
   const proj = new Map(
     projectMonth(hh.id, nextMonth(today)).services.map((p) => [p.service.id, p]),
   );
@@ -55,22 +50,16 @@ export default async function ServicesPage() {
     s: (typeof services)[number],
     next: { amount: string; line: string; history: number[] },
   ) => {
-    const swatch = `light-dark(${s.colour}, ${darkVariant(s.colour)})`;
     return (
       <Link
         key={s.id}
         href={`/services/${s.id}`}
         className="glass lift flex min-h-52 flex-col justify-between rounded-card p-5 text-fg"
-        style={tint(s.colour)}
+        style={tintStyle(s.colour)}
       >
         <div className="flex items-start justify-between gap-3">
           <span className="flex items-center gap-3">
-            <span
-              className="grid size-10 place-items-center rounded-full bg-surface-2"
-              style={{ color: swatch }}
-            >
-              <Icon name={s.type.icon} width={18} height={18} />
-            </span>
+            <IconDisc icon={s.type.icon} colour={s.colour} variant="soft" size={40} />
             <span className="flex flex-col leading-tight">
               <span className="text-[11px] font-semibold tracking-wide text-fg-muted uppercase">
                 {s.type.label}
@@ -93,12 +82,9 @@ export default async function ServicesPage() {
           <span className="text-xs font-semibold text-fg-muted">
             {s.ownerMemberId ? t('personal.lastTitle') : t('tile.next')}
           </span>
-          <p
-            className="font-display text-[34px] leading-none font-semibold tracking-tight tabular-nums"
-            style={{ color: swatch }}
-          >
-            {next.amount}
-          </p>
+          <div style={{ color: colourCss(s.colour) }}>
+            <Figure size="md">{next.amount}</Figure>
+          </div>
           <p className="mt-1 text-xs text-fg-muted">{next.line}</p>
         </div>
         <div className="mt-3 -mx-1">
@@ -172,41 +158,39 @@ export default async function ServicesPage() {
         <h2 className="font-display font-semibold">{t('types.title')}</h2>
         <p className="mt-0.5 text-xs text-fg-muted">{t('types.body')}</p>
         <dl className="mt-3 flex flex-col gap-2">
-          {SERVICE_CATEGORIES.map((c) => {
-            const inGroup = types.filter((ty) => ty.category === c);
-            if (!inGroup.length) return null;
-            return (
-              <div key={c} className="flex flex-wrap items-baseline gap-1.5">
-                <dt className="w-20 shrink-0 text-xs font-semibold text-fg-muted">
-                  {t(`categories.${c}`)}
-                </dt>
-                <dd className="flex flex-1 flex-wrap gap-1.5">
-                  {inGroup.map((ty) => (
-                    <Badge key={ty.slug}>{ty.label}</Badge>
-                  ))}
-                </dd>
-              </div>
-            );
-          })}
+          {groupTypes(types).map((g) => (
+            <div key={g.category} className="flex flex-wrap items-baseline gap-1.5">
+              <dt className="w-20 shrink-0 text-xs font-semibold text-fg-muted">
+                {t(`categories.${g.category}`)}
+              </dt>
+              <dd className="flex flex-1 flex-wrap gap-1.5">
+                {g.types.map((ty) => (
+                  <Badge key={ty.slug}>{ty.label}</Badge>
+                ))}
+              </dd>
+            </div>
+          ))}
         </dl>
-        <form action={createServiceTypeAction} className="mt-4 flex flex-wrap items-end gap-3">
-          <Field label={t('types.label')}>
-            <Input name="label" required placeholder={t('types.placeholder')} />
-          </Field>
-          <Field label={t('types.unit')}>
-            <Select name="defaultUnit" defaultValue="">
-              <option value="">—</option>
-              {listUnits().map((u) => (
-                <option key={u.key} value={u.key}>
-                  {u.label}
-                </option>
-              ))}
-            </Select>
-          </Field>
-          <Button type="submit" variant="secondary">
-            {t('types.add')}
-          </Button>
-        </form>
+        {operator && (
+          <form action={createServiceTypeAction} className="mt-4 flex flex-wrap items-end gap-3">
+            <Field label={t('types.label')}>
+              <Input name="label" required placeholder={t('types.placeholder')} />
+            </Field>
+            <Field label={t('types.unit')}>
+              <Select name="defaultUnit" defaultValue="">
+                <option value="">—</option>
+                {listUnits().map((u) => (
+                  <option key={u.key} value={u.key}>
+                    {u.label}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Button type="submit" variant="secondary">
+              {t('types.add')}
+            </Button>
+          </form>
+        )}
       </Card>
     </>
   );

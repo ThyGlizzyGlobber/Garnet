@@ -6,7 +6,7 @@
 # App name: home-utilities  (deploy/nas-updater.sh expects this name)
 #
 # Runs the image GitHub Actions publishes for every push to main. Updates are
-# applied from Settings → Software update (see DEPLOY.md, "Updates").
+# applied from Settings → Software update (DEPLOY.md §1 and §4).
 #
 # Before pasting, fill in every <...> value. The image is private, so first sign
 # in to ghcr.io under Apps → Configuration → Docker registries (DEPLOY.md §2).
@@ -23,12 +23,24 @@ services:
     environment:
       DATA_DIR: /data
       AUTH_SECRET: '<openssl rand -base64 48>'
-      AUTH_SESSION_DAYS: '30'
+      # Days a PIN unlock lasts; days a browser stays trusted after a full sign-in.
+      AUTH_SESSION_DAYS: '7'
+      AUTH_DEVICE_DAYS: '180'
+      # Sign-in (DEPLOY.md §8): without an email service nobody can sign in by code.
+      APP_URL: '<https://your-public-address>'
+      OPERATOR_EMAILS: '<your email>'
+      RESEND_API_KEY: '<re_...>'
+      EMAIL_FROM: 'Home Utilities <bills@your-domain>'
+      GOOGLE_CLIENT_ID: ''
+      GOOGLE_CLIENT_SECRET: ''
+      # Household bills addresses (DEPLOY.md §9); leave empty to turn them off.
+      BILLS_ADDRESS_TEMPLATE: ''
+      INBOUND_EMAIL_SECRET: ''
       DEFAULT_CURRENCY: AUD
       DEFAULT_LOCALE: en-AU
       DEFAULT_TIMEZONE: Australia/Melbourne
       DEFAULT_FISCAL_YEAR_START_MONTH: '7'
-      # Email ingestion (leave IMAP_USER/IMAP_PASSWORD empty to disable)
+      # Optional operator mailbox, polled by the app (leave IMAP_USER empty to turn it off)
       IMAP_HOST: imap.gmail.com
       IMAP_PORT: '993'
       IMAP_SECURE: 'true'
@@ -36,7 +48,7 @@ services:
       IMAP_PASSWORD: ''
       IMAP_MAILBOX: INBOX
       IMAP_POLL_INTERVAL_SECONDS: '300'
-      # AI extraction (leave empty to send unknown providers to the review queue)
+      # AI bill reader: without a key every document waits in the Inbox for entry by hand
       ANTHROPIC_API_KEY: ''
       ANTHROPIC_MODEL: claude-opus-5
       EXTRACTOR_CONFIDENCE_THRESHOLD: '0.85'
@@ -45,7 +57,6 @@ services:
       UPDATE_REPO: ThyGlizzyGlobber/Home-Utilities-Software--Prototype-1-
       UPDATE_GITHUB_TOKEN: ''
       DEMO_MODE: 'false'
-      LOG_LEVEL: info
     healthcheck:
       test:
         [

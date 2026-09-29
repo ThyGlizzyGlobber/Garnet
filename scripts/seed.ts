@@ -1,13 +1,15 @@
+/**
+ * Create the fictional "Riverside House" demo household (the same one
+ * DEMO_MODE=true seeds on start). Real data is never seeded.
+ *   npm run db:seed:demo
+ */
 import { getEnv } from '@/lib/env';
 import { runMigrations } from '@/db/migrate';
-import { seedDemo, seedReal } from '@/db/seed';
+import { seedDemo } from '@/db/demo-seed';
 
 async function main() {
-  const env = getEnv();
-  runMigrations(env.DATA_DIR);
-  const mode = process.argv[2] ?? (env.DEMO_MODE ? 'demo' : 'real');
-  const result = mode === 'demo' ? await seedDemo() : await seedReal();
-  console.log(`Seeded (${mode}):`, result);
+  runMigrations(getEnv().DATA_DIR);
+  console.log('Seeded (demo):', await seedDemo());
 }
 
 main().catch((e) => {

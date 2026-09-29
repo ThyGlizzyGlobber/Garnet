@@ -10,6 +10,7 @@ import {
   type SplitMode,
 } from '@/db/schema';
 import { ulid } from '@/lib/ids';
+import { DEFAULT_COLOUR } from '@/lib/palette';
 import { getMember } from '@/lib/members';
 import { ownerCondition, type Scope } from '@/lib/scope';
 
@@ -118,7 +119,7 @@ export function splitSettings(
   svc: Pick<ServiceWithType, 'id' | 'splitMode'>,
   db: Db = getDb(),
 ): { customWeights?: Record<string, number>; fixedAmounts?: Record<string, number> } {
-  if (svc.splitMode === 'custom' || svc.splitMode === 'percent')
+  if (svc.splitMode === 'percent')
     return { customWeights: getCustomSplits(householdId, svc.id, db) };
   if (svc.splitMode === 'fixed') return { fixedAmounts: getFixedAmounts(householdId, svc.id, db) };
   return {};
@@ -196,7 +197,7 @@ export function createService(
       ownerMemberId: rest.ownerMemberId ?? null,
       setUpByMemberId: rest.setUpByMemberId ?? null,
       ownerAskedAt: rest.ownerAskedAt ?? null,
-      colour: rest.colour ?? '#0a84ff',
+      colour: rest.colour ?? DEFAULT_COLOUR,
       isActive: rest.isActive ?? true,
       notes: rest.notes ?? null,
       trustedSenders: rest.trustedSenders ?? [],
@@ -239,7 +240,7 @@ export function updateService(
 }
 
 /** Replace a service's split with amounts per bill (0 = pays nothing; members left out share the rest). */
-export function setFixedAmounts(
+function setFixedAmounts(
   householdId: string,
   serviceId: string,
   amounts: Record<string, number>,
