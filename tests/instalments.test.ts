@@ -23,6 +23,7 @@ import { createHousehold } from '@/lib/households';
 import { dueNow, planUndecided, unpaidMinor } from '@/lib/instalments';
 import { createMember } from '@/lib/members';
 import { remindersFor } from '@/lib/reminders';
+import { filterBills } from '@/lib/bill-search';
 import { createService, updateService } from '@/lib/services';
 import { settlementRate } from '@/lib/stats';
 import { scriptAi, type AiOutput } from './helpers/fake-ai';
@@ -45,6 +46,9 @@ afterAll(() => {
 });
 
 afterEach(() => scriptAi(null));
+
+/** Before the notice's pay-in-full date (30 Sep 2026). */
+const TODAY = '2026-09-20';
 
 /** A fictional annual rates notice: pay $2,000.35 in full, or four instalments. */
 const OPTIONS = [
@@ -198,7 +202,7 @@ describe('a bill offering instalments', () => {
 
   it('paid by instalments: splits each instalment and follows its due dates', () => {
     const { hh, jo, kim, rates } = setup();
-    const b = setPaymentPlan(hh.id, rates().id, 'instalments', db);
+    const b = setPaymentPlan(hh.id, rates().id, 'instalments', db, TODAY);
     expect(b.paymentPlan).toBe('instalments');
     expect(b.amountMinor).toBe(200035);
     expect(b.dueDate).toBe('2026-09-30');
@@ -236,7 +240,7 @@ describe('a bill offering instalments', () => {
 
   it('moves on to the next instalment as each is paid, and is paid once the last one is', () => {
     const { hh, rates } = setup();
-    const id = setPaymentPlan(hh.id, rates().id, 'instalments', db).id;
+    const id = setPaymentPlan(hh.id, rates().id, 'instalments', db, TODAY).id;
     setInstalmentPaid(hh.id, id, 1, true, db, '2026-09-18T00:00:00Z');
     let b = getBill(hh.id, id, db)!;
     expect(b.dueDate).toBe('2026-11-30');
@@ -257,7 +261,7 @@ describe('a bill offering instalments', () => {
 
   it('takes a payment to the provider as the next instalments it covers', () => {
     const { hh, rates } = setup();
-    const id = setPaymentPlan(hh.id, rates().id, 'instalments', db).id;
+    const id = setPaymentPlan(hh.id, rates().id, 'instalments', db, TODAY).id;
     setBillPaidToProvider(hh.id, id, true, db, '2026-09-20T00:00:00Z', 100000);
     let b = getBill(hh.id, id, db)!;
     expect(b.instalments.map((i) => !!i.paidToProviderAt)).toEqual([true, true, false, false]);
@@ -274,30 +278,30 @@ describe('a bill offering instalments', () => {
 
   it('can switch back to paying in full until money has changed hands', () => {
     const { hh, kim, rates } = setup();
-    const id = setPaymentPlan(hh.id, rates().id, 'instalments', db).id;
-    let b = setPaymentPlan(hh.id, id, 'full', db);
+    const id = setPaymentPlan(hh.id, rates().id, 'instalments', db, TODAY).id;
+    let b = setPaymentPlan(hh.id, id, 'full', db, TODAY);
     expect(b.paymentPlan).toBe('full');
     expect(b.shares.every((s) => s.instalment === 0)).toBe(true);
     expect(b.dueDate).toBe('2026-09-30');
 
-    b = setPaymentPlan(hh.id, id, 'instalments', db);
+    b = setPaymentPlan(hh.id, id, 'instalments', db, TODAY);
     const share = b.shares.find((s) => s.memberId === kim.id)!;
     setSharePaid(hh.id, share.id, true, {}, db);
-    expect(() => setPaymentPlan(hh.id, id, 'full', db)).toThrow(/locked/);
+    expect(() => setPaymentPlan(hh.id, id, 'full', db, TODAY)).toThrow(/locked/);
     setSharePaid(hh.id, share.id, false, {}, db);
     setInstalmentPaid(hh.id, id, 1, true, db);
-    expect(() => setPaymentPlan(hh.id, id, 'full', db)).toThrow(/Undo it first/);
+    expect(() => setPaymentPlan(hh.id, id, 'full', db, TODAY)).toThrow(/Undo it first/);
   });
 
   it('keeps amount and due date tied to the instalments while paying by them', () => {
     const { hh, rates } = setup();
-    const id = setPaymentPlan(hh.id, rates().id, 'instalments', db).id;
+    const id = setPaymentPlan(hh.id, rates().id, 'instalments', db, TODAY).id;
     expect(() => updateBill(hh.id, id, { amountMinor: 190000 }, db)).toThrow(/instalments/);
     const b = updateBill(hh.id, id, { notes: 'Paid by BPAY', dueDate: '2026-09-30' }, db);
     expect(b.notes).toBe('Paid by BPAY');
     expect(b.shares).toHaveLength(8);
     // Paying in full, an edit changes the pay-in-full option too.
-    setPaymentPlan(hh.id, id, 'full', db);
+    setPaymentPlan(hh.id, id, 'full', db, TODAY);
     const full = updateBill(hh.id, id, { amountMinor: 190000 }, db);
     expect(full.fullAmountMinor).toBe(190000);
   });
@@ -317,13 +321,13 @@ describe('a bill offering instalments', () => {
       db,
     );
     expect(plain.instalments).toEqual([]);
-    expect(() => setPaymentPlan(hh.id, plain.id, 'instalments', db)).toThrow(/instalments/);
+    expect(() => setPaymentPlan(hh.id, plain.id, 'instalments', db, TODAY)).toThrow(/instalments/);
   });
 
   it('is settled instalment by instalment when the provider takes payment automatically', () => {
     const { hh, svc, rates } = setup();
     updateService(hh.id, svc.id, { autoPay: true }, db);
-    const id = setPaymentPlan(hh.id, rates().id, 'instalments', db).id;
+    const id = setPaymentPlan(hh.id, rates().id, 'instalments', db, TODAY).id;
     settleAutoPaidBills(new Date('2026-12-05T00:00:00Z'), db);
     const b = getBill(hh.id, id, db)!;
     expect(b.instalments.map((i) => i.paidToProviderAt)).toEqual([
@@ -334,5 +338,65 @@ describe('a bill offering instalments', () => {
     ]);
     expect(b.dueDate).toBe('2027-03-01');
     expect(b.paidToProviderAt).toBeNull();
+  });
+
+  it('can only switch to paying in full until the pay-in-full date', () => {
+    const { hh, rates } = setup();
+    const id = setPaymentPlan(hh.id, rates().id, 'instalments', db, TODAY).id;
+    expect(() => setPaymentPlan(hh.id, id, 'full', db, '2026-10-01')).toThrow(/has passed/);
+    expect(setPaymentPlan(hh.id, id, 'full', db, '2026-09-30').paymentPlan).toBe('full');
+    // Nobody chose in time: instalments is still open, paying in full isn't.
+    const late = rates().id;
+    expect(() => setPaymentPlan(hh.id, late, 'full', db, '2026-10-01')).toThrow(/has passed/);
+    expect(setPaymentPlan(hh.id, late, 'instalments', db, '2026-10-01').paymentPlan).toBe(
+      'instalments',
+    );
+  });
+});
+
+describe('the bills list', () => {
+  it('lists a bill paid by instalments once per instalment, in the month each is due', () => {
+    const { hh, rates } = setup();
+    const id = setPaymentPlan(hh.id, rates().id, 'instalments', db, TODAY).id;
+    setInstalmentPaid(hh.id, id, 1, true, db, '2026-09-18T00:00:00Z');
+    const ctx = { locale: 'en-AU', today: '2026-12-05' };
+    const all = listBills(hh.id, {}, db);
+    const { entries, bills } = filterBills(all, {}, ctx);
+    expect(bills).toHaveLength(1);
+    expect(
+      entries.map((e) => [e.date.slice(0, 7), e.amountMinor, !!e.paidAt, e.instalment]),
+    ).toEqual([
+      ['2026-09', 50000, true, { seq: 1, of: 4 }],
+      ['2026-11', 50000, false, { seq: 2, of: 4 }],
+      ['2027-03', 50000, false, { seq: 3, of: 4 }],
+      ['2027-05', 50035, false, { seq: 4, of: 4 }],
+    ]);
+    // Each instalment has its own status and year.
+    expect(filterBills(all, { status: 'overdue' }, ctx).entries.map((e) => e.key)).toEqual([
+      `${id}:2`,
+    ]);
+    expect(filterBills(all, { status: 'paid' }, ctx).entries).toHaveLength(1);
+    expect(filterBills(all, { year: '2027' }, ctx).entries).toHaveLength(2);
+    expect(filterBills(all, { q: 'rates march' }, ctx).entries.map((e) => e.key)).toContain(
+      `${id}:3`,
+    );
+    // Each instalment's shares are counted on their own.
+    expect(all[0]!.sharesByInstalment[2]).toEqual({ count: 2, paid: 1 });
+  });
+
+  it('lists a bill paid in full once, in the month it belongs to', () => {
+    const { hh, rates } = setup();
+    rates();
+    const { entries } = filterBills(
+      listBills(hh.id, {}, db),
+      {},
+      {
+        locale: 'en-AU',
+        today: TODAY,
+      },
+    );
+    expect(entries.map((e) => [e.date, e.amountMinor, e.instalment])).toEqual([
+      ['2026-08-11', 200035, null],
+    ]);
   });
 });

@@ -147,6 +147,9 @@
     "plan": {
       "title": "How will you pay?",
       "undecided": "This notice can be paid in full or in {count} instalments. Until someone chooses, it's treated as paid in full.",
+      "undecidedClosed": "The date to pay in full ({date}) has passed, so this is paid in {count} instalments. Choose instalments to split it up.",
+      "fullClosed": "Closed {date}",
+      "lockedDate": "Paying in full closed on {date}, so this stays on instalments.",
       "whoChooses": "The person who pays {service} or a household admin can choose.",
       "chosenFull": "You're paying this in full.",
       "chosenInstalments": "You're paying this in {count} instalments. Everyone's share is split across them.",
@@ -191,7 +194,7 @@
     "anomaly": "Unusual",
     "download": "Download all bills (CSV)",
     "tile": {
-      "instalment": "instalment {n} of {of}",
+      "instalment": "Instalment {n} of {of}",
       "paidProvider": "Paid",
       "unpaid": "Unpaid",
       "overdue": "Overdue",
@@ -637,6 +640,7 @@
     },
     "planBanner": {
       "text": "{service} can be paid in full or in {count} instalments. Choose how you'll pay it",
+      "textClosed": "{service}: the date to pay in full has passed. Set it to {count} instalments",
       "open": "Choose"
     }
   },

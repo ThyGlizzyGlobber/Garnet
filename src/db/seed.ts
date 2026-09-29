@@ -376,12 +376,12 @@ export async function seedDemo(db: Db = getDb()) {
   const rates = createService(
     hh.id,
     {
-      typeSlug: 'other',
+      typeSlug: 'council_rates',
       name: 'Council rates',
       provider: 'Example City Council',
       cadence: 'annual',
       payerMemberId: alex.id,
-      colour: TYPE_COLOUR.other,
+      colour: TYPE_COLOUR.council_rates,
     },
     db,
   );

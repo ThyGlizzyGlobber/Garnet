@@ -13,7 +13,8 @@ import {
   type Share,
 } from '@/db/schema';
 import type { BillInstalmentOption } from '@/ingest/extractors/types';
-import { instalmentDueDate } from '@/lib/instalments';
+import { fullPaymentOpen, instalmentDueDate } from '@/lib/instalments';
+import { todayIn } from '@/lib/dates';
 import { ulid } from '@/lib/ids';
 import { getHousehold } from '@/lib/households';
 import { listMembers } from '@/lib/members';
@@ -56,6 +57,8 @@ export type BillListItem = Bill & {
   service: ServiceWithType;
   shareCount: number;
   paidShareCount: number;
+  /** Share counts per instalment (0 = the whole bill). */
+  sharesByInstalment: Record<number, { count: number; paid: number }>;
   instalments: BillInstalment[];
 };
 
@@ -333,11 +336,18 @@ export function listBills(
       services.set(svc.id, svc);
     }
     const mine = shares.filter((s) => s.billId === r.bill.id);
+    const sharesByInstalment: BillListItem['sharesByInstalment'] = {};
+    for (const s of mine) {
+      const c = (sharesByInstalment[s.instalment] ??= { count: 0, paid: 0 });
+      c.count++;
+      if (s.paidAt) c.paid++;
+    }
     return {
       ...r.bill,
       service: svc,
       shareCount: mine.length,
       paidShareCount: mine.filter((s) => s.paidAt).length,
+      sharesByInstalment,
       instalments: instalments.filter((i) => i.billId === r.bill.id),
     };
   });
@@ -567,19 +577,29 @@ function saveInstalmentPayments(
 export type PaymentPlan = 'full' | 'instalments';
 
 /**
- * Choose how a bill that offers instalments is paid. Switching re-splits the
- * bill (per instalment, or as one amount), so it's refused once a housemate's
- * share or a payment to the provider has been recorded.
+ * Choose how a bill that offers instalments is paid. Paying in full can only
+ * be chosen up to the notice's pay-in-full date. Switching re-splits the bill
+ * (per instalment, or as one amount), so it's refused once a housemate's share
+ * or a payment to the provider has been recorded.
  */
 export function setPaymentPlan(
   householdId: string,
   billId: string,
   plan: PaymentPlan,
   db: Db = getDb(),
+  /** Today in the household's timezone (YYYY-MM-DD); defaults to now. */
+  today?: string,
 ): BillDetail {
   const b = getBill(householdId, billId, db);
   if (!b) throw new Error('Bill not found');
   if (!b.instalments.length) throw new Error('This bill doesn’t offer instalments');
+  const hh = getHousehold(householdId, db)!;
+  if (
+    plan === 'full' &&
+    b.paymentPlan !== 'full' &&
+    !fullPaymentOpen(b, today ?? todayIn(hh.timezone))
+  )
+    throw new Error('The date to pay this bill in full has passed');
   const current: PaymentPlan = b.paymentPlan ?? 'full';
   if (current === plan) {
     if (b.paymentPlan === null)
@@ -595,7 +615,6 @@ export function setPaymentPlan(
     throw new Error(
       'A payment to the provider is already recorded. Undo it first to change the plan',
     );
-  const hh = getHousehold(householdId, db)!;
   const amountMinor =
     plan === 'instalments'
       ? b.instalments.reduce((sum, i) => sum + i.amountMinor, 0)

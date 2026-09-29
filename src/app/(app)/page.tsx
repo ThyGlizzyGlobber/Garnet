@@ -6,7 +6,7 @@ import { Badge, Card, EmptyState, LinkButton, PageHeader } from '@/components/ui
 import { InlineAction } from '@/components/ui/form';
 import { Arc, Ring } from '@/components/ui/ring';
 import { billsWithAlerts, getBill, listBills } from '@/lib/bills';
-import { dueNow, planUndecided } from '@/lib/instalments';
+import { dueNow, fullPaymentOpen, planUndecided } from '@/lib/instalments';
 import { pageContext } from '@/lib/context';
 import { darkVariant } from '@/lib/palette';
 import { addMonths } from '@/lib/periods';
@@ -227,7 +227,7 @@ export default async function HomePage() {
           className="mb-4 flex items-center justify-between gap-3 rounded-card bg-accent-soft px-5 py-3 text-sm font-semibold text-accent"
         >
           <span>
-            {t('planBanner.text', {
+            {t(fullPaymentOpen(b, today) ? 'planBanner.text' : 'planBanner.textClosed', {
               service: b.service.name,
               count: b.instalments.length,
             })}

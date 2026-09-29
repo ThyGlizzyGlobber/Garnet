@@ -13,6 +13,49 @@ const base = {
 
 export function Icon({ name, ...props }: { name: string } & ComponentProps<'svg'>) {
   switch (name) {
+    case 'landmark':
+      return (
+        <svg {...base} {...props}>
+          <path d="M3 21h18M4 10h16M12 3 4 7v3h16V7l-8-4zM6 10v8M10 10v8M14 10v8M18 10v8M4 18h16" />
+        </svg>
+      );
+    case 'building':
+      return (
+        <svg {...base} {...props}>
+          <rect x="5" y="3" width="14" height="18" rx="1.5" />
+          <path d="M9 7h1M14 7h1M9 11h1M14 11h1M9 15h1M14 15h1M10 21v-3h4v3" />
+        </svg>
+      );
+    case 'shield':
+      return (
+        <svg {...base} {...props}>
+          <path d="M12 3 5 6v5c0 4.5 3 8.5 7 10 4-1.5 7-5.5 7-10V6l-7-3z" />
+          <path d="m9 12 2 2 4-4" />
+        </svg>
+      );
+    case 'phone':
+      return (
+        <svg {...base} {...props}>
+          <rect x="7" y="2.5" width="10" height="19" rx="2.5" />
+          <path d="M11 18.5h2" />
+        </svg>
+      );
+    case 'car':
+      return (
+        <svg {...base} {...props}>
+          <path d="M5 17H3v-4l2-5.5A2 2 0 0 1 6.9 6h10.2a2 2 0 0 1 1.9 1.5L21 13v4h-2M9 17h6" />
+          <path d="M4 12h16" />
+          <circle cx="7" cy="17" r="2" />
+          <circle cx="17" cy="17" r="2" />
+        </svg>
+      );
+    case 'play':
+      return (
+        <svg {...base} {...props}>
+          <rect x="3" y="5" width="18" height="14" rx="2.5" />
+          <path d="m10 9 5 3-5 3V9z" />
+        </svg>
+      );
     case 'pin':
       return (
         <svg {...base} {...props}>

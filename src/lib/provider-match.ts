@@ -99,6 +99,12 @@ const GENERIC_WORDS = new Set([
   'billing',
   'retail',
   'services',
+  'phone',
+  'insurance',
+  'council',
+  'city',
+  'shire',
+  'rates',
 ]);
 
 /**

@@ -11,7 +11,7 @@ import { listBillMetrics } from '@/lib/metrics';
 import { figureChanges } from '@/lib/consumption';
 import { ChangeText } from '@/components/app/usage';
 import { METRIC_KINDS } from '@/db/schema';
-import { paysByInstalments } from '@/lib/instalments';
+import { fullPaymentOpen, paysByInstalments } from '@/lib/instalments';
 import {
   clearBillAlertAction,
   deleteBillAction,
@@ -343,6 +343,8 @@ function PaymentPlan({
   // Paid in order: mark the next one paid, or undo the last one paid.
   const nextSeq = b.instalments.find((i) => !i.paidToProviderAt)?.seq;
   const lastPaidSeq = b.instalments.filter((i) => i.paidToProviderAt).at(-1)?.seq;
+  // Paying in full is only on offer until the notice's pay-in-full date.
+  const fullOpen = fullPaymentOpen(b, today);
   const lock = b.shares.some((s) => s.paidAt && s.paidMethod !== 'payer')
     ? t('lockedShares')
     : b.paidToProviderAt || b.instalments.some((i) => i.paidToProviderAt)
@@ -350,12 +352,16 @@ function PaymentPlan({
       : null;
   const option = (plan: 'full' | 'instalments') => {
     const isChosen = chosen === plan;
+    const closed = plan === 'full' && !fullOpen && !isChosen;
     return `flex flex-col gap-2 rounded-2xl border p-4 ${
       isChosen ? 'border-accent bg-accent-soft' : 'border-border-strong bg-surface-2'
-    }`;
+    } ${closed ? 'opacity-60' : ''}`;
   };
   const choose = (plan: 'full' | 'instalments') =>
-    canChoose && chosen !== plan && !(lock && current !== plan) ? (
+    canChoose &&
+    chosen !== plan &&
+    !(lock && current !== plan) &&
+    (plan === 'instalments' || fullOpen) ? (
       <div className="mt-auto pt-1">
         <InlineAction
           action={setPaymentPlanAction}
@@ -370,7 +376,9 @@ function PaymentPlan({
       <h2 className="font-semibold">{t('title')}</h2>
       <p className="mt-0.5 text-xs text-fg-muted">
         {chosen === null
-          ? t('undecided', { count })
+          ? fullOpen
+            ? t('undecided', { count })
+            : t('undecidedClosed', { count, date: date(b.fullDueDate) })
           : chosen === 'full'
             ? t('chosenFull')
             : t('chosenInstalments', { count })}
@@ -386,7 +394,9 @@ function PaymentPlan({
             {money(b.fullAmountMinor ?? b.amountMinor, b.currency)}
           </p>
           <p className="text-xs text-fg-muted">
-            {t('fullBy', { date: date(b.fullDueDate ?? b.dueDate) })}
+            {fullOpen || chosen === 'full'
+              ? t('fullBy', { date: date(b.fullDueDate ?? b.dueDate) })
+              : t('fullClosed', { date: date(b.fullDueDate) })}
           </p>
           {choose('full')}
         </div>
@@ -445,7 +455,13 @@ function PaymentPlan({
           {choose('instalments')}
         </div>
       </div>
-      {lock && canChoose && <p className="mt-3 text-xs text-fg-muted">{lock}</p>}
+      {canChoose && chosen === 'instalments' && !fullOpen ? (
+        <p className="mt-3 text-xs text-fg-muted">
+          {t('lockedDate', { date: date(b.fullDueDate) })}
+        </p>
+      ) : (
+        lock && canChoose && <p className="mt-3 text-xs text-fg-muted">{lock}</p>
+      )}
     </Card>
   );
 }

@@ -62,10 +62,16 @@ describe('service type catalog', () => {
   it('is seeded by the migration', () => {
     expect(listServiceTypes(db).map((t) => t.slug)).toEqual([
       'internet',
+      'phone',
       'electricity',
       'gas',
       'water',
       'rent',
+      'council_rates',
+      'strata',
+      'insurance',
+      'vehicle_registration',
+      'subscriptions',
       'other',
     ]);
   });

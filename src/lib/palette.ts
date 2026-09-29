@@ -36,5 +36,6 @@ export const TYPE_COLOUR: Record<string, string> = {
   gas: '#eb6834',
   water: '#1baf7a',
   rent: '#4a3aa7',
+  council_rates: '#008300',
   other: '#e87ba4',
 };

@@ -136,3 +136,51 @@ describe('0002_multi_household', () => {
     fs.rmSync(fresh, { recursive: true, force: true });
   });
 });
+
+describe('0018 instalments and 0019 service types', () => {
+  it('re-file council and insurance services and keep existing shares whole', () => {
+    const d = fs.mkdtempSync(path.join(os.tmpdir(), 'hud-migrate-19-'));
+    const upTo17 = migrationsUpTo('0017_regional');
+    try {
+      runMigrations(d, upTo17);
+      const file = path.join(d, 'db', 'utilities.sqlite');
+      const db = new Database(file);
+      const t = '2026-09-01T00:00:00Z';
+      db.exec(`
+        INSERT INTO household (id, name, currency, locale, timezone, created_at, updated_at)
+          VALUES ('H1', 'Smith Household', 'AUD', 'en-AU', 'Australia/Melbourne', '${t}', '${t}');
+        INSERT INTO member (id, household_id, name, active_from, created_at, updated_at)
+          VALUES ('M1', 'H1', 'Jo', '2026-01-01', '${t}', '${t}');
+        INSERT INTO service (id, household_id, type_slug, name, provider, created_at, updated_at) VALUES
+          ('S1', 'H1', 'other', 'Rates', 'City of Riverside', '${t}', '${t}'),
+          ('S2', 'H1', 'other', 'Council', 'Riverside Shire Council', '${t}', '${t}'),
+          ('S3', 'H1', 'other', 'Home & contents', 'Example Insurance', '${t}', '${t}'),
+          ('S4', 'H1', 'other', 'Gym', 'Example Fitness', '${t}', '${t}'),
+          ('S5', 'H1', 'internet', 'Internet', 'Example Broadband', '${t}', '${t}');
+        INSERT INTO bill (id, household_id, service_id, amount_minor, currency, period_start, period_end, due_date, source, created_at, updated_at)
+          VALUES ('B1', 'H1', 'S5', 12900, 'AUD', '2026-09-01', '2026-09-30', '2026-09-15', 'manual', '${t}', '${t}');
+        INSERT INTO share (id, household_id, bill_id, member_id, amount_minor, currency, basis_weight, basis_days, period_days, created_at, updated_at)
+          VALUES ('SH1', 'H1', 'B1', 'M1', 12900, 'AUD', 1, 30, 30, '${t}', '${t}');
+      `);
+      db.close();
+      runMigrations(d);
+      const after = new Database(file, { readonly: true });
+      const types = after.prepare('SELECT id, type_slug FROM service ORDER BY id').all();
+      expect(types).toEqual([
+        { id: 'S1', type_slug: 'council_rates' },
+        { id: 'S2', type_slug: 'council_rates' },
+        { id: 'S3', type_slug: 'insurance' },
+        { id: 'S4', type_slug: 'other' },
+        { id: 'S5', type_slug: 'internet' },
+      ]);
+      expect(after.prepare('SELECT instalment, due_date FROM share').get()).toEqual({
+        instalment: 0,
+        due_date: null,
+      });
+      after.close();
+    } finally {
+      fs.rmSync(d, { recursive: true, force: true });
+      fs.rmSync(upTo17, { recursive: true, force: true });
+    }
+  });
+});

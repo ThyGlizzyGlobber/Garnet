@@ -1,17 +1,16 @@
 import Link from 'next/link';
-import { dueNow, paysByInstalments, unpaidMinor } from '@/lib/instalments';
 import { getTranslations } from 'next-intl/server';
 import { ForwardAddress } from '@/components/app/forward-address';
 import { Icon } from '@/components/app/icons';
 import { Badge, EmptyState, LinkButton, PageHeader } from '@/components/ui';
 import { billsAddress } from '@/lib/bills-address';
-import { listBills, type BillListItem } from '@/lib/bills';
+import { listBills } from '@/lib/bills';
 import { pageContext } from '@/lib/context';
 import { darkVariant } from '@/lib/palette';
 import { listServices } from '@/lib/services';
 import { Highlight } from '@/components/app/highlight';
-import { billDate, billMonth, monthLabel } from '@/lib/bill-month';
-import { filterBills } from '@/lib/bill-search';
+import { monthLabel } from '@/lib/bill-month';
+import { billEntries, entryOverdue, filterBills, type BillEntry } from '@/lib/bill-search';
 import { listDocuments, searchDocuments } from '@/lib/review';
 
 type Filter = 'all' | 'unpaid' | 'overdue' | 'unusual' | 'paid';
@@ -34,24 +33,24 @@ export default async function BillsPage({
     all.some((b) => b.serviceId === svc.id),
   );
   const serviceId = services.some((svc) => svc.id === params.s) ? params.s! : null;
-  const years = [...new Set(all.map((b) => billMonth(b).slice(0, 4)))].sort().reverse();
+  const years = [...new Set(all.flatMap(billEntries).map((e) => e.date.slice(0, 4)))]
+    .sort()
+    .reverse();
   const year = years.includes(params.y ?? '') ? params.y! : null;
   const hasServices = listServices(hh.id).length > 0;
   const address = billsAddress(hh);
-  const isOverdue = (b: BillListItem) => !b.paidToProviderAt && b.dueDate < today;
-  const { bills, tokens } = filterBills(
+  const { entries, tokens } = filterBills(
     all,
     { q, status: filter, serviceId, year },
     { locale: hh.locale, today },
   );
-  // Grouped by the month each bill belongs to (see billMonth), newest first.
-  const groups = new Map<string, BillListItem[]>();
-  for (const b of [...bills].sort((a, c) => billDate(c).localeCompare(billDate(a))))
-    groups.set(billMonth(b), [...(groups.get(billMonth(b)) ?? []), b]);
-  const total = bills.reduce((sum, b) => sum + b.amountMinor, 0);
-  const unpaid = bills
-    .filter((b) => !b.paidToProviderAt)
-    .reduce((sum, b) => sum + unpaidMinor(b), 0);
+  // Grouped by month, newest first: the month a bill belongs to (see billMonth),
+  // or, paid by instalments, the month each instalment is due.
+  const groups = new Map<string, BillEntry[]>();
+  for (const e of [...entries].sort((a, c) => c.date.localeCompare(a.date)))
+    groups.set(e.date.slice(0, 7), [...(groups.get(e.date.slice(0, 7)) ?? []), e]);
+  const total = entries.reduce((sum, e) => sum + e.amountMinor, 0);
+  const unpaid = entries.filter((e) => !e.paidAt).reduce((sum, e) => sum + e.amountMinor, 0);
   // Links that change one filter and keep the rest.
   const href = (change: { f?: Filter; s?: string | null; y?: string | null; q?: string }) => {
     const next = { f: filter, s: serviceId, y: year, q, ...change };
@@ -73,8 +72,8 @@ export default async function BillsPage({
       <PageHeader
         title={t('title')}
         subtitle={
-          bills.length
-            ? `${t('summary.count', { count: bills.length })} · ${t('summary.total', { amount: money(total) })}${unpaid ? ` · ${t('summary.unpaid', { amount: money(unpaid) })}` : ''}`
+          entries.length
+            ? `${t('summary.count', { count: entries.length })} · ${t('summary.total', { amount: money(total) })}${unpaid ? ` · ${t('summary.unpaid', { amount: money(unpaid) })}` : ''}`
             : undefined
         }
         action={
@@ -156,8 +155,8 @@ export default async function BillsPage({
           {filtered && (
             <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-fg-muted">
               {q
-                ? t('searchResults', { count: bills.length, q })
-                : t('filterResults', { count: bills.length })}
+                ? t('searchResults', { count: entries.length, q })
+                : t('filterResults', { count: entries.length })}
               <Link href="/bills" className="font-semibold text-accent">
                 {t('clearSearch')}
               </Link>
@@ -184,7 +183,7 @@ export default async function BillsPage({
             </LinkButton>
           }
         />
-      ) : bills.length === 0 ? (
+      ) : entries.length === 0 ? (
         <EmptyState
           title={t('empty.noMatch')}
           body={q ? t('searchResults', { count: 0, q }) : t('filterResults', { count: 0 })}
@@ -201,12 +200,13 @@ export default async function BillsPage({
               <Highlight text={monthLabel(m, hh.locale)} tokens={tokens} />
               <span className="font-sans text-xs font-normal text-fg-muted">
                 {t('summary.count', { count: items.length })} ·{' '}
-                {money(items.reduce((sum, b) => sum + b.amountMinor, 0))}
+                {money(items.reduce((sum, e) => sum + e.amountMinor, 0))}
               </span>
             </h2>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {items.map((b) => {
-                const overdue = isOverdue(b);
+              {items.map((e) => {
+                const b = e.bill;
+                const overdue = entryOverdue(e, today);
                 const swatch = `light-dark(${b.service.colour}, ${darkVariant(b.service.colour)})`;
                 const sourceLabel =
                   b.extractor === 'review'
@@ -216,13 +216,14 @@ export default async function BillsPage({
                       : t(`tile.source.${b.source}`, {
                           pct: Math.round((b.confidence ?? 0) * 100),
                         });
-                const sharePct = b.shareCount
-                  ? Math.round((b.paidShareCount / b.shareCount) * 100)
+                const shares = b.sharesByInstalment[e.instalment?.seq ?? 0];
+                const sharePct = shares?.count
+                  ? Math.round((shares.paid / shares.count) * 100)
                   : null;
                 return (
                   <Link
-                    key={b.id}
-                    href={`/bills/${b.id}`}
+                    key={e.key}
+                    href={`/bills/${b.id}${e.instalment ? '#plan' : ''}`}
                     className={`glass lift flex flex-col gap-3 rounded-card p-5 text-fg ${overdue ? 'bg-danger-soft' : ''}`}
                   >
                     <div className="flex items-start justify-between gap-3">
@@ -242,7 +243,7 @@ export default async function BillsPage({
                           </span>
                         </span>
                       </span>
-                      {b.paidToProviderAt ? (
+                      {e.paidAt ? (
                         <Badge tone="success">{t('tile.paidProvider')}</Badge>
                       ) : overdue ? (
                         <Badge tone="danger">{t('tile.overdue')}</Badge>
@@ -252,16 +253,16 @@ export default async function BillsPage({
                     </div>
                     <div>
                       <p className="font-display text-[32px] leading-none font-semibold tracking-tight tabular-nums">
-                        <Highlight text={money(b.amountMinor, b.currency)} tokens={tokens} />
+                        <Highlight text={money(e.amountMinor, b.currency)} tokens={tokens} />
                       </p>
                       <p className="mt-1.5 text-xs text-fg-muted">
-                        {t('tile.period', {
-                          start: date(b.periodStart, 'short'),
-                          end: date(b.periodEnd, 'short'),
-                        })}{' '}
-                        · {t('due')} {date(b.dueDate, 'short')}
-                        {paysByInstalments(b) &&
-                          ` · ${t('tile.instalment', { n: dueNow(b).seq!, of: dueNow(b).of })}`}
+                        {e.instalment
+                          ? t('tile.instalment', { n: e.instalment.seq, of: e.instalment.of })
+                          : t('tile.period', {
+                              start: date(b.periodStart, 'short'),
+                              end: date(b.periodEnd, 'short'),
+                            })}{' '}
+                        · {t('due')} {date(e.dueDate, 'short')}
                       </p>
                     </div>
                     {hh.splitMode === 'shared' && sharePct !== null && (
@@ -273,7 +274,7 @@ export default async function BillsPage({
                           />
                         </div>
                         <p className="mt-1 text-[11px] text-fg-muted">
-                          {t('tile.sharesBar', { paid: b.paidShareCount, total: b.shareCount })}
+                          {t('tile.sharesBar', { paid: shares!.paid, total: shares!.count })}
                         </p>
                       </div>
                     )}

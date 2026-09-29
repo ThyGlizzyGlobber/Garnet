@@ -49,3 +49,10 @@ export function unpaidMinor(b: WithInstalments & { paidToProviderAt: string | nu
   if (!paysByInstalments(b)) return b.amountMinor;
   return b.instalments.filter((i) => !i.paidToProviderAt).reduce((s, i) => s + i.amountMinor, 0);
 }
+
+/**
+ * Can the household still choose to pay in full? Only up to the notice's
+ * pay-in-full date; after that they're on instalments for good.
+ */
+export const fullPaymentOpen = (b: { fullDueDate: string | null }, today: string): boolean =>
+  !!b.fullDueDate && today <= b.fullDueDate;

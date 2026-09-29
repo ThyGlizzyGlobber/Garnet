@@ -1,5 +1,6 @@
 import type { BillListItem } from '@/lib/bills';
-import { billMonth } from '@/lib/bill-month';
+import { billDate, billMonth } from '@/lib/bill-month';
+import { paysByInstalments } from '@/lib/instalments';
 import { minorUnitDigits } from '@/lib/format';
 import { amountWords, matchesAll, monthWords, searchTokens } from '@/lib/search';
 
@@ -39,24 +40,75 @@ export function billHaystack(b: BillListItem, locale: string, today: string): st
     .toLowerCase();
 }
 
-/** The bills that pass every filter, and the words to highlight in them. */
+/**
+ * One line in the bills list. A bill paid by instalments is listed once per
+ * instalment, in the month that instalment is due, with its own amount and
+ * payment; any other bill is one entry in the month it belongs to.
+ */
+export interface BillEntry {
+  bill: BillListItem;
+  /** Unique within the list: the bill id, plus the instalment number. */
+  key: string;
+  /** The date it's filed under (YYYY-MM-DD). */
+  date: string;
+  amountMinor: number;
+  dueDate: string;
+  /** Paid to the provider. */
+  paidAt: string | null;
+  instalment: { seq: number; of: number } | null;
+}
+
+export function billEntries(b: BillListItem): BillEntry[] {
+  if (!paysByInstalments(b))
+    return [
+      {
+        bill: b,
+        key: b.id,
+        date: billDate(b),
+        amountMinor: b.amountMinor,
+        dueDate: b.dueDate,
+        paidAt: b.paidToProviderAt,
+        instalment: null,
+      },
+    ];
+  return b.instalments.map((i) => ({
+    bill: b,
+    key: `${b.id}:${i.seq}`,
+    date: i.dueDate,
+    amountMinor: i.amountMinor,
+    dueDate: i.dueDate,
+    paidAt: i.paidToProviderAt,
+    instalment: { seq: i.seq, of: b.instalments.length },
+  }));
+}
+
+export const entryOverdue = (e: BillEntry, today: string): boolean =>
+  !e.paidAt && e.dueDate < today;
+
+/**
+ * The list entries (see BillEntry) that pass every filter, the bills they come
+ * from, and the words to highlight in them.
+ */
 export function filterBills(
   bills: BillListItem[],
   f: BillFilters,
   ctx: { locale: string; today: string },
-): { bills: BillListItem[]; tokens: string[] } {
+): { bills: BillListItem[]; entries: BillEntry[]; tokens: string[] } {
   const tokens = searchTokens(f.q ?? '');
-  const out = bills.filter((b) => {
+  const entries = bills.flatMap(billEntries).filter((e) => {
+    const b = e.bill;
     if (f.serviceId && b.serviceId !== f.serviceId) return false;
-    if (f.year && billMonth(b).slice(0, 4) !== f.year) return false;
-    const overdue = !b.paidToProviderAt && b.dueDate < ctx.today;
-    if (f.status === 'unpaid' && b.paidToProviderAt) return false;
-    if (f.status === 'paid' && !b.paidToProviderAt) return false;
-    if (f.status === 'overdue' && !overdue) return false;
+    if (f.year && e.date.slice(0, 4) !== f.year) return false;
+    if (f.status === 'unpaid' && e.paidAt) return false;
+    if (f.status === 'paid' && !e.paidAt) return false;
+    if (f.status === 'overdue' && !entryOverdue(e, ctx.today)) return false;
     if (f.status === 'unusual' && !b.isAnomaly) return false;
-    return !tokens.length || matchesAll(billHaystack(b, ctx.locale, ctx.today), tokens);
+    if (!tokens.length) return true;
+    const hay = `${billHaystack(b, ctx.locale, ctx.today)} ${monthWords(e.date.slice(0, 7), ctx.locale).join(' ')}${e.instalment ? ' instalment' : ''}`;
+    return matchesAll(hay.toLowerCase(), tokens);
   });
-  return { bills: out, tokens };
+  const out = [...new Set(entries.map((e) => e.bill))];
+  return { bills: out, entries, tokens };
 }
 
 /** YYYY-MM for each month from start to end, at most 13. */
