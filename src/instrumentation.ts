@@ -37,6 +37,10 @@ export async function register() {
       `[bills] Unusual flags re-checked with rule v${ANOMALY_RULE_VERSION}: ${changed} changed`,
     );
   }
+  // "Who's this for?" goes to whoever brought the bill in, not the admins.
+  const { adoptSetUpBy } = await import('./ingest/set-up-by');
+  const adopted = adoptSetUpBy();
+  if (adopted) console.log(`[services] found who set up ${adopted} service(s)`);
   // Every bill's file (and its receipts) filed by year, month and service.
   const { refileAll } = await import('./lib/filing');
   const filed = refileAll();

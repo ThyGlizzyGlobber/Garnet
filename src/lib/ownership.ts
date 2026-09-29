@@ -101,13 +101,20 @@ export function confirmOwnership(householdId: string, serviceId: string, db: Db 
 
 /**
  * May this member switch a service between household and personal? Its owner
- * can hand a personal one back; an admin or its payer can make a household one
- * theirs. (Whoever is asked "Who's this for?" may answer either way.)
+ * can hand a personal one back. A household one can be made theirs by whoever
+ * brought its bill in; only when nobody is known to have (set up by hand, or
+ * mail straight from the provider) can an admin or its payer. (Whoever is
+ * being asked "Who's this for?" may answer either way.)
  */
 export function canChangeOwner(
   me: { id: string; role: string },
-  svc: { ownerMemberId: string | null; payerMemberId: string | null },
+  svc: {
+    ownerMemberId: string | null;
+    payerMemberId: string | null;
+    setUpByMemberId?: string | null;
+  },
 ): boolean {
   if (svc.ownerMemberId) return svc.ownerMemberId === me.id;
+  if (svc.setUpByMemberId) return svc.setUpByMemberId === me.id;
   return me.role === 'owner' || svc.payerMemberId === me.id;
 }

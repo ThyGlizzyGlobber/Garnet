@@ -6,6 +6,9 @@ import { openDb, type Db } from '@/db/client';
 import { runMigrations } from '@/db/migrate';
 import { archiveDocument } from '@/ingest/archive';
 import { processDocument } from '@/ingest/pipeline';
+import { adoptSetUpBy } from '@/ingest/set-up-by';
+import { service } from '@/db/schema';
+import { eq } from 'drizzle-orm';
 import { linkMember, signInAccount } from '@/lib/accounts';
 import {
   createBill,
@@ -449,5 +452,64 @@ describe('switching whose a service is, from its bill', () => {
     // The household's power (Jo pays, Jo is the admin): Jo can, Sam can't.
     expect(canChangeOwner(jo, power)).toBe(true);
     expect(canChangeOwner(sam, power)).toBe(false);
+    // Set up from Sam's bill: only Sam can make it theirs, not the admin.
+    const fromSam = { ...power, setUpByMemberId: sam.id };
+    expect(canChangeOwner(sam, fromSam)).toBe(true);
+    expect(canChangeOwner(jo, fromSam)).toBe(false);
+  });
+});
+
+describe('who is asked about services an update marked for asking', () => {
+  it('is whoever uploaded its first bill, not the admins', async () => {
+    const { hh, jo, sam } = setup();
+    scriptAi({
+      document_type: 'bill',
+      provider: 'Example Ambulance',
+      document_date: '2025-12-15',
+      service_type: 'ambulance_cover',
+      bill: {
+        amount: 109.93,
+        currency: 'AUD',
+        tax_amount: null,
+        tax_label: null,
+        period_start: '2026-01-05',
+        period_end: '2027-01-04',
+        issue_date: '2025-12-15',
+        due_date: '2026-01-05',
+        usage_quantity: null,
+        usage_unit: null,
+        invoice_number: null,
+        account_number: null,
+        auto_pay: false,
+        previous_payment: null,
+        metrics: [],
+        instalments: null,
+      },
+      payment: null,
+      page_rotation: [],
+      confidence: 0.95,
+      notes: null,
+    });
+    const doc = archiveDocument(
+      hh.id,
+      {
+        kind: 'upload',
+        buffer: Buffer.from(`Ambulance membership renewal notice ${Math.random()}`),
+        originalFilename: 'ambulance.txt',
+        mimeType: 'text/plain',
+        memberId: sam.id,
+      },
+      db,
+    ).doc;
+    const billId = (await processDocument(hh.id, doc.id, db)).billId!;
+    const serviceId = getBill(hh.id, billId, db)!.serviceId;
+    // As an update left it: marked for asking, nobody recorded as setting it up.
+    db.update(service).set({ setUpByMemberId: null }).where(eq(service.id, serviceId)).run();
+    expect(ownershipQuestions(hh.id, jo, db)).toHaveLength(1);
+    expect(ownershipQuestions(hh.id, sam, db)).toEqual([]);
+
+    expect(adoptSetUpBy(db)).toBeGreaterThanOrEqual(1);
+    expect(ownershipQuestions(hh.id, jo, db)).toEqual([]);
+    expect(ownershipQuestions(hh.id, sam, db).map((q) => q.service.id)).toEqual([serviceId]);
   });
 });
