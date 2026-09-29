@@ -264,9 +264,11 @@
     },
     "filterResults": "{count, plural, =0 {No bills match these filters} one {# bill matches} other {# bills match}}",
     "whose": {
-      "all": "Everything",
-      "household": "Household",
-      "mine": "Just mine"
+      "title": "Who's this for?",
+      "bodyMine": "{service} is set up as yours: only you see it, and it isn't split. Is that right, or is it the household's?",
+      "bodyHousehold": "{service} is set up as the household's: everyone sees it and it's split. Is it the household's, or just yours?",
+      "mine": "Just mine",
+      "household": "The household's"
     },
     "downloadHint": "A zip of every bill: spreadsheets for your accountant plus each bill's file, filed by year, month and service",
     "downloadMine": "Download my bills",
@@ -710,6 +712,10 @@
     "planBanner": {
       "text": "{service} can be paid in full or in {count} instalments. Choose how you'll pay it",
       "textClosed": "{service}: the date to pay in full has passed. Set it to {count} instalments",
+      "open": "Choose"
+    },
+    "whoseBanner": {
+      "text": "Is {service} just yours or the household's?",
       "open": "Choose"
     }
   },

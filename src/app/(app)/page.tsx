@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ownershipQuestions } from '@/lib/ownership';
 import { PersonalView } from './personal-view';
 import { getTranslations } from 'next-intl/server';
 import { Icon } from '@/components/app/icons';
@@ -106,6 +107,8 @@ export default async function HomePage({
   const reviewCount = documentCounts(hh.id).needs_review;
   // Banners: household bills, and the viewer's own personal ones.
   const alerts = billsWithAlerts(hh.id, { viewer: me.id });
+  // "Who's this for?": services set up from bills this member brought in.
+  const whose = shared ? ownershipQuestions(hh.id, me) : [];
   // Bills offering instalments that nobody has chosen a plan for (the payer or an admin chooses).
   const planChoices = listBills(hh.id, { viewer: me.id }).filter(
     (b) =>
@@ -233,6 +236,16 @@ export default async function HomePage({
             })}
           </span>
           <span>{t('alertBanner.open')} →</span>
+        </Link>
+      ))}
+      {whose.map((q) => (
+        <Link
+          key={q.service.id}
+          href={q.billId ? `/bills/${q.billId}#whose` : `/services/${q.service.id}/edit`}
+          className="mb-4 flex items-center justify-between gap-3 rounded-card bg-accent-soft px-5 py-3 text-sm font-semibold text-accent"
+        >
+          <span>{t('whoseBanner.text', { service: q.service.name })}</span>
+          <span>{t('whoseBanner.open')} →</span>
         </Link>
       ))}
       {planChoices.map((b) => (

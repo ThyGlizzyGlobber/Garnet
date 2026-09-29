@@ -1,5 +1,6 @@
 'use server';
 
+import { answerOwnership, asksMember } from '@/lib/ownership';
 import { rotateDocument } from '@/ingest/rotate';
 import { getReviewItem } from '@/lib/review';
 import { refileDocuments } from '@/lib/filing';
@@ -245,4 +246,17 @@ export async function rotateDocumentAction(fd: FormData): Promise<void> {
     console.warn('[bills] turn page:', (e as Error).message);
   }
   revalidatePath(`/bills/${billId}`);
+}
+
+/** "Who's this for?": the member who brought the bill in says whether its service is theirs. */
+export async function answerOwnershipAction(fd: FormData): Promise<void> {
+  const me = await requireMember();
+  const billId = str(fd, 'billId');
+  const b = visibleBill(me, billId);
+  const answer = str(fd, 'answer');
+  if (!b || (answer !== 'mine' && answer !== 'household') || !asksMember(b.service, me)) return;
+  answerOwnership(me.householdId, b.serviceId, me, answer);
+  revalidatePath(`/bills/${billId}`);
+  revalidatePath('/bills');
+  revalidatePath('/');
 }

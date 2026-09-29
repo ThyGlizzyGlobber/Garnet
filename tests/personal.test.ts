@@ -16,9 +16,10 @@ import {
   updateBill,
 } from '@/lib/bills';
 import { devOutbox } from '@/lib/email';
-import { createHousehold } from '@/lib/households';
+import { createHousehold, updateHousehold } from '@/lib/households';
 import { createMember, deleteMember, setMemberRole } from '@/lib/members';
 import { notifyBillCreated } from '@/lib/notifications';
+import { answerOwnership, ownershipQuestions } from '@/lib/ownership';
 import { personalSummary } from '@/lib/personal';
 import { createService, listServices } from '@/lib/services';
 import { dashboardSummary, monthlySeries } from '@/lib/stats';
@@ -314,5 +315,97 @@ describe('admins', () => {
     expect(setMemberRole(hh.id, jo.id, 'member', db).role).toBe('member');
     expect(() => setMemberRole(hh.id, sam.id, 'member', db)).toThrow(/at least one admin/);
     expect(() => deleteMember(hh.id, sam.id, db)).toThrow(/admin/);
+  });
+});
+
+describe('who a new service is for', () => {
+  const water = (): AiOutput => ({
+    ...regoNoticeFor('Example Water', 'water'),
+  });
+  function regoNoticeFor(provider: string, type: string): AiOutput {
+    return {
+      document_type: 'bill',
+      provider,
+      document_date: '2026-09-01',
+      service_type: type,
+      bill: {
+        amount: 120,
+        currency: 'AUD',
+        tax_amount: null,
+        tax_label: null,
+        period_start: '2026-07-01',
+        period_end: '2026-09-30',
+        issue_date: '2026-09-01',
+        due_date: '2026-10-01',
+        usage_quantity: null,
+        usage_unit: null,
+        invoice_number: null,
+        account_number: null,
+        auto_pay: false,
+        previous_payment: null,
+        metrics: [],
+        instalments: null,
+      },
+      payment: null,
+      page_rotation: [],
+      confidence: 0.95,
+      notes: null,
+    };
+  }
+  const uploadAs = async (hid: string, memberId: string, answer: AiOutput) => {
+    scriptAi(answer);
+    const doc = archiveDocument(
+      hid,
+      {
+        kind: 'upload',
+        buffer: Buffer.from(`A document long enough for the reader to look at ${Math.random()}`),
+        originalFilename: 'notice.txt',
+        mimeType: 'text/plain',
+        memberId,
+      },
+      db,
+    ).doc;
+    return (await processDocument(hid, doc.id, db)).billId!;
+  };
+
+  it('is asked of whoever brought the bill in, once', async () => {
+    const { hh, jo, sam } = setup();
+    const billId = await uploadAs(hh.id, sam.id, water());
+    const svc = getBill(hh.id, billId, db)!.service;
+    // Household by its type, but Sam is asked; Jo isn't.
+    expect(svc.ownerMemberId).toBeNull();
+    expect(ownershipQuestions(hh.id, sam, db).map((q) => [q.service.id, q.billId])).toEqual([
+      [svc.id, billId],
+    ]);
+    expect(ownershipQuestions(hh.id, jo, db)).toEqual([]);
+
+    // Sam says it's theirs: it becomes Sam's, unsplit, and isn't asked again.
+    expect(answerOwnership(hh.id, svc.id, sam, 'mine', db).ok).toBe(true);
+    const b = getBill(hh.id, billId, db)!;
+    expect([b.ownerMemberId, b.shares.length]).toEqual([sam.id, 0]);
+    expect(ownershipQuestions(hh.id, sam, db)).toEqual([]);
+  });
+
+  it('can turn a car rego guessed as theirs into the household’s', async () => {
+    const { hh, sam } = setup();
+    const billId = await uploadAs(
+      hh.id,
+      sam.id,
+      regoNoticeFor('Other Roads', 'vehicle_registration'),
+    );
+    const svc = getBill(hh.id, billId, db)!.service;
+    expect(svc.ownerMemberId).toBe(sam.id);
+    expect(ownershipQuestions(hh.id, sam, db)).toHaveLength(1);
+    answerOwnership(hh.id, svc.id, sam, 'household', db);
+    const b = getBill(hh.id, billId, db)!;
+    expect([b.ownerMemberId, b.shares.length]).toEqual([null, 2]);
+    expect(ownershipQuestions(hh.id, sam, db)).toEqual([]);
+  });
+
+  it('is never asked in a household that doesn’t split bills', async () => {
+    const { hh, sam } = setup();
+    updateHousehold(hh.id, { splitMode: 'single' }, db);
+    await uploadAs(hh.id, sam.id, water());
+    expect(ownershipQuestions(hh.id, sam, db)).toEqual([]);
   });
 });

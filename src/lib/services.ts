@@ -116,6 +116,9 @@ export interface ServiceInput {
   customSplits?: Record<string, number>;
   /** Personal to this member (only they see it; not split). Set on create; see setServiceOwner. */
   ownerMemberId?: string | null;
+  /** Set up from a bill this member brought in; they're asked whether it's theirs (src/lib/ownership.ts). */
+  setUpByMemberId?: string | null;
+  ownerAskedAt?: string | null;
 }
 
 /** A payer from another household would leak data across households; refuse it. */
@@ -157,6 +160,8 @@ export function createService(
       // A personal service is paid by its owner.
       payerMemberId: rest.ownerMemberId ?? rest.payerMemberId ?? null,
       ownerMemberId: rest.ownerMemberId ?? null,
+      setUpByMemberId: rest.setUpByMemberId ?? null,
+      ownerAskedAt: rest.ownerAskedAt ?? null,
       colour: rest.colour ?? '#0a84ff',
       isActive: rest.isActive ?? true,
       notes: rest.notes ?? null,

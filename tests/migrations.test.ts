@@ -220,3 +220,41 @@ describe('0018 instalments, 0019–0022 service types and names', () => {
     }
   });
 });
+
+describe('0027 asks about services set up automatically', () => {
+  it('asks about car rego and the like, and anything set up since personal services', () => {
+    const d = fs.mkdtempSync(path.join(os.tmpdir(), 'hud-migrate-27-'));
+    const upTo26 = migrationsUpTo('0026_service_categories');
+    try {
+      runMigrations(d, upTo26);
+      const file = path.join(d, 'db', 'utilities.sqlite');
+      const db = new Database(file);
+      const auto =
+        'Set up automatically from its first bill. Check who pays it and how it’s split.';
+      db.exec(`
+        INSERT INTO household (id, name, currency, locale, timezone, created_at, updated_at)
+          VALUES ('H1', 'Smith', 'AUD', 'en-AU', 'Australia/Melbourne', '2026-01-01', '2026-01-01');
+        INSERT INTO household (id, name, currency, locale, timezone, split_mode, created_at, updated_at)
+          VALUES ('H2', 'Solo', 'AUD', 'en-AU', 'Australia/Melbourne', 'single', '2026-01-01', '2026-01-01');
+        INSERT INTO service (id, household_id, type_slug, name, provider, notes, created_at, updated_at) VALUES
+          ('R1', 'H1', 'vehicle_registration', 'Rego', 'Roads', '${auto}', '2026-05-01', '2026-05-01'),
+          ('O1', 'H1', 'other', 'Other', 'Roads', '${auto}', '2026-09-29T05:00:00Z', '2026-09-29'),
+          ('E1', 'H1', 'electricity', 'Power', 'Energy', '${auto}', '2026-05-01', '2026-05-01'),
+          ('M1', 'H1', 'vehicle_registration', 'Rego 2', 'Roads', 'typed by hand', '2026-05-01', '2026-05-01'),
+          ('S1', 'H2', 'vehicle_registration', 'Rego', 'Roads', '${auto}', '2026-05-01', '2026-05-01');
+      `);
+      db.close();
+      runMigrations(d);
+      const after = new Database(file, { readonly: true });
+      const asked = after
+        .prepare('SELECT id FROM service WHERE owner_asked_at IS NOT NULL ORDER BY id')
+        .all()
+        .map((r) => (r as { id: string }).id);
+      expect(asked).toEqual(['O1', 'R1']);
+      after.close();
+    } finally {
+      fs.rmSync(d, { recursive: true, force: true });
+      fs.rmSync(upTo26, { recursive: true, force: true });
+    }
+  });
+});

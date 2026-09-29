@@ -211,6 +211,16 @@ export const service = sqliteTable(
      * Null = a household service. Bills carry a copy (bill.owner_member_id).
      */
     ownerMemberId: text('owner_member_id').references(() => member.id),
+    /**
+     * Services set up automatically from a bill: who brought that bill in, and
+     * whether they've said if it's theirs or the household's. Until then the
+     * app asks them (bill page, Home). Null = nobody needs asking.
+     */
+    setUpByMemberId: text('set_up_by_member_id').references(() => member.id, {
+      onDelete: 'set null',
+    }),
+    ownerAskedAt: text('owner_asked_at'),
+    ownerConfirmedAt: text('owner_confirmed_at'),
     colour: text('colour').notNull().default('#0a84ff'),
     isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
     /**

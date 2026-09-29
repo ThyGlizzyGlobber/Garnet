@@ -1,4 +1,5 @@
 import type { SourceDocument } from '@/db/schema';
+import { asksMember } from '@/lib/ownership';
 import { Icon } from '@/components/app/icons';
 import { actingMember } from '@/ingest/pipeline';
 import { canRotate } from '@/ingest/rotate';
@@ -22,6 +23,7 @@ import { METRIC_KINDS } from '@/db/schema';
 import { dueNow, fullPaymentOpen, paysByInstalments } from '@/lib/instalments';
 import {
   clearBillAlertAction,
+  answerOwnershipAction,
   deleteBillAction,
   rotateDocumentAction,
   setPaymentPlanAction,
@@ -101,6 +103,33 @@ export default async function BillPage({ params }: { params: Promise<{ id: strin
           {t('edit')}
         </LinkButton>
       </header>
+
+      {hh.splitMode === 'shared' && asksMember(b.service, me) && (
+        <Card className="mb-4 flex flex-col gap-3 border-accent/40 bg-accent-soft" id="whose">
+          <div>
+            <p className="font-display text-lg font-semibold">{t('whose.title')}</p>
+            <p className="text-sm text-fg-muted">
+              {t(personal ? 'whose.bodyMine' : 'whose.bodyHousehold', {
+                service: b.service.name,
+              })}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <InlineAction
+              action={answerOwnershipAction}
+              hidden={{ billId: b.id, answer: 'mine' }}
+              label={t('whose.mine')}
+              variant={personal ? 'primary' : 'secondary'}
+            />
+            <InlineAction
+              action={answerOwnershipAction}
+              hidden={{ billId: b.id, answer: 'household' }}
+              label={t('whose.household')}
+              variant={personal ? 'secondary' : 'primary'}
+            />
+          </div>
+        </Card>
+      )}
 
       {b.alertKind && (
         <Card className="mb-4 flex flex-col gap-3 border-danger/40 bg-danger-soft">

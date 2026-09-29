@@ -1,5 +1,6 @@
 'use server';
 
+import { confirmOwnership } from '@/lib/ownership';
 import { refileDocuments } from '@/lib/filing';
 import { parseSenderList } from '@/lib/sender-auth';
 import { revalidatePath } from 'next/cache';
@@ -134,6 +135,8 @@ export async function updateServiceAction(_prev: ActionState, fd: FormData): Pro
     refreshAnomalies(me.householdId, id);
     // A renamed service (or one made personal) files its bills under the new name.
     refileDocuments(me.householdId);
+    // Its "Just for me" box has been seen and saved: nobody needs asking about it.
+    confirmOwnership(me.householdId, id);
   } catch (e) {
     return { error: (e as Error).message };
   }

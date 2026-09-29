@@ -144,10 +144,9 @@ export function serviceForNewProvider(
   const type =
     types.find((t) => t.slug === bill.serviceType) ?? types.find((t) => t.slug === 'other')!;
   // Car rego, car insurance: the member's own, in a household that splits bills.
-  const owner =
-    type.personalByDefault && opts.member && getHousehold(householdId, db)?.splitMode === 'shared'
-      ? opts.member
-      : null;
+  // Either way, whoever brought the bill in is asked to confirm (ownership.ts).
+  const shared = getHousehold(householdId, db)?.splitMode === 'shared';
+  const owner = type.personalByDefault && opts.member && shared ? opts.member : null;
   const name = all.some((s) => s.name.toLowerCase() === type.label.toLowerCase())
     ? `${type.label} (${provider})`
     : type.label;
@@ -168,6 +167,8 @@ export function serviceForNewProvider(
       splitMode: 'equal',
       payerMemberId: owner ?? payer,
       ownerMemberId: owner,
+      setUpByMemberId: opts.member ?? null,
+      ownerAskedAt: shared ? new Date().toISOString() : null,
       colour: TYPE_COLOUR[type.slug] ?? nextPaletteColour(all.map((s) => s.colour)),
       autoPay: bill.autoPay ?? false,
       trustedSenders: opts.trustedDomain ? [opts.trustedDomain] : [],
