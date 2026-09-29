@@ -49,6 +49,47 @@ export function Icon({ name, ...props }: { name: string } & ComponentProps<'svg'
           <path d="m10 9 5 3-5 3V9z" />
         </svg>
       );
+    case 'cross':
+      return (
+        <svg {...base} {...props}>
+          <path d="M9.5 3.5h5v6h6v5h-6v6h-5v-6h-6v-5h6z" />
+        </svg>
+      );
+    case 'leaf':
+      return (
+        <svg {...base} {...props}>
+          <path d="M5 19c0-8 5-14 15-15-.5 10-6.5 15-14 15" />
+          <path d="M5 19c3-4 6-7 10-9.5" />
+        </svg>
+      );
+    case 'spray':
+      return (
+        <svg {...base} {...props}>
+          <path d="M8 9h6l1 3v8.5a.5.5 0 0 1-.5.5h-7a.5.5 0 0 1-.5-.5V12l1-3zM9 9V6h4v3M13 6h3l2 2" />
+          <path d="M19.5 4v.01M21 6.5v.01M19.5 9v.01" />
+        </svg>
+      );
+    case 'bug':
+      return (
+        <svg {...base} {...props}>
+          <rect x="8" y="8" width="8" height="12" rx="4" />
+          <path d="M12 8v12M9.5 8a2.5 2.5 0 0 1 5 0M4 13h4M16 13h4M5 8l3 2M19 8l-3 2M5 19l3-2.5M19 19l-3-2.5" />
+        </svg>
+      );
+    case 'waves':
+      return (
+        <svg {...base} {...props}>
+          <path d="M3 9c1.5 0 1.5-1.5 3-1.5S7.5 9 9 9s1.5-1.5 3-1.5S13.5 9 15 9s1.5-1.5 3-1.5S19.5 9 21 9" />
+          <path d="M3 14c1.5 0 1.5-1.5 3-1.5S7.5 14 9 14s1.5-1.5 3-1.5 1.5 1.5 3 1.5 1.5-1.5 3-1.5 1.5 1.5 3 1.5" />
+          <path d="M3 19c1.5 0 1.5-1.5 3-1.5S7.5 19 9 19s1.5-1.5 3-1.5 1.5 1.5 3 1.5 1.5-1.5 3-1.5 1.5 1.5 3 1.5" />
+        </svg>
+      );
+    case 'wrench':
+      return (
+        <svg {...base} {...props}>
+          <path d="M14.5 6.5a4 4 0 0 0 5 5l-9 9a2.1 2.1 0 0 1-3-3l9-9a4 4 0 0 1 5-5l-2.5 2.5.5 2 2 .5 2.5-2.5" />
+        </svg>
+      );
     case 'heart':
       return (
         <svg {...base} {...props}>

@@ -137,7 +137,7 @@ describe('0002_multi_household', () => {
   });
 });
 
-describe('0018 instalments, 0019–0021 service types and names', () => {
+describe('0018 instalments, 0019–0022 service types and names', () => {
   it('re-file council and insurance services and keep existing shares whole', () => {
     const d = fs.mkdtempSync(path.join(os.tmpdir(), 'hud-migrate-19-'));
     const upTo17 = migrationsUpTo('0017_regional');
@@ -160,7 +160,13 @@ describe('0018 instalments, 0019–0021 service types and names', () => {
           ('S6', 'H1', 'other', 'Other', 'City of Greater Example', '${t}', '${t}'),
           ('S7', 'H1', 'other', 'Hospital & extras', 'Example Health Insurance', '${t}', '${t}'),
           ('S8', 'H1', 'other', 'Contents', 'Example Insurance', '${t}', '${t}'),
-          ('S9', 'H1', 'other', 'Insurance', 'Example Mutual', '${t}', '${t}');
+          ('S9', 'H1', 'other', 'Insurance', 'Example Mutual', '${t}', '${t}'),
+          ('S10', 'H1', 'other', 'Other', 'Ambulance Example', '${t}', '${t}'),
+          ('S11', 'H1', 'other', 'Lawns', 'Jo''s Mowing', '${t}', '${t}'),
+          ('S12', 'H1', 'other', 'Cleaner', 'Sparkle Co', '${t}', '${t}'),
+          ('S13', 'H1', 'other', 'Termite check', 'Example Services', '${t}', '${t}'),
+          ('S14', 'H1', 'other', 'Pool', 'Blue Water', '${t}', '${t}'),
+          ('S15', 'H1', 'other', 'Plumber', 'Example Plumbing', '${t}', '${t}');
         INSERT INTO bill (id, household_id, service_id, amount_minor, currency, period_start, period_end, due_date, source, created_at, updated_at)
           VALUES ('B1', 'H1', 'S5', 12900, 'AUD', '2026-09-01', '2026-09-30', '2026-09-15', 'manual', '${t}', '${t}');
         INSERT INTO share (id, household_id, bill_id, member_id, amount_minor, currency, basis_weight, basis_days, period_days, created_at, updated_at)
@@ -169,7 +175,9 @@ describe('0018 instalments, 0019–0021 service types and names', () => {
       db.close();
       runMigrations(d);
       const after = new Database(file, { readonly: true });
-      const types = after.prepare('SELECT id, name, type_slug FROM service ORDER BY id').all();
+      const types = after
+        .prepare('SELECT id, name, type_slug FROM service ORDER BY length(id), id')
+        .all();
       // Re-filed, and a service named after its old type ("Other") takes the new name (0020).
       expect(types).toEqual([
         { id: 'S1', name: 'Rates', type_slug: 'council_rates' },
@@ -182,6 +190,13 @@ describe('0018 instalments, 0019–0021 service types and names', () => {
         { id: 'S7', name: 'Hospital & extras', type_slug: 'health_insurance' },
         { id: 'S8', name: 'Contents', type_slug: 'contents_insurance' },
         { id: 'S9', name: 'Insurance', type_slug: 'other' },
+        // 0022: ambulance cover and home services (an "Other"-named service is renamed).
+        { id: 'S10', name: 'Ambulance cover', type_slug: 'ambulance_cover' },
+        { id: 'S11', name: 'Lawns', type_slug: 'gardening' },
+        { id: 'S12', name: 'Cleaner', type_slug: 'cleaning' },
+        { id: 'S13', name: 'Termite check', type_slug: 'pest_control' },
+        { id: 'S14', name: 'Pool', type_slug: 'pool' },
+        { id: 'S15', name: 'Plumber', type_slug: 'repairs' },
       ]);
       expect(after.prepare("SELECT slug FROM service_type WHERE slug = 'insurance'").get()).toBe(
         undefined,

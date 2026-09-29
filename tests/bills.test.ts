@@ -72,8 +72,14 @@ describe('service type catalog', () => {
       'health_insurance',
       'contents_insurance',
       'building_insurance',
+      'ambulance_cover',
       'vehicle_registration',
       'subscriptions',
+      'gardening',
+      'cleaning',
+      'pest_control',
+      'pool',
+      'repairs',
       'other',
     ]);
   });
