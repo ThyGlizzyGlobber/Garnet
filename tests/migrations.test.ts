@@ -258,3 +258,40 @@ describe('0027 asks about services set up automatically', () => {
     }
   });
 });
+
+describe('0028 asks in households that don’t split bills too', () => {
+  it('asks when others live there, not when someone lives alone', () => {
+    const d = fs.mkdtempSync(path.join(os.tmpdir(), 'hud-migrate-28-'));
+    const upTo27 = migrationsUpTo('0027_ask_owner');
+    try {
+      runMigrations(d, upTo27);
+      const file = path.join(d, 'db', 'utilities.sqlite');
+      const db = new Database(file);
+      const auto = 'Set up automatically from its first bill.';
+      db.exec(`
+        INSERT INTO household (id, name, currency, locale, timezone, split_mode, created_at, updated_at) VALUES
+          ('H1', 'Smith', 'AUD', 'en-AU', 'Australia/Melbourne', 'single', '2026-01-01', '2026-01-01'),
+          ('H2', 'Alone', 'AUD', 'en-AU', 'Australia/Melbourne', 'single', '2026-01-01', '2026-01-01');
+        INSERT INTO member (id, household_id, name, active_from, created_at, updated_at) VALUES
+          ('M1', 'H1', 'Ray', '2026-01-01', '2026-01-01', '2026-01-01'),
+          ('M2', 'H1', 'Mum', '2026-01-01', '2026-01-01', '2026-01-01'),
+          ('M3', 'H2', 'Kim', '2026-01-01', '2026-01-01', '2026-01-01');
+        INSERT INTO service (id, household_id, type_slug, name, provider, notes, created_at, updated_at) VALUES
+          ('R1', 'H1', 'vehicle_registration', 'Rego', 'VicRoads', '${auto}', '2026-09-29T05:00:00Z', '2026-09-29'),
+          ('R2', 'H2', 'vehicle_registration', 'Rego', 'VicRoads', '${auto}', '2026-09-29T05:00:00Z', '2026-09-29');
+      `);
+      db.close();
+      runMigrations(d);
+      const after = new Database(file, { readonly: true });
+      const asked = after
+        .prepare('SELECT id FROM service WHERE owner_asked_at IS NOT NULL ORDER BY id')
+        .all()
+        .map((r) => (r as { id: string }).id);
+      expect(asked).toEqual(['R1']);
+      after.close();
+    } finally {
+      fs.rmSync(d, { recursive: true, force: true });
+      fs.rmSync(upTo27, { recursive: true, force: true });
+    }
+  });
+});

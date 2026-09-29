@@ -276,7 +276,13 @@
       "makeMine": "Make it just mine",
       "confirmHousehold": "Make {service} the household's? Everyone will see it and its bills, and they'll be split between you.",
       "confirmMine": "Make {service} just yours? Only you will see it and its bills, and they won't be split.",
-      "lockedShares": "Housemates have paid their shares, so it stays the household's."
+      "lockedShares": "Housemates have paid their shares, so it stays the household's.",
+      "bodyMineNoSplit": "{service} is set up as yours: only you see it, and it stays out of the household's figures. Is that right, or is it the household's?",
+      "bodyHouseholdNoSplit": "{service} is set up as the household's: everyone in the house sees it. Is it the household's, or just yours?",
+      "isMineNoSplit": "Yours: only you see it",
+      "isHouseholdNoSplit": "The household's: everyone in the house sees it",
+      "confirmHouseholdNoSplit": "Make {service} the household's? Everyone in the house will see it and its bills.",
+      "confirmMineNoSplit": "Make {service} just yours? Only you will see it and its bills, and they'll stay out of the household's figures."
     },
     "downloadHint": "A zip of every bill: spreadsheets for your accountant plus each bill's file, filed by year, month and service",
     "downloadMine": "Download my bills",

@@ -96,37 +96,40 @@ export async function PersonalView({ ctx, toggle }: { ctx: PageContext; toggle: 
           </div>
         </section>
 
-        <Link href="/ledger" className={`${tile} flex flex-col text-fg`}>
-          <div className="flex items-start justify-between">
-            <p className="text-sm font-semibold">{t('owe.title')}</p>
-            <Badge tone={p.owed > 0 ? 'warning' : 'success'}>
-              {p.owed > 0 ? t('owe.toPay') : t('owe.settled')}
-            </Badge>
-          </div>
-          <div className="mt-2 flex flex-col items-center">
-            <Arc
-              id="mine-owe"
-              pct={paidPct}
-              width={190}
-              stroke={13}
-              from="var(--color-accent-2)"
-              to="var(--color-accent)"
-            />
-            <span className="-mt-9 flex flex-col items-center leading-none">
-              <span
-                className={`font-display text-[32px] font-semibold tabular-nums ${p.owed > 0 ? 'text-warning' : 'text-success'}`}
-              >
-                {money(p.owed)}
+        {/* Shares only exist in a household that splits its bills. */}
+        {hh.splitMode === 'shared' && (
+          <Link href="/ledger" className={`${tile} flex flex-col text-fg`}>
+            <div className="flex items-start justify-between">
+              <p className="text-sm font-semibold">{t('owe.title')}</p>
+              <Badge tone={p.owed > 0 ? 'warning' : 'success'}>
+                {p.owed > 0 ? t('owe.toPay') : t('owe.settled')}
+              </Badge>
+            </div>
+            <div className="mt-2 flex flex-col items-center">
+              <Arc
+                id="mine-owe"
+                pct={paidPct}
+                width={190}
+                stroke={13}
+                from="var(--color-accent-2)"
+                to="var(--color-accent)"
+              />
+              <span className="-mt-9 flex flex-col items-center leading-none">
+                <span
+                  className={`font-display text-[32px] font-semibold tabular-nums ${p.owed > 0 ? 'text-warning' : 'text-success'}`}
+                >
+                  {money(p.owed)}
+                </span>
+                <span className="mt-1 text-[11px] text-fg-muted">
+                  {t('owe.owedToYou', { amount: money(p.owedToMe) })}
+                </span>
               </span>
-              <span className="mt-1 text-[11px] text-fg-muted">
-                {t('owe.owedToYou', { amount: money(p.owedToMe) })}
-              </span>
-            </span>
-          </div>
-          <p className="mt-3 text-center text-xs text-fg-muted">
-            {t('owe.paidOfYear', { pct: paidPct, label: p.fiscalYear.label })}
-          </p>
-        </Link>
+            </div>
+            <p className="mt-3 text-center text-xs text-fg-muted">
+              {t('owe.paidOfYear', { pct: paidPct, label: p.fiscalYear.label })}
+            </p>
+          </Link>
+        )}
 
         <section className={`${tile} flex flex-col justify-between gap-3`}>
           <p className="text-sm font-semibold">{t('year.title', { label: p.fiscalYear.label })}</p>

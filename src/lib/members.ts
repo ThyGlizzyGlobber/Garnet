@@ -115,6 +115,15 @@ export function updateMember(
 }
 
 /**
+ * More than one person in the household: then whose a bill is matters
+ * (personal bills, "Who's this for?", the Mine view), whether or not the
+ * household splits its bills.
+ */
+export function hasHousemates(householdId: string, db: Db = getDb()): boolean {
+  return listMembers(householdId, db).length > 1;
+}
+
+/**
  * Make a member an admin (role "owner": adds members, sends invites, changes
  * household settings) or a member again. A household always keeps at least
  * one admin.

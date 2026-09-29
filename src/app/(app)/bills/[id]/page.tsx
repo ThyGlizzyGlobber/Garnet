@@ -77,6 +77,10 @@ export default async function BillPage({ params }: { params: Promise<{ id: strin
           : x.doc.receivedAt.localeCompare(y.doc.receivedAt),
     );
   const members = new Map(listMembers(hh.id).map((m) => [m.id, m.name]));
+  // Whose it is matters once anyone else lives there, split or not.
+  const housemates = members.size > 1;
+  // A household that doesn't split bills: nothing is "split", only seen or not.
+  const solo = hh.splitMode === 'shared' ? '' : 'NoSplit';
   const notes = personNotes(b.notes, files.find((f) => f.kind === 'bill')?.doc ?? null);
   const swatch = `light-dark(${b.service.colour}, ${darkVariant(b.service.colour)})`;
   const dueNext = byInstalments ? dueNow(b) : null;
@@ -105,12 +109,12 @@ export default async function BillPage({ params }: { params: Promise<{ id: strin
         </LinkButton>
       </header>
 
-      {hh.splitMode === 'shared' && asksMember(b.service, me) && (
+      {housemates && asksMember(b.service, me) && (
         <Card className="mb-4 flex flex-col gap-3 border-accent/40 bg-accent-soft" id="whose">
           <div>
             <p className="font-display text-lg font-semibold">{t('whose.title')}</p>
             <p className="text-sm text-fg-muted">
-              {t(personal ? 'whose.bodyMine' : 'whose.bodyHousehold', {
+              {t(personal ? `whose.bodyMine${solo}` : `whose.bodyHousehold${solo}`, {
                 service: b.service.name,
               })}
             </p>
@@ -247,12 +251,12 @@ export default async function BillPage({ params }: { params: Promise<{ id: strin
             <Row label={t('detail.type')} value={b.service.type.label} />
           </dl>
           {notes && <p className="mt-4 text-sm whitespace-pre-wrap text-fg-muted">{notes}</p>}
-          {hh.splitMode === 'shared' && (
+          {housemates && (
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-surface-2 px-4 py-3">
               <div className="min-w-0">
                 <p className="text-xs text-fg-muted">{t('whose.label')}</p>
                 <p className="text-sm font-medium">
-                  {personal ? t('whose.isMine') : t('whose.isHousehold')}
+                  {personal ? t(`whose.isMine${solo}`) : t(`whose.isHousehold${solo}`)}
                 </p>
               </div>
               {!personal && b.shares.some((x) => x.paidAt && x.paidMethod !== 'payer') ? (
@@ -266,8 +270,8 @@ export default async function BillPage({ params }: { params: Promise<{ id: strin
                     variant="secondary"
                     confirm={
                       personal
-                        ? t('whose.confirmHousehold', { service: b.service.name })
-                        : t('whose.confirmMine', { service: b.service.name })
+                        ? t(`whose.confirmHousehold${solo}`, { service: b.service.name })
+                        : t(`whose.confirmMine${solo}`, { service: b.service.name })
                     }
                   />
                 )

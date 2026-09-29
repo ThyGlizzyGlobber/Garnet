@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { hasHousemates } from '@/lib/members';
 import { visibleTo } from '@/lib/scope';
 import { getTranslations } from 'next-intl/server';
 import { LinkButton, PageHeader } from '@/components/ui';
@@ -35,6 +36,7 @@ export default async function EditServicePage({ params }: { params: Promise<{ id
         cadences={CADENCES}
         splitModes={SPLIT_MODES}
         sharedHousehold={hh.splitMode === 'shared'}
+        canBePersonal={hasHousemates(hh.id)}
         canChangePersonal={
           s.ownerMemberId
             ? s.ownerMemberId === me.id

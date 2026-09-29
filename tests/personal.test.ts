@@ -402,11 +402,41 @@ describe('who a new service is for', () => {
     expect(ownershipQuestions(hh.id, sam, db)).toEqual([]);
   });
 
-  it('is never asked in a household that doesn’t split bills', async () => {
+  it('is asked in a household that doesn’t split bills too, but not by someone living alone', async () => {
     const { hh, sam } = setup();
     updateHousehold(hh.id, { splitMode: 'single' }, db);
-    await uploadAs(hh.id, sam.id, water());
-    expect(ownershipQuestions(hh.id, sam, db)).toEqual([]);
+    const billId = await uploadAs(
+      hh.id,
+      sam.id,
+      regoNoticeFor('Other Roads', 'vehicle_registration'),
+    );
+    // Still Sam's own (only Sam sees it), and Sam is asked.
+    expect(getBill(hh.id, billId, db)!.ownerMemberId).toBe(sam.id);
+    expect(ownershipQuestions(hh.id, sam, db)).toHaveLength(1);
+
+    const alone = createHousehold(
+      {
+        name: 'Alone',
+        currency: 'AUD',
+        locale: 'en-AU',
+        timezone: 'Australia/Melbourne',
+        fiscalYearStartMonth: 7,
+        splitMode: 'single',
+      },
+      db,
+    );
+    const kim = createMember(
+      alone.id,
+      { name: 'Kim', role: 'owner', activeFrom: '2025-01-01' },
+      db,
+    );
+    const own = await uploadAs(
+      alone.id,
+      kim.id,
+      regoNoticeFor('Other Roads', 'vehicle_registration'),
+    );
+    expect(getBill(alone.id, own, db)!.ownerMemberId).toBeNull();
+    expect(ownershipQuestions(alone.id, kim, db)).toEqual([]);
   });
 });
 

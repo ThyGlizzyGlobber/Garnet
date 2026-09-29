@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { hasHousemates } from '@/lib/members';
 import { ownershipQuestions } from '@/lib/ownership';
 import { PersonalView } from './personal-view';
 import { getTranslations } from 'next-intl/server';
@@ -50,8 +51,9 @@ export default async function HomePage({
   const shared = hh.splitMode === 'shared';
   // Household · Mine: in a household that splits bills, each member also has
   // their own view (their shares plus their personal bills).
-  const mineView = shared && (await searchParams).view === 'mine';
-  const toggle = shared ? (
+  const housemates = hasHousemates(hh.id);
+  const mineView = housemates && (await searchParams).view === 'mine';
+  const toggle = housemates ? (
     <ViewToggle mine={mineView} labels={await getTranslations('personal')} />
   ) : null;
   if (mineView) return <PersonalView ctx={ctx} toggle={toggle} />;
@@ -108,7 +110,7 @@ export default async function HomePage({
   // Banners: household bills, and the viewer's own personal ones.
   const alerts = billsWithAlerts(hh.id, { viewer: me.id });
   // "Who's this for?": services set up from bills this member brought in.
-  const whose = shared ? ownershipQuestions(hh.id, me) : [];
+  const whose = housemates ? ownershipQuestions(hh.id, me) : [];
   // Bills offering instalments that nobody has chosen a plan for (the payer or an admin chooses).
   const planChoices = listBills(hh.id, { viewer: me.id }).filter(
     (b) =>

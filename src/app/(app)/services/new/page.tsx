@@ -1,4 +1,5 @@
 import { getTranslations } from 'next-intl/server';
+import { hasHousemates } from '@/lib/members';
 import { PageHeader } from '@/components/ui';
 import { CADENCES, SPLIT_MODES } from '@/db/schema';
 import { pageContext } from '@/lib/context';
@@ -19,7 +20,8 @@ export default async function NewServicePage({
   const t = await getTranslations('services');
   const types = listServiceTypes();
   // From the personal dashboard: start on a kind of service that's usually one person's own.
-  const personal = hh.splitMode === 'shared' && !!(await searchParams).personal;
+  const housemates = hasHousemates(hh.id);
+  const personal = housemates && !!(await searchParams).personal;
   const first = (personal ? types.find((ty) => ty.personalByDefault) : undefined) ?? types[0]!;
   const used = listServices(hh.id, { includeInactive: true }).map((s) => s.colour);
   const colour =
@@ -37,6 +39,7 @@ export default async function NewServicePage({
         cadences={CADENCES}
         splitModes={SPLIT_MODES}
         sharedHousehold={hh.splitMode === 'shared'}
+        canBePersonal={housemates}
         submitLabel={t('form.create')}
         cancelHref={personal ? '/?view=mine' : '/services'}
         initial={{
@@ -56,7 +59,7 @@ export default async function NewServicePage({
           autoPay: false,
           seasonal: SEASONAL_TYPES.includes(first.slug),
           customSplits: {},
-          personal: personal || (hh.splitMode === 'shared' && first.personalByDefault),
+          personal: personal || (housemates && first.personalByDefault),
         }}
       />
     </div>

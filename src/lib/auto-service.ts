@@ -2,8 +2,7 @@ import { getDb, type Db } from '@/db/client';
 import type { Cadence } from '@/db/schema';
 import type { ExtractedBill } from '@/ingest/extractors/types';
 import { daysInclusive } from '@/lib/dates';
-import { getHousehold } from '@/lib/households';
-import { listMembers } from '@/lib/members';
+import { hasHousemates, listMembers } from '@/lib/members';
 import type { Scope } from '@/lib/scope';
 import { nextPaletteColour, TYPE_COLOUR } from '@/lib/palette';
 import {
@@ -143,10 +142,10 @@ export function serviceForNewProvider(
   const types = listServiceTypes(db);
   const type =
     types.find((t) => t.slug === bill.serviceType) ?? types.find((t) => t.slug === 'other')!;
-  // Car rego, car insurance: the member's own, in a household that splits bills.
+  // Car rego, car insurance: the member's own, when others live there too.
   // Either way, whoever brought the bill in is asked to confirm (ownership.ts).
-  const shared = getHousehold(householdId, db)?.splitMode === 'shared';
-  const owner = type.personalByDefault && opts.member && shared ? opts.member : null;
+  const together = hasHousemates(householdId, db);
+  const owner = type.personalByDefault && opts.member && together ? opts.member : null;
   const name = all.some((s) => s.name.toLowerCase() === type.label.toLowerCase())
     ? `${type.label} (${provider})`
     : type.label;
@@ -168,7 +167,7 @@ export function serviceForNewProvider(
       payerMemberId: owner ?? payer,
       ownerMemberId: owner,
       setUpByMemberId: opts.member ?? null,
-      ownerAskedAt: shared ? new Date().toISOString() : null,
+      ownerAskedAt: together ? new Date().toISOString() : null,
       colour: TYPE_COLOUR[type.slug] ?? nextPaletteColour(all.map((s) => s.colour)),
       autoPay: bill.autoPay ?? false,
       trustedSenders: opts.trustedDomain ? [opts.trustedDomain] : [],

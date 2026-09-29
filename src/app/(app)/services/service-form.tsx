@@ -37,6 +37,7 @@ export function ServiceForm({
   cadences,
   splitModes,
   sharedHousehold,
+  canBePersonal = sharedHousehold,
   canChangePersonal = true,
   submitLabel,
   cancelHref,
@@ -55,6 +56,8 @@ export function ServiceForm({
   cadences: readonly string[];
   splitModes: readonly string[];
   sharedHousehold: boolean;
+  /** Others live there too, so a service can be just one person's (split or not). */
+  canBePersonal?: boolean;
   /** Whether this member may switch it between household and personal. */
   canChangePersonal?: boolean;
   submitLabel: string;
@@ -99,7 +102,7 @@ export function ServiceForm({
                     setUsageUnit(ty.defaultUnit ?? '');
                     if (!name) setName(ty.label);
                     // A new car rego or car insurance is usually one person's own.
-                    if (!initial.id && !personalTouched && sharedHousehold)
+                    if (!initial.id && !personalTouched && canBePersonal)
                       setPersonal(!!ty.personalByDefault);
                   }
                 }}
@@ -234,7 +237,7 @@ export function ServiceForm({
             {!initial.id && <input type="hidden" name="isActive" value="on" />}
           </Card>
 
-          {sharedHousehold && (
+          {canBePersonal && (
             <Card className="flex flex-col gap-3">
               <label
                 className={`flex items-start gap-3 text-sm font-medium ${canChangePersonal ? '' : 'opacity-60'}`}
