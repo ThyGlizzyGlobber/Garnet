@@ -58,6 +58,24 @@ export function Icon({ name, ...props }: { name: string } & ComponentProps<'svg'
           <path d="M18 9.5l-4 1.6v2.8c0 2.4 1.7 4.3 4 5 2.3-.7 4-2.6 4-5v-2.8l-4-1.6z" />
         </svg>
       );
+    case 'car-wrench':
+      return (
+        <svg {...base} {...props}>
+          <path d="M4 15H3v-3.5l1.6-4.3A2 2 0 0 1 6.5 6h7" />
+          <path d="M3.5 11.5H12" />
+          <circle cx="6.5" cy="15.5" r="1.8" />
+          <path d="M19.8 9.2a3 3 0 0 1-3.9 3.9l-3.4 3.4a1.3 1.3 0 0 1-1.9-1.9l3.4-3.4a3 3 0 0 1 3.9-3.9l-1.8 1.8.4 1.5 1.5.4 1.8-1.8z" />
+        </svg>
+      );
+    case 'dumbbell':
+      return (
+        <svg {...base} {...props}>
+          <path d="M8 12h8" />
+          <rect x="4.5" y="7" width="3.5" height="10" rx="1" />
+          <rect x="16" y="7" width="3.5" height="10" rx="1" />
+          <path d="M2.5 10v4M21.5 10v4" />
+        </svg>
+      );
     case 'roadside':
       return (
         <svg {...base} {...props}>

@@ -76,13 +76,29 @@ describe('service type catalog', () => {
       'vehicle_registration',
       'car_insurance',
       'roadside_assistance',
+      'vehicle_maintenance',
       'subscriptions',
+      'gym',
       'gardening',
       'cleaning',
       'pest_control',
       'pool',
       'repairs',
       'other',
+    ]);
+  });
+});
+
+describe('service type groups', () => {
+  it('put every built-in type in a group; only "other" is left in Other', () => {
+    const ungrouped = listServiceTypes(db).filter((t) => t.category === 'other');
+    expect(ungrouped.map((t) => t.slug)).toEqual(['other']);
+    const vehicle = listServiceTypes(db).filter((t) => t.category === 'vehicle');
+    expect(vehicle.map((t) => [t.slug, t.personalByDefault])).toEqual([
+      ['vehicle_registration', true],
+      ['car_insurance', true],
+      ['roadside_assistance', true],
+      ['vehicle_maintenance', true],
     ]);
   });
 });

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { SERVICE_CATEGORIES } from '@/lib/service-categories';
 import { getTranslations } from 'next-intl/server';
 import { Icon } from '@/components/app/icons';
 import {
@@ -170,11 +171,24 @@ export default async function ServicesPage() {
       <Card className="mt-6">
         <h2 className="font-display font-semibold">{t('types.title')}</h2>
         <p className="mt-0.5 text-xs text-fg-muted">{t('types.body')}</p>
-        <p className="mt-2 flex flex-wrap gap-1.5">
-          {types.map((ty) => (
-            <Badge key={ty.slug}>{ty.label}</Badge>
-          ))}
-        </p>
+        <dl className="mt-3 flex flex-col gap-2">
+          {SERVICE_CATEGORIES.map((c) => {
+            const inGroup = types.filter((ty) => ty.category === c);
+            if (!inGroup.length) return null;
+            return (
+              <div key={c} className="flex flex-wrap items-baseline gap-1.5">
+                <dt className="w-20 shrink-0 text-xs font-semibold text-fg-muted">
+                  {t(`categories.${c}`)}
+                </dt>
+                <dd className="flex flex-1 flex-wrap gap-1.5">
+                  {inGroup.map((ty) => (
+                    <Badge key={ty.slug}>{ty.label}</Badge>
+                  ))}
+                </dd>
+              </div>
+            );
+          })}
+        </dl>
         <form action={createServiceTypeAction} className="mt-4 flex flex-wrap items-end gap-3">
           <Field label={t('types.label')}>
             <Input name="label" required placeholder={t('types.placeholder')} />

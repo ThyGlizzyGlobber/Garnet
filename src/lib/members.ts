@@ -143,7 +143,8 @@ export function setMemberRole(
 export function deleteMember(householdId: string, id: string, db: Db = getDb()): void {
   const m = getMember(householdId, id, db);
   if (!m) return;
-  if (m.role === 'owner') throw new Error('An admin can’t be deleted. Remove their admin role first.');
+  if (m.role === 'owner')
+    throw new Error('An admin can’t be deleted. Remove their admin role first.');
   const n = db.select({ n: count() }).from(share).where(eq(share.memberId, id)).get()?.n ?? 0;
   if (n > 0)
     throw new Error('This member has bill shares. Set a move-out date instead of deleting.');

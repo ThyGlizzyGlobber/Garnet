@@ -292,6 +292,8 @@ describe('bills that arrive', () => {
     expect(await owner('Example Roadside Club', 'roadside_assistance')).toBe(sam.id);
     expect(await owner('Example Car Insurer', 'car_insurance')).toBe(sam.id);
     expect(await owner('Example Ambulance', 'ambulance_cover')).toBeNull();
+    expect(await owner('Example Fitness', 'gym')).toBe(sam.id);
+    expect(await owner('Example Mechanics', 'vehicle_maintenance')).toBe(sam.id);
   });
 
   it('household kinds of bill stay household services', async () => {

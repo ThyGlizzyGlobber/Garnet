@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Card, Field, Input, Select, Textarea } from '@/components/ui';
 import { ActionForm, type FormAction } from '@/components/ui/form';
+import { SERVICE_CATEGORIES } from '@/lib/service-categories';
 
 export interface ServiceFormValues {
   id?: string;
@@ -47,6 +48,7 @@ export function ServiceForm({
     label: string;
     defaultUnit: string | null;
     personalByDefault?: boolean;
+    category?: string;
   }[];
   units: { key: string; label: string }[];
   members: { id: string; name: string }[];
@@ -59,6 +61,12 @@ export function ServiceForm({
   cancelHref: string;
 }) {
   const t = useTranslations('services.form');
+  const tc = useTranslations('services.categories');
+  // Types grouped (Utilities, Home, Health, Vehicle, Lifestyle, Other), in catalog order within each.
+  const groups = SERVICE_CATEGORIES.map((c) => ({
+    category: c,
+    types: types.filter((ty) => (ty.category ?? 'other') === c),
+  })).filter((g) => g.types.length);
   const [typeSlug, setTypeSlug] = useState(initial.typeSlug);
   const [usageUnit, setUsageUnit] = useState(initial.usageUnit);
   const [splitMode, setSplitMode] = useState(initial.splitMode);
@@ -96,10 +104,14 @@ export function ServiceForm({
                   }
                 }}
               >
-                {types.map((ty) => (
-                  <option key={ty.slug} value={ty.slug}>
-                    {ty.label}
-                  </option>
+                {groups.map((g) => (
+                  <optgroup key={g.category} label={tc(g.category)}>
+                    {g.types.map((ty) => (
+                      <option key={ty.slug} value={ty.slug}>
+                        {ty.label}
+                      </option>
+                    ))}
+                  </optgroup>
                 ))}
               </Select>
             </Field>

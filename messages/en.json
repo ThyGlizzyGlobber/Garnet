@@ -346,6 +346,14 @@
       "body": "Your personal services. Nobody else sees them, and they aren't counted in the household's figures.",
       "lastTitle": "Last bill",
       "last": "due {date}"
+    },
+    "categories": {
+      "utilities": "Utilities",
+      "home": "Home",
+      "health": "Health",
+      "vehicle": "Vehicle",
+      "lifestyle": "Lifestyle",
+      "other": "Other"
     }
   },
   "members": {

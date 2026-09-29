@@ -162,6 +162,8 @@ export const serviceType = sqliteTable('service_type', {
    * personal to that member.
    */
   personalByDefault: integer('personal_by_default', { mode: 'boolean' }).notNull().default(false),
+  /** Group in pickers: see SERVICE_CATEGORIES (src/lib/service-categories.ts). */
+  category: text('category').notNull().default('other'),
 });
 
 export const CADENCES = [

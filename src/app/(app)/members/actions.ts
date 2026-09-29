@@ -115,8 +115,7 @@ export async function updateMemberAction(_prev: ActionState, fd: FormData): Prom
   const target = getMember(me.householdId, id);
   if (!target) return { error: 'Member not found' };
   // Members edit themselves; the owner edits anyone.
-  if (me.role !== 'owner' && me.id !== id)
-    return { error: 'Only admins can edit other members.' };
+  if (me.role !== 'owner' && me.id !== id) return { error: 'Only admins can edit other members.' };
   const parsed = read(fd);
   if (!parsed.success) return zodToState(parsed.error);
   const v = parsed.data;

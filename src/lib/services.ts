@@ -38,6 +38,7 @@ export function createServiceType(
     sortOrder: 500,
     isBuiltin: false,
     personalByDefault: false,
+    category: 'other',
   };
   db.insert(serviceType).values(row).run();
   return row;
