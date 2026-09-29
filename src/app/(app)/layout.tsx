@@ -37,7 +37,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       wallLabel={t('wall')}
       reviewHref="/review"
       reviewLabel={t('review')}
-      reviewCount={documentCounts(hh.id).needs_review}
+      reviewCount={documentCounts(hh.id, { viewer: me.id }).needs_review}
       addHref="/bills/new"
       addLabel={t('addBill')}
       searchLabel={t('search')}

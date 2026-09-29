@@ -129,10 +129,10 @@ export function householdEmails(householdId: string, db: Db = getDb()): Set<stri
   return new Set(memberAddresses(householdId, db).flatMap((m) => m.addresses));
 }
 
-/** The member who uses this (lowercased) address, or null. */
-export function memberByAddress(householdId: string, address: string, db: Db = getDb()) {
-  return (
-    memberAddresses(householdId, db).find((m) => m.addresses.includes(address))?.memberId ?? null
+/** Every address the household's members use → the member, for looking up many at once. */
+export function memberAddressBook(householdId: string, db: Db = getDb()): Map<string, string> {
+  return new Map(
+    memberAddresses(householdId, db).flatMap((m) => m.addresses.map((a) => [a, m.memberId])),
   );
 }
 

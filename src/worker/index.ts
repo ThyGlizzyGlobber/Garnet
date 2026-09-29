@@ -1,5 +1,3 @@
-import { getEnv, isImapConfigured } from '@/lib/env';
-import { pollMailbox, type PollResult } from '@/ingest/imap/poller';
 import { settleAutoPaidBills } from '@/lib/autopay';
 import { refileAll } from '@/lib/filing';
 import { sendDueReminders, sendSeasonAhead } from '@/lib/notifications';
@@ -8,24 +6,8 @@ import { syncWeather } from '@/lib/weather';
 import { computeRegionalStats, regionalEnabled } from '@/lib/regional';
 import { weatherProvider } from '@/weather';
 
-export interface WorkerStatus {
-  enabled: boolean;
-  intervalSeconds: number;
-  running: boolean;
-  lastPoll: PollResult | null;
-  nextPollAt: string | null;
-  pollCount: number;
-  errorCount: number;
-}
-
-interface WorkerState extends WorkerStatus {
-  timer: NodeJS.Timeout | null;
-}
-
-// Survives Next.js hot reloads in dev; one poller per process.
+// Survives Next.js hot reloads in dev; one set of timers per process.
 const g = globalThis as unknown as {
-  __hudWorker?: WorkerState;
-  __hudPoll?: Promise<PollResult>;
   __hudReminders?: NodeJS.Timeout;
   __hudWeather?: NodeJS.Timeout;
   __hudRegional?: NodeJS.Timeout;
@@ -75,47 +57,6 @@ function startReminders(): void {
   g.__hudReminders.unref();
 }
 
-function state(): WorkerState {
-  g.__hudWorker ??= {
-    enabled: false,
-    intervalSeconds: 0,
-    running: false,
-    lastPoll: null,
-    nextPollAt: null,
-    pollCount: 0,
-    errorCount: 0,
-    timer: null,
-  };
-  return g.__hudWorker;
-}
-
-export function workerStatus(): WorkerStatus {
-  const { timer: _timer, ...rest } = state();
-  void _timer;
-  return rest;
-}
-
-/** Run one poll now (used by the timer and the "poll now" button). Serialised. */
-export function pollNow(): Promise<PollResult> {
-  // A poll already running (even the very first): wait for it rather than start another.
-  g.__hudPoll ??= (async () => {
-    const s = state();
-    s.running = true;
-    try {
-      const r = await pollMailbox();
-      s.lastPoll = r;
-      s.pollCount++;
-      if (r.error) s.errorCount++;
-      return r;
-    } finally {
-      s.running = false;
-      if (s.timer) s.nextPollAt = new Date(Date.now() + s.intervalSeconds * 1000).toISOString();
-      g.__hudPoll = undefined;
-    }
-  })();
-  return g.__hudPoll;
-}
-
 /** Weather for households with a postcode: every 30 minutes, first run soon after start. */
 function startWeather(): void {
   if (g.__hudWeather) return;
@@ -155,23 +96,9 @@ function startRegional(): void {
   g.__hudRegional.unref();
 }
 
+/** The background timers, started once when the server starts (src/instrumentation.ts). */
 export function startWorker(): void {
   startReminders();
   startWeather();
   startRegional();
-  const env = getEnv();
-  const s = state();
-  if (s.timer) return;
-  s.intervalSeconds = env.IMAP_POLL_INTERVAL_SECONDS;
-  s.enabled = isImapConfigured(env) && env.IMAP_POLL_INTERVAL_SECONDS > 0;
-  if (!s.enabled) return;
-  const tick = () => {
-    pollNow().catch(() => undefined);
-  };
-  // First poll shortly after boot, then on the interval.
-  setTimeout(tick, 5_000);
-  s.timer = setInterval(tick, s.intervalSeconds * 1000);
-  s.timer.unref();
-  s.nextPollAt = new Date(Date.now() + 5_000).toISOString();
-  console.log(`[worker] IMAP poller started, every ${s.intervalSeconds}s`);
 }

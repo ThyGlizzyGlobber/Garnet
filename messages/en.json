@@ -97,7 +97,7 @@
     "overdue": "Overdue",
     "empty": {
       "title": "No bills yet",
-      "body": "Add your first bill by hand, or wait for the mailbox to pick one up once ingestion is set up.",
+      "body": "Add your first bill by hand, upload one, or forward it to your bills address.",
       "noServices": "Create a service first, then add bills against it.",
       "addService": "Add a service",
       "noMatch": "No matching bills"
@@ -553,13 +553,13 @@
     "system": {
       "title": "System",
       "dataDir": "Data directory",
-      "mailbox": "Bills mailbox",
       "llm": "AI extraction",
       "demoMode": "Demo mode",
       "configured": "Configured",
       "notConfigured": "Not configured",
       "on": "On",
-      "off": "Off"
+      "off": "Off",
+      "billsAddresses": "Bills addresses"
     },
     "theme": {
       "title": "Appearance",
@@ -885,25 +885,6 @@
       "archived": "Documents archived",
       "archivedHint": "Emails, attachments and uploads kept forever"
     },
-    "mailbox": {
-      "title": "Bills mailbox",
-      "notConfigured": "Set IMAP_HOST, IMAP_USER and IMAP_PASSWORD in .env to enable polling.",
-      "off": "Not configured",
-      "on": "Polling",
-      "paused": "Paused",
-      "error": "Error",
-      "interval": "Poll interval",
-      "everySeconds": "Every {seconds} s",
-      "disabled": "Disabled",
-      "lastPoll": "Last poll",
-      "nextPoll": "Next poll",
-      "lastResult": "Last result",
-      "result": "{messages} messages, {docs} new documents",
-      "polls": "Polls since start",
-      "pollsValue": "{polls} ({errors} errors)",
-      "lastUid": "Last processed message UID",
-      "pollNow": "Poll now"
-    },
     "extractors": {
       "ready": "Ready",
       "needsKey": "Needs ANTHROPIC_API_KEY",
@@ -931,6 +912,15 @@
     },
     "reading": {
       "title": "Reading bills"
+    },
+    "billsAddresses": {
+      "title": "Bills addresses",
+      "off": "Off",
+      "offHint": "Set BILLS_ADDRESS_TEMPLATE and INBOUND_EMAIL_SECRET to give each household its own address.",
+      "bound": "Signed per household",
+      "boundHint": "The email Worker signs each household's address with every message (since {date}), so a message can't be redirected to another household. Deliveries with the older signature are refused.",
+      "olderWorker": "Older Worker",
+      "olderWorkerHint": "The email Worker still signs messages without the household's address. Paste deploy/email-worker/worker.js into the Worker in Cloudflare; from its first message on, the older signature is refused."
     }
   },
   "code": {

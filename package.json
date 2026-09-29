@@ -30,7 +30,6 @@
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^13.0.3",
     "drizzle-orm": "^0.45.3",
-    "imapflow": "^2.0.6",
     "iron-session": "^9.0.1",
     "mailauth": "^7.1.0",
     "mailparser": "^3.9.28",

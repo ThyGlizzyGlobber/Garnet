@@ -2,7 +2,6 @@ import { simpleParser } from 'mailparser';
 import { getDb, type Db } from '@/db/client';
 import { archiveDocument } from './archive';
 import { isImageFile } from './scan';
-import { processDocument, type PipelineOutcome } from './pipeline';
 
 export interface ArchivedEmail {
   /** New documents written (the PDFs, or the email when it has none). */
@@ -75,17 +74,4 @@ export async function archiveEmail(
     }
   }
   return out;
-}
-
-/** Archive, then run the pipeline on what needs reading. */
-export async function ingestEmail(
-  householdId: string,
-  source: Buffer,
-  receivedAt: string,
-  db: Db = getDb(),
-): Promise<{ archived: number; outcomes: PipelineOutcome[] }> {
-  const { archived, toProcess } = await archiveEmail(householdId, source, receivedAt, db);
-  const outcomes: PipelineOutcome[] = [];
-  for (const id of toProcess) outcomes.push(await processDocument(householdId, id, db));
-  return { archived, outcomes };
 }

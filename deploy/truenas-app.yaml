@@ -40,14 +40,6 @@ services:
       DEFAULT_LOCALE: en-AU
       DEFAULT_TIMEZONE: Australia/Melbourne
       DEFAULT_FISCAL_YEAR_START_MONTH: '7'
-      # Optional operator mailbox, polled by the app (leave IMAP_USER empty to turn it off)
-      IMAP_HOST: imap.gmail.com
-      IMAP_PORT: '993'
-      IMAP_SECURE: 'true'
-      IMAP_USER: ''
-      IMAP_PASSWORD: ''
-      IMAP_MAILBOX: INBOX
-      IMAP_POLL_INTERVAL_SECONDS: '300'
       # AI bill reader: without a key every document waits in the Inbox for entry by hand
       ANTHROPIC_API_KEY: ''
       ANTHROPIC_MODEL: claude-opus-5

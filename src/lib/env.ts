@@ -28,7 +28,7 @@ const envSchema = z.object({
   AUTH_DEVICE_DAYS: z.coerce.number().int().positive().default(180),
   /** Public base URL, e.g. https://home.example.com. Used in emails and the Google redirect. */
   APP_URL: z.string().url().optional(),
-  /** Comma-separated emails that get operator rights (software updates, mailbox polling). */
+  /** Comma-separated emails that get operator rights (software updates, service types). */
   OPERATOR_EMAILS: z.string().default(''),
 
   GOOGLE_CLIENT_ID: z.string().optional(),
@@ -61,14 +61,6 @@ const envSchema = z.object({
     .optional(),
   /** Messages accepted per household per hour on its bills address. */
   INBOUND_MAX_PER_HOUR: z.coerce.number().int().positive().default(60),
-
-  IMAP_HOST: z.string().optional(),
-  IMAP_PORT: z.coerce.number().int().positive().default(993),
-  IMAP_SECURE: boolish.default(true),
-  IMAP_USER: z.string().optional(),
-  IMAP_PASSWORD: z.string().optional(),
-  IMAP_MAILBOX: z.string().default('INBOX'),
-  IMAP_POLL_INTERVAL_SECONDS: z.coerce.number().int().min(0).default(300),
 
   ANTHROPIC_API_KEY: pasted,
   ANTHROPIC_MODEL: z.string().default('claude-opus-5'),
@@ -112,7 +104,7 @@ let cached: Env | undefined;
 
 /** Parse and validate environment variables. Throws a readable error on misconfiguration. */
 export function parseEnv(source: Record<string, string | undefined> = process.env): Env {
-  // Treat empty strings as unset so `IMAP_USER=` in .env.example behaves as "not configured".
+  // Treat empty strings as unset so `RESEND_API_KEY=` in .env.example behaves as "not configured".
   const cleaned = Object.fromEntries(
     Object.entries(source).map(([k, v]) => [k, v === '' ? undefined : v]),
   );
@@ -132,10 +124,6 @@ export function getEnv(): Env {
 /** Test helper: forget the cached env so the next getEnv() re-reads process.env. */
 export function resetEnvCache(): void {
   cached = undefined;
-}
-
-export function isImapConfigured(env: Env = getEnv()): boolean {
-  return Boolean(env.IMAP_HOST && env.IMAP_USER && env.IMAP_PASSWORD);
 }
 
 export function isUpdateCheckConfigured(env: Env = getEnv()): boolean {

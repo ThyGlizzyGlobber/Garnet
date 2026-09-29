@@ -12,7 +12,8 @@ import {
   purgeEmailEnvelopes,
   setDocumentStatus,
 } from '@/ingest/archive';
-import { handleInboundEmail } from '@/ingest/inbound';
+import { handleInboundEmail, householdBoundSince } from '@/ingest/inbound';
+import { dataPaths } from '@/lib/paths';
 import {
   aliasFromRecipient,
   billsAddress,
@@ -20,6 +21,7 @@ import {
   householdByAlias,
   replaceAlias,
   signDelivery,
+  signDeliveryV1,
   verifyDelivery,
 } from '@/lib/bills-address';
 import { parseEnv, resetEnvCache } from '@/lib/env';
@@ -105,13 +107,20 @@ function email(opts: { subject: string; body: string; pdf?: Buffer }): Buffer {
   );
 }
 
-function delivery(to: string, body: Buffer, opts: { secret?: string; ts?: number } = {}) {
+function delivery(
+  to: string,
+  body: Buffer,
+  opts: { secret?: string; ts?: number; v1?: boolean; signedFor?: string } = {},
+) {
   const ts = String(opts.ts ?? Math.floor(Date.now() / 1000));
+  const secret = opts.secret ?? SECRET;
   return {
     headers: new Headers({
       'x-inbound-to': to,
       'x-timestamp': ts,
-      'x-signature': signDelivery(opts.secret ?? SECRET, ts, body),
+      'x-signature': opts.v1
+        ? signDeliveryV1(secret, ts, body)
+        : signDelivery(secret, ts, opts.signedFor ?? to, body),
     }),
     body,
   };
@@ -157,36 +166,62 @@ describe('aliases and addresses', () => {
 describe('delivery signatures', () => {
   const body = Buffer.from('raw message');
   const now = 1_800_000_000;
-  const sig = signDelivery(SECRET, String(now), body);
+  const to = 'smith-7k2f@bills.example.com';
+  const sig = signDelivery(SECRET, String(now), to, body);
+  const headers = { timestamp: String(now), signature: sig, recipient: to };
 
-  it('accept a fresh, untampered delivery', () => {
-    expect(verifyDelivery(SECRET, { timestamp: String(now), signature: sig }, body, now)).toBe(
-      true,
-    );
+  it('accept a fresh, untampered delivery for the address it was signed for', () => {
+    expect(verifyDelivery(SECRET, headers, body, now)).toBe('v2');
   });
 
-  it('reject tampering, stale timestamps and the wrong secret', () => {
+  it('reject tampering, another address, stale timestamps and the wrong secret', () => {
+    expect(verifyDelivery(SECRET, headers, Buffer.from('raw massage'), now)).toBe(false);
     expect(
-      verifyDelivery(
-        SECRET,
-        { timestamp: String(now), signature: sig },
-        Buffer.from('raw massage'),
-        now,
-      ),
+      verifyDelivery(SECRET, { ...headers, recipient: 'jones-9p3q@bills.example.com' }, body, now),
     ).toBe(false);
-    expect(
-      verifyDelivery(SECRET, { timestamp: String(now), signature: sig }, body, now + 301),
-    ).toBe(false);
-    expect(
-      verifyDelivery('t'.repeat(40), { timestamp: String(now), signature: sig }, body, now),
-    ).toBe(false);
-    expect(verifyDelivery(SECRET, { timestamp: null, signature: sig }, body, now)).toBe(false);
+    expect(verifyDelivery(SECRET, headers, body, now + 301)).toBe(false);
+    expect(verifyDelivery('t'.repeat(40), headers, body, now)).toBe(false);
+    expect(verifyDelivery(SECRET, { ...headers, timestamp: null }, body, now)).toBe(false);
+  });
+
+  it('still recognise the older signature, which leaves the address out', () => {
+    const v1 = signDeliveryV1(SECRET, String(now), body);
+    expect(verifyDelivery(SECRET, { ...headers, signature: v1 }, body, now)).toBe('v1');
   });
 
   it('match what the Cloudflare Worker produces', async () => {
     const raw = new Uint8Array(Buffer.from('From: a\r\n\r\nhello'));
-    expect(await workerSign(SECRET, '1800000000', raw)).toBe(
-      signDelivery(SECRET, '1800000000', Buffer.from(raw)),
+    expect(await workerSign(SECRET, '1800000000', to, raw)).toBe(
+      signDelivery(SECRET, '1800000000', to, Buffer.from(raw)),
+    );
+  });
+});
+
+describe('moving to the household-bound signature', () => {
+  const file = () => path.join(dataPaths().config, 'inbound-signature.json');
+  it('accepts the older signature until the first new one, then refuses it for good', async () => {
+    fs.rmSync(file(), { force: true });
+    const hh = household('Signature House');
+    const to = billsAddress(hh, db)!;
+    const note = (n: number) => Buffer.from(`Subject: note ${n}\r\n\r\nNothing much ${n}.`);
+    // A Worker from before the change: still delivered.
+    expect((await handleInboundEmail(delivery(to, note(1), { v1: true }), { db })).status).toBe(
+      202,
+    );
+    expect(householdBoundSince()).toBeNull();
+    // Signed for another household's address, then sent to this one: refused.
+    expect(
+      (
+        await handleInboundEmail(delivery(to, note(2), { signedFor: 'x@bills.example.com' }), {
+          db,
+        })
+      ).status,
+    ).toBe(401);
+    // The updated Worker's first message switches the older signature off.
+    expect((await handleInboundEmail(delivery(to, note(3)), { db })).status).toBe(202);
+    expect(householdBoundSince()).not.toBeNull();
+    expect((await handleInboundEmail(delivery(to, note(4), { v1: true }), { db })).status).toBe(
+      401,
     );
   });
 });
@@ -215,10 +250,14 @@ describe('the Worker', () => {
     expect(
       verifyDelivery(
         SECRET,
-        { timestamp: headers['X-Timestamp']!, signature: headers['X-Signature']! },
+        {
+          timestamp: headers['X-Timestamp']!,
+          signature: headers['X-Signature']!,
+          recipient: headers['X-Inbound-To']!,
+        },
         Buffer.from(init.body as Uint8Array),
       ),
-    ).toBe(true);
+    ).toBe('v2');
     expect(m.setReject).not.toHaveBeenCalled();
     vi.unstubAllGlobals();
   });

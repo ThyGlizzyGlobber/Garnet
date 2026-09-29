@@ -48,6 +48,10 @@ export async function prepareInstall(): Promise<void> {
     runOnce('2026-09-29 adopt set-up-by', () => adoptSetUpBy()),
     'found who set up {n} service(s)',
   );
+  // The IMAP poller was removed: its progress file has nothing left to track.
+  runOnce('2026-09-29 remove mailbox poller state', () =>
+    fs.rmSync(path.join(ensureDataDirs().config, 'imap-state.json'), { force: true }),
+  );
 
   if (env.DEMO_MODE) {
     const { seedDemo } = await import('@/db/demo-seed');

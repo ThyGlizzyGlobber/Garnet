@@ -132,7 +132,7 @@ export async function requireOwner(): Promise<Member> {
   return m;
 }
 
-/** Operator of the install: software updates, mailbox polling. */
+/** Operator of the install: software updates, service types, install-wide status. */
 export async function requireOperator(): Promise<Member> {
   const s = await authState();
   if (s.kind !== 'ok') redirect(pathFor(s)!);

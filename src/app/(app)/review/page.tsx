@@ -57,7 +57,7 @@ export default async function ReviewPage({
             ? d.category === 'receipt'
             : d.category === 'other' && d.status !== 'needs_review',
   );
-  const counts = documentCounts(hh.id);
+  const counts = documentCounts(hh.id, { viewer: me.id });
   // Grouped by the month each document belongs to (its bill's month, or the
   // date printed on it), not the day it arrived. listDocuments sorts newest first.
   const groups = groupByMonth(docs, (d) => d.date);

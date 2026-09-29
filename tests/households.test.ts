@@ -232,7 +232,7 @@ describe('documents', () => {
     expect(listDocuments(A.hh.id, {}, db).map((d) => d.id)).toEqual([a.doc.id]);
     expect(getDocument(A.hh.id, b.doc.id, db)).toBeNull();
     expect(getReviewItem(A.hh.id, b.doc.id, db)).toBeNull();
-    expect(documentCounts(A.hh.id, db).unprocessed).toBe(1);
+    expect(documentCounts(A.hh.id, {}, db).unprocessed).toBe(1);
   });
 
   it('cannot be processed from another household', async () => {

@@ -14,4 +14,9 @@ export interface WorkerMessage {
 }
 declare const worker: { email(message: WorkerMessage, env: WorkerEnv): Promise<unknown> };
 export default worker;
-export function sign(secret: string, timestamp: string, raw: Uint8Array): Promise<string>;
+export function sign(
+  secret: string,
+  timestamp: string,
+  recipient: string,
+  raw: Uint8Array,
+): Promise<string>;

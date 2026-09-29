@@ -11,10 +11,7 @@ export function listHouseholds(db: Db = getDb()): Household[] {
   return db.select().from(household).orderBy(asc(household.createdAt), asc(household.id)).all();
 }
 
-/**
- * The install's first household: where the operator-level bills mailbox (IMAP)
- * delivers until households get their own bills addresses.
- */
+/** The install's first household (local scripts use it, e.g. the extraction dry-run). */
 export function primaryHousehold(db: Db = getDb()): Household | null {
   return listHouseholds(db)[0] ?? null;
 }

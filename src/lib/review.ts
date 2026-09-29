@@ -1,7 +1,9 @@
 import { and, desc, eq, isNotNull, sql } from 'drizzle-orm';
 import { getDb, type Db } from '@/db/client';
-import { bill, sourceDocument, type SourceDocument } from '@/db/schema';
+import { bill, service, serviceType, sourceDocument, type SourceDocument } from '@/db/schema';
 import type { StoredExtraction } from '@/ingest/pipeline';
+import { memberAddressBook } from '@/lib/accounts';
+import { actingMember } from '@/lib/acting-member';
 import { billDate } from '@/lib/bill-month';
 import { dayIn } from '@/lib/dates';
 import { getHousehold } from '@/lib/households';
@@ -62,8 +64,12 @@ function parse(json: string | null): StoredExtraction | null {
 }
 
 /**
- * The household's documents, newest first. A document that became (or acted
- * on) a member's personal bill is only listed for that member (see Scope).
+ * The household's documents, newest first, as the given member may see them
+ * (see Scope). A document that became (or acted on) a bill follows the bill:
+ * a member's personal bill is only theirs. One a member brought in themselves
+ * (an upload, or a forward from their own address) that isn't a bill yet stays
+ * theirs too, unless the reader took it for one of the household's bills: a
+ * personal upload never reaches the household's Inbox (owner, 2026-09-29).
  */
 export function listDocuments(
   householdId: string,
@@ -79,6 +85,37 @@ export function listDocuments(
       .all()
       .map((r) => [r.id, r.owner]),
   );
+  const serviceOwners = new Map(
+    db
+      .select({ id: service.id, owner: service.ownerMemberId })
+      .from(service)
+      .where(eq(service.householdId, householdId))
+      .all()
+      .map((r) => [r.id, r.owner]),
+  );
+  const personalTypes = new Set(
+    db
+      .select({ slug: serviceType.slug })
+      .from(serviceType)
+      .where(eq(serviceType.personalByDefault, true))
+      .all()
+      .map((r) => r.slug),
+  );
+  const book = memberAddressBook(householdId, db);
+  /** Who a document that isn't a bill yet belongs to: null for the household. */
+  const waitingOwner = (doc: SourceDocument, extraction: StoredExtraction | null) => {
+    const by = actingMember(householdId, doc, db, book);
+    if (!by) return null; // mail straight from a provider
+    const read = extraction?.result?.bill;
+    const kind = extraction?.result?.document?.kind;
+    const household =
+      !!read &&
+      (!kind || kind === 'bill') &&
+      (read.serviceId
+        ? serviceOwners.get(read.serviceId) === null
+        : !personalTypes.has(read.serviceType));
+    return household ? null : by;
+  };
   const rows = db
     .select({
       doc: sourceDocument,
@@ -127,7 +164,12 @@ export function listDocuments(
           (extraction?.billId && billOwners.has(extraction.billId) ? extraction.billId : null),
       };
     })
-    .filter((d) => inScope((d.linkedBillId && billOwners.get(d.linkedBillId)) || null, opts))
+    .filter((d) =>
+      inScope(
+        d.linkedBillId ? (billOwners.get(d.linkedBillId) ?? null) : waitingOwner(d, d.extraction),
+        opts,
+      ),
+    )
     .sort((a, b) => b.date.localeCompare(a.date) || b.receivedAt.localeCompare(a.receivedAt));
 }
 
@@ -156,16 +198,12 @@ export function getReviewItem(
   return listDocuments(householdId, { ...scope, id }, db)[0] ?? null;
 }
 
+/** How many documents of each status the member can see (the Inbox badge and counts). */
 export function documentCounts(
   householdId: string,
+  scope: Scope = {},
   db: Db = getDb(),
 ): Record<SourceDocument['status'], number> {
-  const rows = db
-    .select({ status: sourceDocument.status, n: sql<number>`count(*)` })
-    .from(sourceDocument)
-    .where(eq(sourceDocument.householdId, householdId))
-    .groupBy(sourceDocument.status)
-    .all();
   const out: Record<SourceDocument['status'], number> = {
     unprocessed: 0,
     extracted: 0,
@@ -173,7 +211,7 @@ export function documentCounts(
     ignored: 0,
     notice: 0,
   };
-  for (const r of rows) out[r.status] = r.n;
+  for (const d of listDocuments(householdId, scope, db)) out[d.status]++;
   return out;
 }
 

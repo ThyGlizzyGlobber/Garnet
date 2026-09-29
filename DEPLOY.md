@@ -67,7 +67,7 @@ by hand. Fill in only these fields; leave everything else at its default.
 |                         | Dataset Name           | `data`                                                                          |
 |                         | Enable ACL             | on, then ACL Entries → Add: ID Type **USER**, ID `568`, Access **FULL_CONTROL** |
 
-Everything else (currency, locale, bill mailbox, AI extraction) has working
+Everything else (currency, locale, bills addresses, AI reading) has working
 defaults; add `ANTHROPIC_API_KEY` etc. later with **Edit** on the app.
 
 Check it's up: `http://<nas-ip>:30080/api/health` shows `"status":"ok"` and the
@@ -148,15 +148,15 @@ five wrong PINs sign that browser out.
 
 Add these to the app (**Edit → Container Configuration → Environment Variables**):
 
-| Variable                                    | Value                                                                                                                                                      |
-| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `APP_URL`                                   | the public address, e.g. `https://home.brjlabs.com`                                                                                                        |
-| `OPERATOR_EMAILS`                           | your email (comma-separate several). Operators get Software update and Poll now, and can link a household that existed before accounts                     |
-| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google Cloud → Google Auth Platform → Clients (Web application). Redirect URI: `<APP_URL>/api/auth/google/callback`. Leave empty to hide the Google button |
-| `RESEND_API_KEY`                            | Resend API key with sending access to your verified domain                                                                                                 |
-| `EMAIL_FROM`                                | e.g. `Home Utilities <no-reply@mail.brjlabs.com>`                                                                                                          |
-| `EMAIL_LOG_ONLY`                            | `true` writes emails to the app log instead of sending (only for trying things out)                                                                        |
-| `AI_MONTHLY_LIMIT`                          | AI bill reads per household per month (default 60). Beyond it, new documents wait in the review queue until next month                                     |
+| Variable                                    | Value                                                                                                                                                                       |
+| ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `APP_URL`                                   | the public address, e.g. `https://home.brjlabs.com`                                                                                                                         |
+| `OPERATOR_EMAILS`                           | your email (comma-separate several). Operators get Software update, adding service types and the install-wide Status, and can link a household that existed before accounts |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google Cloud → Google Auth Platform → Clients (Web application). Redirect URI: `<APP_URL>/api/auth/google/callback`. Leave empty to hide the Google button                  |
+| `RESEND_API_KEY`                            | Resend API key with sending access to your verified domain                                                                                                                  |
+| `EMAIL_FROM`                                | e.g. `Home Utilities <no-reply@mail.brjlabs.com>`                                                                                                                           |
+| `EMAIL_LOG_ONLY`                            | `true` writes emails to the app log instead of sending (only for trying things out)                                                                                         |
+| `AI_MONTHLY_LIMIT`                          | AI bill reads per household per month (default 60). Beyond it, new documents wait in the review queue until next month                                                      |
 
 **First sign-in after upgrading from a version without accounts:** sign in with
 the email in `OPERATOR_EMAILS`. The Welcome screen offers to link your existing
@@ -167,8 +167,18 @@ household gets an invitation from **Members → (name) → Invite**.
 
 Each household gets its own address (Settings → **Bills email address**).
 Email Routing hands mail for those addresses to a small Email Worker
-(`deploy/email-worker/worker.js`), which signs each message and posts it to
-`<APP_URL>/api/inbound/email`. The app archives it and reads it like any other bill.
+(`deploy/email-worker/worker.js`), which signs each message together with the
+address it was sent to and posts it to `<APP_URL>/api/inbound/email`. The app
+archives it and reads it like any other bill. Because the signature covers the
+address, a captured delivery can't be replayed to another household.
+
+**Updating the Worker (2026-09-29, signature v2).** Workers pasted before
+29 Sep 2026 sign without the address. The app still accepts those until the
+first message signed the new way arrives, then refuses them for good. After
+installing the update, open the Worker in Cloudflare (Workers & Pages → the
+Worker → **Edit code**), replace its code with the current
+`deploy/email-worker/worker.js`, **Deploy**, and forward a test bill. Status →
+Bills addresses then shows "Signed per household" with the date.
 
 **How households use it (prototype, 2026-09-28):** members forward each bill
 from their own inbox to the household address as it arrives. Nobody changes the
@@ -356,7 +366,7 @@ app with an icon and keeps the last-loaded pages available offline.
                                    when they aren't about a bill)
 /data/originals/<id>.<ext>         a scan exactly as it arrived, once it was turned upright
 /data/config/upgrades.json         one-off upgrade steps already run on this install
-/data/config/imap-state.json       last processed mailbox UID
+/data/config/inbound-signature.json  when the email Worker started signing the address
 /data/config/update-request.json   present only while an update is queued
 /data/config/update-last.json      the last update request (shown in Settings)
 /data/config/demo-off.json         present once someone left demo mode

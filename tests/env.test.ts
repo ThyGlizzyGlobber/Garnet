@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isImapConfigured, isLlmConfigured, parseEnv } from '@/lib/env';
+import { isEmailConfigured, isLlmConfigured, parseEnv } from '@/lib/env';
 
 const base = { AUTH_SECRET: 'x'.repeat(32) };
 
@@ -19,16 +19,16 @@ describe('parseEnv', () => {
   });
 
   it('treats empty strings as unset', () => {
-    const env = parseEnv({ ...base, IMAP_USER: '', ANTHROPIC_API_KEY: '' });
-    expect(env.IMAP_USER).toBeUndefined();
-    expect(isImapConfigured(env)).toBe(false);
+    const env = parseEnv({ ...base, RESEND_API_KEY: '', ANTHROPIC_API_KEY: '' });
+    expect(env.RESEND_API_KEY).toBeUndefined();
+    expect(isEmailConfigured(env)).toBe(false);
     expect(isLlmConfigured(env)).toBe(false);
   });
 
   it('parses booleans and numbers from strings', () => {
-    const env = parseEnv({ ...base, DEMO_MODE: 'true', IMAP_SECURE: '0', PORT: '8080' });
+    const env = parseEnv({ ...base, DEMO_MODE: 'true', EMAIL_LOG_ONLY: '0', PORT: '8080' });
     expect(env.DEMO_MODE).toBe(true);
-    expect(env.IMAP_SECURE).toBe(false);
+    expect(env.EMAIL_LOG_ONLY).toBe(false);
     expect(env.PORT).toBe(8080);
   });
 

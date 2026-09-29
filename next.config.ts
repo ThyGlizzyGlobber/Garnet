@@ -12,7 +12,6 @@ const nextConfig: NextConfig = {
     'pdf-parse',
     'pdfjs-dist',
     '@napi-rs/canvas',
-    'imapflow',
     'mailparser',
   ],
   poweredByHeader: false,

@@ -177,7 +177,9 @@ describe('the inbox', () => {
       db,
     );
     // The bill is gone: it stays its own page.
-    expect(listDocuments(hh.id, {}, db).find((d) => d.id === receipt.id)?.linkedBillId).toBeNull();
+    expect(
+      listDocuments(hh.id, { everyone: true }, db).find((d) => d.id === receipt.id)?.linkedBillId,
+    ).toBeNull();
   });
 
   it('says what happened in plain words, never how the reader works', () => {

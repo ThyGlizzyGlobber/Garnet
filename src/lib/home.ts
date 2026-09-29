@@ -132,7 +132,7 @@ export function homeView(
       plans: listBills(hh.id, { viewer: me.id }, db)
         .filter((b) => planUndecided(b) && !b.paidToProviderAt && canChoosePlan(me, b))
         .map((b) => ({ bill: b, fullStillOpen: fullPaymentOpen(b, today) })),
-      waitingInInbox: documentCounts(hh.id, db).needs_review,
+      waitingInInbox: documentCounts(hh.id, { viewer: me.id }, db).needs_review,
       myReminders: shared ? summariseReminders(remindersFor(hh.id, me.id, today, 7, db)) : null,
     },
     notices: {

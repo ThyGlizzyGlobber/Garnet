@@ -30,6 +30,7 @@ import {
   ownershipQuestions,
 } from '@/lib/ownership';
 import { personalSummary } from '@/lib/personal';
+import { documentCounts, getReviewItem, listDocuments } from '@/lib/review';
 import { createService, listServices } from '@/lib/services';
 import { dashboardSummary, monthlySeries } from '@/lib/stats';
 import { scriptAi, type AiOutput } from './helpers/fake-ai';
@@ -572,5 +573,81 @@ describe('who is asked about services an update marked for asking', () => {
     expect(adoptSetUpBy(db)).toBeGreaterThanOrEqual(1);
     expect(ownershipQuestions(hh.id, jo, db)).toEqual([]);
     expect(ownershipQuestions(hh.id, sam, db).map((q) => q.service.id)).toEqual([serviceId]);
+  });
+});
+
+describe('the Inbox and what a member brought in', () => {
+  const reading = (serviceType: string, provider: string): AiOutput => ({
+    document_type: 'bill',
+    provider,
+    document_date: '2026-09-01',
+    service_type: serviceType,
+    bill: {
+      amount: 212.5,
+      currency: 'AUD',
+      tax_amount: null,
+      tax_label: null,
+      period_start: '2026-09-01',
+      period_end: '2027-08-31',
+      issue_date: '2026-09-01',
+      due_date: '2026-09-30',
+      usage_quantity: null,
+      usage_unit: null,
+      invoice_number: null,
+      account_number: null,
+      auto_pay: false,
+      previous_payment: null,
+      metrics: [],
+      instalments: null,
+    },
+    payment: null,
+    page_rotation: [],
+    // Not sure enough to become a bill: it waits in the Inbox.
+    confidence: 0.5,
+    notes: null,
+  });
+
+  it('keeps a member’s own waiting uploads out of everyone else’s Inbox', async () => {
+    const { hh, jo, sam } = setup();
+    const upload = async (text: string, memberId: string | null) => {
+      const doc = archiveDocument(
+        hh.id,
+        {
+          kind: memberId ? 'upload' : 'email',
+          buffer: Buffer.from(`${text} ${Math.random()}`),
+          originalFilename: 'doc.txt',
+          mimeType: 'text/plain',
+          memberId,
+          ...(memberId ? {} : { senderVerified: true, emailFrom: 'bills@provider.example' }),
+        },
+        db,
+      ).doc;
+      await processDocument(hh.id, doc.id, db);
+      return doc.id;
+    };
+    // Sam's car rego, read but not surely: Sam's alone.
+    scriptAi(reading('vehicle_registration', 'Example Roads'));
+    const rego = await upload('A vehicle registration renewal notice for a car.', sam.id);
+    // Something the reader couldn't make out: Sam's alone too (it can't be told apart).
+    scriptAi(null);
+    const unreadable = await upload('A scribbled note the reader could make nothing of.', sam.id);
+    // A household bill Sam uploaded, not read surely: the admins can help with it.
+    scriptAi(reading('water', 'Example Water'));
+    const water = await upload('A water bill for the whole house, quarterly charges.', sam.id);
+    // Mail straight from a provider: the household's, as before.
+    const fromProvider = await upload('An email from a provider that nobody sent.', null);
+
+    const ids = (viewer: string) =>
+      listDocuments(hh.id, { viewer }, db)
+        .map((d) => d.id)
+        .sort();
+    expect(ids(sam.id)).toEqual([rego, unreadable, water, fromProvider].sort());
+    expect(ids(jo.id)).toEqual([water, fromProvider].sort());
+    expect(documentCounts(hh.id, { viewer: jo.id }, db).needs_review).toBe(
+      documentCounts(hh.id, { viewer: sam.id }, db).needs_review - 2,
+    );
+    // Opening it by id is refused as well (the file route and review page use this).
+    expect(getReviewItem(hh.id, rego, db, { viewer: jo.id })).toBeNull();
+    expect(getReviewItem(hh.id, rego, db, { viewer: sam.id })?.id).toBe(rego);
   });
 });

@@ -80,22 +80,48 @@ export function replaceAlias(hh: Household, db: Db = getDb()): string {
 }
 
 // ─── Worker → app signature ──────────────────────────────────────────────────
+//
+// v2 ("v2=<hex>"): HMAC-SHA256 over "v2.<timestamp>.<recipient>." followed by the
+// raw message, so a delivery can't be replayed to another household's address.
+// v1 ("sha256=<hex>", timestamp and message only) is what Workers deployed
+// before 2026-09-29 send; src/ingest/inbound.ts accepts it only until the first
+// v2 delivery arrives.
 
 /** Accept deliveries signed within five minutes either side of now. */
 const SIGNATURE_WINDOW_S = 300;
 
-export function signDelivery(secret: string, timestamp: string, body: Buffer): string {
+export function signDelivery(
+  secret: string,
+  timestamp: string,
+  recipient: string,
+  body: Buffer,
+): string {
+  const mac = createHmac('sha256', secret)
+    .update(`v2.${timestamp}.${recipient}.`)
+    .update(body)
+    .digest('hex');
+  return `v2=${mac}`;
+}
+
+/** The older signature, without the recipient (tests and the v1 check only). */
+export function signDeliveryV1(secret: string, timestamp: string, body: Buffer): string {
   return `sha256=${createHmac('sha256', secret).update(`${timestamp}.`).update(body).digest('hex')}`;
 }
 
+/** Which signature a genuine, fresh delivery carries, or false. */
 export function verifyDelivery(
   secret: string,
-  headers: { timestamp: string | null; signature: string | null },
+  headers: { timestamp: string | null; signature: string | null; recipient: string | null },
   body: Buffer,
   nowS = Math.floor(Date.now() / 1000),
-): boolean {
+): 'v2' | 'v1' | false {
   const ts = Number(headers.timestamp);
-  if (!headers.signature || !Number.isInteger(ts)) return false;
+  const sig = headers.signature;
+  if (!sig || !Number.isInteger(ts)) return false;
   if (Math.abs(nowS - ts) > SIGNATURE_WINDOW_S) return false;
-  return safeEqual(signDelivery(secret, String(ts), body), headers.signature);
+  if (sig.startsWith('v2='))
+    return safeEqual(signDelivery(secret, String(ts), headers.recipient ?? '', body), sig)
+      ? 'v2'
+      : false;
+  return safeEqual(signDeliveryV1(secret, String(ts), body), sig) ? 'v1' : false;
 }

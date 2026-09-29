@@ -8,7 +8,7 @@ import { approveDocument } from '@/ingest/approve';
 import { archiveDocument, getDocument, setDocumentStatus } from '@/ingest/archive';
 import { processDocument } from '@/ingest/pipeline';
 import { errorText, fieldErrors, str, zodToState } from '@/lib/actions';
-import { requireMember, requireOperator } from '@/lib/auth/session';
+import { requireMember } from '@/lib/auth/session';
 import { isIsoDate } from '@/lib/dates';
 import { parseMoneyToMinor } from '@/lib/format';
 import { getHousehold } from '@/lib/households';
@@ -16,7 +16,6 @@ import { rateLimit } from '@/lib/rate-limit';
 import { getReviewItem, listDocuments } from '@/lib/review';
 import { visibleTo } from '@/lib/scope';
 import { getService } from '@/lib/services';
-import { pollNow } from '@/worker';
 
 /** Uploads a household may make per hour (sign-up is open; files are kept for good). */
 const UPLOADS_PER_HOUR = 60;
@@ -151,14 +150,6 @@ export async function reprocessAllAction(): Promise<void> {
   revalidatePath('/review');
   revalidatePath('/bills');
   redirect('/review');
-}
-
-export async function pollNowAction(): Promise<void> {
-  await requireOperator();
-  await pollNow();
-  revalidatePath('/status');
-  revalidatePath('/review');
-  redirect('/status');
 }
 
 export async function uploadBillAction(_prev: ActionState, fd: FormData): Promise<ActionState> {

@@ -1,8 +1,11 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import { getDb, type Db } from '@/db/client';
 import { aliasFromRecipient, householdByAlias, verifyDelivery } from '@/lib/bills-address';
 import type { DNSResolver } from 'mailauth';
 import { checkSender } from '@/lib/sender-auth';
 import { getEnv, isInboundEmailConfigured } from '@/lib/env';
+import { ensureDataDirs } from '@/lib/paths';
 import { rateLimit } from '@/lib/rate-limit';
 import { archiveEmail } from './email';
 import { processDocument } from './pipeline';
@@ -35,14 +38,23 @@ export async function handleInboundEmail(
   if (!isInboundEmailConfigured(env))
     return { status: 503, body: { error: 'inbound email is off' } };
   if (req.body.length > INBOUND_MAX_BYTES) return { status: 413, body: { error: 'too large' } };
+  const recipient = req.headers.get('x-inbound-to') ?? '';
   const signed = verifyDelivery(
     env.INBOUND_EMAIL_SECRET!,
-    { timestamp: req.headers.get('x-timestamp'), signature: req.headers.get('x-signature') },
+    {
+      timestamp: req.headers.get('x-timestamp'),
+      signature: req.headers.get('x-signature'),
+      recipient,
+    },
     req.body,
     opts.nowS,
   );
   if (!signed) return { status: 401, body: { error: 'bad signature' } };
-  const alias = aliasFromRecipient(req.headers.get('x-inbound-to') ?? '', env);
+  // Once the Worker signs the recipient too, the older signature is refused for good.
+  if (signed === 'v1' && householdBoundSince())
+    return { status: 401, body: { error: 'signature version retired' } };
+  if (signed === 'v2' && !householdBoundSince()) recordHouseholdBound();
+  const alias = aliasFromRecipient(recipient, env);
   const hh = alias ? householdByAlias(alias, db) : null;
   if (!hh) return { status: 404, body: { error: 'unknown address' } };
   if (!rateLimit(`inbound:${hh.id}`, env.INBOUND_MAX_PER_HOUR, 3_600_000))
@@ -67,4 +79,29 @@ export async function handleInboundEmail(
   if (opts.waitForProcessing) await work;
   console.log(`[inbound] ${hh.id}: archived ${archived}, reading ${toProcess.length}`);
   return { status: 202, body: { archived, reading: toProcess.length } };
+}
+
+// ─── Signature version ──────────────────────────────────────────────────────
+
+const SIGNATURE_FILE = 'inbound-signature.json';
+
+/**
+ * When the first delivery signed with the recipient (v2) arrived, or null while
+ * the Worker still sends the older signature. Recorded in the data directory
+ * so it survives restarts and updates.
+ */
+export function householdBoundSince(): string | null {
+  try {
+    const f = path.join(ensureDataDirs().config, SIGNATURE_FILE);
+    return (JSON.parse(fs.readFileSync(f, 'utf8')) as { v2Since?: string }).v2Since ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function recordHouseholdBound(): void {
+  fs.writeFileSync(
+    path.join(ensureDataDirs().config, SIGNATURE_FILE),
+    JSON.stringify({ v2Since: new Date().toISOString() }, null, 2),
+  );
 }

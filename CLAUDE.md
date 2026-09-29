@@ -28,7 +28,8 @@ log below; this section is the quick orientation.
   (see the decisions log, 2026-09-29) is committed locally and not yet pushed. Households: the owner's Smith Household (real bills, a financial year fed in, the AI cap
   lifted for the operator's household) and the owner's aunt's.
 - **Email in.** Cloudflare Email Routing on brjlabs.com, apex catch-all → Worker `home-utilities-bills` →
-  `/api/inbound/email` (HMAC). Households forward bills to `{alias}@brjlabs.com` (forward-only; nobody changes
+  `/api/inbound/email` (HMAC over the recipient, timestamp and message; the Worker in Cloudflare must be updated to
+  the 2026-09-29 `deploy/email-worker/worker.js` — Status → Bills addresses says when it is). Households forward bills to `{alias}@brjlabs.com` (forward-only; nobody changes
   provider emails). DMARC `p=quarantine`. The owner's LAN intercepts DNS: check records via DNS-over-HTTPS, not dig.
 - **Reading bills.** The Anthropic AI reader is the only extractor (`ANTHROPIC_API_KEY` set on the NAS, a
   workspace key; `claude-opus-5`), one document at a time, scans/photos sent as files, every figure kept
@@ -49,7 +50,7 @@ log below; this section is the quick orientation.
   gives the fictional Riverside House demo ("Try the demo household", Alex, PIN 1234). The local `.env` has no
   Anthropic, Resend or Google keys, so those paths are exercised by tests with stand-ins (`tests/setup.ts` fakes the AI).
   Weather does call the real Open-Meteo API when a demo household has a postcode.
-- **Verified.** `npm run check` (lint, types, formatting, knip dead-code check, 376 tests), production build,
+- **Verified.** `npm run check` (lint, types, formatting, knip dead-code check, 379 tests), production build,
   every page of the demo in the browser after the cleanup, and live on the NAS up to `ac34d58`: inbound email,
   forwarding, updates, AI reading with a real key.
 - **Not yet verified live.** The cleanup; Google sign-in; the regional figures
@@ -59,11 +60,9 @@ log below; this section is the quick orientation.
   type and brand mark; Open-Meteo commercial plan (`OPEN_METEO_API_KEY`) before charging anyone; the scope's §7
   privacy/legal review before non-family households (sharing is on by default by the owner's choice — see the
   decisions log); the `SettlementAdapter` in the hard constraints was never built (shares are tracked in
-  `src/lib`): add the thin interface or reword the constraint; the IMAP poller is legacy (bills arrive through
-  the bills-address Worker) and could be retired; the Worker's HMAC doesn't cover the recipient header (changing
-  it needs the Worker redeployed in step); documents waiting in the Inbox are visible to every member even when
-  a member uploaded them for a personal service; lib-level error messages and stored Unusual notes are still
-  English text rather than message keys.
+  `src/lib`): add the thin interface or reword the constraint; paste the new email Worker into Cloudflare after
+  installing the 2026-09-29 update; lib-level error messages and stored Unusual notes are still English text
+  rather than message keys.
 - **Likely next steps.** The UI/UX redesign: every screen reads its numbers from a view function in `src/lib`
   (`home.ts`, `service-overview.ts`, `status.ts`, `personal.ts`) and draws with the primitives in
   `src/components/ui` (Tile, Figure, Banner, Chip, Swatch, Avatar, IconDisc…), so a redesign swaps markup and
@@ -125,7 +124,7 @@ log below; this section is the quick orientation.
 Next.js 16.3.6 (App Router, Turbopack; pinned, see the decisions log) · TypeScript 5 strict · Tailwind v4 ·
 Recharts · Drizzle ORM + better-sqlite3 · next-intl · Vitest · ESLint 9 + Prettier · knip ·
 iron-session + bcryptjs · mailparser + mailauth (DKIM) + pdf-parse + pdf-lib (turning pages) + sharp (photos) ·
-imapflow (optional operator mailbox) · @anthropic-ai/sdk · Resend (email out, HTTP API) · Open-Meteo (weather) ·
+@anthropic-ai/sdk · Resend (email out, HTTP API) · Open-Meteo (weather) ·
 Docker multi-stage on node:22-bookworm-slim with Next standalone output, built by GitHub Actions and published to GHCR (`deploy/`).
 
 ## Commands
@@ -161,11 +160,11 @@ src/ingest/         pipeline.ts (read a document → bill or Inbox), trust.ts (w
                     document speaks for), payments.ts (receipts, notices, hints),
                     approve.ts (Inbox approval), archive.ts (inbox/ writer), inbound.ts
                     (bills-address Worker), email.ts, scan.ts, rotate.ts, text/,
-                    extractors/ (types, llm/anthropic), imap/ (optional mailbox)
+                    extractors/ (types, llm/anthropic)
 src/weather/        WeatherProvider interface + Open-Meteo
 src/worker/         startup.ts (migrations, one-off steps, demo) and the timers:
                     reminders/auto-pay/refiling (15 min), weather (30 min),
-                    area figures (6 h), optional mailbox poll
+                    area figures (6 h)
 src/i18n/           next-intl request config
 drizzle/            generated SQL migrations (committed)
 messages/           next-intl message files (en.json)
@@ -362,3 +361,6 @@ Append entries as `- YYYY-MM-DD — decision — why`. Do not rewrite old entrie
 - 2026-09-29 — One-off startup steps run once per install (`src/lib/upgrades.ts`, recorded in `config/upgrades.json`, listed in `src/worker/startup.ts`): the legacy demo flag (now only when exactly one household exists — a stray `demo.json` used to mark every household demo), the two purges, the Unusual-rule re-check (replacing `anomaly-rule.json`) and adopting who set services up. The boot-time refile is gone (the worker files a minute after start). `src/instrumentation.ts` only calls `prepareInstall()` and starts the worker. Pre-migration database copies are pruned to the latest five.
 - 2026-09-29 — Pipeline split for readability: `src/ingest/trust.ts` holds the one sender-trust rule (`standingOf`: household / member / signed / unsigned; `trustsSender`, `mayActFor`), which the bill path, notices, receipts and auto-set-up each wrote out separately; `src/ingest/payments.ts` holds receipts, provider notices and invoice payment hints; `src/ingest/approve.ts` the Inbox approval (moved out of its server action). Provider names match by one rule everywhere (`sameProvider`, `src/lib/provider-match.ts`); `matchService` used a looser substring test with no minimum length. Shared maths (`costPerDay`, `mean`, `median`, "the same time last year", the 2% "about the same" band) lives in `src/lib/averages.ts`. The member statement lists every share of the year (it stopped at the latest 20) and `fy=<start year>` / `fy=all` work; the bills spreadsheet and statement are built in `src/lib/export.ts`.
 - 2026-09-29 — Ready for the redesign: each screen reads its numbers from a view function (`homeView`/`wallView` in `src/lib/home.ts`, `serviceOverview`, `statusView`, `personalSummary`, `billFiles`) and lays them out with shared primitives (`Tile`, `TileHeader`, `Figure`, `Banner`, `Chip`, `DownloadButton` in `components/ui`; `Swatch`, `ColourBar`, `Avatar`, `IconDisc` in `components/ui/colour.tsx`; `CopyButton`/`CopyField`; `SearchBar`). Home's tiles live in `src/app/(app)/_home/`, the bill page's parts beside it. Formatting is in `format.ts` and bound in `pageContext()` (month names, percentages, date-times, quantities, whole-dollar amounts, rates). Colours go through `colourCss`/`tintStyle`/`DEFAULT_COLOUR` (`palette.ts`) and a `--color-on-colour` token; charts default to the accent token; the Sparkline is plain SVG (no Recharts on /services; each colour gets its own gradient, they used to share the first tile's). The glass, lift, hatch and glow-disc classes moved into Tailwind's components layer so utilities on the same element win — the accent, overdue and warning tints written on tiles had never shown. Admin checks go through `isAdmin` (`src/lib/roles.ts`); plan rules through `canChoosePlan`/`planLock`. Server-action errors are message keys (`errors` in en.json), the split/no-split message pairs are ICU selects, the hard-coded "above August" in Home's greeting is "above last month", and `tests/messages.test.ts` checks every message key the code uses exists (the Bills whose-filter showed a raw key). Phones: the ring tiles (Home, Mine, Ledger) stack the ring above the figure when there's no room, and the header's household name truncates; no page scrolls sideways at 375 px (Home did by 23 px).
+- 2026-09-29 — Owner's answers to the audit's open items. **IMAP poller removed** (bills arrive through the household bills addresses and uploads): `src/ingest/imap/`, `ingestEmail`, the Status mailbox card and "Poll now", the `IMAP_*` settings and the `imapflow` dependency are gone; a run-once step deletes `config/imap-state.json`. Supersedes the 2026-09-23/24 IMAP entries. **Next.js stays pinned at 16.3.6.** The `SettlementAdapter` question is still open.
+- 2026-09-29 — Bills-address deliveries are signed per household (owner): the Worker's HMAC now covers "v2.<timestamp>.<recipient>." plus the message (`X-Signature: v2=…`), so a captured delivery can't be replayed to another household's address. Workers pasted earlier send the older `sha256=` signature, which the app accepts only until the first v2 delivery arrives (recorded in `config/inbound-signature.json`), then refuses for good — installing the app first and pasting the new Worker after loses nothing. Status → Bills addresses (operators) shows which signature is in use. Supersedes the 2026-09-27 signature format.
+- 2026-09-29 — Personal uploads stay out of the household's Inbox (owner): a document a member brought in (an upload, or a signed forward from their own address) that isn't a bill yet is listed only for that member, unless the reader took it for one of the household's bills (matched a household service, or a type that isn't personal by default) — then admins can help with it as before. Unreadable ones stay the member's (they can't be told apart). Mail straight from a provider is the household's. The Inbox badge, the Home "waiting" banner, the Inbox and Status counts, the document page and the file route all follow the same rule (`listDocuments` in `src/lib/review.ts`; `documentCounts` now takes the viewer).

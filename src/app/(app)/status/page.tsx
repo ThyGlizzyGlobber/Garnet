@@ -1,15 +1,13 @@
 import { getTranslations } from 'next-intl/server';
 import { Badge, Card, PageHeader } from '@/components/ui';
-import { InlineAction } from '@/components/ui/form';
 import { viewerIsOperator } from '@/lib/auth/session';
 import { pageContext } from '@/lib/context';
 import { statusView } from '@/lib/status';
-import { pollNowAction } from '../review/actions';
 
 export default async function StatusPage() {
-  const { hh, dateTime, pct } = await pageContext();
+  const { hh, me, dateTime, pct } = await pageContext();
   const t = await getTranslations('status');
-  const { household: h, install } = statusView(hh.id, await viewerIsOperator());
+  const { household: h, install } = statusView(hh.id, me.id, await viewerIsOperator());
   const when = (iso: string | null | undefined) => dateTime(iso) || '—';
 
   return (
@@ -73,58 +71,32 @@ export default async function StatusPage() {
         <>
           <Card className="mt-4">
             <div className="flex items-start justify-between gap-3">
-              <div>
-                <h2 className="font-semibold">{t('mailbox.title')}</h2>
-                <p className="text-xs text-fg-muted">
-                  {install.mailbox.account ?? t('mailbox.notConfigured')}
-                </p>
-              </div>
+              <h2 className="font-semibold">{t('billsAddresses.title')}</h2>
               <Badge
                 tone={
-                  ({ off: 'neutral', error: 'danger', on: 'success', paused: 'warning' } as const)[
-                    install.mailbox.state
-                  ]
+                  !install.billsAddresses.configured
+                    ? 'neutral'
+                    : install.billsAddresses.householdBoundSince
+                      ? 'success'
+                      : 'warning'
                 }
               >
-                {t(`mailbox.${install.mailbox.state}`)}
+                {!install.billsAddresses.configured
+                  ? t('billsAddresses.off')
+                  : install.billsAddresses.householdBoundSince
+                    ? t('billsAddresses.bound')
+                    : t('billsAddresses.olderWorker')}
               </Badge>
             </div>
-            <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-              <dt className="text-fg-muted">{t('mailbox.interval')}</dt>
-              <dd>
-                {install.mailbox.intervalSeconds > 0
-                  ? t('mailbox.everySeconds', { seconds: install.mailbox.intervalSeconds })
-                  : t('mailbox.disabled')}
-              </dd>
-              <dt className="text-fg-muted">{t('mailbox.lastPoll')}</dt>
-              <dd>{when(install.mailbox.lastPollAt)}</dd>
-              <dt className="text-fg-muted">{t('mailbox.nextPoll')}</dt>
-              <dd>{when(install.mailbox.nextPollAt)}</dd>
-              <dt className="text-fg-muted">{t('mailbox.lastResult')}</dt>
-              <dd>
-                {install.mailbox.lastPoll
-                  ? (install.mailbox.lastPoll.error ??
-                    t('mailbox.result', {
-                      messages: install.mailbox.lastPoll.messagesSeen,
-                      docs: install.mailbox.lastPoll.documentsArchived,
-                    }))
-                  : '—'}
-              </dd>
-              <dt className="text-fg-muted">{t('mailbox.polls')}</dt>
-              <dd>
-                {t('mailbox.pollsValue', {
-                  polls: install.mailbox.pollCount,
-                  errors: install.mailbox.errorCount,
-                })}
-              </dd>
-              <dt className="text-fg-muted">{t('mailbox.lastUid')}</dt>
-              <dd>{install.mailbox.lastUid}</dd>
-            </dl>
-            {install.mailbox.configured && (
-              <div className="mt-4">
-                <InlineAction action={pollNowAction} label={t('mailbox.pollNow')} />
-              </div>
-            )}
+            <p className="mt-2 text-xs text-fg-muted">
+              {!install.billsAddresses.configured
+                ? t('billsAddresses.offHint')
+                : install.billsAddresses.householdBoundSince
+                  ? t('billsAddresses.boundHint', {
+                      date: when(install.billsAddresses.householdBoundSince),
+                    })
+                  : t('billsAddresses.olderWorkerHint')}
+            </p>
           </Card>
 
           <Card className="mt-4">

@@ -2,8 +2,9 @@
  * Cloudflare Email Worker for Home Utilities household bills addresses.
  *
  * Email Routing hands every message for the bills addresses to this Worker.
- * It signs the raw message and posts it to the app, which works out which
- * household it belongs to from the recipient.
+ * It signs the recipient and the raw message together and posts them to the
+ * app, which works out which household it belongs to from the recipient (the
+ * signature covers it, so a delivery can't be replayed to another household).
  *
  * Variables (Worker → Settings → Variables and Secrets):
  *   APP_INBOUND_URL      https://<your app>/api/inbound/email
@@ -26,7 +27,7 @@ const worker = {
           'X-Inbound-To': message.to,
           'X-Inbound-From': message.from,
           'X-Timestamp': timestamp,
-          'X-Signature': await sign(env.INBOUND_EMAIL_SECRET, timestamp, raw),
+          'X-Signature': await sign(env.INBOUND_EMAIL_SECRET, timestamp, message.to, raw),
         },
         body: raw,
       });
@@ -46,8 +47,8 @@ const worker = {
 
 export default worker;
 
-/** "sha256=" + hex HMAC-SHA256 over "<timestamp>." followed by the raw message. */
-export async function sign(secret, timestamp, raw) {
+/** "v2=" + hex HMAC-SHA256 over "v2.<timestamp>.<recipient>." followed by the raw message. */
+export async function sign(secret, timestamp, recipient, raw) {
   const enc = new TextEncoder();
   const key = await crypto.subtle.importKey(
     'raw',
@@ -56,10 +57,10 @@ export async function sign(secret, timestamp, raw) {
     false,
     ['sign'],
   );
-  const prefix = enc.encode(`${timestamp}.`);
+  const prefix = enc.encode(`v2.${timestamp}.${recipient}.`);
   const data = new Uint8Array(prefix.length + raw.length);
   data.set(prefix);
   data.set(raw, prefix.length);
   const mac = new Uint8Array(await crypto.subtle.sign('HMAC', key, data));
-  return `sha256=${Array.from(mac, (b) => b.toString(16).padStart(2, '0')).join('')}`;
+  return `v2=${Array.from(mac, (b) => b.toString(16).padStart(2, '0')).join('')}`;
 }

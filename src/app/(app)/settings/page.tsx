@@ -10,7 +10,7 @@ import { BillsAddressCard } from '@/components/app/bills-address';
 import { viewerIsOperator } from '@/lib/auth/session';
 import { billsAddress } from '@/lib/bills-address';
 import { pageContext } from '@/lib/context';
-import { getEnv, isImapConfigured, isLlmConfigured } from '@/lib/env';
+import { getEnv, isInboundEmailConfigured, isLlmConfigured } from '@/lib/env';
 import { SettingsForm } from './settings-form';
 import { InlineAction } from '@/components/ui/form';
 import { getTheme, THEMES } from '@/lib/theme';
@@ -303,9 +303,11 @@ export default async function SettingsPage() {
                 <>
                   <dt className="text-fg-muted">{t('system.dataDir')}</dt>
                   <dd className="truncate font-mono text-xs">{env.DATA_DIR}</dd>
-                  <dt className="text-fg-muted">{t('system.mailbox')}</dt>
+                  <dt className="text-fg-muted">{t('system.billsAddresses')}</dt>
                   <dd>
-                    {isImapConfigured(env) ? t('system.configured') : t('system.notConfigured')}
+                    {isInboundEmailConfigured(env)
+                      ? t('system.configured')
+                      : t('system.notConfigured')}
                   </dd>
                 </>
               )}
