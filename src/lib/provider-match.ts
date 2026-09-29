@@ -101,6 +101,7 @@ const GENERIC_WORDS = new Set([
   'services',
   'phone',
   'insurance',
+  'health',
   'council',
   'city',
   'shire',

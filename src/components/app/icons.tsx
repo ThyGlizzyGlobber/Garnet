@@ -26,13 +26,6 @@ export function Icon({ name, ...props }: { name: string } & ComponentProps<'svg'
           <path d="M9 7h1M14 7h1M9 11h1M14 11h1M9 15h1M14 15h1M10 21v-3h4v3" />
         </svg>
       );
-    case 'shield':
-      return (
-        <svg {...base} {...props}>
-          <path d="M12 3 5 6v5c0 4.5 3 8.5 7 10 4-1.5 7-5.5 7-10V6l-7-3z" />
-          <path d="m9 12 2 2 4-4" />
-        </svg>
-      );
     case 'phone':
       return (
         <svg {...base} {...props}>
@@ -54,6 +47,28 @@ export function Icon({ name, ...props }: { name: string } & ComponentProps<'svg'
         <svg {...base} {...props}>
           <rect x="3" y="5" width="18" height="14" rx="2.5" />
           <path d="m10 9 5 3-5 3V9z" />
+        </svg>
+      );
+    case 'heart':
+      return (
+        <svg {...base} {...props}>
+          <path d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.2a4.3 4.3 0 0 1 7.5 2.6C19.5 15.4 12 20 12 20z" />
+          <path d="M7.5 12h2.5l1.2-2 1.6 4 1.2-2h2.5" />
+        </svg>
+      );
+    case 'sofa':
+      return (
+        <svg {...base} {...props}>
+          <path d="M5 11V8a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v3" />
+          <path d="M3 13a2 2 0 0 1 4 0v2h10v-2a2 2 0 0 1 4 0v4a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-4zM6 18v2M18 18v2" />
+        </svg>
+      );
+    case 'house-shield':
+      return (
+        <svg {...base} {...props}>
+          <path d="M3 11 12 4l9 7" />
+          <path d="M5.5 9.5V20h13V9.5" />
+          <path d="M12 11.5l-3 1.2v2.1c0 1.8 1.3 3.2 3 3.7 1.7-.5 3-1.9 3-3.7v-2.1l-3-1.2z" />
         </svg>
       );
     case 'pin':

@@ -137,7 +137,7 @@ describe('0002_multi_household', () => {
   });
 });
 
-describe('0018 instalments, 0019 service types and 0020 service names', () => {
+describe('0018 instalments, 0019–0021 service types and names', () => {
   it('re-file council and insurance services and keep existing shares whole', () => {
     const d = fs.mkdtempSync(path.join(os.tmpdir(), 'hud-migrate-19-'));
     const upTo17 = migrationsUpTo('0017_regional');
@@ -157,7 +157,10 @@ describe('0018 instalments, 0019 service types and 0020 service names', () => {
           ('S3', 'H1', 'other', 'Home & contents', 'Example Insurance', '${t}', '${t}'),
           ('S4', 'H1', 'other', 'Gym', 'Example Fitness', '${t}', '${t}'),
           ('S5', 'H1', 'internet', 'Internet', 'Example Broadband', '${t}', '${t}'),
-          ('S6', 'H1', 'other', 'Other', 'City of Greater Example', '${t}', '${t}');
+          ('S6', 'H1', 'other', 'Other', 'City of Greater Example', '${t}', '${t}'),
+          ('S7', 'H1', 'other', 'Hospital & extras', 'Example Health Insurance', '${t}', '${t}'),
+          ('S8', 'H1', 'other', 'Contents', 'Example Insurance', '${t}', '${t}'),
+          ('S9', 'H1', 'other', 'Insurance', 'Example Mutual', '${t}', '${t}');
         INSERT INTO bill (id, household_id, service_id, amount_minor, currency, period_start, period_end, due_date, source, created_at, updated_at)
           VALUES ('B1', 'H1', 'S5', 12900, 'AUD', '2026-09-01', '2026-09-30', '2026-09-15', 'manual', '${t}', '${t}');
         INSERT INTO share (id, household_id, bill_id, member_id, amount_minor, currency, basis_weight, basis_days, period_days, created_at, updated_at)
@@ -171,11 +174,18 @@ describe('0018 instalments, 0019 service types and 0020 service names', () => {
       expect(types).toEqual([
         { id: 'S1', name: 'Rates', type_slug: 'council_rates' },
         { id: 'S2', name: 'Council', type_slug: 'council_rates' },
-        { id: 'S3', name: 'Home & contents', type_slug: 'insurance' },
+        // 0021: insurance splits into health, contents and building (home & contents → building).
+        { id: 'S3', name: 'Home & contents', type_slug: 'building_insurance' },
         { id: 'S4', name: 'Gym', type_slug: 'other' },
         { id: 'S5', name: 'Internet', type_slug: 'internet' },
         { id: 'S6', name: 'Council rates', type_slug: 'council_rates' },
+        { id: 'S7', name: 'Hospital & extras', type_slug: 'health_insurance' },
+        { id: 'S8', name: 'Contents', type_slug: 'contents_insurance' },
+        { id: 'S9', name: 'Insurance', type_slug: 'other' },
       ]);
+      expect(after.prepare("SELECT slug FROM service_type WHERE slug = 'insurance'").get()).toBe(
+        undefined,
+      );
       expect(after.prepare('SELECT instalment, due_date FROM share').get()).toEqual({
         instalment: 0,
         due_date: null,

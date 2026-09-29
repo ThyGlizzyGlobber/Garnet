@@ -148,6 +148,13 @@
       "when": 1790651615775,
       "tag": "0020_service_names",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "6",
+      "when": 1790652908856,
+      "tag": "0021_insurance_types",
+      "breakpoints": true
     }
   ]
 }
