@@ -166,7 +166,8 @@ describe('0018 instalments, 0019–0022 service types and names', () => {
           ('S12', 'H1', 'other', 'Cleaner', 'Sparkle Co', '${t}', '${t}'),
           ('S13', 'H1', 'other', 'Termite check', 'Example Services', '${t}', '${t}'),
           ('S14', 'H1', 'other', 'Pool', 'Blue Water', '${t}', '${t}'),
-          ('S15', 'H1', 'other', 'Plumber', 'Example Plumbing', '${t}', '${t}');
+          ('S15', 'H1', 'other', 'Plumber', 'Example Plumbing', '${t}', '${t}'),
+          ('S16', 'H1', 'other', 'Other', 'Example Roadside Club', '${t}', '${t}');
         INSERT INTO bill (id, household_id, service_id, amount_minor, currency, period_start, period_end, due_date, source, created_at, updated_at)
           VALUES ('B1', 'H1', 'S5', 12900, 'AUD', '2026-09-01', '2026-09-30', '2026-09-15', 'manual', '${t}', '${t}');
         INSERT INTO share (id, household_id, bill_id, member_id, amount_minor, currency, basis_weight, basis_days, period_days, created_at, updated_at)
@@ -197,6 +198,8 @@ describe('0018 instalments, 0019–0022 service types and names', () => {
         { id: 'S13', name: 'Termite check', type_slug: 'pest_control' },
         { id: 'S14', name: 'Pool', type_slug: 'pool' },
         { id: 'S15', name: 'Plumber', type_slug: 'repairs' },
+        // 0025: roadside assistance.
+        { id: 'S16', name: 'Roadside assistance', type_slug: 'roadside_assistance' },
       ]);
       expect(after.prepare("SELECT slug FROM service_type WHERE slug = 'insurance'").get()).toBe(
         undefined,

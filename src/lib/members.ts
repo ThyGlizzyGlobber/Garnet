@@ -114,11 +114,36 @@ export function updateMember(
   return getMember(householdId, id, db)!;
 }
 
+/**
+ * Make a member an admin (role "owner": adds members, sends invites, changes
+ * household settings) or a member again. A household always keeps at least
+ * one admin.
+ */
+export function setMemberRole(
+  householdId: string,
+  id: string,
+  role: 'owner' | 'member',
+  db: Db = getDb(),
+): Member {
+  const m = getMember(householdId, id, db);
+  if (!m) throw new Error('Member not found');
+  if (m.role === role) return m;
+  if (role === 'member') {
+    const admins = listMembers(householdId, db).filter((x) => x.role === 'owner');
+    if (admins.length <= 1) throw new Error('A household needs at least one admin');
+  }
+  db.update(member)
+    .set({ role, updatedAt: new Date().toISOString() })
+    .where(and(eq(member.householdId, householdId), eq(member.id, id)))
+    .run();
+  return getMember(householdId, id, db)!;
+}
+
 /** Members with shares can't be deleted; deactivate with activeTo instead. */
 export function deleteMember(householdId: string, id: string, db: Db = getDb()): void {
   const m = getMember(householdId, id, db);
   if (!m) return;
-  if (m.role === 'owner') throw new Error('The owner cannot be deleted');
+  if (m.role === 'owner') throw new Error('An admin can’t be deleted. Remove their admin role first.');
   const n = db.select({ n: count() }).from(share).where(eq(share.memberId, id)).get()?.n ?? 0;
   if (n > 0)
     throw new Error('This member has bill shares. Set a move-out date instead of deleting.');

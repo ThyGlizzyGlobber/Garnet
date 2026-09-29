@@ -353,7 +353,7 @@
     "add": "Add member",
     "new": "New member",
     "you": "you",
-    "owner": "Owner",
+    "owner": "Admin",
     "inactive": "Not living here",
     "since": "Since {date}",
     "until": "until {date}",
@@ -427,6 +427,19 @@
       "nothingOwed": "Nothing to pay right now",
       "paidOf": "{paid} of {total} paid this year",
       "owedToThem": "Owed {amount} by others"
+    },
+    "role": {
+      "title": "Admin",
+      "isAdmin": "{name} is an admin: adds and invites members, sets up services and changes household settings.",
+      "you": "You",
+      "isMember": "{name} is a member. Make them an admin so they can add and invite people too.",
+      "lastAdmin": "The household's only admin. Make someone else an admin before stepping down.",
+      "promote": "Make admin",
+      "promoteConfirm": "Make {name} an admin? They'll be able to add and remove members, send invites and change the household's settings.",
+      "demote": "Remove admin",
+      "demoteConfirm": "Make {name} a member again? They keep their bills and shares.",
+      "stepDown": "Step down as admin",
+      "stepDownConfirm": "Stop being an admin? Another admin can make you one again."
     }
   },
   "settings": {

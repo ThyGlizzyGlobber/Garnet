@@ -75,6 +75,7 @@ describe('service type catalog', () => {
       'ambulance_cover',
       'vehicle_registration',
       'car_insurance',
+      'roadside_assistance',
       'subscriptions',
       'gardening',
       'cleaning',
@@ -83,6 +84,14 @@ describe('service type catalog', () => {
       'repairs',
       'other',
     ]);
+  });
+});
+
+describe('service type icons', () => {
+  it('exist for every type in the catalog (an unknown name draws a blank square)', () => {
+    const icons = fs.readFileSync(path.join(process.cwd(), 'src/components/app/icons.tsx'), 'utf8');
+    const missing = listServiceTypes(db).filter((t) => !icons.includes(`case '${t.icon}':`));
+    expect(missing.map((t) => `${t.slug}: ${t.icon}`)).toEqual([]);
   });
 });
 

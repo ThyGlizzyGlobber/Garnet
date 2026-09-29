@@ -21,7 +21,7 @@ import { getHousehold } from '@/lib/households';
 import { inviteLink, sendInviteEmail } from '@/lib/invite-email';
 import { setNotifyPref } from '@/lib/notifications';
 import { createInvite, revokeInvites } from '@/lib/invites';
-import { createMember, deleteMember, getMember, updateMember } from '@/lib/members';
+import { createMember, deleteMember, getMember, setMemberRole, updateMember } from '@/lib/members';
 
 const isoDate = z.string().refine(isIsoDate, 'Use a valid date');
 
@@ -116,7 +116,7 @@ export async function updateMemberAction(_prev: ActionState, fd: FormData): Prom
   if (!target) return { error: 'Member not found' };
   // Members edit themselves; the owner edits anyone.
   if (me.role !== 'owner' && me.id !== id)
-    return { error: 'Only the owner can edit other members.' };
+    return { error: 'Only admins can edit other members.' };
   const parsed = read(fd);
   if (!parsed.success) return zodToState(parsed.error);
   const v = parsed.data;
@@ -136,6 +136,22 @@ export async function updateMemberAction(_prev: ActionState, fd: FormData): Prom
   }
   revalidatePath('/members');
   redirect('/members');
+}
+
+/** Admin: make another member an admin, or a member again (never the last admin). */
+export async function setMemberRoleAction(fd: FormData): Promise<void> {
+  const me = await requireOwner();
+  const id = str(fd, 'id');
+  const role = str(fd, 'role');
+  if (role !== 'owner' && role !== 'member') redirect('/members');
+  try {
+    setMemberRole(me.householdId, id, role);
+  } catch {
+    // Only the last admin can't step down; the page doesn't offer it.
+  }
+  revalidatePath('/members');
+  // Stepping down yourself: you can no longer edit others.
+  redirect(id === me.id && role === 'member' ? '/members' : `/members/${id}/edit`);
 }
 
 export async function deleteMemberAction(fd: FormData): Promise<void> {

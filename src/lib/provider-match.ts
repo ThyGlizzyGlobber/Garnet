@@ -103,6 +103,7 @@ const GENERIC_WORDS = new Set([
   'insurance',
   'health',
   'ambulance',
+  'roadside',
   'garden',
   'gardening',
   'cleaning',

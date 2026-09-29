@@ -17,7 +17,7 @@ import {
 } from '@/lib/bills';
 import { devOutbox } from '@/lib/email';
 import { createHousehold } from '@/lib/households';
-import { createMember, deleteMember } from '@/lib/members';
+import { createMember, deleteMember, setMemberRole } from '@/lib/members';
 import { notifyBillCreated } from '@/lib/notifications';
 import { personalSummary } from '@/lib/personal';
 import { createService, listServices } from '@/lib/services';
@@ -282,11 +282,34 @@ describe('bills that arrive', () => {
     expect(getBill(hh.id, outcome.billId!, db)!.serviceId).toBe(rego.id);
   });
 
+  it("roadside assistance and car insurance are personal; ambulance cover is the household's", async () => {
+    const { hh, sam } = setup();
+    const owner = async (provider: string, type: string) => {
+      scriptAi(regoNotice(provider, type));
+      const outcome = await processDocument(hh.id, upload(hh.id, sam.id).id, db);
+      return getBill(hh.id, outcome.billId!, db)!.service.ownerMemberId;
+    };
+    expect(await owner('Example Roadside Club', 'roadside_assistance')).toBe(sam.id);
+    expect(await owner('Example Car Insurer', 'car_insurance')).toBe(sam.id);
+    expect(await owner('Example Ambulance', 'ambulance_cover')).toBeNull();
+  });
+
   it('household kinds of bill stay household services', async () => {
     const { hh, sam } = setup();
     scriptAi(regoNotice('Example Water', 'water'));
     const outcome = await processDocument(hh.id, upload(hh.id, sam.id).id, db);
     const b = getBill(hh.id, outcome.billId!, db)!;
     expect([b.ownerMemberId, b.service.ownerMemberId, b.shares.length]).toEqual([null, null, 2]);
+  });
+});
+
+describe('admins', () => {
+  it('can make another member an admin, and a household keeps at least one', () => {
+    const { hh, jo, sam } = setup();
+    expect(setMemberRole(hh.id, sam.id, 'owner', db).role).toBe('owner');
+    // Two admins: either can step down.
+    expect(setMemberRole(hh.id, jo.id, 'member', db).role).toBe('member');
+    expect(() => setMemberRole(hh.id, sam.id, 'member', db)).toThrow(/at least one admin/);
+    expect(() => deleteMember(hh.id, sam.id, db)).toThrow(/admin/);
   });
 });

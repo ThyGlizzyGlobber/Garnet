@@ -5,11 +5,12 @@ import { NewPinForm } from '@/components/app/auth-forms';
 import { Card, PageHeader } from '@/components/ui';
 import { InlineAction } from '@/components/ui/form';
 import { pageContext } from '@/lib/context';
-import { getMember } from '@/lib/members';
+import { getMember, listMembers } from '@/lib/members';
 import {
   changePinAction,
   deleteMemberAction,
   removeAccessAction,
+  setMemberRoleAction,
   saveNotifyPrefsAction,
   signOutOtherDevicesAction,
   updateMemberAction,
@@ -32,6 +33,9 @@ export default async function EditMemberPage({ params }: { params: Promise<{ id:
   const tn = await getTranslations('notify.prefs');
   const self = me.id === m.id;
   if (!admin && !self) redirect('/members');
+  // A household always keeps one admin: the last one can't step down.
+  const lastAdmin =
+    m.role === 'owner' && listMembers(hh.id).filter((x) => x.role === 'owner').length <= 1;
   return (
     <div className="mx-auto max-w-xl">
       <PageHeader
@@ -67,6 +71,40 @@ export default async function EditMemberPage({ params }: { params: Promise<{ id:
             <Link href={`/members/${m.id}/invite`} className="text-sm font-semibold text-accent">
               {t('invite.cta')} →
             </Link>
+          )}
+        </Card>
+      )}
+      {admin && (
+        <Card className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="font-display font-semibold">{t('role.title')}</h2>
+            <p className="text-xs text-fg-muted">
+              {m.role === 'owner'
+                ? lastAdmin
+                  ? t('role.lastAdmin')
+                  : t('role.isAdmin', { name: self ? t('role.you') : m.name })
+                : t('role.isMember', { name: m.name })}
+            </p>
+          </div>
+          {m.role === 'owner' ? (
+            !lastAdmin && (
+              <InlineAction
+                action={setMemberRoleAction}
+                hidden={{ id: m.id, role: 'member' }}
+                label={self ? t('role.stepDown') : t('role.demote')}
+                variant="secondary"
+                confirm={
+                  self ? t('role.stepDownConfirm') : t('role.demoteConfirm', { name: m.name })
+                }
+              />
+            )
+          ) : (
+            <InlineAction
+              action={setMemberRoleAction}
+              hidden={{ id: m.id, role: 'owner' }}
+              label={t('role.promote')}
+              confirm={t('role.promoteConfirm', { name: m.name })}
+            />
           )}
         </Card>
       )}
