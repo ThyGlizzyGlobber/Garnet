@@ -11,10 +11,23 @@ export interface SplitInput {
   amountMinor: number;
   periodStart: string;
   periodEnd: string;
-  splitMode: 'equal' | 'weighted' | 'custom';
+  splitMode: 'equal' | 'weighted' | 'custom' | 'percent' | 'fixed';
   members: SplitMember[];
-  /** Only used for splitMode === 'custom'. Members missing from the map get weight 0. */
+  /**
+   * 'custom' (ratios) and 'percent': each member's weight or percentage.
+   * Members missing from the map pay nothing.
+   */
   customWeights?: Record<string, number>;
+  /**
+   * 'fixed': what each member pays of a bill, in minor units (0 = nothing).
+   * Members without an amount share whatever is left, evenly.
+   */
+  fixedAmounts?: Record<string, number>;
+  /**
+   * 'fixed': the whole bill the amounts are for, when splitting only part of it
+   * (an instalment, or a month's estimate). Defaults to amountMinor.
+   */
+  referenceAmountMinor?: number;
   /** Member who paid the provider; receives the rounding remainder and is auto-marked paid. */
   payerMemberId?: string | null;
 }
@@ -44,12 +57,14 @@ export function computeShares(input: SplitInput): ShareResult[] {
     let basisWeight: number;
     switch (input.splitMode) {
       case 'equal':
+      case 'fixed':
         basisWeight = 1;
         break;
       case 'weighted':
         basisWeight = m.splitWeight;
         break;
       case 'custom':
+      case 'percent':
         basisWeight = input.customWeights?.[m.id] ?? 0;
         break;
     }
@@ -57,6 +72,7 @@ export function computeShares(input: SplitInput): ShareResult[] {
     return { member: m, basisDays, basisWeight, effective };
   });
 
+  if (input.splitMode === 'fixed') fixedEffective(rows, input, periodDays);
   const total = rows.reduce((s, r) => s + r.effective, 0);
   if (total <= 0) return [];
 
@@ -79,6 +95,42 @@ export function computeShares(input: SplitInput): ShareResult[] {
     target.amountMinor += remainder;
   }
   return shares;
+}
+
+/**
+ * Set amounts: each member with an amount pays it (less for days they didn't
+ * live there), and everyone without one shares what's left of the bill evenly.
+ * When nobody is left to share it, or the amounts come to more than the bill,
+ * the amounts are scaled to fit. Rewrites each row's `effective` (in minor
+ * units of the reference bill; computeShares scales them to the part split).
+ */
+function fixedEffective(
+  rows: { member: SplitMember; basisDays: number; basisWeight: number; effective: number }[],
+  input: SplitInput,
+  periodDays: number,
+) {
+  const reference = input.referenceAmountMinor ?? input.amountMinor;
+  const amounts = input.fixedAmounts ?? {};
+  let setTotal = 0;
+  let restDays = 0;
+  for (const r of rows) {
+    const amount = amounts[r.member.id];
+    if (amount === undefined) {
+      restDays += r.basisDays;
+      continue;
+    }
+    r.basisWeight = amount;
+    r.effective = amount * (r.basisDays / periodDays);
+    setTotal += r.effective;
+  }
+  const left = reference - setTotal;
+  for (const r of rows) {
+    if (amounts[r.member.id] !== undefined) continue;
+    r.basisWeight = 0;
+    r.effective = left > 0 && restDays > 0 ? (left * r.basisDays) / restDays : 0;
+  }
+  // Nobody set and nobody left to share it: fall back to even.
+  if (setTotal <= 0 && restDays <= 0) for (const r of rows) r.effective = r.basisDays;
 }
 
 /** Fill a payment reference template such as "{service} {period} {member}". */

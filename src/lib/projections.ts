@@ -5,7 +5,7 @@ import { addDays, daysInclusive, monthOf } from '@/lib/dates';
 import { ulid } from '@/lib/ids';
 import { listMembers } from '@/lib/members';
 import { addMonths, allocateToMonths, monthBounds } from '@/lib/periods';
-import { getCustomSplits, listServices, type ServiceWithType } from '@/lib/services';
+import { listServices, splitSettings, type ServiceWithType } from '@/lib/services';
 import { computeShares } from '@/lib/splits';
 import { normalMonthCostPerDay } from '@/lib/weather-model';
 import { areaMonthCostPerDay } from '@/lib/regional';
@@ -142,6 +142,8 @@ export function projectMonth(
   const days = daysInclusive(start, end);
   const now = new Date().toISOString();
   const rows: ServiceProjection[] = [];
+  // Each service's latest bill: set amounts are per bill, so the month is split in the same proportions.
+  const latestMinor = new Map<string, number>();
   for (const svc of services) {
     const history = db
       .select()
@@ -171,6 +173,7 @@ export function projectMonth(
     const remainingDays = Math.max(0, days - knownDays);
     const monthMinor = knownMinor + Math.round(est.perDay * remainingDays);
     const latest = history[history.length - 1];
+    if (latest) latestMinor.set(svc.id, latest.amountMinor);
     rows.push({
       service: svc,
       monthMinor,
@@ -223,10 +226,8 @@ export function projectMonth(
       periodEnd: end,
       splitMode: r.service.splitMode,
       members,
-      customWeights:
-        r.service.splitMode === 'custom'
-          ? getCustomSplits(householdId, r.service.id, db)
-          : undefined,
+      ...splitSettings(householdId, r.service, db),
+      referenceAmountMinor: latestMinor.get(r.service.id),
       payerMemberId: r.service.payerMemberId,
     });
     for (const s of shares)

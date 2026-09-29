@@ -5,6 +5,21 @@ import { useTranslations } from 'next-intl';
 import { Card, Field, Input, Select, Textarea } from '@/components/ui';
 import { ActionForm, type FormAction } from '@/components/ui/form';
 import { SERVICE_CATEGORIES } from '@/lib/service-categories';
+import { SplitEditor, type SplitMemberOption } from './split-editor';
+
+/** How it's split, for the form: what's stored, and what admins need to change it. */
+export interface ServiceFormSplit {
+  /** Only admins change how a service is split (and who pays it). */
+  canEdit: boolean;
+  currency: string;
+  locale: string;
+  latestMinor: number | null;
+  resplitCount: number;
+  percents: Record<string, number>;
+  amounts: Record<string, string>;
+  /** Read-only lines for members who can't change it ("Jordan · 40%"). */
+  summary: { name: string; colour: string; part: string }[];
+}
 
 export interface ServiceFormValues {
   id?: string;
@@ -23,7 +38,6 @@ export interface ServiceFormValues {
   trustedSenders: string;
   autoPay: boolean;
   seasonal: boolean;
-  customSplits: Record<string, number>;
   /** Just for the member filling in the form (only they see it; not split). */
   personal: boolean;
 }
@@ -34,6 +48,7 @@ export function ServiceForm({
   types,
   units,
   members,
+  split,
   cadences,
   splitModes,
   sharedHousehold,
@@ -52,7 +67,8 @@ export function ServiceForm({
     category?: string;
   }[];
   units: { key: string; label: string }[];
-  members: { id: string; name: string }[];
+  members: SplitMemberOption[];
+  split: ServiceFormSplit;
   cadences: readonly string[];
   splitModes: readonly string[];
   sharedHousehold: boolean;
@@ -72,7 +88,6 @@ export function ServiceForm({
   })).filter((g) => g.types.length);
   const [typeSlug, setTypeSlug] = useState(initial.typeSlug);
   const [usageUnit, setUsageUnit] = useState(initial.usageUnit);
-  const [splitMode, setSplitMode] = useState(initial.splitMode);
   const [name, setName] = useState(initial.name);
   const [personal, setPersonal] = useState(initial.personal);
   const [personalTouched, setPersonalTouched] = useState(false);
@@ -265,43 +280,51 @@ export function ServiceForm({
           )}
 
           {sharedHousehold && !personal && (
-            <Card className="flex flex-col gap-4">
+            <Card className="flex scroll-mt-24 flex-col gap-4" id="split">
               <h2 className="font-semibold">{t('splitting')}</h2>
-              <Field label={t('payer')} hint={t('payerHint')}>
-                <Select name="payerMemberId" defaultValue={initial.payerMemberId}>
-                  <option value="">{t('noPayer')}</option>
-                  {members.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.name}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-              <Field label={t('splitMode')}>
-                <Select
-                  name="splitMode"
-                  value={splitMode}
-                  onChange={(e) => setSplitMode(e.target.value)}
-                >
-                  {splitModes.map((m) => (
-                    <option key={m} value={m}>
-                      {t(`splitModes.${m}`)}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-              {splitMode === 'custom' && (
-                <div className="grid grid-cols-2 gap-3">
-                  {members.map((m) => (
-                    <Field key={m.id} label={m.name}>
-                      <Input
-                        name={`weight_${m.id}`}
-                        inputMode="decimal"
-                        defaultValue={String(initial.customSplits[m.id] ?? 1)}
-                      />
-                    </Field>
-                  ))}
-                </div>
+              {split.canEdit ? (
+                <>
+                  <Field label={t('payer')} hint={t('payerHint')}>
+                    <Select name="payerMemberId" defaultValue={initial.payerMemberId}>
+                      <option value="">{t('noPayer')}</option>
+                      {members.map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.name}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+                  <SplitEditor
+                    members={members}
+                    modes={splitModes}
+                    initialMode={initial.splitMode}
+                    percents={split.percents}
+                    amounts={split.amounts}
+                    currency={split.currency}
+                    locale={split.locale}
+                    latestMinor={split.latestMinor}
+                    resplitCount={split.resplitCount}
+                    payerMemberId={initial.payerMemberId}
+                  />
+                </>
+              ) : (
+                <>
+                  <ul className="flex flex-col gap-1.5 text-sm">
+                    {split.summary.map((r) => (
+                      <li key={r.name} className="flex items-center gap-3">
+                        <span
+                          className="size-2.5 shrink-0 rounded-full"
+                          style={{ background: r.colour }}
+                          aria-hidden
+                        />
+                        <span className="flex-1">{r.name}</span>
+                        <span className="font-medium tabular-nums">{r.part}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="text-xs text-fg-muted">{t('splitAdminsOnly')}</p>
+                  <input type="hidden" name="payerMemberId" value={initial.payerMemberId} />
+                </>
               )}
             </Card>
           )}

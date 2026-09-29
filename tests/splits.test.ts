@@ -6,6 +6,90 @@ const a = { id: 'a', splitWeight: 1, activeFrom: '2025-01-01', activeTo: null };
 const b = { id: 'b', splitWeight: 1, activeFrom: '2025-01-01', activeTo: null };
 const c = { id: 'c', splitWeight: 2, activeFrom: '2025-01-01', activeTo: null };
 
+const shareOf = (s: ReturnType<typeof computeShares>) =>
+  Object.fromEntries(s.map((x) => [x.memberId, x.amountMinor]));
+
+describe('splitting by percentage and set amounts', () => {
+  it('splits by percentage: 40% for the big room, 30% each for the others', () => {
+    const s = computeShares({
+      amountMinor: 100000,
+      ...period,
+      splitMode: 'percent',
+      members: [a, b, c],
+      customWeights: { a: 40, b: 30, c: 30 },
+    });
+    expect(shareOf(s)).toEqual({ a: 40000, b: 30000, c: 30000 });
+  });
+
+  it('leaves out anyone at 0%, and shares a leaver’s part by the others’ percentages', () => {
+    const left = { ...b, activeTo: '2026-06-28' }; // half the period
+    const s = computeShares({
+      amountMinor: 100000,
+      ...period,
+      splitMode: 'percent',
+      members: [a, left, c],
+      customWeights: { a: 50, b: 50 },
+    });
+    expect(shareOf(s)).toEqual({ a: 66667, b: 33333 });
+  });
+
+  it('set amounts: each pays theirs, and those left blank share the rest evenly', () => {
+    const s = computeShares({
+      amountMinor: 100000,
+      ...period,
+      splitMode: 'fixed',
+      members: [a, b, c],
+      fixedAmounts: { a: 40000 },
+    });
+    expect(shareOf(s)).toEqual({ a: 40000, b: 30000, c: 30000 });
+  });
+
+  it('set amounts for everyone: a bigger or smaller bill moves everyone in proportion', () => {
+    const s = computeShares({
+      amountMinor: 110000,
+      ...period,
+      splitMode: 'fixed',
+      members: [a, b, c],
+      fixedAmounts: { a: 40000, b: 30000, c: 30000 },
+    });
+    expect(shareOf(s)).toEqual({ a: 44000, b: 33000, c: 33000 });
+  });
+
+  it('set amounts above the bill are scaled down and nobody else pays', () => {
+    const s = computeShares({
+      amountMinor: 50000,
+      ...period,
+      splitMode: 'fixed',
+      members: [a, b, c],
+      fixedAmounts: { a: 60000, b: 40000 },
+    });
+    expect(shareOf(s)).toEqual({ a: 30000, b: 20000 });
+  });
+
+  it('0 means someone pays nothing', () => {
+    const s = computeShares({
+      amountMinor: 90000,
+      ...period,
+      splitMode: 'fixed',
+      members: [a, b, c],
+      fixedAmounts: { a: 30000, c: 0 },
+    });
+    expect(shareOf(s)).toEqual({ a: 30000, b: 60000 });
+  });
+
+  it('an instalment pays its part of each set amount', () => {
+    const s = computeShares({
+      amountMinor: 25000, // one of four instalments of a $1,000 bill
+      referenceAmountMinor: 100000,
+      ...period,
+      splitMode: 'fixed',
+      members: [a, b, c],
+      fixedAmounts: { a: 40000 },
+    });
+    expect(shareOf(s)).toEqual({ a: 10000, b: 7500, c: 7500 });
+  });
+});
+
 describe('computeShares', () => {
   it('splits equally and sums exactly to the bill', () => {
     const s = computeShares({

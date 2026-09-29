@@ -1,7 +1,7 @@
 import type { SourceDocument } from '@/db/schema';
-import { asksMember, canChangeOwner } from '@/lib/ownership';
+import { asksMember, mayChangeOwner } from '@/lib/ownership';
 import { Icon } from '@/components/app/icons';
-import { actingMember } from '@/ingest/pipeline';
+import { actingMember } from '@/lib/acting-member';
 import { canRotate } from '@/ingest/rotate';
 import { isImageFile } from '@/ingest/scan';
 import { filedDocuments, type FiledDocument } from '@/lib/filing';
@@ -12,7 +12,7 @@ import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { Badge, Card, LinkButton } from '@/components/ui';
 import { InlineAction } from '@/components/ui/form';
-import { getBill } from '@/lib/bills';
+import { getBill, housematesPaid } from '@/lib/bills';
 import { pageContext } from '@/lib/context';
 import { formatMoney } from '@/lib/format';
 import { unitLabel } from '@/lib/units';
@@ -259,10 +259,10 @@ export default async function BillPage({ params }: { params: Promise<{ id: strin
                   {personal ? t(`whose.isMine${solo}`) : t(`whose.isHousehold${solo}`)}
                 </p>
               </div>
-              {!personal && b.shares.some((x) => x.paidAt && x.paidMethod !== 'payer') ? (
+              {!personal && housematesPaid(hh.id, b.serviceId) ? (
                 <p className="text-xs text-fg-muted">{t('whose.lockedShares')}</p>
               ) : (
-                (canChangeOwner(me, b.service) || asksMember(b.service, me)) && (
+                mayChangeOwner(hh.id, me, b.service) && (
                   <InlineAction
                     action={setWhoseAction}
                     hidden={{ billId: b.id, whose: personal ? 'household' : 'mine' }}

@@ -177,7 +177,13 @@ export const CADENCES = [
 ] as const;
 export type Cadence = (typeof CADENCES)[number];
 
-export const SPLIT_MODES = ['equal', 'weighted', 'custom'] as const;
+/**
+ * How a household service's bills are split: equal, percent (service_split
+ * weights are percentages), fixed (service_split amounts per bill; the rest
+ * shared evenly). weighted (members' own weights) and custom (ratios) are
+ * older modes still honoured; 0029 turned custom into percent.
+ */
+export const SPLIT_MODES = ['equal', 'percent', 'fixed', 'weighted', 'custom'] as const;
 export type SplitMode = (typeof SPLIT_MODES)[number];
 
 export const service = sqliteTable(
@@ -248,7 +254,7 @@ export const service = sqliteTable(
   ],
 );
 
-/** Per-member weights, only consulted when service.splitMode === 'custom'. */
+/** Per-member split: percentages ('percent'), amounts ('fixed') or ratios ('custom'). */
 export const serviceSplit = sqliteTable(
   'service_split',
   {
@@ -260,6 +266,8 @@ export const serviceSplit = sqliteTable(
       .notNull()
       .references(() => member.id, { onDelete: 'cascade' }),
     weight: real('weight').notNull().default(1),
+    /** 'fixed': what this member pays of each bill, in minor units (0 = nothing). */
+    amountMinor: integer('amount_minor'),
   },
   (t) => [uniqueIndex('service_split_unique').on(t.serviceId, t.memberId)],
 );

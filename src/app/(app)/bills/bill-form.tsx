@@ -39,6 +39,7 @@ export function BillForm({
   submitLabel,
   locked,
   cancelHref,
+  whose,
 }: {
   action: FormAction;
   services: BillFormService[];
@@ -49,6 +50,8 @@ export function BillForm({
   /** Amount and period are locked once a housemate has paid a share. */
   locked?: boolean;
   cancelHref: string;
+  /** Whose the bill is, when this member may switch it (others live there too). */
+  whose?: { value: 'mine' | 'household'; split: boolean };
 }) {
   const t = useTranslations('bills.form');
   const [serviceId, setServiceId] = useState(initial.serviceId);
@@ -93,6 +96,34 @@ export function BillForm({
               </Select>
               {locked && <input type="hidden" name="serviceId" value={serviceId} />}
             </Field>
+            {whose && (
+              <fieldset>
+                <legend className="mb-1.5 text-sm font-medium">{t('whose')}</legend>
+                <div className="grid grid-cols-2 gap-2">
+                  {(['household', 'mine'] as const).map((w) => (
+                    <label
+                      key={w}
+                      className="flex cursor-pointer items-start gap-2.5 rounded-2xl border border-border-strong bg-surface-2 p-3 has-[:checked]:border-accent has-[:checked]:bg-accent-soft"
+                    >
+                      <input
+                        type="radio"
+                        name="whose"
+                        value={w}
+                        defaultChecked={whose.value === w}
+                        className="mt-0.5 size-4 accent-accent"
+                      />
+                      <span className="text-sm">
+                        <span className="block font-semibold">{t(`whoseOptions.${w}`)}</span>
+                        <span className="block text-xs text-fg-muted">
+                          {t(`whoseHints.${w}${whose.split ? '' : 'NoSplit'}`)}
+                        </span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+                <p className="mt-1.5 text-xs text-fg-muted">{t('whoseNote')}</p>
+              </fieldset>
+            )}
             <div className="grid grid-cols-2 gap-3">
               <Field label={t('amount', { currency })} error={errors.amount}>
                 <Input

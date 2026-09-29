@@ -3,11 +3,11 @@ import { rotateDocument } from './rotate';
 import { refileDocuments } from '@/lib/filing';
 import type { Scope } from '@/lib/scope';
 import { getDb, type Db } from '@/db/client';
-import { account, bill, sourceDocument, type SourceDocument } from '@/db/schema';
+import { bill, sourceDocument, type SourceDocument } from '@/db/schema';
+import { actingMember } from '@/lib/acting-member';
 import { createBill, type BillDetail } from '@/lib/bills';
 import { getEnv, isLlmConfigured } from '@/lib/env';
 import { getHousehold } from '@/lib/households';
-import { listMembers } from '@/lib/members';
 import { getService, listServices, listServiceTypes, updateService } from '@/lib/services';
 import { getDocument, readDocument, setDocumentStatus } from './archive';
 import { fallbackExtractors, templateExtractors } from './extractors';
@@ -62,25 +62,7 @@ export interface StoredExtraction {
   documentDate?: string;
 }
 
-/**
- * The member a document came from: whoever uploaded it, or the member whose
- * address a signed forward came from. Null for mail straight from a provider.
- */
-export function actingMember(
-  householdId: string,
-  doc: Partial<SourceDocument>,
-  db: Db = getDb(),
-): string | null {
-  if (doc.memberId) return doc.memberId;
-  if (!doc.senderVerified) return null;
-  const address = addressOf(doc.emailFrom ?? null);
-  if (!address) return null;
-  return (
-    listMembers(householdId, db).find(
-      (m) => m.email?.toLowerCase() === address || memberAccountEmail(m.accountId, db) === address,
-    )?.id ?? null
-  );
-}
+export { actingMember };
 
 /**
  * The services a document may land on: the household's, plus the personal
@@ -861,14 +843,6 @@ function autoServiceFor(
   if (!isFreemail(doc.senderDomain) && senderMatchesProvider(doc.senderDomain, bill.provider))
     return serviceForNewProvider(householdId, bill, { trustedDomain: doc.senderDomain, scope }, db);
   return null;
-}
-
-function memberAccountEmail(accountId: string | null, db: Db): string | null {
-  if (!accountId) return null;
-  return (
-    db.select({ email: account.email }).from(account).where(eq(account.id, accountId)).get()
-      ?.email ?? null
-  );
 }
 
 /** A short, readable version of an Anthropic API error for the review queue. */

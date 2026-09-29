@@ -1,6 +1,6 @@
 'use server';
 
-import { answerOwnership, asksMember, canChangeOwner } from '@/lib/ownership';
+import { answerOwnership, asksMember, mayChangeOwner } from '@/lib/ownership';
 import { rotateDocument } from '@/ingest/rotate';
 import { getReviewItem } from '@/lib/review';
 import { refileDocuments } from '@/lib/filing';
@@ -154,6 +154,21 @@ export async function updateBillAction(_prev: ActionState, fd: FormData): Promis
       ? (existing.paidToProviderAt ?? input.paidToProviderAt)
       : null;
     updateBill(hh.id, id, { ...input, paidToProviderAt });
+    // "Whose is it?": switches the whole service (and its bills) when changed.
+    const whose = str(fd, 'whose');
+    const svc = getService(hh.id, input.serviceId);
+    if (
+      svc &&
+      (whose === 'mine' || whose === 'household') &&
+      (whose === 'mine') !== !!svc.ownerMemberId &&
+      mayChangeOwner(hh.id, me, svc)
+    ) {
+      const r = answerOwnership(hh.id, svc.id, me, whose);
+      if (!r.ok && r.reason !== 'not-found')
+        return { error: r.reason ?? 'Couldn’t change whose it is' };
+      revalidatePath('/');
+      revalidatePath('/services');
+    }
     // A new date or service can mean a new folder for its files.
     refileDocuments(hh.id);
   } catch (e) {
@@ -268,7 +283,7 @@ export async function setWhoseAction(fd: FormData): Promise<void> {
   const b = visibleBill(me, billId);
   const whose = str(fd, 'whose');
   if (!b || (whose !== 'mine' && whose !== 'household')) return;
-  if (!canChangeOwner(me, b.service) && !asksMember(b.service, me)) return;
+  if (!mayChangeOwner(me.householdId, me, b.service)) return;
   answerOwnership(me.householdId, b.serviceId, me, whose);
   // Its files move folder ("… (Mum, personal)" or back).
   refileDocuments(me.householdId);

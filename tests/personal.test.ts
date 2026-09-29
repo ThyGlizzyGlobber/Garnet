@@ -22,7 +22,13 @@ import { devOutbox } from '@/lib/email';
 import { createHousehold, updateHousehold } from '@/lib/households';
 import { createMember, deleteMember, setMemberRole } from '@/lib/members';
 import { notifyBillCreated } from '@/lib/notifications';
-import { answerOwnership, canChangeOwner, ownershipQuestions } from '@/lib/ownership';
+import {
+  answerOwnership,
+  broughtInBy,
+  canChangeOwner,
+  mayChangeOwner,
+  ownershipQuestions,
+} from '@/lib/ownership';
 import { personalSummary } from '@/lib/personal';
 import { createService, listServices } from '@/lib/services';
 import { dashboardSummary, monthlySeries } from '@/lib/stats';
@@ -456,6 +462,42 @@ describe('switching whose a service is, from its bill', () => {
     const fromSam = { ...power, setUpByMemberId: sam.id };
     expect(canChangeOwner(sam, fromSam)).toBe(true);
     expect(canChangeOwner(jo, fromSam)).toBe(false);
+  });
+
+  it('whoever uploaded a bill of it can switch it, even on a service they didn’t set up', () => {
+    const { hh, jo, sam, power } = setup();
+    // Set up by hand, Jo pays: only Jo (admin, payer) can, so far.
+    expect(mayChangeOwner(hh.id, sam, power, db)).toBe(false);
+    expect(mayChangeOwner(hh.id, jo, power, db)).toBe(true);
+    // Sam uploads its next bill.
+    const doc = archiveDocument(
+      hh.id,
+      {
+        kind: 'upload',
+        buffer: Buffer.from(`power bill ${Math.random()}`),
+        originalFilename: 'power.txt',
+        mimeType: 'text/plain',
+        memberId: sam.id,
+      },
+      db,
+    ).doc;
+    createBill(
+      hh.id,
+      {
+        serviceId: power.id,
+        amountMinor: 20000,
+        periodStart: '2026-10-01',
+        periodEnd: '2026-10-31',
+        dueDate: '2026-11-14',
+        source: 'llm',
+        sourceDocumentId: doc.id,
+      },
+      db,
+    );
+    expect([...broughtInBy(hh.id, power.id, db)]).toEqual([sam.id]);
+    expect(mayChangeOwner(hh.id, sam, power, db)).toBe(true);
+    // It came from Sam: the admin no longer gets to make it theirs.
+    expect(mayChangeOwner(hh.id, jo, power, db)).toBe(false);
   });
 });
 

@@ -197,7 +197,19 @@
       "usageQuantity": "Usage",
       "usageUnit": "Unit",
       "notes": "Notes",
-      "paidToProvider": "Already paid to the provider"
+      "paidToProvider": "Already paid to the provider",
+      "whose": "Whose is it?",
+      "whoseOptions": {
+        "household": "The household's",
+        "mine": "Just mine"
+      },
+      "whoseHints": {
+        "household": "Everyone sees it and it’s split",
+        "mine": "Only you see it, not split",
+        "householdNoSplit": "Everyone in the house sees it",
+        "mineNoSplit": "Only you see it"
+      },
+      "whoseNote": "This applies to the whole service and all its bills."
     },
     "anomaly": "Unusual",
     "download": "Download everything",
@@ -276,7 +288,7 @@
       "makeMine": "Make it just mine",
       "confirmHousehold": "Make {service} the household's? Everyone will see it and its bills, and they'll be split between you.",
       "confirmMine": "Make {service} just yours? Only you will see it and its bills, and they won't be split.",
-      "lockedShares": "Housemates have paid their shares, so it stays the household's.",
+      "lockedShares": "Housemates have paid shares of its bills, so it stays the household’s.",
       "bodyMineNoSplit": "{service} is set up as yours: only you see it, and it stays out of the household's figures. Is that right, or is it the household's?",
       "bodyHouseholdNoSplit": "{service} is set up as the household's: everyone in the house sees it. Is it the household's, or just yours?",
       "isMineNoSplit": "Yours: only you see it",
@@ -341,7 +353,7 @@
       "colour": "Colour",
       "notes": "Notes",
       "isActive": "Active (uncheck when you cancel this service)",
-      "splitting": "Splitting",
+      "splitting": "How it’s split",
       "payer": "Who pays the provider?",
       "payerHint": "Their own share is marked paid automatically and the others pay them back.",
       "noPayer": "Nobody in particular",
@@ -356,9 +368,11 @@
         "irregular": "Irregular"
       },
       "splitModes": {
-        "equal": "Equal",
+        "equal": "Split evenly",
+        "percent": "By percentage",
+        "fixed": "Set amounts",
         "weighted": "By member weight",
-        "custom": "Custom weights"
+        "custom": "By percentage"
       },
       "trustedSenders": "Trusted bill senders",
       "trustedSendersHint": "Email domains (provider.com.au) or exact addresses whose signed bills are added automatically. Personal mailbox domains like gmail.com can only be added as a full address. Bills forwarded by household members are always accepted.",
@@ -369,7 +383,8 @@
       "seasonal": "Changes with the seasons",
       "seasonalHint": "Heating, cooling or solar make some months cost more than others. Bills are then compared with the same time last year, and you're told before a costly season starts.",
       "personal": "Just for me",
-      "personalHint": "A personal service, like your own car rego: only you see it and its bills, it isn't split, and it stays out of the household's figures."
+      "personalHint": "A personal service, like your own car rego: only you see it and its bills, it isn't split, and it stays out of the household's figures.",
+      "splitAdminsOnly": "Only an admin can change how it’s split or who pays it."
     },
     "nextBill": "Next bill about {amount} · due {date}",
     "noHistory": "No bills yet",
@@ -397,6 +412,42 @@
       "vehicle": "Vehicle",
       "lifestyle": "Lifestyle",
       "other": "Other"
+    },
+    "split": {
+      "how": "How it’s split",
+      "title": "How it’s split",
+      "change": "Change",
+      "modes": {
+        "equal": "Evenly",
+        "percent": "Percentage",
+        "fixed": "Set amounts",
+        "weighted": "Member weight"
+      },
+      "hints": {
+        "equal": "Everyone living there pays the same share of each bill.",
+        "percent": "Give each person a percentage of every bill. They need to add up to 100%. Put 0 for anyone who doesn’t pay.",
+        "fixed": "Set what each person pays of every bill. Leave someone blank and they share whatever is left, evenly. Put 0 for anyone who doesn’t pay.",
+        "weighted": "Uses each person’s weighting from their member page."
+      },
+      "pctTotal": "Adds up to {total}%",
+      "pctOff": "Adds up to {total}%. It needs to be 100%.",
+      "evenly": "Share it evenly",
+      "restPlaceholder": "Shares the rest",
+      "fixedRest": "{total} set per bill. {names} {count, plural, one {pays} other {share}} whatever is left.",
+      "fixedAll": "{total} set per bill. When a bill comes to more or less than that, everyone’s part goes up or down in proportion.",
+      "preview": "On the latest bill ({amount})",
+      "resplit": "{count, plural, one {Also re-split the # earlier bill} other {Also re-split the # earlier bills}} nobody has paid a share of yet",
+      "resplitHint": "Bills someone has already paid their share of keep the split they had.",
+      "parts": {
+        "even": "Even share",
+        "percent": "{value}%",
+        "amount": "{amount} a bill",
+        "rest": "Shares the rest",
+        "weight": "Weight {value}",
+        "none": "Doesn’t pay"
+      },
+      "latest": "Latest bill: {amount}",
+      "newMembers": "Someone who moves in later isn’t included until an admin gives them a part."
     }
   },
   "members": {
@@ -1348,7 +1399,9 @@
     },
     "contact": {
       "title": "Contact",
-      "points": ["Questions about this notice go to the operator of this installation."]
+      "points": [
+        "Questions about this notice go to the operator of this installation."
+      ]
     },
     "back": "Back to the app"
   },

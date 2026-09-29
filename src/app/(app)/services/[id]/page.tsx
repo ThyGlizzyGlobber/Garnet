@@ -17,6 +17,8 @@ import { projectMonth } from '@/lib/projections';
 import { seasonAhead } from '@/lib/seasons';
 import { weatherAdjusted } from '@/lib/weather-model';
 import { areaComparison } from '@/lib/regional';
+import { splitView } from '@/lib/split-view';
+import { partText } from '../split-text';
 
 /** A service at a glance: how much it uses and how that compares, then its bills. */
 export default async function ServicePage({ params }: { params: Promise<{ id: string }> }) {
@@ -92,6 +94,11 @@ export default async function ServicePage({ params }: { params: Promise<{ id: st
     }))
     .filter((x) => x.p && x.p.method !== 'none');
 
+  // Who pays what of it (household services, in households that split bills).
+  const tsp = await getTranslations('services.split');
+  const split = hh.splitMode === 'shared' && !svc.ownerMemberId ? splitView(hh.id, svc) : null;
+  const payer = split?.parts.find((p) => p.member.id === svc.payerMemberId)?.member;
+
   // Per-band change against the previous bill with usage.
   const before = c?.previous?.period.parts ?? [];
 
@@ -164,6 +171,64 @@ export default async function ServicePage({ params }: { params: Promise<{ id: st
           <p className="mt-3 rounded-2xl bg-surface-2 px-4 py-3 text-sm">{weatherLine}</p>
         )}
       </Card>
+
+      {split && split.parts.length > 1 && (
+        <Card className="mt-4">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="font-semibold">{tsp('title')}</h2>
+            {me.role === 'owner' && (
+              <Link
+                href={`/services/${svc.id}/edit#split`}
+                className="text-sm font-medium text-accent hover:underline"
+              >
+                {tsp('change')}
+              </Link>
+            )}
+          </div>
+          <p className="mt-1 text-sm text-fg-muted">
+            {ts(`form.splitModes.${split.mode}`)}
+            {payer ? ` · ${ts('paidBy', { name: payer.name })}` : ''}
+          </p>
+          {split.latestMinor !== null && split.latestMinor > 0 && (
+            <div className="mt-3 flex h-2.5 overflow-hidden rounded-full bg-surface-2">
+              {split.parts
+                .filter((p) => p.exampleMinor)
+                .map((p) => (
+                  <span
+                    key={p.member.id}
+                    style={{
+                      width: `${(p.exampleMinor! * 100) / split.latestMinor!}%`,
+                      background: p.member.colour,
+                    }}
+                  />
+                ))}
+            </div>
+          )}
+          <ul className="mt-3 flex flex-col gap-2 text-sm">
+            {split.parts.map((p) => (
+              <li key={p.member.id} className="flex items-center gap-3">
+                <span
+                  className="size-2.5 shrink-0 rounded-full"
+                  style={{ background: p.member.colour }}
+                  aria-hidden
+                />
+                <span className="min-w-0 flex-1 truncate font-medium">{p.member.name}</span>
+                <span className="text-fg-muted">{partText(tsp, p.setting, money)}</span>
+                {p.exampleMinor !== null && (
+                  <span className="w-24 text-right font-semibold tabular-nums">
+                    {money(p.exampleMinor)}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+          {split.latestMinor !== null && (
+            <p className="mt-2 text-xs text-fg-muted">
+              {tsp('latest', { amount: money(split.latestMinor) })}
+            </p>
+          )}
+        </Card>
+      )}
 
       {withUsage.length >= 2 && (
         <Card className="mt-4">

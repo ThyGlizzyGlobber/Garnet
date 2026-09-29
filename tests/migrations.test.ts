@@ -295,3 +295,52 @@ describe('0028 asks in households that don’t split bills too', () => {
     }
   });
 });
+
+describe('0029 splits by percentage and set amounts', () => {
+  it('turns the old custom weights into percentages of the same proportions', () => {
+    const d = fs.mkdtempSync(path.join(os.tmpdir(), 'hud-migrate-29-'));
+    const upTo28 = migrationsUpTo('0028_ask_owner_single');
+    try {
+      runMigrations(d, upTo28);
+      const file = path.join(d, 'db', 'utilities.sqlite');
+      const db = new Database(file);
+      db.exec(`
+        INSERT INTO household (id, name, currency, locale, timezone, split_mode, created_at, updated_at) VALUES
+          ('H1', 'Share house', 'AUD', 'en-AU', 'Australia/Melbourne', 'shared', '2026-01-01', '2026-01-01');
+        INSERT INTO member (id, household_id, name, active_from, created_at, updated_at) VALUES
+          ('M1', 'H1', 'Jordan', '2026-01-01', '2026-01-01', '2026-01-01'),
+          ('M2', 'H1', 'Sam', '2026-01-01', '2026-01-01', '2026-01-01');
+        INSERT INTO service (id, household_id, type_slug, name, provider, split_mode, created_at, updated_at) VALUES
+          ('S1', 'H1', 'rent', 'Rent', 'Agent', 'custom', '2026-01-01', '2026-01-01'),
+          ('S2', 'H1', 'water', 'Water', 'Water Co', 'equal', '2026-01-01', '2026-01-01');
+        INSERT INTO service_split (household_id, service_id, member_id, weight) VALUES
+          ('H1', 'S1', 'M1', 2), ('H1', 'S1', 'M2', 1), ('H1', 'S2', 'M1', 5);
+      `);
+      db.close();
+      runMigrations(d);
+      const after = new Database(file, { readonly: true });
+      const mode = (id: string) =>
+        (
+          after.prepare('SELECT split_mode FROM service WHERE id = ?').get(id) as {
+            split_mode: string;
+          }
+        ).split_mode;
+      expect(mode('S1')).toBe('percent');
+      expect(mode('S2')).toBe('equal');
+      const splits = after
+        .prepare(
+          'SELECT service_id, member_id, weight, amount_minor FROM service_split ORDER BY service_id, member_id',
+        )
+        .all();
+      expect(splits).toEqual([
+        { service_id: 'S1', member_id: 'M1', weight: 66.67, amount_minor: null },
+        { service_id: 'S1', member_id: 'M2', weight: 33.33, amount_minor: null },
+        { service_id: 'S2', member_id: 'M1', weight: 5, amount_minor: null },
+      ]);
+      after.close();
+    } finally {
+      fs.rmSync(d, { recursive: true, force: true });
+      fs.rmSync(upTo28, { recursive: true, force: true });
+    }
+  });
+});

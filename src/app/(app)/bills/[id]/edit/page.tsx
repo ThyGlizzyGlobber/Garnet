@@ -1,8 +1,10 @@
 import { notFound } from 'next/navigation';
+import { hasHousemates } from '@/lib/members';
+import { mayChangeOwner } from '@/lib/ownership';
 import { visibleTo } from '@/lib/scope';
 import { getTranslations } from 'next-intl/server';
 import { PageHeader } from '@/components/ui';
-import { getBill } from '@/lib/bills';
+import { getBill, housematesPaid } from '@/lib/bills';
 import { pageContext } from '@/lib/context';
 import { minorUnitDigits } from '@/lib/format';
 import { listServices } from '@/lib/services';
@@ -20,6 +22,11 @@ export default async function EditBillPage({ params }: { params: Promise<{ id: s
   const major = (minor: number | null) =>
     minor === null ? '' : (minor / 10 ** digits).toFixed(digits);
   const locked = b.shares.some((s) => s.paidAt && s.paidMethod !== 'payer');
+  // Whoever brought it in can say whose it is here too (not once housemates have paid shares).
+  const showWhose =
+    hasHousemates(hh.id) &&
+    (!!b.ownerMemberId || !housematesPaid(hh.id, b.serviceId)) &&
+    mayChangeOwner(hh.id, me, b.service);
   return (
     <div className="mx-auto max-w-xl">
       <PageHeader title={t('editTitle')} />
@@ -37,6 +44,11 @@ export default async function EditBillPage({ params }: { params: Promise<{ id: s
         submitLabel={t('form.save')}
         cancelHref={`/bills/${b.id}`}
         locked={locked}
+        whose={
+          showWhose
+            ? { value: b.ownerMemberId ? 'mine' : 'household', split: hh.splitMode === 'shared' }
+            : undefined
+        }
         initial={{
           id: b.id,
           serviceId: b.serviceId,

@@ -1,6 +1,6 @@
 'use server';
 
-import { canChangeOwner, confirmOwnership } from '@/lib/ownership';
+import { confirmOwnership, mayChangeOwner } from '@/lib/ownership';
 import { refileDocuments } from '@/lib/filing';
 import { parseSenderList } from '@/lib/sender-auth';
 import { revalidatePath } from 'next/cache';
@@ -10,12 +10,16 @@ import { CADENCES, SPLIT_MODES } from '@/db/schema';
 import type { ActionState } from '@/components/ui/form';
 import { optStr, str, zodToState } from '@/lib/actions';
 import { requireMember } from '@/lib/auth/session';
-import { refreshAnomalies, setServiceOwner } from '@/lib/bills';
+import { refreshAnomalies, resplitBills, setServiceOwner } from '@/lib/bills';
+import { parseMoneyToMinor } from '@/lib/format';
+import { getHousehold } from '@/lib/households';
 import { visibleTo } from '@/lib/scope';
 import { listMembers } from '@/lib/members';
 import {
   createService,
   createServiceType,
+  getCustomSplits,
+  getFixedAmounts,
   getService,
   updateService,
   type ServiceInput,
@@ -35,7 +39,7 @@ const schema = z.object({
       (v) => v === '' || (Number.isFinite(Number(v)) && Number(v) > 0),
       'Enter a number above zero',
     ),
-  splitMode: z.enum(SPLIT_MODES),
+  splitMode: z.enum(SPLIT_MODES).catch('equal'),
   payerMemberId: z.string(),
   colour: z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Pick a colour'),
   isActive: z.boolean(),
@@ -44,7 +48,7 @@ const schema = z.object({
 
 type ReadResult = { ok: true; input: ServiceInput } | { ok: false; state: ActionState };
 
-function read(householdId: string, fd: FormData): ReadResult {
+function read(householdId: string, currency: string, fd: FormData): ReadResult {
   const parsed = schema.safeParse({
     typeSlug: str(fd, 'typeSlug'),
     name: str(fd, 'name'),
@@ -61,14 +65,38 @@ function read(householdId: string, fd: FormData): ReadResult {
   });
   if (!parsed.success) return { ok: false, state: zodToState(parsed.error) };
   const v = parsed.data;
+  const members = listMembers(householdId);
   const customSplits: Record<string, number> = {};
-  if (v.splitMode === 'custom') {
-    for (const m of listMembers(householdId)) {
-      const w = Number(str(fd, `weight_${m.id}`) || '0');
-      if (Number.isFinite(w) && w > 0) customSplits[m.id] = w;
+  const fixedAmounts: Record<string, number> = {};
+  if (v.splitMode === 'percent') {
+    for (const m of members) {
+      const raw = str(fd, `pct_${m.id}`);
+      if (!raw) continue;
+      const pct = Number(raw.replace('%', ''));
+      if (!Number.isFinite(pct) || pct < 0)
+        return { ok: false, state: { error: `Enter a percentage for ${m.name}` } };
+      if (pct > 0) customSplits[m.id] = pct;
     }
-    if (Object.keys(customSplits).length === 0)
-      return { ok: false, state: { error: 'Give at least one member a weight above zero.' } };
+    const total = Object.values(customSplits).reduce((s, p) => s + p, 0);
+    if (Math.abs(total - 100) >= 0.05)
+      return {
+        ok: false,
+        state: { error: `The percentages add up to ${Math.round(total * 100) / 100}%, not 100%.` },
+      };
+  } else if (v.splitMode === 'fixed') {
+    for (const m of members) {
+      const raw = str(fd, `amt_${m.id}`);
+      if (!raw) continue;
+      const minor = parseMoneyToMinor(raw, currency);
+      if (minor === null || minor < 0)
+        return { ok: false, state: { error: `Enter an amount for ${m.name}, or leave it blank` } };
+      fixedAmounts[m.id] = minor;
+    }
+    if (!Object.values(fixedAmounts).some((a) => a > 0))
+      return {
+        ok: false,
+        state: { error: 'Enter an amount for at least one person, or split it evenly.' },
+      };
   }
   return {
     ok: true,
@@ -89,21 +117,57 @@ function read(householdId: string, fd: FormData): ReadResult {
       trustedSenders: parseSenderList(str(fd, 'trustedSenders')),
       autoPay: fd.get('autoPay') === 'on',
       seasonal: fd.get('seasonal') === 'on',
-      customSplits,
+      ...(v.splitMode === 'fixed'
+        ? { fixedAmounts }
+        : v.splitMode === 'percent'
+          ? { customSplits }
+          : {}),
     },
   };
 }
 
+/** Only admins decide how a service is split and who pays it; for anyone else those fields are dropped. */
+function splitFields(input: ServiceInput): Partial<ServiceInput> {
+  return {
+    splitMode: input.splitMode,
+    payerMemberId: input.payerMemberId,
+    customSplits: input.customSplits,
+    fixedAmounts: input.fixedAmounts,
+  };
+}
+
+function withoutSplit(input: ServiceInput): ServiceInput {
+  const rest = { ...input };
+  for (const k of Object.keys(splitFields(input)) as (keyof ServiceInput)[]) delete rest[k];
+  return rest;
+}
+
+/** The split as stored, to tell whether saving the form changed it. */
+function splitKey(householdId: string, id: string): string {
+  const s = getService(householdId, id)!;
+  return JSON.stringify([
+    s.splitMode,
+    s.payerMemberId,
+    getCustomSplits(householdId, id),
+    getFixedAmounts(householdId, id),
+  ]);
+}
+
 export async function createServiceAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
   const me = await requireMember();
-  const r = read(me.householdId, fd);
+  const hh = getHousehold(me.householdId)!;
+  const r = read(me.householdId, hh.currency, fd);
   if (!r.ok) return r.state;
   // "Just for me": the member creating it owns it.
   const personal = fd.get('personal') === 'on';
+  const isAdmin = me.role === 'owner';
   let id: string;
   try {
     id = createService(me.householdId, {
-      ...r.input,
+      // A member setting one up splits it evenly and pays it; an admin can change that.
+      ...(isAdmin
+        ? r.input
+        : { ...withoutSplit(r.input), splitMode: 'equal', payerMemberId: me.id }),
       isActive: true,
       ownerMemberId: personal ? me.id : null,
     }).id;
@@ -119,18 +183,24 @@ export async function updateServiceAction(_prev: ActionState, fd: FormData): Pro
   const id = str(fd, 'id');
   const existing = getService(me.householdId, id);
   if (!existing || !visibleTo(existing.ownerMemberId, me.id)) return { error: 'Service not found' };
-  const r = read(me.householdId, fd);
+  const hh = getHousehold(me.householdId)!;
+  const r = read(me.householdId, hh.currency, fd);
   if (!r.ok) return r.state;
   const personal = fd.get('personal') === 'on';
+  const isAdmin = me.role === 'owner';
   try {
-    // Household ↔ personal: only its owner hands it back; only an admin or its
-    // payer can make a household service their own. Its bills move with it.
+    // Household ↔ personal: only its owner hands it back; whoever brought its
+    // bills in (else an admin or its payer) can make it theirs. Its bills move with it.
     if (personal !== !!existing.ownerMemberId) {
-      if (!canChangeOwner(me, existing))
-        return { error: 'Only an admin or the person who pays it can make it personal' };
+      if (!mayChangeOwner(me.householdId, me, existing))
+        return { error: 'Only the person who brought its bills in can make it personal' };
       setServiceOwner(me.householdId, id, personal ? me.id : null);
     }
-    updateService(me.householdId, id, r.input);
+    const before = splitKey(me.householdId, id);
+    updateService(me.householdId, id, isAdmin ? r.input : withoutSplit(r.input));
+    // A new split applies to later bills, and to earlier ones nobody has paid a share of when asked.
+    if (isAdmin && fd.get('resplit') === 'on' && splitKey(me.householdId, id) !== before)
+      resplitBills(me.householdId, id);
     // Seasonal on/off changes how its bills are judged Unusual.
     refreshAnomalies(me.householdId, id);
     // A renamed service (or one made personal) files its bills under the new name.

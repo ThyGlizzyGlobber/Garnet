@@ -1,12 +1,15 @@
 import { notFound } from 'next/navigation';
 import { hasHousemates } from '@/lib/members';
+import { mayChangeOwner } from '@/lib/ownership';
 import { visibleTo } from '@/lib/scope';
 import { getTranslations } from 'next-intl/server';
 import { LinkButton, PageHeader } from '@/components/ui';
 import { CADENCES, SPLIT_MODES } from '@/db/schema';
 import { pageContext } from '@/lib/context';
-import { listMembers } from '@/lib/members';
-import { getCustomSplits, getService, listServiceTypes } from '@/lib/services';
+import { formatMoney } from '@/lib/format';
+import { getService, listServiceTypes } from '@/lib/services';
+import { splitView } from '@/lib/split-view';
+import { partText } from '../../split-text';
 import { listUnits } from '@/lib/units';
 import { updateServiceAction } from '../../actions';
 import { ServiceForm } from '../../service-form';
@@ -15,8 +18,11 @@ export default async function EditServicePage({ params }: { params: Promise<{ id
   const { id } = await params;
   const { hh, me } = await pageContext();
   const t = await getTranslations('services');
+  const ts = await getTranslations('services.split');
   const s = getService(hh.id, id);
   if (!s || !visibleTo(s.ownerMemberId, me.id)) notFound();
+  const view = splitView(hh.id, s);
+  const money = (minor: number) => formatMoney(minor, hh.currency, hh.locale);
   return (
     <div className="mx-auto max-w-xl">
       <PageHeader
@@ -32,16 +38,31 @@ export default async function EditServicePage({ params }: { params: Promise<{ id
         action={updateServiceAction}
         types={listServiceTypes()}
         units={listUnits()}
-        members={listMembers(hh.id).map((m) => ({ id: m.id, name: m.name }))}
+        members={view.parts.map(({ member: m }) => ({
+          id: m.id,
+          name: m.name,
+          colour: m.colour,
+          splitWeight: m.splitWeight,
+        }))}
+        split={{
+          canEdit: me.role === 'owner',
+          currency: hh.currency,
+          locale: hh.locale,
+          latestMinor: view.latestMinor,
+          resplitCount: view.resplitCount,
+          percents: view.percents,
+          amounts: view.amounts,
+          summary: view.parts.map((p) => ({
+            name: p.member.name,
+            colour: p.member.colour,
+            part: partText(ts, p.setting, money),
+          })),
+        }}
         cadences={CADENCES}
         splitModes={SPLIT_MODES}
         sharedHousehold={hh.splitMode === 'shared'}
         canBePersonal={hasHousemates(hh.id)}
-        canChangePersonal={
-          s.ownerMemberId
-            ? s.ownerMemberId === me.id
-            : me.role === 'owner' || s.payerMemberId === me.id
-        }
+        canChangePersonal={mayChangeOwner(hh.id, me, s)}
         submitLabel={t('form.save')}
         cancelHref="/services"
         initial={{
@@ -61,7 +82,6 @@ export default async function EditServicePage({ params }: { params: Promise<{ id
           trustedSenders: s.trustedSenders.join(', '),
           autoPay: s.autoPay,
           seasonal: s.seasonal,
-          customSplits: getCustomSplits(hh.id, s.id),
           personal: !!s.ownerMemberId,
         }}
       />

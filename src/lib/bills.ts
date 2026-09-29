@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull } from 'drizzle-orm';
 import { getDb, type Db } from '@/db/client';
 import {
   bill,
@@ -19,7 +19,7 @@ import { todayIn } from '@/lib/dates';
 import { ulid } from '@/lib/ids';
 import { getHousehold } from '@/lib/households';
 import { listMembers } from '@/lib/members';
-import { getCustomSplits, getService, type ServiceWithType } from '@/lib/services';
+import { getService, splitSettings, type ServiceWithType } from '@/lib/services';
 import { computeShares, renderPaymentReference } from '@/lib/splits';
 import { anomalyNote, detectAnomaly } from '@/lib/anomaly';
 
@@ -182,8 +182,7 @@ function insertShares(
   if (svc.ownerMemberId) return;
   const members = listMembers(householdId, tx);
   const byId = new Map(members.map((m) => [m.id, m]));
-  const customWeights =
-    svc.splitMode === 'custom' ? getCustomSplits(householdId, svc.id, tx) : undefined;
+  const settings = splitSettings(householdId, svc, tx);
   const parts = instalments.length
     ? instalments.map((i) => ({
         instalment: i.seq,
@@ -198,7 +197,9 @@ function insertShares(
       periodEnd: input.periodEnd,
       splitMode: svc.splitMode,
       members,
-      customWeights,
+      ...settings,
+      // Set amounts are per bill: an instalment pays its part of each.
+      referenceAmountMinor: input.amountMinor,
       payerMemberId: svc.payerMemberId,
     }).map((r) => ({
       id: ulid(),
@@ -737,6 +738,17 @@ export function billsWithAlerts(
  * with it: personal bills lose their shares, household bills are split again.
  * Refused once a housemate has paid a share of one of its bills.
  */
+/** Has a housemate paid a share of any of this service's bills? Then it stays the household's. */
+export function housematesPaid(householdId: string, serviceId: string, db: Db = getDb()): boolean {
+  return db
+    .select({ paidAt: share.paidAt, paidMethod: share.paidMethod })
+    .from(share)
+    .innerJoin(bill, eq(bill.id, share.billId))
+    .where(and(eq(bill.householdId, householdId), eq(bill.serviceId, serviceId)))
+    .all()
+    .some((s) => s.paidAt && s.paidMethod !== 'payer');
+}
+
 export function setServiceOwner(
   householdId: string,
   serviceId: string,
@@ -755,15 +767,7 @@ export function setServiceOwner(
     .where(and(eq(bill.householdId, householdId), eq(bill.serviceId, serviceId)))
     .all();
   const ids = bills.map((b) => b.id);
-  const paid = ids.length
-    ? db
-        .select()
-        .from(share)
-        .where(inArray(share.billId, ids))
-        .all()
-        .some((s) => s.paidAt && s.paidMethod !== 'payer')
-    : false;
-  if (paid)
+  if (housematesPaid(householdId, serviceId, db))
     throw new Error(
       'Housemates have paid shares of its bills, so it has to stay a household service',
     );
@@ -797,4 +801,73 @@ export function setServiceOwner(
       );
   });
   return getService(householdId, serviceId, db)!;
+}
+
+/**
+ * The bills of a household service that a new split can still apply to: none
+ * of their shares has been paid by a housemate (the same lock as editing a bill).
+ */
+export function resplittableBills(
+  householdId: string,
+  serviceId: string,
+  db: Db = getDb(),
+): Bill[] {
+  const bills = db
+    .select()
+    .from(bill)
+    .where(
+      and(
+        eq(bill.householdId, householdId),
+        eq(bill.serviceId, serviceId),
+        isNull(bill.ownerMemberId),
+      ),
+    )
+    .all();
+  if (!bills.length) return [];
+  const paid = new Set(
+    db
+      .select({ billId: share.billId, paidAt: share.paidAt, paidMethod: share.paidMethod })
+      .from(share)
+      .where(
+        inArray(
+          share.billId,
+          bills.map((b) => b.id),
+        ),
+      )
+      .all()
+      .filter((s) => s.paidAt && s.paidMethod !== 'payer')
+      .map((s) => s.billId),
+  );
+  return bills.filter((b) => !paid.has(b.id));
+}
+
+/**
+ * Split a service's bills again after its split or payer changed: every bill
+ * nobody has paid a share of yet (see resplittableBills). Returns how many.
+ */
+export function resplitBills(householdId: string, serviceId: string, db: Db = getDb()): number {
+  const hh = getHousehold(householdId, db)!;
+  const svc = getService(householdId, serviceId, db);
+  if (!svc || svc.ownerMemberId || hh.splitMode !== 'shared') return 0;
+  const bills = resplittableBills(householdId, serviceId, db);
+  if (!bills.length) return 0;
+  const ids = bills.map((b) => b.id);
+  const now = new Date().toISOString();
+  db.transaction((tx) => {
+    const instalments = listInstalments(ids, tx);
+    tx.delete(share).where(inArray(share.billId, ids)).run();
+    for (const b of bills)
+      insertShares(
+        tx,
+        householdId,
+        b.id,
+        svc,
+        { ...b, currency: b.currency },
+        hh.paymentReferenceTemplate,
+        hh.locale,
+        now,
+        b.paymentPlan === 'instalments' ? instalments.filter((i) => i.billId === b.id) : [],
+      );
+  });
+  return bills.length;
 }

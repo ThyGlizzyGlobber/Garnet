@@ -1,6 +1,7 @@
 import { and, eq, isNotNull, isNull } from 'drizzle-orm';
 import { getDb, type Db } from '@/db/client';
-import { bill, service } from '@/db/schema';
+import { bill, service, sourceDocument } from '@/db/schema';
+import { actingMember } from '@/lib/acting-member';
 import { setServiceOwner } from '@/lib/bills';
 import { getService, listServices, type ServiceWithType } from '@/lib/services';
 import { visibleTo } from '@/lib/scope';
@@ -100,11 +101,35 @@ export function confirmOwnership(householdId: string, serviceId: string, db: Db 
 }
 
 /**
+ * The members who brought any of this service's bills in: whoever uploaded a
+ * bill's file, or forwarded it from their own address.
+ */
+export function broughtInBy(householdId: string, serviceId: string, db: Db = getDb()): Set<string> {
+  const docs = db
+    .select({
+      memberId: sourceDocument.memberId,
+      senderVerified: sourceDocument.senderVerified,
+      emailFrom: sourceDocument.emailFrom,
+    })
+    .from(bill)
+    .innerJoin(sourceDocument, eq(sourceDocument.id, bill.sourceDocumentId))
+    .where(and(eq(bill.householdId, householdId), eq(bill.serviceId, serviceId)))
+    .all();
+  const who = new Set<string>();
+  for (const d of docs) {
+    const m = actingMember(householdId, d, db);
+    if (m) who.add(m);
+  }
+  return who;
+}
+
+/**
  * May this member switch a service between household and personal? Its owner
  * can hand a personal one back. A household one can be made theirs by whoever
- * brought its bill in; only when nobody is known to have (set up by hand, or
- * mail straight from the provider) can an admin or its payer. (Whoever is
- * being asked "Who's this for?" may answer either way.)
+ * set it up or brought any of its bills in (upload or forward); only when
+ * nobody is known to have (set up by hand, or mail straight from the provider)
+ * can an admin or its payer. (Whoever is being asked "Who's this for?" may
+ * answer either way.) `broughtIn` is `broughtInBy()` for the service.
  */
 export function canChangeOwner(
   me: { id: string; role: string },
@@ -113,8 +138,28 @@ export function canChangeOwner(
     payerMemberId: string | null;
     setUpByMemberId?: string | null;
   },
+  broughtIn: Set<string> = new Set(),
 ): boolean {
   if (svc.ownerMemberId) return svc.ownerMemberId === me.id;
-  if (svc.setUpByMemberId) return svc.setUpByMemberId === me.id;
+  if (svc.setUpByMemberId === me.id || broughtIn.has(me.id)) return true;
+  if (svc.setUpByMemberId || broughtIn.size) return false;
   return me.role === 'owner' || svc.payerMemberId === me.id;
+}
+
+/** `canChangeOwner()` for a stored service, working out who brought its bills in. */
+export function mayChangeOwner(
+  householdId: string,
+  me: { id: string; role: string },
+  svc: Pick<
+    ServiceWithType,
+    | 'id'
+    | 'ownerMemberId'
+    | 'payerMemberId'
+    | 'setUpByMemberId'
+    | 'ownerAskedAt'
+    | 'ownerConfirmedAt'
+  >,
+  db: Db = getDb(),
+): boolean {
+  return canChangeOwner(me, svc, broughtInBy(householdId, svc.id, db)) || asksMember(svc, me);
 }

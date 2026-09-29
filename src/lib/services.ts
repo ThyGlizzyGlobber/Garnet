@@ -84,12 +84,44 @@ export function getCustomSplits(
   serviceId: string,
   db: Db = getDb(),
 ): Record<string, number> {
-  const rows = db
+  return Object.fromEntries(
+    splitRows(householdId, serviceId, db)
+      .filter((r) => r.amountMinor === null)
+      .map((r) => [r.memberId, r.weight]),
+  );
+}
+
+/** 'fixed' splits: what each member pays of a bill, in minor units. */
+export function getFixedAmounts(
+  householdId: string,
+  serviceId: string,
+  db: Db = getDb(),
+): Record<string, number> {
+  return Object.fromEntries(
+    splitRows(householdId, serviceId, db)
+      .filter((r) => r.amountMinor !== null)
+      .map((r) => [r.memberId, r.amountMinor!]),
+  );
+}
+
+function splitRows(householdId: string, serviceId: string, db: Db) {
+  return db
     .select()
     .from(serviceSplit)
     .where(and(eq(serviceSplit.householdId, householdId), eq(serviceSplit.serviceId, serviceId)))
     .all();
-  return Object.fromEntries(rows.map((r) => [r.memberId, r.weight]));
+}
+
+/** What computeShares needs besides the members: the service's percentages or amounts. */
+export function splitSettings(
+  householdId: string,
+  svc: Pick<ServiceWithType, 'id' | 'splitMode'>,
+  db: Db = getDb(),
+): { customWeights?: Record<string, number>; fixedAmounts?: Record<string, number> } {
+  if (svc.splitMode === 'custom' || svc.splitMode === 'percent')
+    return { customWeights: getCustomSplits(householdId, svc.id, db) };
+  if (svc.splitMode === 'fixed') return { fixedAmounts: getFixedAmounts(householdId, svc.id, db) };
+  return {};
 }
 
 export interface ServiceInput {
@@ -112,8 +144,10 @@ export interface ServiceInput {
   trustedSenders?: string[];
   /** Provider charges automatically (card on file / direct debit). */
   autoPay?: boolean;
-  /** memberId → weight; replaces existing custom splits when provided. */
+  /** memberId → percentage or ratio; replaces the service's splits when provided. */
   customSplits?: Record<string, number>;
+  /** memberId → amount per bill (minor units); replaces the service's splits when provided. */
+  fixedAmounts?: Record<string, number>;
   /** Personal to this member (only they see it; not split). Set on create; see setServiceOwner. */
   ownerMemberId?: string | null;
   /** Set up from a bill this member brought in; they're asked whether it's theirs (src/lib/ownership.ts). */
@@ -141,7 +175,7 @@ export function createService(
 ): ServiceWithType {
   const now = new Date().toISOString();
   const id = ulid();
-  const { customSplits, ...rest } = input;
+  const { customSplits, fixedAmounts, ...rest } = input;
   assertPayerInHousehold(householdId, rest.payerMemberId, db);
   assertPayerInHousehold(householdId, rest.ownerMemberId, db);
   db.insert(service)
@@ -171,7 +205,8 @@ export function createService(
       updatedAt: now,
     })
     .run();
-  if (customSplits) setCustomSplits(householdId, id, customSplits, db);
+  if (fixedAmounts) setFixedAmounts(householdId, id, fixedAmounts, db);
+  else if (customSplits) setCustomSplits(householdId, id, customSplits, db);
   return getService(householdId, id, db)!;
 }
 
@@ -184,7 +219,7 @@ export function updateService(
   const existing = getService(householdId, id, db);
   if (!existing) throw new Error('Service not found');
   // Who owns it changes only through setServiceOwner (its bills and shares move too).
-  const { customSplits, ...rest } = input;
+  const { customSplits, fixedAmounts, ...rest } = input;
   delete rest.ownerMemberId;
   // A personal service is always paid by its owner.
   if (existing.ownerMemberId) rest.payerMemberId = existing.ownerMemberId;
@@ -198,8 +233,34 @@ export function updateService(
     })
     .where(and(eq(service.householdId, householdId), eq(service.id, id)))
     .run();
-  if (customSplits) setCustomSplits(householdId, id, customSplits, db);
+  if (fixedAmounts) setFixedAmounts(householdId, id, fixedAmounts, db);
+  else if (customSplits) setCustomSplits(householdId, id, customSplits, db);
   return getService(householdId, id, db)!;
+}
+
+/** Replace a service's split with amounts per bill (0 = pays nothing; members left out share the rest). */
+export function setFixedAmounts(
+  householdId: string,
+  serviceId: string,
+  amounts: Record<string, number>,
+  db: Db = getDb(),
+) {
+  if (!getService(householdId, serviceId, db)) throw new Error('Service not found');
+  db.delete(serviceSplit)
+    .where(and(eq(serviceSplit.householdId, householdId), eq(serviceSplit.serviceId, serviceId)))
+    .run();
+  const rows = Object.entries(amounts)
+    .filter(
+      ([memberId, a]) => a >= 0 && Number.isInteger(a) && getMember(householdId, memberId, db),
+    )
+    .map(([memberId, amountMinor]) => ({
+      householdId,
+      serviceId,
+      memberId,
+      weight: 0,
+      amountMinor,
+    }));
+  if (rows.length) db.insert(serviceSplit).values(rows).run();
 }
 
 /** Replace a service's custom weights. Weights for members of other households are dropped. */
