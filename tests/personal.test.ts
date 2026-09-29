@@ -235,6 +235,7 @@ describe('bills that arrive', () => {
       instalments: null,
     },
     payment: null,
+    page_rotation: [],
     confidence: 0.95,
     notes: null,
   });

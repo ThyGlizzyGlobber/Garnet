@@ -63,6 +63,7 @@ const bill = (
     instalments: null,
   },
   payment: null,
+  page_rotation: [],
   confidence: 0.95,
   notes: null,
 });

@@ -1,5 +1,7 @@
 'use server';
 
+import { rotateDocument } from '@/ingest/rotate';
+import { getReviewItem } from '@/lib/review';
 import { refileDocuments } from '@/lib/filing';
 import type { Member } from '@/db/schema';
 import { visibleTo } from '@/lib/scope';
@@ -227,4 +229,20 @@ export async function toggleInstalmentPaidAction(fd: FormData): Promise<void> {
   revalidatePath(`/bills/${id}`);
   revalidatePath('/bills');
   revalidatePath('/');
+}
+
+/** Turn a bill's scan or photo a quarter turn clockwise, for good (see src/ingest/rotate.ts). */
+export async function rotateDocumentAction(fd: FormData): Promise<void> {
+  const me = await requireMember();
+  const billId = str(fd, 'billId');
+  if (!visibleBill(me, billId)) return;
+  // Only a file that belongs with this bill (its source, a receipt, a notice).
+  const doc = getReviewItem(me.householdId, str(fd, 'id'), undefined, { viewer: me.id });
+  if (!doc || doc.linkedBillId !== billId) return;
+  try {
+    await rotateDocument(me.householdId, doc.id, 90);
+  } catch (e) {
+    console.warn('[bills] turn page:', (e as Error).message);
+  }
+  revalidatePath(`/bills/${billId}`);
 }

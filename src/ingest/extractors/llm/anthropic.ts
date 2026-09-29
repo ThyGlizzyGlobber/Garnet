@@ -140,6 +140,16 @@ export const outputSchema = z.object({
     })
     .nullable()
     .describe('For receipts and payment notices; null for bills and other documents'),
+  page_rotation: z
+    .array(
+      z.object({
+        page: z.number().int().describe('1-based page number'),
+        degrees: z.number().int().describe('90, 180 or 270: how far to turn it clockwise'),
+      }),
+    )
+    .describe(
+      'Only for an attached scan or photo: each page that is sideways or upside down, and how far to turn it clockwise so its text reads normally. Empty when every page is upright, and always empty for text documents',
+    ),
   confidence: z
     .number()
     .min(0)
@@ -356,6 +366,14 @@ function instalmentOptions(
 }
 
 /** Map the model's record onto the pipeline's types. Exported for tests. */
+/** The pages to turn, as the pipeline wants them: whole quarter turns only. */
+function rotationOf(o: Output): { page: number; degrees: 90 | 180 | 270 }[] | undefined {
+  const turns = (o.page_rotation ?? [])
+    .filter((r) => r.page >= 1 && (r.degrees === 90 || r.degrees === 180 || r.degrees === 270))
+    .map((r) => ({ page: r.page, degrees: r.degrees as 90 | 180 | 270 }));
+  return turns.length ? turns : undefined;
+}
+
 export function toResult(
   o: Output,
   input: {
@@ -395,6 +413,7 @@ export function toResult(
       bill,
       confidence: o.confidence,
       warnings,
+      rotation: rotationOf(o),
       document: {
         kind,
         provider: o.provider,
@@ -456,17 +475,30 @@ export function toResult(
   };
   if (!bill.periodStart || !bill.periodEnd || !bill.dueDate) {
     warnings.push('A billing date could not be read (expected YYYY-MM-DD)');
-    return { extractor, bill, confidence: Math.min(o.confidence, 0.3), warnings };
+    return {
+      extractor,
+      bill,
+      confidence: Math.min(o.confidence, 0.3),
+      warnings,
+      rotation: rotationOf(o),
+    };
   }
   if (bill.periodEnd < bill.periodStart) {
     warnings.push('Period end before start');
-    return { extractor, bill, confidence: Math.min(o.confidence, 0.3), warnings };
+    return {
+      extractor,
+      bill,
+      confidence: Math.min(o.confidence, 0.3),
+      warnings,
+      rotation: rotationOf(o),
+    };
   }
   return {
     extractor,
     bill,
     confidence: o.confidence,
     warnings,
+    rotation: rotationOf(o),
     document: { kind: 'bill', provider: o.provider, payment: null, date: day(o.document_date) },
   };
 }

@@ -131,6 +131,7 @@ describe('reading instalments from a bill', () => {
       ],
     },
     payment: null,
+    page_rotation: [],
     confidence: 0.95,
     notes: null,
   };
@@ -211,6 +212,7 @@ describe('the service a council notice lands on', () => {
       instalments: null,
     },
     payment: null,
+    page_rotation: [],
     confidence: 0.95,
     notes: null,
   });

@@ -1,8 +1,15 @@
-import Link from 'next/link';
+import type { SourceDocument } from '@/db/schema';
+import { Icon } from '@/components/app/icons';
+import { actingMember } from '@/ingest/pipeline';
+import { canRotate } from '@/ingest/rotate';
+import { isImageFile } from '@/ingest/scan';
+import { filedDocuments, type FiledDocument } from '@/lib/filing';
+import { listMembers } from '@/lib/members';
+import { darkVariant } from '@/lib/palette';
 import { visibleTo } from '@/lib/scope';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import { Badge, Card, LinkButton, PageHeader } from '@/components/ui';
+import { Badge, Card, LinkButton } from '@/components/ui';
 import { InlineAction } from '@/components/ui/form';
 import { getBill } from '@/lib/bills';
 import { pageContext } from '@/lib/context';
@@ -12,10 +19,11 @@ import { listBillMetrics } from '@/lib/metrics';
 import { figureChanges } from '@/lib/consumption';
 import { ChangeText } from '@/components/app/usage';
 import { METRIC_KINDS } from '@/db/schema';
-import { fullPaymentOpen, paysByInstalments } from '@/lib/instalments';
+import { dueNow, fullPaymentOpen, paysByInstalments } from '@/lib/instalments';
 import {
   clearBillAlertAction,
   deleteBillAction,
+  rotateDocumentAction,
   setPaymentPlanAction,
   toggleBillPaidAction,
   toggleInstalmentPaidAction,
@@ -54,17 +62,46 @@ export default async function BillPage({ params }: { params: Promise<{ id: strin
       ? money(m.amountMinor, m.currency ?? b.currency)
       : `${number.format(m.value ?? 0)}${m.unit ? ` ${unitLabel(m.unit)}` : ''}`;
 
+  // Everything that came with this bill: the file it was read from, then any
+  // receipts and payment notices about it (one page per bill).
+  const files = filedDocuments(hh.id, { everyone: true })
+    .filter((f) => f.billId === b.id)
+    .sort((x, y) =>
+      x.kind === 'bill'
+        ? -1
+        : y.kind === 'bill'
+          ? 1
+          : x.doc.receivedAt.localeCompare(y.doc.receivedAt),
+    );
+  const members = new Map(listMembers(hh.id).map((m) => [m.id, m.name]));
+  const notes = personNotes(b.notes, files.find((f) => f.kind === 'bill')?.doc ?? null);
+  const swatch = `light-dark(${b.service.colour}, ${darkVariant(b.service.colour)})`;
+  const dueNext = byInstalments ? dueNow(b) : null;
+
   return (
-    <div className="mx-auto max-w-2xl">
-      <PageHeader
-        title={`${b.service.name} · ${b.service.provider}`}
-        subtitle={`${date(b.periodStart)} – ${date(b.periodEnd)}`}
-        action={
-          <LinkButton href={`/bills/${b.id}/edit`} variant="secondary">
-            {t('edit')}
-          </LinkButton>
-        }
-      />
+    <div className="mx-auto max-w-4xl">
+      <header className="mb-5 flex flex-wrap items-center justify-between gap-4">
+        <div className="flex min-w-0 items-center gap-4">
+          <span
+            className="glow-disc size-14 shrink-0"
+            style={{ color: swatch, ['--glow' as string]: swatch }}
+          >
+            <Icon name={b.service.type.icon} width={24} height={24} />
+          </span>
+          <div className="min-w-0">
+            <h1 className="truncate font-display text-[26px] leading-tight font-semibold tracking-tight sm:text-[32px]">
+              {b.service.name}
+            </h1>
+            <p className="truncate text-sm text-fg-muted">
+              {b.service.provider} · {date(b.periodStart)} – {date(b.periodEnd)}
+            </p>
+          </div>
+        </div>
+        <LinkButton href={`/bills/${b.id}/edit`} variant="secondary">
+          {t('edit')}
+        </LinkButton>
+      </header>
+
       {b.alertKind && (
         <Card className="mb-4 flex flex-col gap-3 border-danger/40 bg-danger-soft">
           <p className="font-semibold text-danger">{t(`alert.${b.alertKind}`)}</p>
@@ -76,12 +113,9 @@ export default async function BillPage({ params }: { params: Promise<{ id: strin
           </p>
           <div className="flex flex-wrap items-center gap-3">
             {b.alertDocumentId && (
-              <Link
-                href={`/review/${b.alertDocumentId}`}
-                className="text-sm font-semibold text-accent"
-              >
-                {t('alert.viewEmail')} →
-              </Link>
+              <a href="#files" className="text-sm font-semibold text-accent">
+                {t('alert.viewEmail')} ↓
+              </a>
             )}
             <InlineAction
               action={clearBillAlertAction}
@@ -92,21 +126,39 @@ export default async function BillPage({ params }: { params: Promise<{ id: strin
           </div>
         </Card>
       )}
-      <Card>
-        <div className="flex items-start justify-between gap-4">
+
+      {/* The cost, and where it stands. */}
+      <section
+        className={`glass rounded-card p-5 sm:p-6 ${overdue ? 'bg-danger-soft' : 'bg-accent-soft'}`}
+      >
+        <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-sm text-fg-muted">{t('detail.amount')}</p>
-            <p className="text-3xl font-semibold tabular-nums">
+            <p className="text-sm font-semibold text-fg-muted">{t('detail.amount')}</p>
+            <p className="font-display text-[44px] leading-none font-semibold tracking-tight tabular-nums">
               {money(b.amountMinor, b.currency)}
             </p>
             {b.taxMinor !== null && (
-              <p className="text-xs text-fg-muted">
+              <p className="mt-1 text-xs text-fg-muted">
                 {t('detail.includesTax', {
                   amount: money(b.taxMinor, b.currency),
                   label: b.taxLabel ?? t('detail.tax'),
                 })}
               </p>
             )}
+            <p className={`mt-3 text-sm font-semibold ${overdue ? 'text-danger' : ''}`}>
+              {b.paidToProviderAt
+                ? t('detail.paidOn', { date: date(b.paidToProviderAt) })
+                : dueNext
+                  ? t('detail.instalmentDue', {
+                      amount: money(dueNext.amountMinor, b.currency),
+                      n: dueNext.seq ?? 1,
+                      of: dueNext.of,
+                      date: date(dueNext.dueDate),
+                    })
+                  : overdue
+                    ? t('detail.wasDue', { date: date(b.dueDate) })
+                    : t('detail.dueOn', { date: date(b.dueDate) })}
+            </p>
           </div>
           <div className="flex flex-col items-end gap-2">
             {b.paidToProviderAt ? (
@@ -117,59 +169,79 @@ export default async function BillPage({ params }: { params: Promise<{ id: strin
               <Badge tone="warning">{t('detail.unpaid')}</Badge>
             )}
             {personal && <Badge>{t('tile.onlyYou')}</Badge>}
-            <Badge>{t(`source.${b.source}`)}</Badge>
             {b.isAnomaly && <Badge tone="warning">{t('anomaly')}</Badge>}
           </div>
         </div>
-        <dl className="mt-5 grid grid-cols-2 gap-x-4 gap-y-3 text-sm sm:grid-cols-3">
-          <Row
-            label={byInstalments ? tp('nextDue') : t('detail.dueDate')}
-            value={date(b.dueDate)}
-          />
-          <Row label={t('detail.issueDate')} value={date(b.issueDate) || '—'} />
-          <Row label={t('detail.externalRef')} value={b.externalRef ?? '—'} />
-          <Row
-            label={t('detail.usage')}
-            value={b.usageQuantity !== null ? `${b.usageQuantity} ${unitLabel(b.usageUnit)}` : '—'}
-          />
-          <Row label={t('detail.account')} value={b.service.accountRef ?? '—'} />
-          <Row label={t('detail.paidToProviderAt')} value={date(b.paidToProviderAt) || '—'} />
-          {b.sourceDocumentId && (
-            <div>
-              <dt className="text-fg-muted">{t('detail.sourceDocument')}</dt>
-              <dd>
-                <Link href={`/review/${b.sourceDocumentId}`} className="font-medium text-accent">
-                  {t('detail.viewSource')}
-                </Link>
-              </dd>
-            </div>
-          )}
-        </dl>
         {b.isAnomaly && b.anomalyNote && (
           <p className="mt-4 rounded-xl bg-warning/10 px-4 py-3 text-sm text-warning">
             {b.anomalyNote}
           </p>
         )}
-        {b.notes && <p className="mt-4 whitespace-pre-wrap text-sm text-fg-muted">{b.notes}</p>}
-        <div className="mt-5 flex flex-wrap gap-2">
-          {!byInstalments && (
+        {!byInstalments && (
+          <div className="mt-4">
             <InlineAction
               action={toggleBillPaidAction}
               hidden={{ id: b.id, paid: b.paidToProviderAt ? 'false' : 'true' }}
               label={
                 b.paidToProviderAt ? t('detail.markUnpaidProvider') : t('detail.markPaidProvider')
               }
+              variant={b.paidToProviderAt ? 'ghost' : 'primary'}
             />
+          </div>
+        )}
+      </section>
+
+      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+        {/* The details. */}
+        <Card>
+          <h2 className="font-display text-lg font-semibold">{t('detail.detailsTitle')}</h2>
+          <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+            <Row
+              label={byInstalments ? tp('nextDue') : t('detail.dueDate')}
+              value={date(b.dueDate)}
+            />
+            <Row label={t('detail.issueDate')} value={date(b.issueDate) || '—'} />
+            <Row
+              label={t('detail.period')}
+              value={`${date(b.periodStart, 'short')} – ${date(b.periodEnd, 'short')}`}
+            />
+            <Row label={t('detail.externalRef')} value={b.externalRef ?? '—'} />
+            <Row label={t('detail.account')} value={b.service.accountRef ?? '—'} />
+            <Row
+              label={t('detail.usage')}
+              value={
+                b.usageQuantity !== null ? `${b.usageQuantity} ${unitLabel(b.usageUnit)}` : '—'
+              }
+            />
+            <Row label={t('detail.paidToProviderAt')} value={date(b.paidToProviderAt) || '—'} />
+            <Row label={t('detail.type')} value={b.service.type.label} />
+          </dl>
+          {notes && <p className="mt-4 text-sm whitespace-pre-wrap text-fg-muted">{notes}</p>}
+        </Card>
+
+        {/* The email and file it came from, and anything since. */}
+        <Card className="scroll-mt-24" id="files">
+          <h2 className="font-display text-lg font-semibold">{t('files.title')}</h2>
+          {files.length === 0 ? (
+            <p className="mt-3 text-sm text-fg-muted">
+              {b.source === 'manual' && !b.sourceDocumentId ? t('files.byHand') : t('files.none')}
+            </p>
+          ) : (
+            <ul className="mt-3 flex flex-col divide-y divide-border">
+              {files.map((f) => (
+                <FileRow
+                  key={f.doc.id}
+                  file={f}
+                  billId={b.id}
+                  sentBy={sentBy(hh.id, f.doc, members)}
+                  date={date}
+                  t={t}
+                />
+              ))}
+            </ul>
           )}
-          <InlineAction
-            action={deleteBillAction}
-            hidden={{ id: b.id }}
-            label={t('delete')}
-            variant="danger"
-            confirm={t('deleteConfirm')}
-          />
-        </div>
-      </Card>
+        </Card>
+      </div>
 
       {b.instalments.length > 0 && (
         <PaymentPlan
@@ -316,7 +388,116 @@ export default async function BillPage({ params }: { params: Promise<{ id: strin
           ))}
         </Card>
       )}
+
+      <div className="mt-8 flex justify-end">
+        <InlineAction
+          action={deleteBillAction}
+          hidden={{ id: b.id }}
+          label={t('delete')}
+          variant="danger"
+          confirm={t('deleteConfirm')}
+        />
+      </div>
     </div>
+  );
+}
+
+/**
+ * A bill's notes as a person wrote them. Bills read by the AI used to carry the
+ * reader's own remarks in their notes; those aren't for people, so notes that
+ * are exactly what the reader said about its source file are left out.
+ */
+function personNotes(notes: string | null, source: SourceDocument | null): string | null {
+  if (!notes?.trim()) return null;
+  try {
+    const read = source?.extractionJson
+      ? (JSON.parse(source.extractionJson) as { result?: { warnings?: string[] } })
+      : null;
+    const said = read?.result?.warnings ?? [];
+    if (said.length && said.join('\n').trim() === notes.trim()) return null;
+  } catch {
+    // Unreadable record: show the notes.
+  }
+  return notes;
+}
+
+type SentBy =
+  | { kind: 'upload'; name: string | null }
+  | { kind: 'forward'; name: string; from: string | null }
+  | { kind: 'email'; from: string | null };
+
+/** How a file reached the household: uploaded, forwarded by a member, or emailed in. */
+function sentBy(householdId: string, doc: SourceDocument, members: Map<string, string>): SentBy {
+  if (doc.kind === 'upload')
+    return { kind: 'upload', name: (doc.memberId && members.get(doc.memberId)) || null };
+  const member = actingMember(householdId, doc);
+  if (member) return { kind: 'forward', name: members.get(member) ?? '', from: doc.emailFrom };
+  return { kind: 'email', from: doc.emailFrom };
+}
+
+/** One file that came with the bill: who sent it, its email details, and a link to open it. */
+function FileRow({
+  file: f,
+  billId,
+  sentBy: who,
+  date,
+  t,
+}: {
+  file: FiledDocument;
+  billId: string;
+  sentBy: SentBy;
+  date: (iso: string | null | undefined, style?: 'short' | 'medium') => string;
+  t: Translate;
+}) {
+  const doc = f.doc;
+  const isPdf = (doc.mimeType ?? '').includes('pdf') || doc.path.toLowerCase().endsWith('.pdf');
+  const isPhoto = isImageFile(doc.mimeType, doc.path);
+  const when = date(doc.receivedAt);
+  const line =
+    who.kind === 'upload'
+      ? who.name
+        ? t('files.uploadedBy', { name: who.name, date: when })
+        : t('files.uploaded', { date: when })
+      : who.kind === 'forward'
+        ? t('files.forwardedBy', { name: who.name, date: when })
+        : t('files.emailed', { date: when });
+  return (
+    <li className="flex flex-col gap-1.5 py-3 first:pt-0 last:pb-0">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="font-semibold">{t(`files.kind.${f.kind}`)}</p>
+          <p className="text-xs text-fg-muted">{line}</p>
+        </div>
+        {doc.senderVerified === true && doc.senderDomain && (
+          <Badge tone="success">{t('files.signed', { domain: doc.senderDomain })}</Badge>
+        )}
+      </div>
+      {doc.emailSubject && <p className="text-sm">{doc.emailSubject}</p>}
+      {doc.emailFrom && (
+        <p className="truncate text-xs text-fg-muted">{t('files.from', { from: doc.emailFrom })}</p>
+      )}
+      {doc.originalFilename && (
+        <p className="truncate font-mono text-xs text-fg-muted">{doc.originalFilename}</p>
+      )}
+      <div className="mt-1 flex flex-wrap items-center gap-2">
+        <a
+          href={`/api/documents/${doc.id}/file`}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center gap-1.5 rounded-full border border-border-strong bg-surface-2 px-4 py-2 text-sm font-semibold hover:bg-surface"
+        >
+          {isPdf ? t('files.viewPdf') : isPhoto ? t('files.viewPhoto') : t('files.viewEmail')} ↗
+        </a>
+        {canRotate(doc) && (
+          <InlineAction
+            action={rotateDocumentAction}
+            hidden={{ id: doc.id, billId }}
+            label={t('files.turn')}
+            variant="ghost"
+          />
+        )}
+      </div>
+    </li>
   );
 }
 

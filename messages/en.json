@@ -109,8 +109,8 @@
     },
     "source": {
       "manual": "Entered by hand",
-      "template": "Parsed",
-      "llm": "AI extracted"
+      "template": "Read from the bill",
+      "llm": "Read from the bill"
     },
     "detail": {
       "amount": "Amount",
@@ -128,7 +128,14 @@
       "markUnpaidProvider": "Mark not paid to provider",
       "sourceDocument": "Source file",
       "viewSource": "View",
-      "personalNote": "A personal bill: only you can see it, it isn't split, and it stays out of the household's figures. It counts on your own dashboard (Home → Mine)."
+      "personalNote": "A personal bill: only you can see it, it isn't split, and it stays out of the household's figures. It counts on your own dashboard (Home → Mine).",
+      "paidOn": "Paid on {date}",
+      "dueOn": "Due {date}",
+      "wasDue": "Was due {date}",
+      "instalmentDue": "Next: {amount} (instalment {n} of {of}) due {date}",
+      "detailsTitle": "Details",
+      "period": "Covers",
+      "type": "Type"
     },
     "shares": {
       "title": "Shares",
@@ -202,8 +209,8 @@
       "period": "{start} – {end}",
       "source": {
         "manual": "Entered by hand",
-        "template": "Read {pct}% · template",
-        "llm": "Read {pct}% · AI",
+        "template": "Read from the bill",
+        "llm": "Read from the bill",
         "review": "Confirmed in review"
       },
       "document": "View file",
@@ -263,7 +270,27 @@
     },
     "downloadHint": "A zip of every bill: spreadsheets for your accountant plus each bill's file, filed by year, month and service",
     "downloadMine": "Download my bills",
-    "downloadMineHint": "A zip of your personal bills: a spreadsheet plus each bill's file, filed by year, month and service"
+    "downloadMineHint": "A zip of your personal bills: a spreadsheet plus each bill's file, filed by year, month and service",
+    "files": {
+      "title": "Bill email & file",
+      "byHand": "Entered by hand, so there's no email or file.",
+      "none": "The email or file this bill came from is no longer stored.",
+      "kind": {
+        "bill": "The bill",
+        "receipt": "Payment receipt",
+        "notice": "Payment notice"
+      },
+      "uploadedBy": "Uploaded by {name} · {date}",
+      "uploaded": "Uploaded · {date}",
+      "forwardedBy": "Forwarded by {name} · {date}",
+      "emailed": "Emailed to the household · {date}",
+      "signed": "Verified {domain}",
+      "from": "From {from}",
+      "viewPdf": "View PDF",
+      "viewPhoto": "View photo",
+      "viewEmail": "View email",
+      "turn": "Turn page ↻"
+    }
   },
   "services": {
     "title": "Services",
@@ -820,6 +847,9 @@
     "arrived": "arrived {date}",
     "category": {
       "receipt": "Receipt"
+    },
+    "why": {
+      "check": "Some details need checking"
     }
   },
   "upload": {

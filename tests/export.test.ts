@@ -86,6 +86,7 @@ const notice = (provider: string, type: string, issue: string): AiOutput => ({
     ],
   },
   payment: null,
+  page_rotation: [],
   confidence: 0.95,
   notes: null,
 });

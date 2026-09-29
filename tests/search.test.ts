@@ -161,6 +161,7 @@ describe('the inbox by month', () => {
     service_type: 'internet',
     bill: null,
     payment: { date, amount: 129, currency: 'AUD', invoice_numbers: ['1'] },
+    page_rotation: [],
     confidence: 0.95,
     notes: null,
   });

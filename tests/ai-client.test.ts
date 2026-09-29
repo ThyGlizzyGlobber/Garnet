@@ -57,6 +57,7 @@ const receipt = {
   service_type: 'internet',
   bill: null,
   payment: { date: '2026-07-28', amount: 129, currency: 'AUD', invoice_numbers: ['60097874'] },
+  page_rotation: [],
   confidence: 0.96,
   notes: null,
 };

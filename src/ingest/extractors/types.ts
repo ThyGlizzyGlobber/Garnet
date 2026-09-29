@@ -111,6 +111,11 @@ export interface ExtractionResult {
   document?: DocumentInfo;
   /** Overall confidence in [0,1]. Below the household threshold → review queue. */
   confidence: number;
+  /**
+   * A scan or photo with pages that aren't upright: how far to turn each,
+   * clockwise (1-based pages). Empty or absent when everything reads normally.
+   */
+  rotation?: { page: number; degrees: 90 | 180 | 270 }[];
   /** Per-field confidence when the extractor can tell. */
   fieldConfidence?: Partial<Record<keyof ExtractedBill, number>>;
   warnings: string[];

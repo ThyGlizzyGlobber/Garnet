@@ -1,4 +1,5 @@
 import { and, eq } from 'drizzle-orm';
+import { rotateDocument } from './rotate';
 import { refileDocuments } from '@/lib/filing';
 import type { Scope } from '@/lib/scope';
 import { getDb, type Db } from '@/db/client';
@@ -287,6 +288,15 @@ async function readAndRoute(
     extractors: aiLeft ? [...templateExtractors, ...fallbackExtractors] : templateExtractors,
   });
   documentDate = best?.document?.date ?? best?.bill.issueDate ?? null;
+  // A sideways or upside-down scan: turn it the right way up, for good.
+  if (scan && best?.rotation?.length) {
+    try {
+      if (await rotateDocument(householdId, doc.id, best.rotation, db))
+        console.log(`[ingest] turned ${doc.id} the right way up`);
+    } catch (e) {
+      console.warn(`[ingest] couldn't turn ${doc.id}:`, (e as Error).message);
+    }
+  }
   // Failed calls (bad key, outage) aren't charged, so they don't count either.
   if (attempts.some((a) => a.extractor.startsWith('llm:') && !a.error))
     recordUsage(householdId, AI_READ, db);
@@ -526,7 +536,8 @@ export function createBillFromExtraction(
       extractor: result.extractor,
       confidence: result.confidence,
       externalRef: b.externalRef ?? null,
-      notes: result.warnings.length ? result.warnings.join('\n') : null,
+      // The reader's own remarks stay in the document's record, not on the bill.
+      notes: null,
       instalments: b.instalments ?? null,
     },
     db,

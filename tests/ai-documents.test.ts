@@ -42,6 +42,7 @@ const base: Output = {
   service_type: null,
   bill: null,
   payment: null,
+  page_rotation: [],
   confidence: 0.95,
   notes: null,
 };

@@ -74,6 +74,7 @@ const waterBill = (ref: string): AiOutput => ({
     instalments: null,
   },
   payment: null,
+  page_rotation: [],
   confidence: 0.93,
   notes: null,
 });

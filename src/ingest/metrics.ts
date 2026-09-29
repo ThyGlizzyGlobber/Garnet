@@ -1,4 +1,5 @@
 import { getDb, type Db } from '@/db/client';
+import { rotateDocument } from './rotate';
 import type { SourceDocument } from '@/db/schema';
 import { billsMissingMetrics, saveBillMetrics } from '@/lib/metrics';
 import { listDocuments } from '@/lib/review';
@@ -54,6 +55,9 @@ async function readWithAi(
   if (!fallbackExtractors.some((e) => e.canHandle(input))) return undefined;
   const { best, attempts } = await runExtractors(input, { extractors: fallbackExtractors });
   if (attempts.some((a) => !a.error)) recordUsage(householdId, AI_READ, db);
+  // An older scan that's sideways: turn it the right way up while it's being read.
+  if (file && best?.rotation?.length)
+    await rotateDocument(householdId, doc.id, best.rotation, db).catch(() => false);
   return best;
 }
 

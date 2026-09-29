@@ -152,6 +152,7 @@ const electricity = (ref: string): AiOutput => ({
     ],
   },
   payment: null,
+  page_rotation: [],
   confidence: 0.95,
   notes: null,
 });
@@ -254,6 +255,7 @@ describe('figures from a bill', () => {
       service_type: 'electricity',
       bill: null,
       payment: { date: '2026-05-03', amount: 412.5, currency: 'AUD', invoice_numbers: [] },
+      page_rotation: [],
       confidence: 0.95,
       notes: null,
     });

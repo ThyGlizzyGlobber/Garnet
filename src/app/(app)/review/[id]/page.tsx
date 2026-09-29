@@ -1,11 +1,10 @@
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import { Badge, Card, LinkButton, PageHeader } from '@/components/ui';
+import { Badge, Card, PageHeader } from '@/components/ui';
 import { InlineAction } from '@/components/ui/form';
 import { pageContext } from '@/lib/context';
 import { minorUnitDigits } from '@/lib/format';
-import { getBill } from '@/lib/bills';
-import { getReviewItem } from '@/lib/review';
+import { getReviewItem, plainReason } from '@/lib/review';
 import { listServices } from '@/lib/services';
 import { listUnits } from '@/lib/units';
 import { matchService } from '@/ingest/pipeline';
@@ -20,6 +19,9 @@ export default async function ReviewItemPage({ params }: { params: Promise<{ id:
   const t = await getTranslations('review');
   const d = getReviewItem(hh.id, id, undefined, { viewer: me.id });
   if (!d) notFound();
+  // One page per bill: its file, receipts and notices all open the bill.
+  if (d.linkedBillId) redirect(`/bills/${d.linkedBillId}#files`);
+  const why = plainReason(d.extraction);
   const r = d.extraction?.result ?? null;
   const services = listServices(hh.id, { viewer: me.id });
   const tb = await getTranslations('bills');
@@ -34,9 +36,6 @@ export default async function ReviewItemPage({ params }: { params: Promise<{ id:
   const canReview = d.status !== 'extracted';
   // A receipt or provider notice: nothing to fill in, so say what happened instead.
   const isNotice = d.status === 'notice' || d.status === 'ignored';
-  const linked = d.billId ?? d.extraction?.billId ?? null;
-  // A receipt or notice may point at a bill that has since been deleted.
-  const relatedBill = linked && getBill(hh.id, linked) ? linked : null;
 
   const form = (
     <ReviewForm
@@ -78,13 +77,6 @@ export default async function ReviewItemPage({ params }: { params: Promise<{ id:
             : (d.originalFilename ?? t('detail.untitled'))
         }
         subtitle={`${t(`kind.${d.kind}`)} · ${date(d.receivedAt)}${d.emailFrom ? ` · ${d.emailFrom}` : ''}`}
-        action={
-          relatedBill && !isNotice ? (
-            <LinkButton href={`/bills/${relatedBill}`} variant="secondary">
-              {t('detail.viewBill')}
-            </LinkButton>
-          ) : undefined
-        }
       />
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <Badge
@@ -98,16 +90,10 @@ export default async function ReviewItemPage({ params }: { params: Promise<{ id:
         >
           {t(`status.${d.status}`)}
         </Badge>
-        {d.extraction?.reason && !isNotice && (
-          <span className="text-sm text-fg-muted">{d.extraction.reason}</span>
-        )}
-        {r && (
-          <Badge tone={r.confidence >= 0.85 ? 'success' : 'warning'}>
-            {t('detail.confidence', {
-              pct: Math.round(r.confidence * 100),
-              extractor: r.extractor,
-            })}
-          </Badge>
+        {why.kind !== 'none' && !isNotice && (
+          <span className="text-sm text-fg-muted">
+            {why.kind === 'check' ? t('why.check') : why.text}
+          </span>
         )}
       </div>
       <div className="grid gap-4 lg:grid-cols-2">
@@ -134,32 +120,17 @@ export default async function ReviewItemPage({ params }: { params: Promise<{ id:
           )}
         </Card>
         <div className={`flex flex-col gap-4 ${isNotice ? 'order-1 lg:order-none' : ''}`}>
-          {r && r.warnings.length > 0 && (
-            <Card className="text-sm">
-              <p className="font-semibold">{t('detail.warnings')}</p>
-              <ul className="mt-1 list-disc pl-5 text-fg-muted">
-                {r.warnings.map((w, i) => (
-                  <li key={i}>{w}</li>
-                ))}
-              </ul>
-            </Card>
-          )}
           {isNotice ? (
             <>
               <Card className="flex flex-col gap-3">
                 <p className="font-display text-lg font-semibold">{t('detail.noticeTitle')}</p>
-                {d.status === 'notice' && d.extraction?.reason && (
-                  <p className="text-sm">{d.extraction.reason}.</p>
+                {d.status === 'notice' && why.kind === 'text' && (
+                  <p className="text-sm">{why.text}.</p>
                 )}
                 <p className="text-sm text-fg-muted">
                   {d.status === 'ignored' ? t('detail.ignoredBody') : t('detail.noticeBody')}
                 </p>
                 <div className="flex flex-wrap items-center gap-2">
-                  {relatedBill && (
-                    <LinkButton href={`/bills/${relatedBill}`} variant="secondary">
-                      {t('detail.noticeBill')}
-                    </LinkButton>
-                  )}
                   <InlineAction
                     action={readAsBillAction}
                     hidden={{ documentId: d.id }}
@@ -205,23 +176,6 @@ export default async function ReviewItemPage({ params }: { params: Promise<{ id:
               {t('detail.openFile')}
             </a>
           </div>
-          {d.extraction?.attempts && d.extraction.attempts.length > 0 && (
-            <Card className="text-xs text-fg-muted">
-              <p className="font-semibold text-fg">{t('detail.attempts')}</p>
-              <ul className="mt-1">
-                {d.extraction.attempts.map((a, i) => (
-                  <li key={i}>
-                    {a.extractor}:{' '}
-                    {a.error
-                      ? t('detail.attemptError', { error: a.error })
-                      : a.confidence === null
-                        ? t('detail.attemptNone')
-                        : `${Math.round(a.confidence * 100)}%`}
-                  </li>
-                ))}
-              </ul>
-            </Card>
-          )}
         </div>
       </div>
     </>

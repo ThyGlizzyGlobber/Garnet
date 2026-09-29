@@ -10,6 +10,12 @@ import { inScope, type Scope } from '@/lib/scope';
 export type ReviewItem = SourceDocument & {
   extraction: StoredExtraction | null;
   billId: string | null;
+  /**
+   * The bill this document belongs with, when it still exists: the bill made
+   * from it, or the bill a receipt or notice was about. Its page is the one
+   * page for the bill and everything that came with it.
+   */
+  linkedBillId: string | null;
   category: DocumentCategory;
   /**
    * The date the document belongs to (YYYY-MM-DD): its bill's month date, the
@@ -60,11 +66,11 @@ export function listDocuments(
   opts: { status?: SourceDocument['status'] } & Scope = {},
   db: Db = getDb(),
 ): ReviewItem[] {
-  const owners = new Map(
+  const billOwners = new Map(
     db
       .select({ id: bill.id, owner: bill.ownerMemberId })
       .from(bill)
-      .where(and(eq(bill.householdId, householdId), isNotNull(bill.ownerMemberId)))
+      .where(eq(bill.householdId, householdId))
       .all()
       .map((r) => [r.id, r.owner]),
   );
@@ -108,13 +114,29 @@ export function listDocuments(
         billId: r.billId,
         category: documentCategory(r.doc.status, extraction),
         date,
+        linkedBillId:
+          r.billId ??
+          (extraction?.billId && billOwners.has(extraction.billId) ? extraction.billId : null),
       };
     })
-    .filter((d) => {
-      const billId = d.billId ?? d.extraction?.billId;
-      return inScope((billId && owners.get(billId)) || null, opts);
-    })
+    .filter((d) => inScope((d.linkedBillId && billOwners.get(d.linkedBillId)) || null, opts))
     .sort((a, b) => b.date.localeCompare(a.date) || b.receivedAt.localeCompare(a.receivedAt));
+}
+
+/**
+ * What to tell a person about a document, without the reader's inner workings:
+ * "check" when some details need a look, nothing for one that simply became a
+ * bill, otherwise the plain sentence the pipeline stored.
+ */
+export function plainReason(
+  extraction: Pick<StoredExtraction, 'code' | 'reason'> | null,
+): { kind: 'check' } | { kind: 'none' } | { kind: 'text'; text: string } {
+  const reason = extraction?.reason ?? '';
+  if (extraction?.code === 'low-confidence' || /\bConfidence \d+%|threshold/i.test(reason))
+    return { kind: 'check' };
+  if (!reason || extraction?.code === 'created' || /^Created bill via /.test(reason))
+    return { kind: 'none' };
+  return { kind: 'text', text: reason };
 }
 
 export function getReviewItem(

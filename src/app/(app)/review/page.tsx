@@ -4,7 +4,7 @@ import { Badge, Card, EmptyState, LinkButton, List, ListRow, PageHeader } from '
 import { InlineAction } from '@/components/ui/form';
 import { billsAddress } from '@/lib/bills-address';
 import { pageContext } from '@/lib/context';
-import { documentCounts, listDocuments, searchDocuments } from '@/lib/review';
+import { documentCounts, listDocuments, plainReason, searchDocuments } from '@/lib/review';
 import { Highlight } from '@/components/app/highlight';
 import { monthLabel } from '@/lib/bill-month';
 import { reprocessAllAction } from './actions';
@@ -150,8 +150,13 @@ export default async function ReviewPage({
               {items.map((d) => {
                 const r = d.extraction?.result;
                 const arrivedLater = d.receivedAt.slice(0, 7) !== d.date.slice(0, 7);
+                const why = plainReason(d.extraction);
                 return (
-                  <ListRow key={d.id} href={d.billId ? `/bills/${d.billId}` : `/review/${d.id}`}>
+                  // Anything that belongs with a bill opens that bill's one page.
+                  <ListRow
+                    key={d.id}
+                    href={d.linkedBillId ? `/bills/${d.linkedBillId}` : `/review/${d.id}`}
+                  >
                     <div className="min-w-0">
                       <p className="truncate font-semibold">
                         <Highlight
@@ -167,10 +172,13 @@ export default async function ReviewPage({
                         {t(`kind.${d.kind}`)} · {date(d.date, 'short')}
                         {arrivedLater &&
                           ` · ${t('arrived', { date: date(d.receivedAt, 'short') })}`}
-                        {d.extraction?.reason && (
+                        {why.kind !== 'none' && (
                           <>
                             {' · '}
-                            <Highlight text={d.extraction.reason} tokens={tokens} />
+                            <Highlight
+                              text={why.kind === 'check' ? t('why.check') : why.text}
+                              tokens={tokens}
+                            />
                           </>
                         )}
                       </p>

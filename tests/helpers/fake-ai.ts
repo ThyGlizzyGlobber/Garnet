@@ -26,6 +26,7 @@ const blank: AiOutput = {
   service_type: null,
   bill: null,
   payment: null,
+  page_rotation: [],
   confidence: 0.95,
   notes: null,
 };
@@ -74,6 +75,7 @@ function readFixture(t: string): AiOutput | null {
       metrics: [],
       instalments: null,
     },
+    page_rotation: [],
     confidence: 0.97,
   };
 }
