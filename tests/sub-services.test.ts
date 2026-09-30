@@ -32,6 +32,8 @@ import {
 } from '@/lib/services';
 import { serviceCardsView } from '@/lib/main-view';
 import { shellView } from '@/lib/shell';
+import { shadesOf } from '@/lib/palette';
+import { CATEGORY_COLOURS, inMainCategory } from '@/lib/service-categories';
 
 const TODAY = '2026-09-29';
 let dir: string;
@@ -112,16 +114,29 @@ describe('the catalog', () => {
 
   it('gives every type one colour, the same for every household', () => {
     const types = listServiceTypes(db);
-    // The colour of what it is: electricity yellow, gas orange, water blue, gardening green.
     const colour = (slug: string) => types.find((t) => t.slug === slug)!.colour;
+    // The colour of what it is: electricity yellow, gas orange, water blue.
     expect(colour('electricity')).toBe('#eda100');
     expect(colour('gas')).toBe('#eb6834');
     expect(colour('water')).toBe('#2a78d6');
-    expect(colour('gardening')).toBe('#008300');
-    // The everyday bills never share a colour.
-    const common = ['internet', 'electricity', 'gas', 'water', 'phone', 'rent', 'council_rates'];
-    const colours = common.map((slug) => types.find((t) => t.slug === slug)!.colour);
-    expect(new Set(colours).size).toBe(common.length);
+    // Every top-level entry on the Services page wears its own colour: the
+    // everyday bills, each main service, Subscriptions and Other.
+    const everyday = ['internet', 'electricity', 'gas', 'water', 'phone', 'rent', 'council_rates'];
+    const top = [
+      ...everyday.map(colour),
+      ...Object.values(CATEGORY_COLOURS),
+      colour('subscriptions'),
+      colour('other'),
+    ].map((c) => c.toLowerCase());
+    expect(new Set(top).size).toBe(top.length);
+    // The parts of a main service wear shades of its colour, each a different one.
+    for (const [category, base] of Object.entries(CATEGORY_COLOURS)) {
+      const parts = types.filter((t) => t.category === category && inMainCategory(t));
+      expect(parts.length).toBeGreaterThan(0);
+      const shades = shadesOf(base).map((c) => c.toLowerCase());
+      for (const t of parts) expect(shades).toContain(t.colour.toLowerCase());
+      expect(new Set(parts.map((t) => t.colour)).size).toBe(parts.length);
+    }
   });
 });
 

@@ -2557,7 +2557,8 @@
     "main": {
       "vehicle": "Vehicles",
       "health": "Health",
-      "lifestyle": "Lifestyle"
+      "lifestyle": "Lifestyle",
+      "home": "Home & property"
     },
     "yours": "Yours",
     "billCount": "{count, plural, one {# bill} other {# bills}}",
@@ -2575,7 +2576,8 @@
     "emptyTitle": "Nothing under {name} yet",
     "emptyBody": {
       "health": "Add your health insurance and ambulance cover, or forward a bill and it’s set up for you.",
-      "lifestyle": "Add your gym, memberships and donations, or forward a bill and it’s set up for you."
+      "lifestyle": "Add your gym, memberships and donations, or forward a bill and it’s set up for you.",
+      "home": "Add your strata, home insurance, gardener, cleaner and the like, or forward a bill and it’s set up for you."
     },
     "whoseFollows": "Whose it is follows {name}, the vehicle it’s filed under.",
     "kinds": {

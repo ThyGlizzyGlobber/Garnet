@@ -1,7 +1,7 @@
 import { addDays } from '@/lib/dates';
 import { billStatus, type BillStatus } from '@/lib/bill-status';
 import type { BillListItem } from '@/lib/bills';
-import { PALETTE } from '@/lib/palette';
+import { PALETTE, shadesOf } from '@/lib/palette';
 import { addMonths } from '@/lib/periods';
 import type { ServiceWithType } from '@/lib/services';
 import { dueParts, expectedNext } from '@/lib/services-month';
@@ -66,10 +66,32 @@ export interface MainOverview {
   };
 }
 
-/** Distinct colours for series that would otherwise share one (sub-services of one type). */
+/** The shade steps to hand out, base first then alternating lighter and darker. */
+const SPREAD = [3, 5, 1, 6, 2, 7, 0, 4];
+
+/**
+ * Series that share a colour (Netflix and Spotify, both Subscriptions plum)
+ * get shades of it instead, so a chart tells them apart without borrowing
+ * another service's colour. A colour with no shades keeps the palette's.
+ */
 export function seriesColours<T extends { colour: string }>(xs: T[]): T[] {
-  const distinct = new Set(xs.map((x) => x.colour.toLowerCase())).size === xs.length;
-  return distinct ? xs : xs.map((x, i) => ({ ...x, colour: PALETTE[i % PALETTE.length]!.light }));
+  const seen = new Map<string, number>();
+  const counts = new Map<string, number>();
+  for (const x of xs)
+    counts.set(x.colour.toLowerCase(), (counts.get(x.colour.toLowerCase()) ?? 0) + 1);
+  return xs.map((x, i) => {
+    const key = x.colour.toLowerCase();
+    if (counts.get(key)! < 2) return x;
+    const n = seen.get(key) ?? 0;
+    seen.set(key, n + 1);
+    const shades = shadesOf(x.colour);
+    return {
+      ...x,
+      colour: shades.length
+        ? shades[SPREAD[n % SPREAD.length]!]!
+        : PALETTE[i % PALETTE.length]!.light,
+    };
+  });
 }
 
 export function mainOverview(input: {

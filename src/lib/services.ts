@@ -13,7 +13,12 @@ import { ulid } from '@/lib/ids';
 import { DEFAULT_COLOUR, PALETTE } from '@/lib/palette';
 import { getMember } from '@/lib/members';
 import { ownerCondition, type Scope } from '@/lib/scope';
-import { CATEGORY_ICONS, inMainCategory, type GroupedCategory } from '@/lib/service-categories';
+import {
+  CATEGORY_COLOURS,
+  CATEGORY_ICONS,
+  inMainCategory,
+  type GroupedCategory,
+} from '@/lib/service-categories';
 
 export type ServiceWithType = Service & { type: ServiceType };
 
@@ -406,7 +411,7 @@ export function groupServices<S extends { type: ServiceType }>(services: S[]): S
             category,
             label: '',
             icon: CATEGORY_ICONS[category],
-            colour: s.type.colour,
+            colour: CATEGORY_COLOURS[category],
             services: [],
           }
         : {

@@ -26,11 +26,13 @@ export function groupTypes<T extends { category?: string | null }>(types: T[]) {
 /**
  * Categories that are a main service of their own, holding their types as
  * sub-services: Vehicles (Registration, Car insurance…), Health (Health
- * insurance, Ambulance cover) and Lifestyle (Gym, Donations…). Subscriptions
- * stays its own main service (see OWN_MAIN_SERVICES). Vehicles' bills are also filed under the
+ * insurance, Ambulance cover), Lifestyle (Gym, Donations…) and Home &
+ * property (strata, home insurance, gardening, cleaning, repairs…).
+ * Subscriptions stays its own main service, rent and council rates stand on
+ * their own (see OWN_MAIN_SERVICES, STANDALONE_TYPES). Vehicles' bills are also filed under the
  * household's vehicles (src/lib/assets.ts).
  */
-const MAIN_CATEGORIES = ['vehicle', 'health', 'lifestyle'] as const;
+const MAIN_CATEGORIES = ['vehicle', 'health', 'lifestyle', 'home'] as const;
 export type GroupedCategory = (typeof MAIN_CATEGORIES)[number];
 
 /** The icon a grouped category's main service wears. */
@@ -38,6 +40,19 @@ export const CATEGORY_ICONS: Record<GroupedCategory, string> = {
   vehicle: 'car',
   health: 'heart',
   lifestyle: 'sun',
+  home: 'building',
+};
+
+/**
+ * The colour each main service wears, its own and unlike any other
+ * top-level entry's (src/lib/palette.ts); the parts inside it wear shades
+ * of it (migration 0037).
+ */
+export const CATEGORY_COLOURS: Record<GroupedCategory, string> = {
+  vehicle: '#5b6f8a',
+  health: '#e34948',
+  lifestyle: '#7a9f12',
+  home: '#9a6a3a',
 };
 
 export function isGroupedCategory(
@@ -53,9 +68,17 @@ export function isGroupedCategory(
  */
 const OWN_MAIN_SERVICES = new Set(['subscriptions']);
 
+/**
+ * Types of a main service's category that stay on their own: rent and
+ * council rates are everyday bills, not parts of Home & property.
+ */
+const STANDALONE_TYPES = new Set(['rent', 'council_rates']);
+
 /** Is this type one of a main service's sub-services (Registration under Vehicles, Gym under Lifestyle)? */
 export const inMainCategory = (ty: { slug: string; category?: string | null }): boolean =>
-  isGroupedCategory(ty.category) && !OWN_MAIN_SERVICES.has(ty.slug);
+  isGroupedCategory(ty.category) &&
+  !OWN_MAIN_SERVICES.has(ty.slug) &&
+  !STANDALONE_TYPES.has(ty.slug);
 
 /** Bills of this category are filed under vehicles; null for every other category. */
 export function assetKindOf(category: string | null | undefined): 'vehicle' | null {

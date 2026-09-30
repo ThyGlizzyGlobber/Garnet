@@ -117,23 +117,29 @@ difference between the themes is a token in the three mode blocks at the top of
 
 ### Service colours (the same for every household)
 
-Every service wears its type's colour, chosen for what the thing is, from the
-eight-colour data palette (`src/lib/palette.ts`, validated for colour
-blindness). The everyday bills never share one; rarer types do.
+Every top-level entry on the Services page wears a colour of its own, chosen
+for what the thing is; nothing at the top level shares one. The parts inside
+a main service wear shades of its colour (`src/lib/palette.ts`:
+`SERVICE_COLOURS`, eight steps a family, "-1" darkest … "-8" lightest).
 
-| Colour  | Types                                                            |
-| ------- | ---------------------------------------------------------------- |
-| Blue    | Water, Pool & spa, Vehicle registration                          |
-| Yellow  | Electricity, Repairs & maintenance, Roadside assistance          |
-| Orange  | Gas, Pest control, Vehicle repairs & servicing, Gym              |
-| Green   | Council rates, Gardening                                         |
-| Aqua    | Phone, Cleaning                                                  |
-| Violet  | Internet, Strata, Building insurance, Car insurance              |
-| Magenta | Rent, Contents insurance, Health insurance, Subscriptions, Other |
-| Red     | Ambulance cover, Donations                                       |
+| Entry           | Colour  | Parts inside, in shades                                                                                |
+| --------------- | ------- | ------------------------------------------------------------------------------------------------------ |
+| Water           | Blue    |                                                                                                        |
+| Electricity     | Yellow  |                                                                                                        |
+| Gas             | Orange  |                                                                                                        |
+| Internet        | Violet  |                                                                                                        |
+| Phone           | Aqua    |                                                                                                        |
+| Rent            | Magenta |                                                                                                        |
+| Council rates   | Green   |                                                                                                        |
+| Vehicles        | Slate   | Rego (base), Car insurance, Roadside, Servicing                                                        |
+| Health          | Red     | Health insurance (base), Ambulance cover                                                               |
+| Lifestyle       | Lime    | Gym (base), Donations                                                                                  |
+| Home & property | Brown   | Strata, Building and Contents insurance, Gardening (base), Cleaning, Pest control, Pool & spa, Repairs |
+| Subscriptions   | Plum    | each subscription a shade in charts                                                                    |
+| Other           | Grey    |                                                                                                        |
 
-Custom types take the palette in turn. Sub-services of one type (Netflix and
-Spotify under Subscriptions) get distinct palette colours in charts only.
+Members keep the eight-colour palette. Series that share a colour in a chart
+(Netflix and Spotify) get shades of it.
 
 ## 3. The scene
 

@@ -10,6 +10,7 @@ import { BillRow, Rows } from '@/components/ui/rows';
 import type { BillListItem } from '@/lib/bills';
 import type { PageContext } from '@/lib/context';
 import type { VehiclesView } from '@/lib/main-view';
+import { CATEGORY_COLOURS } from '@/lib/service-categories';
 import { fileBillAction } from './asset-actions';
 import { FileBillForm } from './asset-form';
 import { BreakdownCard, NextLine, NumsCard, YearAheadCard } from './overview';
@@ -84,7 +85,7 @@ export async function VehiclesPage({ ctx, view }: { ctx: PageContext; view: Vehi
                   key={c.asset.id}
                   href={`/services/vehicles/${c.asset.id}`}
                   icon="car"
-                  colour={o.series[0]?.colour ?? '#e87ba4'}
+                  colour={CATEGORY_COLOURS.vehicle}
                   title={c.asset.name}
                   meta={
                     <>

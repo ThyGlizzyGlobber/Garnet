@@ -267,6 +267,29 @@ export async function seedDemo(db: Db = getDb()) {
     },
     db,
   );
+  // Home & property: a gardener and a cleaner, each billed monthly, both the household's.
+  const gardener = createService(
+    hh.id,
+    {
+      typeSlug: 'gardening',
+      name: 'Gardening',
+      provider: 'Greenleaf Gardens',
+      cadence: 'monthly',
+      payerMemberId: sam.id,
+    },
+    db,
+  );
+  const cleaner = createService(
+    hh.id,
+    {
+      typeSlug: 'cleaning',
+      name: 'Cleaning',
+      provider: 'Sparkle & Co',
+      cadence: 'monthly',
+      payerMemberId: alex.id,
+    },
+    db,
+  );
   // Alex's own donation to a food bank (Donations → Riverside Food Bank).
   const foodBank = createService(
     hh.id,
@@ -678,6 +701,26 @@ export async function seedDemo(db: Db = getDb()) {
       externalRef: `HH-448120-${mm(m)}`,
       paid: first,
     });
+    if (m >= 4) {
+      add(`garden-${m}`, gardener.id, {
+        amountMinor: m >= 8 ? 13500 : 12000,
+        periodStart: first,
+        periodEnd: monthEnd(2026, m),
+        issueDate: monthEnd(2026, m),
+        dueDate: addDays(monthEnd(2026, m), 7),
+        externalRef: `GLG-1180-${mm(m)}`,
+        paid: addDays(monthEnd(2026, m), 5),
+      });
+      add(`clean-${m}`, cleaner.id, {
+        amountMinor: 26000,
+        periodStart: first,
+        periodEnd: monthEnd(2026, m),
+        issueDate: monthEnd(2026, m),
+        dueDate: addDays(monthEnd(2026, m), 14),
+        externalRef: `SPK-7712-${mm(m)}`,
+        paid: addDays(monthEnd(2026, m), 10),
+      });
+    }
     add(`foodbank-${m}`, foodBank.id, {
       amountMinor: 2500,
       periodStart: from,

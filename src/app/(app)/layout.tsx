@@ -48,6 +48,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           vehicle: tm('main.vehicle'),
           health: tm('main.health'),
           lifestyle: tm('main.lifestyle'),
+          home: tm('main.home'),
         },
         product: ta('name'),
         householdHome: t('householdHome', { household: hh.name }),

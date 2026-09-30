@@ -11,7 +11,7 @@ import { todayIn } from '@/lib/dates';
 import { createServiceAction } from '../actions';
 import { ServiceForm } from '../service-form';
 import { isAdmin } from '@/lib/roles';
-import { isGroupedCategory } from '@/lib/service-categories';
+import { inMainCategory, isGroupedCategory } from '@/lib/service-categories';
 
 export default async function NewServicePage({
   searchParams,
@@ -29,7 +29,7 @@ export default async function NewServicePage({
   // "Add a service" on Health or Lifestyle: only that main service's kinds.
   const category = isGroupedCategory(params.category) ? params.category : null;
   const all = listServiceTypes();
-  const types = category ? all.filter((ty) => ty.category === category && !ty.hasSubServices) : all;
+  const types = category ? all.filter((ty) => ty.category === category && inMainCategory(ty)) : all;
   // From the personal dashboard: start on a kind of service that's usually one person's own.
   const housemates = hasHousemates(hh.id);
   const personal = housemates && !!params.personal;
