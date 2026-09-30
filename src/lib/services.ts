@@ -454,7 +454,7 @@ export function serviceHome(svc: {
   type: { category: string; hasSubServices: boolean };
 }): string {
   if (svc.type.hasSubServices) return `/services/group/${svc.typeSlug}?open=${svc.id}#s-${svc.id}`;
-  if (svc.type.category === 'vehicle') return `/services/category/vehicle?kind=${svc.typeSlug}`;
+  if (svc.type.category === 'vehicle') return '/services/category/vehicle';
   if (isGroupedCategory(svc.type.category))
     return `/services/category/${svc.type.category}?open=${svc.id}#s-${svc.id}`;
   return `/services/${svc.id}`;

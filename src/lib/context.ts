@@ -23,8 +23,11 @@ export async function pageContext() {
     hh,
     me,
     today: todayIn(hh.timezone),
-    money: (minor: number, currency: string = hh.currency, opts?: { whole?: boolean }) =>
-      formatMoney(minor, currency, hh.locale, opts),
+    money: (
+      minor: number,
+      currency: string = hh.currency,
+      opts?: { whole?: boolean; compact?: boolean },
+    ) => formatMoney(minor, currency, hh.locale, opts),
     date: (iso: string | null | undefined, style: 'short' | 'medium' | 'long' = 'medium') =>
       iso
         ? formatDate(

@@ -157,25 +157,3 @@ export function Badge({
 }
 
 export const filterChipClass = (active = false) => cx('chip-btn', active && 'on');
-
-/** A filter capsule: a period, a status, a count that links somewhere. `active` fills it. */
-export function FilterChip({
-  href,
-  active = false,
-  className,
-  children,
-}: {
-  href?: string;
-  active?: boolean;
-  className?: string;
-  children: ReactNode;
-}) {
-  const cls = cx('chip-btn', active && 'on', className);
-  return href ? (
-    <Link href={href} className={cls} aria-current={active ? 'page' : undefined}>
-      {children}
-    </Link>
-  ) : (
-    <span className={cls}>{children}</span>
-  );
-}

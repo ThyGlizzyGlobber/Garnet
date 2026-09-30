@@ -185,12 +185,14 @@ export default async function BillPage({ params }: { params: Promise<{ id: strin
   return (
     <div className="scr d3-bill">
       {/* Back to where its service is shown: its card on Health, Vehicles, Subscriptions… */}
-      <BackLink href={serviceHome(b.service)}>
-        {inMainCategory(b.service.type)
-          ? ta(`main.${b.service.type.category}`)
-          : b.service.type.hasSubServices
-            ? b.service.type.label
-            : b.service.name}
+      <BackLink href={b.asset ? `/services/vehicles/${b.asset.id}` : serviceHome(b.service)}>
+        {b.asset
+          ? b.asset.name
+          : inMainCategory(b.service.type)
+            ? ta(`main.${b.service.type.category}`)
+            : b.service.type.hasSubServices
+              ? b.service.type.label
+              : b.service.name}
       </BackLink>
       <div className="d3-bill-grid">
         <div className="d3-doc">
@@ -488,11 +490,7 @@ export default async function BillPage({ params }: { params: Promise<{ id: strin
                   ? [
                       ta('vehicle.label'),
                       b.asset ? (
-                        <Link
-                          key="as"
-                          href={`/services/category/vehicle?open=${b.asset.id}#v-${b.asset.id}`}
-                          className="link"
-                        >
+                        <Link key="as" href={`/services/vehicles/${b.asset.id}`} className="link">
                           {b.asset.name}
                           {b.asset.identifier && (
                             <span className="muted mono"> · {b.asset.identifier}</span>

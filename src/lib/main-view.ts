@@ -107,75 +107,153 @@ export function serviceCardsView(
   };
 }
 
+/** What was due on a vehicle's (or a set of vehicles') bills, by kind: see mainOverview. */
+function vehicleOverview(
+  rows: { key: string; label: string; bills: BillListItem[] }[],
+  kinds: ServiceType[],
+  services: Map<string, ServiceWithType>,
+  today: string,
+  loose: BillListItem[] = [],
+): MainOverview {
+  return mainOverview({
+    rows: rows.map((r) => ({
+      ...r,
+      services: [...new Set(r.bills.map((b) => b.serviceId))]
+        .map((id) => services.get(id))
+        .filter((svc): svc is ServiceWithType => !!svc && svc.isActive && !svc.cancelledAt),
+    })),
+    loose,
+    series: kinds.map((k) => ({ key: k.slug, label: k.label, colour: k.colour })),
+    seriesOf: (b) => b.service.typeSlug,
+    seriesOfService: (svc) => svc.typeSlug,
+    today,
+  });
+}
+
+/** The vehicle kinds of bill (Registration, Car insurance…), and the member's vehicle bills. */
+function vehicleData(householdId: string, memberId: string, db: Db) {
+  const types = listServiceTypes(db).filter((ty) => assetKindOf(ty.category));
+  const bills = listBills(householdId, { viewer: memberId }, db).filter((b) =>
+    assetKindOf(b.service.type.category),
+  );
+  const services = new Map(
+    listServices(householdId, { viewer: memberId, includeInactive: true }, db).map((s) => [
+      s.id,
+      s,
+    ]),
+  );
+  // Only the kinds the household has bills or services of.
+  const kinds = types.filter(
+    (ty) =>
+      bills.some((b) => b.service.typeSlug === ty.slug) ||
+      [...services.values()].some((s) => s.typeSlug === ty.slug),
+  );
+  return { bills, services, kinds };
+}
+
 interface VehicleCard {
   asset: Asset;
   /** May this member rename, remove or change it (canEditAsset)? */
   canEdit: boolean;
-  /** Its bills of the kind picked (all kinds by default), newest first. */
+  /** Its bills, newest first. */
   bills: BillListItem[];
-  yearMinor: number;
+  /** Its own figures: the last twelve months by kind, what's next, the year ahead by kind. */
+  overview: MainOverview;
 }
 
 export interface VehiclesView {
   cards: VehicleCard[];
-  /** Vehicle bills not filed under a vehicle yet (of the kind picked). */
+  /** Vehicle bills not filed under a vehicle yet. */
   waiting: BillListItem[];
-  /** The kinds of vehicle bill the household has, with how many, for the filter chips. */
-  kinds: { type: ServiceType; bills: number }[];
-  /** The kind picked (a type slug), or null for every kind. */
-  kind: string | null;
-  yearMinor: number;
-  /** The figures, chart and year ahead above the cards: one series per kind, a row per vehicle. */
+  /** All the vehicles together: a row per vehicle, one series per kind. */
   overview: MainOverview;
 }
 
 /**
- * Vehicles: a card per vehicle holding its bills of every kind (rego,
- * insurance, roadside, servicing), or of one kind when one is picked, and the
- * bills waiting for a vehicle. Every vehicle is listed, with bills or not.
+ * Vehicles: every vehicle this member sees, each with its own figures, all of
+ * them together, and the bills waiting for a vehicle.
  */
 export function vehiclesView(
   hh: Household,
   me: { id: string; role: string },
   today: string,
-  kind: string | null = null,
   db: Db = getDb(),
 ): VehiclesView {
-  const types = listServiceTypes(db).filter((ty) => assetKindOf(ty.category));
-  const every = listBills(hh.id, { viewer: me.id }, db).filter((b) =>
-    assetKindOf(b.service.type.category),
-  );
-  const services = listServices(hh.id, { viewer: me.id, includeInactive: true }, db);
-  const kinds = types
-    .map((type) => ({ type, bills: every.filter((b) => b.service.typeSlug === type.slug).length }))
-    .filter((k) => k.bills > 0 || services.some((s) => s.typeSlug === k.type.slug));
-  const picked = kinds.some((k) => k.type.slug === kind) ? kind : null;
-  const bills = picked ? every.filter((b) => b.service.typeSlug === picked) : every;
+  const { bills, services, kinds } = vehicleData(hh.id, me.id, db);
   const cards = listAssets(hh.id, { kind: 'vehicle', viewer: me.id }, db).map((a) => {
     const own = bills.filter((b) => b.assetId === a.id);
-    return { asset: a, canEdit: canEditAsset(me, a), bills: own, yearMinor: yearOf(own, today) };
+    return {
+      asset: a,
+      canEdit: canEditAsset(me, a),
+      bills: own,
+      overview: vehicleOverview(
+        kinds
+          .map((k) => ({
+            key: k.slug,
+            label: k.label,
+            bills: own.filter((b) => b.service.typeSlug === k.slug),
+          }))
+          .filter((r) => r.bills.length > 0),
+        kinds,
+        services,
+        today,
+      ),
+    };
   });
-  const svcById = new Map(services.map((s) => [s.id, s]));
+  const waiting = bills.filter((b) => !b.assetId);
   return {
     cards,
-    overview: mainOverview({
-      rows: cards.map((c) => ({
-        key: c.asset.id,
-        label: c.asset.name,
-        bills: c.bills,
-        services: [...new Set(c.bills.map((b) => b.serviceId))]
-          .map((id) => svcById.get(id)!)
-          .filter((svc) => svc && svc.isActive && !svc.cancelledAt),
-      })),
-      loose: bills.filter((b) => !b.assetId),
-      series: kinds.map((k) => ({ key: k.type.slug, label: k.type.label, colour: k.type.colour })),
-      seriesOf: (b) => b.service.typeSlug,
-      seriesOfService: (svc) => svc.typeSlug,
+    waiting,
+    overview: vehicleOverview(
+      cards.map((c) => ({ key: c.asset.id, label: c.asset.name, bills: c.bills })),
+      kinds,
+      services,
       today,
-    }),
-    waiting: bills.filter((b) => !b.assetId),
-    kinds,
-    kind: picked,
-    yearMinor: yearOf(bills, today),
+      waiting,
+    ),
+  };
+}
+
+export interface VehicleView {
+  asset: Asset;
+  canEdit: boolean;
+  /** Its bills, newest first. */
+  bills: BillListItem[];
+  /** A row (and a series) per kind of bill it has. */
+  overview: MainOverview;
+  /** Each kind of bill it has: who it's with (the services' providers) and the latest. */
+  kinds: { type: ServiceType; providers: string[]; latest: BillListItem; count: number }[];
+}
+
+/** One vehicle's own page, like a service's: its figures, charts and every bill. */
+export function vehicleView(
+  hh: Household,
+  me: { id: string; role: string },
+  assetId: string,
+  today: string,
+  db: Db = getDb(),
+): VehicleView | null {
+  const a = listAssets(hh.id, { kind: 'vehicle', viewer: me.id }, db).find((x) => x.id === assetId);
+  if (!a) return null;
+  const { bills, services, kinds } = vehicleData(hh.id, me.id, db);
+  const own = bills.filter((b) => b.assetId === a.id);
+  const rows = kinds
+    .map((k) => ({
+      key: k.slug,
+      label: k.label,
+      bills: own.filter((b) => b.service.typeSlug === k.slug),
+    }))
+    .filter((r) => r.bills.length > 0);
+  return {
+    asset: a,
+    canEdit: canEditAsset(me, a),
+    bills: own,
+    overview: vehicleOverview(rows, kinds, services, today),
+    kinds: rows.map((r) => ({
+      type: kinds.find((k) => k.slug === r.key)!,
+      providers: [...new Set(r.bills.map((b) => b.service.provider))],
+      latest: r.bills[0]!,
+      count: r.bills.length,
+    })),
   };
 }

@@ -25,7 +25,7 @@ export default async function ServiceGroupPage({
   if (inMainCategory(type))
     redirect(
       type.category === 'vehicle'
-        ? `/services/category/vehicle?kind=${type.slug}`
+        ? '/services/category/vehicle'
         : `/services/category/${type.category}`,
     );
   if (!type.hasSubServices) notFound();

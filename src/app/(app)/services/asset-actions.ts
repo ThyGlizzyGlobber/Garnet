@@ -33,10 +33,9 @@ function refresh() {
   revalidatePath('/');
 }
 
-/** Back to Vehicles, the vehicle's card open, saying how many waiting bills were filed. */
+/** To the vehicle's page (Vehicles once it's gone), saying how many waiting bills were filed. */
 function back(id: string | null, filed: number): never {
-  const q = [id && `open=${id}`, filed && `filed=${filed}`].filter(Boolean).join('&');
-  redirect(`${VEHICLES}${q ? `?${q}` : ''}${id ? `#v-${id}` : ''}`);
+  redirect(id ? `/services/vehicles/${id}${filed ? `?filed=${filed}` : ''}` : VEHICLES);
 }
 
 /** "mine" makes it this member's own, only when others live there; otherwise the household's. */

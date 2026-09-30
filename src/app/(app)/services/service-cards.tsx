@@ -160,7 +160,6 @@ export async function ServiceCardsPage({
         <OverviewLayout
           ctx={ctx}
           overview={view.overview}
-          kind="service"
           count={view.cards.length}
           countSub={
             view.stopped.length ? t('stoppedCount', { count: view.stopped.length }) : t('allGoing')

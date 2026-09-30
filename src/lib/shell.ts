@@ -1,6 +1,8 @@
 import type { Household, Member } from '@/db/schema';
 import { getDb, type Db } from '@/db/client';
+import { listAssets } from '@/lib/assets';
 import { listBills } from '@/lib/bills';
+import { dueParts } from '@/lib/services-month';
 import { listActiveMembers } from '@/lib/members';
 import { monthBounds } from '@/lib/periods';
 import { documentCounts } from '@/lib/review';
@@ -65,10 +67,29 @@ export function shellView(hh: Household, me: Member, today: string, db: Db = get
   const { start, end } = monthBounds(today.slice(0, 7));
   const month = totalsForRange(hh.id, start, end, db);
   const accrued = new Map(month.byService.map((t) => [t.service.id, t.minor]));
-  const services = entries(listServices(hh.id, {}, db), (s) => accrued.get(s.id) ?? 0);
+  // Vehicles, each with what's due on it this month.
+  const vehicleBills = listBills(hh.id, { viewer: me.id }, db).filter((b) => b.assetId);
+  const vehicles = (owner: string | null): ShellService[] =>
+    listAssets(hh.id, owner ? { kind: 'vehicle', owner } : { kind: 'vehicle' }, db).map((a) => ({
+      id: a.id,
+      name: a.name,
+      colour: '',
+      minor: vehicleBills
+        .filter((b) => b.assetId === a.id)
+        .flatMap(dueParts)
+        .filter((p) => p.dueDate.slice(0, 7) === today.slice(0, 7))
+        .reduce((sum, p) => sum + p.amountMinor, 0),
+      href: `/services/vehicles/${a.id}`,
+    }));
+  const services = entries(
+    listServices(hh.id, {}, db),
+    (s) => accrued.get(s.id) ?? 0,
+    vehicles(null),
+  );
   const mine = entries(
     listServices(hh.id, { owner: me.id }, db),
     (s) => listBills(hh.id, { serviceId: s.id, limit: 1 }, db)[0]?.amountMinor ?? 0,
+    vehicles(me.id),
   );
   return {
     household: { name: hh.name, members: listActiveMembers(hh.id, today, db).map((m) => m.name) },
@@ -81,7 +102,12 @@ export function shellView(hh: Household, me: Member, today: string, db: Db = get
   };
 }
 
-function entries(services: ServiceWithType[], minor: (s: ServiceWithType) => number): ShellEntry[] {
+function entries(
+  services: ServiceWithType[],
+  minor: (s: ServiceWithType) => number,
+  /** Vehicles' lines: the vehicles themselves, when there are any. */
+  vehicles: ShellService[],
+): ShellEntry[] {
   // A sub-service opens its card on its main service's page.
   const line = (s: ServiceWithType): ShellService => ({
     id: s.id,
@@ -92,18 +118,20 @@ function entries(services: ServiceWithType[], minor: (s: ServiceWithType) => num
   });
   return groupServices(services).map((g): ShellEntry => {
     if (!g.category && !g.typeSlug) return { kind: 'service', ...line(g.services[0]!) };
-    // Vehicles → one line per kind of bill (Registration), each showing
-    // Vehicles with that kind; every other main service → its services.
+    // Vehicles → its vehicles, each opening its own page (until there are
+    // none: one line per kind of bill); every other main service → its services.
     const children =
-      g.category === 'vehicle'
-        ? byType(g.services).map(({ type, services: of }): ShellService => ({
-            id: type.slug,
-            name: type.label,
-            colour: type.colour,
-            minor: of.reduce((sum, s) => sum + minor(s), 0),
-            href: `/services/category/vehicle?kind=${type.slug}`,
-          }))
-        : g.services.map(line);
+      g.category === 'vehicle' && vehicles.length
+        ? vehicles.map((v) => ({ ...v, colour: g.colour }))
+        : g.category === 'vehicle'
+          ? byType(g.services).map(({ type, services: of }): ShellService => ({
+              id: type.slug,
+              name: type.label,
+              colour: type.colour,
+              minor: of.reduce((sum, s) => sum + minor(s), 0),
+              href: '/services/category/vehicle',
+            }))
+          : g.services.map(line);
     return {
       kind: 'group',
       key: g.category ? `c-${g.category}` : `t-${g.typeSlug}`,
@@ -111,7 +139,8 @@ function entries(services: ServiceWithType[], minor: (s: ServiceWithType) => num
       name: g.category ? '' : g.label,
       category: g.category,
       colour: g.colour,
-      minor: children.reduce((sum, c) => sum + c.minor, 0),
+      // Its services' month added up, like every other line.
+      minor: g.services.reduce((sum, s) => sum + minor(s), 0),
       children,
     };
   });

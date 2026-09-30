@@ -453,6 +453,91 @@ export async function seedDemo(db: Db = getDb()) {
     paid: '2026-02-26',
   });
 
+  // The household's car: rego, insurance and servicing, split evenly.
+  const wagon = createAsset(
+    hh.id,
+    {
+      kind: 'vehicle',
+      name: 'Subaru Outback',
+      identifier: 'RVR-221',
+      createdByMemberId: jordan.id,
+    },
+    db,
+  );
+  const houseRego = createService(
+    hh.id,
+    {
+      typeSlug: 'vehicle_registration',
+      name: 'Registration',
+      provider: 'Transport Registry',
+      cadence: 'annual',
+      payerMemberId: jordan.id,
+    },
+    db,
+  );
+  const houseInsurance = createService(
+    hh.id,
+    {
+      typeSlug: 'car_insurance',
+      name: 'Car insurance',
+      provider: 'Harbourside Insurance',
+      cadence: 'annual',
+      payerMemberId: jordan.id,
+    },
+    db,
+  );
+  const servicing = createService(
+    hh.id,
+    {
+      typeSlug: 'vehicle_maintenance',
+      name: 'Servicing',
+      provider: 'Riverside Motors',
+      cadence: 'irregular',
+      payerMemberId: alex.id,
+    },
+    db,
+  );
+  add('wagon-insurance', houseInsurance.id, {
+    amountMinor: 118400,
+    periodStart: '2025-12-01',
+    periodEnd: '2026-11-30',
+    issueDate: '2025-11-03',
+    dueDate: '2025-12-01',
+    externalRef: 'HSI-MV-338412',
+    assetId: wagon.id,
+    paid: '2025-11-28',
+  });
+  add('wagon-rego', houseRego.id, {
+    amountMinor: 83620,
+    periodStart: '2026-02-14',
+    periodEnd: '2027-02-13',
+    issueDate: '2026-01-16',
+    dueDate: '2026-02-14',
+    externalRef: 'REG RVR-221 · 2026',
+    assetId: wagon.id,
+    paid: '2026-02-10',
+  });
+  add('wagon-service-1', servicing.id, {
+    amountMinor: 28900,
+    periodStart: '2025-12-02',
+    periodEnd: '2025-12-02',
+    issueDate: '2025-12-02',
+    dueDate: '2025-12-09',
+    externalRef: 'RM-40218',
+    assetId: wagon.id,
+    paid: '2025-12-05',
+  });
+  add('wagon-service-2', servicing.id, {
+    amountMinor: 41250,
+    periodStart: '2026-06-18',
+    periodEnd: '2026-06-18',
+    issueDate: '2026-06-18',
+    dueDate: '2026-06-25',
+    externalRef: 'RM-41907',
+    assetId: wagon.id,
+    paid: '2026-06-22',
+  });
+
   // Alex's own car rego (personal: no shares).
   add('rego-2025', rego.id, {
     amountMinor: 88410,

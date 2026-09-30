@@ -8,7 +8,7 @@ import { runMigrations } from '@/db/migrate';
 import { sourceDocument, type Household, type Member } from '@/db/schema';
 import { archiveDocument } from '@/ingest/archive';
 import { processDocument } from '@/ingest/pipeline';
-import { serviceCardsView, vehiclesView } from '@/lib/main-view';
+import { serviceCardsView, vehicleView, vehiclesView } from '@/lib/main-view';
 import { assetKindOf } from '@/lib/service-categories';
 import {
   autoFileBill,
@@ -146,8 +146,8 @@ describe('Vehicles and Health are main services', () => {
       (e) => e.kind === 'group' && e.category === 'vehicle',
     );
     expect(nav?.kind === 'group' && nav.children.map((c) => c.href)).toEqual([
-      '/services/category/vehicle?kind=vehicle_registration',
-      '/services/category/vehicle?kind=car_insurance',
+      '/services/category/vehicle',
+      '/services/category/vehicle',
     ]);
     expect(nav?.kind === 'group' && nav.href).toBe('/services/category/vehicle');
   });
@@ -414,35 +414,72 @@ describe('matching by plate', () => {
 });
 
 describe('the pages', () => {
-  it('Vehicles is a card per vehicle holding its bills, one kind at a time if asked', () => {
+  it('Vehicles shows every vehicle with its own figures, and all of them together', () => {
     const { hh, mum, dad, svc } = setup();
     const rego = svc('vehicle_registration', 'VicRoads');
     const insure = svc('car_insurance', 'RACV');
     const fiesta = createAsset(hh.id, { kind: 'vehicle', name: 'Fiesta' }, db);
     const ute = createAsset(hh.id, { kind: 'vehicle', name: 'Ute' }, db);
     createAsset(hh.id, { kind: 'vehicle', name: 'Dad’s bike', ownerMemberId: dad.id }, db);
-    bill(hh, rego.id, { assetId: fiesta.id, periodStart: '2025-10-01', periodEnd: '2026-09-30' });
+    // Due 1 Oct 2025 and 1 Oct 2026 (TODAY is 29 Sep 2026): only the first is in the last year.
+    bill(hh, rego.id, {
+      assetId: fiesta.id,
+      periodStart: '2025-10-01',
+      periodEnd: '2026-09-30',
+      dueDate: '2025-10-01',
+      amountMinor: 80000,
+      paidToProviderAt: '2025-09-28T00:00:00.000Z',
+    });
     bill(hh, rego.id, { assetId: fiesta.id });
-    bill(hh, insure.id, { assetId: fiesta.id, amountMinor: 60000 });
+    bill(hh, insure.id, {
+      assetId: fiesta.id,
+      amountMinor: 60000,
+      periodStart: '2026-03-01',
+      periodEnd: '2027-02-28',
+      dueDate: '2026-03-01',
+      paidToProviderAt: '2026-02-20T00:00:00.000Z',
+    });
     bill(hh, rego.id);
-    const all = vehiclesView(hh, mum, TODAY, null, db);
+    const all = vehiclesView(hh, mum, TODAY, db);
     // Dad's own bike is only Dad's to see.
     expect(all.cards.map((c) => [c.asset.name, c.bills.length])).toEqual([
       ['Fiesta', 3],
       ['Ute', 0],
     ]);
     expect(all.waiting).toHaveLength(1);
-    expect(all.kinds.map((k) => [k.type.slug, k.bills])).toEqual([
-      ['vehicle_registration', 3],
-      ['car_insurance', 1],
+    const fiestaCard = all.cards[0]!.overview;
+    expect(fiestaCard.yearMinor).toBe(80000 + 60000);
+    expect(fiestaCard.bySeries.map((s) => [s.key, s.minor])).toEqual([
+      ['vehicle_registration', 80000],
+      ['car_insurance', 60000],
     ]);
-    const regoOnly = vehiclesView(hh, mum, TODAY, 'car_insurance', db);
-    expect(regoOnly.kind).toBe('car_insurance');
-    expect(regoOnly.cards.map((c) => c.bills.length)).toEqual([1, 0]);
-    expect(regoOnly.waiting).toEqual([]);
-    expect(vehiclesView(hh, dad, TODAY, 'nonsense', db)).toMatchObject({ kind: null });
-    expect(vehiclesView(hh, dad, TODAY, null, db).cards).toHaveLength(3);
+    // The next thing due: this year's rego, due 1 Oct.
+    expect(fiestaCard.next).toMatchObject({
+      seriesKey: 'vehicle_registration',
+      dueDate: '2026-10-01',
+    });
+    // All of them together: a row per vehicle, the waiting bill counted too.
+    expect(all.overview.ahead.rows.map((r) => r.label)).toEqual(['Fiesta', 'Ute']);
+    expect(vehiclesView(hh, dad, TODAY, db).cards).toHaveLength(3);
     expect(ute.ownerMemberId).toBeNull();
+
+    // One vehicle's page: a row per kind of bill it has, and who each is with.
+    const v = vehicleView(hh, mum, fiesta.id, TODAY, db)!;
+    expect(v.kinds.map((k) => [k.type.slug, k.providers, k.count])).toEqual([
+      ['vehicle_registration', ['VicRoads'], 2],
+      ['car_insurance', ['RACV'], 1],
+    ]);
+    expect(v.overview.ahead.rows.map((r) => r.key)).toEqual([
+      'vehicle_registration',
+      'car_insurance',
+    ]);
+    // The insurance renews next March (expected), the rego is due now.
+    const ahead = v.overview.ahead.rows.flatMap((r) =>
+      r.items.map((i) => [r.key, i.month, i.expected]),
+    );
+    expect(ahead).toContainEqual(['vehicle_registration', '2026-10', false]);
+    expect(ahead).toContainEqual(['car_insurance', '2027-03', true]);
+    expect(vehicleView(hh, dad, 'nope', TODAY, db)).toBeNull();
   });
 
   it('Health is a card per service holding its bills; no policies', () => {
