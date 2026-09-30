@@ -271,8 +271,8 @@
       "period": "{start} – {end}",
       "source": {
         "manual": "Entered by hand",
-        "template": "Read from the bill",
-        "llm": "Read from the bill",
+        "template": "From the bill",
+        "llm": "From the bill",
         "review": "Confirmed in review"
       },
       "upload": "Upload bill",
@@ -755,7 +755,7 @@
     "system": {
       "title": "System",
       "dataDir": "Data directory",
-      "llm": "AI extraction",
+      "llm": "Analysing documents",
       "demoMode": "Demo mode",
       "configured": "Configured",
       "notConfigured": "Not configured",
@@ -794,9 +794,9 @@
     },
     "metrics": {
       "title": "Details from earlier bills and emails",
-      "body": "{count, plural, one {# document came} other {# documents came}} in before the app kept every figure from a bill and the date printed on each receipt and email. Read them again to fill those in, so usage comparisons have history and the Inbox files everything under the right month. Each uses one AI read.",
-      "start": "Read {count, plural, one {# document} other {# documents}}",
-      "reading": "Reading earlier documents in the background. Refresh in a minute or two to see how many are left."
+      "body": "{count, plural, one {# document came} other {# documents came}} in before the app kept every figure from a bill and the date printed on each receipt and email. Analyse them again to fill those in, so usage comparisons have history and the Inbox files everything under the right month.",
+      "start": "Analyse {count, plural, one {# document} other {# documents}} again",
+      "reading": "Analysing earlier documents in the background. Refresh in a minute or two to see how many are left."
     },
     "glance": {
       "members": "Members",
@@ -808,7 +808,6 @@
       "on": "On",
       "off": "Off",
       "region": "{currency} · {locale} · {timezone}",
-      "aiReads": "AI reads this month",
       "noCap": "No monthly cap",
       "ofLimit": "of {limit} this month"
     },
@@ -1008,7 +1007,7 @@
       "receipts": "Receipts",
       "other": "Other"
     },
-    "reprocessAll": "Re-read everything waiting",
+    "reprocessAll": "Analyse everything waiting again",
     "reprocessAllConfirm": "Analyse every waiting document again?",
     "empty": {
       "title": "Nothing to confirm",
@@ -1029,21 +1028,21 @@
       "ignored": "Ignored",
       "notice": "Notice"
     },
-    "footnote": "Every bill file is kept permanently in the data directory's inbox folder, so a bill can always be re-read later. From a forwarded email only its PDFs (or photos) are kept; an email without them is kept as the bill itself.",
+    "footnote": "Every bill file is kept permanently in the data directory’s inbox folder, so a bill can always be analysed again later. From a forwarded email only its PDFs (or photos) are kept; an email without them is kept as the bill itself.",
     "detail": {
       "untitled": "Document",
-      "noPreview": "No text could be read from this file.",
+      "noPreview": "No text could be made out in this file.",
       "alreadyBill": "This document already became a bill.",
-      "reprocess": "Re-run extraction",
+      "reprocess": "Analyse again",
       "ignore": "Not a bill",
       "ignoreConfirm": "Move this to Other emails? It's kept, and you can move it back with “It's a bill”.",
       "openFile": "Open file",
       "noticeTitle": "This isn't a bill",
-      "noticeBody": "It was read as a receipt or notice from the provider and filed away, so there's nothing to fill in.",
+      "noticeBody": "It turned out to be a receipt or notice from the provider and was filed away, so there’s nothing to fill in.",
       "addAnyway": "Or type the bill in yourself",
       "ignoredBody": "Someone marked this as not a bill, so it's filed under Other emails.",
       "readAsBill": "It's a bill",
-      "readAsBillHint": "Wrongly filed? “It's a bill” has the AI read it again as a bill (one AI read) and adds it. If some details can't be read, you'll get the form to finish it.",
+      "readAsBillHint": "Wrongly filed? “It’s a bill” analyses it again as a bill and adds it. If some details can’t be made out, you’ll get the form to finish it.",
       "untitledDocument": "document",
       "untitledPhoto": "photo"
     },
@@ -1085,21 +1084,21 @@
     "confirm": {
       "title": "{count, plural, one {Confirm one detail} other {Confirm # details}}",
       "titleAll": "Confirm this bill",
-      "lede": "Everything else was read from the document; check the marked details, then create the bill.",
-      "ledeAll": "Everything was read from the document. Check it over, then create the bill.",
-      "failedLede": "Nothing could be read from it. Type the details in, or try again.",
+      "lede": "Everything else came from the document; check the marked details, then create the bill.",
+      "ledeAll": "Everything came from the document. Check it over, then create the bill.",
+      "failedLede": "Nothing on it could be made out. Type the details in, or try again.",
       "says": "What the document says",
       "matched": "Matched to {service}",
-      "missing": "Not on the document, or couldn’t be read. Check the file.",
+      "missing": "Not on the document, or couldn’t be made out. Check the file.",
       "notABill": "Not a bill",
       "notABillConfirm": "Move this to Other emails? It's kept, and you can move it back with “It's a bill”.",
       "viewFile": "View file",
-      "noText": "No text could be read from this file."
+      "noText": "No text could be made out in this file."
     }
   },
   "upload": {
     "title": "Upload a bill",
-    "submit": "Upload and read",
+    "submit": "Upload",
     "lede": "PDFs, scans and photos of paper bills. Each one is analysed and filed under its service, usually in under a minute.",
     "ledeNoLlm": "PDFs, scans and photos of paper bills. Analysing isn’t set up on this server, so each one waits in the Inbox to be entered by hand.",
     "drop": "Drop PDFs or photos here",
@@ -1111,7 +1110,7 @@
     "uploaded": "Uploaded {when}",
     "today": "just now",
     "analysing": "Analysing…",
-    "failed": "Nothing could be read from it.",
+    "failed": "Nothing on it could be made out.",
     "confirm": "Confirm",
     "openBill": "Open bill",
     "forwardTo": "Or forward bills to"
@@ -1418,7 +1417,7 @@
     "chartLabel": "Usage per day for each bill",
     "bands": "By tariff",
     "bandsHint": "Per day, compared with the last bill.",
-    "none": "None of this service's bills show usage yet. It's read from each bill as it arrives.",
+    "none": "None of this service’s bills show usage yet. It’s taken from each bill as it arrives.",
     "bills": "Recent bills",
     "overLimit": "{pct}% over your limit",
     "underLimit": "{pct}% under your limit",
@@ -1607,7 +1606,7 @@
       "points": [
         "Your household: its name, settings, postcode and suburb (never your street address), and who's in it.",
         "Members: names, the email each person signs in with, payment details you choose to add, and a PIN stored only as a one-way hash.",
-        "Bills: the PDFs, photos and bill emails forwarded or uploaded to the app, and what was read from them (amounts, dates, usage, every figure on the bill).",
+        "Bills: the PDFs, photos and bill emails forwarded or uploaded to the app, and what was taken from them (amounts, dates, usage, every figure on the bill).",
         "Who has paid what, and the emails the app has sent."
       ]
     },
@@ -1631,7 +1630,7 @@
     "services": {
       "title": "Services the app uses",
       "points": [
-        "Anthropic (Claude) reads your bills so you don't have to type them in: it receives a bill's text, or the file itself for scans and photos, and is not used to train models under the API's terms.",
+        "Anthropic, the service that analyses bills for us, so you don’t have to type them in: it receives a bill’s text, or the file itself for scans and photos, under its commercial terms, which don’t allow the data to be used for training. Nothing else about your household is sent.",
         "Resend sends the app's emails (sign-in codes, invites, bill emails, reminders).",
         "Cloudflare carries your household's bills email address and the connection to the app.",
         "Open-Meteo provides weather for your area: it is only sent the rough map point of your postcode (about 10 km), never who you are. Postcode data comes from GeoNames and is stored in the app itself."

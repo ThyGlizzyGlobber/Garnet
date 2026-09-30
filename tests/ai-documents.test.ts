@@ -329,7 +329,7 @@ describe('when the AI reader fails', () => {
       expect(outcome.status).toBe('needs_review');
       const reason = JSON.parse(getDocument(hh.id, d.id, db)!.extractionJson!).reason as string;
       expect(reason).toBe(
-        'The AI reader failed, so this needs checking by hand (This API key is not scoped to a workspace.)',
+        'This couldn’t be analysed, so it needs checking by hand (This API key is not scoped to a workspace.)',
       );
       expect(usageCount(hh.id, AI_READ, db)).toBe(0);
     } finally {
@@ -363,9 +363,7 @@ describe('when the AI service is busy', () => {
       busyRetries: number;
       processedAt: string;
     };
-    expect(stored.reason).toMatch(
-      /^The AI service was busy, so the app will try reading this again/,
-    );
+    expect(stored.reason).toMatch(/^Analysing is busy right now, so the app will try again/);
     expect(stored.busyRetries).toBe(1);
     const at = (minutes: number) => new Date(Date.parse(stored.processedAt) + minutes * 60_000);
 

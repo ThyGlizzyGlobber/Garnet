@@ -295,11 +295,12 @@ async function readAndRoute(
   if (attempts.some((a) => a.extractor.startsWith('llm:') && !a.error))
     recordUsage(householdId, AI_READ, db);
   const aiError = attempts.find((a) => a.error)?.error;
-  // Marked as a bill, but the AI still found no bill details: a person fills them in.
+  // Marked as a bill, but the reader still found no bill details: a person fills them in.
+  // Stored reasons are shown to households, so they say what happened in plain words (rule 1).
   if (opts.asBill && best && !best.bill.periodStart) {
     store(
       'needs_review',
-      'Marked as a bill, but the AI couldn’t read the bill details. Fill them in below.',
+      'Marked as a bill, but the bill’s details couldn’t be made out. Fill them in below.',
       best,
       attempts,
     );
@@ -324,16 +325,16 @@ async function readAndRoute(
     store(
       'needs_review',
       aiError && isTransientAiError(aiError)
-        ? `The AI service was busy, so the app will try reading this again shortly (${aiProblem(aiError)})`
+        ? `Analysing is busy right now, so the app will try again shortly (${aiProblem(aiError)})`
         : aiError
-          ? `The AI reader failed, so this needs checking by hand (${aiProblem(aiError)})`
+          ? `This couldn’t be analysed, so it needs checking by hand (${aiProblem(aiError)})`
           : attempts.length
-            ? 'The AI reader could not read this document'
+            ? 'Nothing on this document could be made out'
             : aiLeft && isLlmConfigured(env)
-              ? 'There is too little text in this document for the AI reader, so this needs entering by hand'
+              ? 'There is too little text in this document to analyse, so it needs entering by hand'
               : aiLeft
-                ? 'AI reading is not set up (no API key), so this needs entering by hand'
-                : 'This month’s AI reading limit is used up, so this needs entering by hand',
+                ? 'Analysing documents is not set up on this server, so this needs entering by hand'
+                : 'This month’s analysing limit is used up, so this needs entering by hand',
       null,
       attempts,
     );
@@ -342,12 +343,7 @@ async function readAndRoute(
   if (best.confidence < env.EXTRACTOR_CONFIDENCE_THRESHOLD) {
     const notice = notABill(attempts);
     if (notice) return notice;
-    store(
-      'needs_review',
-      `Confidence ${Math.round(best.confidence * 100)}% is below the ${Math.round(env.EXTRACTOR_CONFIDENCE_THRESHOLD * 100)}% threshold`,
-      best,
-      attempts,
-    );
+    store('needs_review', 'Some details need checking', best, attempts);
     return { documentId: doc.id, status: 'needs_review', reason: 'low-confidence', result: best };
   }
   let serviceId =

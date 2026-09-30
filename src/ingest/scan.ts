@@ -55,7 +55,7 @@ export async function scanFile(
 ): Promise<ScanResult> {
   if (isPdfFile(mime, ...names)) {
     if (data.length > MAX_PDF_BYTES)
-      return { problem: 'This scan is too large for the AI reader (over 20 MB)' };
+      return { problem: 'This scan is too large to analyse (over 20 MB)' };
     return { file: { mediaType: 'application/pdf', data } };
   }
   if (!names.some((n) => isImageFile(mime, n))) return null;
@@ -67,7 +67,7 @@ export async function scanFile(
   return {
     problem: /heic|heif/i.test(`${mime} ${names.join(' ')}`)
       ? 'iPhone HEIC photos can’t be read yet; send the photo as a JPEG'
-      : 'This photo couldn’t be prepared for the AI reader',
+      : 'This photo couldn’t be prepared for analysing',
   };
 }
 

@@ -54,4 +54,21 @@ describe('messages', () => {
     }
     expect(missing).toEqual([]);
   });
+
+  it('never mentions the reader where a household can see it (rule 1)', () => {
+    const banned =
+      /\b(AI|A\.I\.|LLM|Anthropic|Claude|read by|read from|confidence|confident|smart|sparkles?|magic|extract(?:ed|ion|or|s)?|OCR|model)\b/i;
+    // Operators only, and the one place the notice must name the service.
+    const allowed = /^(status\.|privacy\.services\.)/;
+    const hits: string[] = [];
+    const walk = (node: unknown, key: string) => {
+      if (typeof node === 'string') {
+        if (!allowed.test(key) && banned.test(node)) hits.push(`${key}: ${node}`);
+      } else if (Array.isArray(node)) node.forEach((v, i) => walk(v, `${key}[${i}]`));
+      else if (node && typeof node === 'object')
+        for (const [k, v] of Object.entries(node)) walk(v, key ? `${key}.${k}` : k);
+    };
+    walk(messages, '');
+    expect(hits).toEqual([]);
+  });
 });
