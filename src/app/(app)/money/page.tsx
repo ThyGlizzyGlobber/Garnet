@@ -1,213 +1,258 @@
 import Link from 'next/link';
-import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import { Badge, DownloadButton, Figure, PageHeader, Tile, TileHeader } from '@/components/ui';
-import { Avatar, Swatch } from '@/components/ui/colour';
-import { InlineAction } from '@/components/ui/form';
+import { relativeDay, rowCtx } from '@/components/app/bill-rows';
+import { Button, Card, LinkButton } from '@/components/ui';
+import { EmptyCard, Money, PageTitle, SectionHead } from '@/components/ui/blocks';
+import { Chip } from '@/components/ui/chip';
+import { Avatar, Disc } from '@/components/ui/colour';
 import { Ring } from '@/components/ui/ring';
 import { pageContext } from '@/lib/context';
-import { listMembers } from '@/lib/members';
-import { groupByMonth } from '@/lib/bill-month';
-import { memberLedger } from '@/lib/stats';
-import { toggleSharePaidAction } from '../bills/actions';
+import { daysBetween } from '@/lib/dates';
+import { formatMonthRange } from '@/lib/format';
+import { colourCss } from '@/lib/palette';
 import { isAdmin } from '@/lib/roles';
+import { moneyView, type Debt } from '@/lib/money';
+import { toggleSharePaidAction } from '../bills/actions';
+import { MoneyActions } from './money-actions';
 
-export default async function LedgerPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ member?: string }>;
-}) {
-  const { hh, me, money, date, month, today } = await pageContext();
-  if (hh.splitMode !== 'shared') redirect('/');
-  const t = await getTranslations('ledger');
-  const { member: requested } = await searchParams;
-  const viewingId = isAdmin(me) && requested ? requested : me.id;
-  const ledger = memberLedger(hh.id, viewingId, today, hh.fiscalYearStartMonth);
-  if (!ledger) redirect('/money');
-  const isMe = ledger.member.id === me.id;
-  const members = isAdmin(me) ? listMembers(hh.id) : [];
-  const paidPct = ledger.paidPct;
-  const groups = groupByMonth(ledger.recent, (s) => s.bill.periodStart);
+/**
+ * Money: who owes whom in the house, from the viewer's side. A settle-up
+ * hero with the two actions (D9), a card per housemate, then what the viewer
+ * owes, what is owed to them, and what is owed between the others. Numbers
+ * from moneyView() (src/lib/money.ts).
+ */
+export default async function MoneyPage() {
+  const ctx = await pageContext();
+  const { hh, me, money, month } = ctx;
+  const t = await getTranslations('money');
+  const tu = await getTranslations('ui');
+  const rc = rowCtx(ctx, tu);
+  if (hh.splitMode !== 'shared')
+    return (
+      <div className="scr">
+        <PageTitle title={t('title')} lede={t('ledeShort')} />
+        <EmptyCard icon="money" title={t('notSplit.title')} body={t('notSplit.body')}>
+          <LinkButton href="/settings" variant="secondary" icon="sliders">
+            {t('notSplit.settings')}
+          </LinkButton>
+        </EmptyCard>
+      </div>
+    );
+  const v = moneyView(hh.id, me.id, ctx.today, hh.fiscalYearStartMonth);
+  const name = (id: string) => v.people.find((p) => p.member.id === id)?.member.name ?? '';
+  const anything = v.youOwe.length + v.owedToYou.length + v.between.length > 0;
+
+  const heroLine =
+    v.netMinor >= 0
+      ? v.youOweMinor > 0
+        ? t('hero.owedAfter', {
+            amount: money(v.youOweMinor),
+            names: new Intl.ListFormat(hh.locale, { type: 'conjunction' }).format(
+              v.creditors.map((c) => c.member.name),
+            ),
+          })
+        : v.owedToYouMinor > 0
+          ? t('hero.owed')
+          : t('hero.square')
+      : t('hero.youOweAfter', { amount: money(v.owedToYouMinor) });
+
+  const debtRow = (d: Debt, dir: 'out' | 'in') => {
+    const other = name(dir === 'out' ? d.toId : d.fromId);
+    const days = daysBetween(ctx.today, d.dueDate);
+    return (
+      <div key={d.shareId} className="debt-row">
+        <Link
+          href={`/bills/${d.billId}`}
+          className="debt-main"
+          style={{ ['--svc' as string]: colourCss(d.colour) }}
+        >
+          <Disc icon={d.icon} colour={d.colour} size="sm" />
+          <span>
+            <b className="truncate">
+              {d.serviceName}
+              {d.instalment ? ` · ${t('instalment', { n: d.instalment })}` : ''}
+            </b>
+            <span className="muted truncate">
+              {t(dir === 'out' ? 'to' : 'from', { name: other })} ·{' '}
+              {relativeDay(rc, days, d.dueDate)}
+            </span>
+          </span>
+        </Link>
+        <span className="debt-amt">{money(d.amountMinor, d.currency)}</span>
+        <form action={toggleSharePaidAction}>
+          <input type="hidden" name="shareId" value={d.shareId} />
+          <input type="hidden" name="billId" value={d.billId} />
+          <input type="hidden" name="paid" value="true" />
+          <Button
+            type="submit"
+            size="sm"
+            variant={dir === 'out' ? 'primary' : 'secondary'}
+            icon={dir === 'in' ? 'check' : undefined}
+          >
+            {dir === 'out' ? t('markPaid') : t('paid')}
+          </Button>
+        </form>
+      </div>
+    );
+  };
+
+  const owedForSheet = v.owedToYou.map((d) => ({
+    shareId: d.shareId,
+    fromId: d.fromId,
+    serviceName: d.serviceName,
+    icon: d.icon,
+    colour: d.colour,
+    amountMinor: d.amountMinor,
+    currency: d.currency,
+    sub: `${formatMonthRange(d.periodStart, d.periodEnd, hh.locale)} · ${t('dueOn', { date: rc.date(d.dueDate) })}`,
+    instalment: d.instalment,
+  }));
 
   return (
-    <>
-      <PageHeader
-        title={isMe ? t('titleMe') : t('titleOther', { name: ledger.member.name })}
-        subtitle={t('subtitle', { label: hh.name })}
-        action={
-          <DownloadButton
-            href={`/api/export?kind=member&member=${ledger.member.id}`}
-            label={t('download')}
+    <div className="scr d3-money">
+      <PageTitle title={t('title')} lede={t('lede')} />
+      <Card className="d3-money-hero">
+        <div className="mh">
+          <div className="eyebrow">{t('settleUp')}</div>
+          <Money
+            minor={Math.abs(v.netMinor)}
+            currency={hh.currency}
+            locale={hh.locale}
+            className="hero-fig"
           />
-        }
-      />
-      {members.length > 1 && (
-        <div className="mb-5 flex flex-wrap gap-2">
-          {members.map((m) => (
-            <Link
-              key={m.id}
-              href={m.id === me.id ? '/money' : `/money?member=${m.id}`}
-              className={`flex items-center gap-2 rounded-full py-1.5 pr-4 pl-1.5 text-sm font-semibold transition ${m.id === ledger.member.id ? 'bg-accent text-accent-fg' : 'bg-surface-2 text-fg-muted hover:text-fg'}`}
-            >
-              <Avatar name={m.name} colour={m.colour} className="size-7 text-[11px]" />
-              {m.name}
-            </Link>
-          ))}
+          <p className="mh-line">{heroLine}</p>
+          <MoneyActions
+            people={v.people.map((p) => ({
+              id: p.member.id,
+              name: p.member.name,
+              colour: p.member.colour,
+            }))}
+            owed={owedForSheet}
+            today={ctx.today}
+            locale={hh.locale}
+            canRemind={v.owedToYou.length > 0}
+          />
+        </div>
+      </Card>
+
+      {v.people.length > 0 && (
+        <div className="d3-people">
+          {v.people.map((p) => {
+            const pct = p.sharesThisFy ? Math.round((p.paidThisFy / p.sharesThisFy) * 100) : 100;
+            return (
+              <Card
+                key={p.member.id}
+                className="person"
+                style={{ ['--m' as string]: colourCss(p.member.colour) }}
+              >
+                <div className="person-top">
+                  <Avatar name={p.member.name} colour={p.member.colour} size="lg" />
+                  <div>
+                    <b>{p.member.name}</b>
+                    <span className="muted small">
+                      {isAdmin(p.member) ? t('admin') : t('member')} ·{' '}
+                      {t('since', { date: month(p.member.activeFrom.slice(0, 7), 'long-year') })}
+                    </span>
+                  </div>
+                </div>
+                <div className="person-body">
+                  <Ring pct={pct} size={70} from={colourCss(p.member.colour)}>
+                    <b className="text-sm">{pct}%</b>
+                  </Ring>
+                  <div className="person-t">
+                    <span className={`person-net ${p.netMinor >= 0 ? 'pos' : 'neg'}`}>
+                      {p.netMinor > 0
+                        ? t('owesYou', { amount: money(p.netMinor) })
+                        : p.netMinor < 0
+                          ? t('youOwe', { amount: money(-p.netMinor) })
+                          : t('square')}
+                    </span>
+                    <span className="muted small">
+                      {t('paidBack', { paid: p.paidThisFy, total: p.sharesThisFy })}
+                    </span>
+                  </div>
+                </div>
+                {p.member.paymentDetails.length > 0 && (
+                  <div className="person-pay">
+                    {p.member.paymentDetails.map((d) => (
+                      <span key={d.label} className="contents">
+                        <span className="muted small">{d.label}</span>
+                        <span className="mono small">{d.value}</span>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </Card>
+            );
+          })}
         </div>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-[1.3fr_1fr_1fr]">
-        <Tile
-          className={`flex flex-wrap items-center gap-6 ${ledger.owed > 0 ? 'bg-warning-soft' : 'bg-success-soft'}`}
-        >
-          <Ring
-            id="ledger-paid"
-            pct={paidPct}
-            size={124}
-            stroke={12}
-            from="var(--color-success)"
-            to="var(--color-accent-2)"
-          >
-            <span className="flex flex-col items-center leading-none">
-              <span className="font-display text-[24px] font-semibold tabular-nums">
-                {paidPct}%
-              </span>
-              <span className="mt-1 text-[11px] font-semibold tracking-wide text-fg-muted uppercase">
-                {t('tiles.paidRing')}
-              </span>
-            </span>
-          </Ring>
-          <div className="min-w-44 flex-1">
-            <p className="text-sm font-semibold">{t('tiles.owed')}</p>
-            <Figure tone={ledger.owed > 0 ? 'warning' : 'success'}>{money(ledger.owed)}</Figure>
-            <p className="mt-2 text-xs text-fg-muted">
-              {t('unpaid.count', { count: ledger.unpaid.length })} ·{' '}
-              {t('tiles.ofTotal', { total: money(ledger.totalThisFy) })}
-            </p>
-          </div>
-        </Tile>
-        <Tile className="flex flex-col gap-3">
-          <p className="text-sm font-semibold">{t('tiles.owedToYou')}</p>
-          <Figure size="md">{money(ledger.owedToMe)}</Figure>
-          {ledger.owedToMeBy.length ? (
-            <ul className="flex flex-col gap-2">
-              {ledger.owedToMeBy.map((x) => (
-                <li key={x.member.id} className="flex items-center gap-2 text-sm">
-                  <Avatar
-                    name={x.member.name}
-                    colour={x.member.colour}
-                    className="size-7 text-[11px]"
-                  />
-                  <span className="flex-1">{x.member.name}</span>
-                  <span className="font-semibold tabular-nums text-warning">{money(x.minor)}</span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-xs text-fg-muted">{t('tiles.nobody')}</p>
-          )}
-        </Tile>
-        <Tile className="flex flex-col gap-2">
-          <p className="text-sm font-semibold">{t('tiles.paidFy')}</p>
-          <Figure size="md">{money(ledger.paidThisFy)}</Figure>
-          <div className="mt-1 h-2 rounded-full bg-surface-2">
-            <div
-              className="h-2 rounded-full bg-accent"
-              style={{ width: `${Math.max(paidPct, 2)}%` }}
+      {anything ? (
+        <div className="d3-money-cols">
+          <Card>
+            <SectionHead
+              title={t('youOweHead')}
+              right={<span className="muted">{money(v.youOweMinor)}</span>}
             />
-          </div>
-          <p className="text-xs text-fg-muted">
-            {t('tiles.ofTotal', { total: money(ledger.totalThisFy) })}
-          </p>
-        </Tile>
-      </div>
-
-      <Tile className="mt-4 flex flex-col gap-2">
-        <TileHeader title={t('unpaid.title')} />
-        {ledger.unpaid.length === 0 ? (
-          <p className="text-sm text-success">{t('unpaid.empty')}</p>
-        ) : (
-          <ul className="divide-y divide-border">
-            {ledger.unpaid.map((s) => {
-              const due = s.dueDate ?? s.bill.dueDate;
-              const overdue = due < today;
-              return (
-                <li key={s.id} className="flex flex-wrap items-center gap-3 py-3 sm:flex-nowrap">
-                  {s.payer ? (
-                    <Avatar name={s.payer.name} colour={s.payer.colour} />
-                  ) : (
-                    <span className="size-10 shrink-0 rounded-full bg-surface-2" />
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <Link href={`/bills/${s.billId}`} className="block truncate font-semibold">
-                      {s.service.name}{' '}
-                      <span className="font-normal text-fg-muted">
-                        ·{' '}
-                        {s.instalment
-                          ? t('unpaid.instalment', { n: s.instalment, date: date(due, 'short') })
-                          : `${date(s.bill.periodStart, 'short')} – ${date(s.bill.periodEnd, 'short')}`}
-                      </span>
-                    </Link>
-                    <p className="flex flex-wrap items-center gap-x-2 text-xs text-fg-muted">
-                      {s.payer ? t('unpaid.payTo', { name: s.payer.name }) : t('unpaid.noPayer')}
-                      {s.paymentReference && (
-                        <span className="font-mono">{s.paymentReference}</span>
-                      )}
-                      {overdue && <Badge tone="danger">{t('unpaid.overdue')}</Badge>}
-                    </p>
-                    {s.payer && s.payer.paymentDetails.length > 0 && (
-                      <p className="mt-0.5 text-xs text-fg-muted">
-                        {s.payer.paymentDetails.map((d) => `${d.label} ${d.value}`).join(' · ')}
-                      </p>
-                    )}
-                  </div>
-                  <span className="font-display text-xl font-semibold tabular-nums">
-                    {money(s.amountMinor, s.currency)}
-                  </span>
-                  <InlineAction
-                    action={toggleSharePaidAction}
-                    hidden={{ shareId: s.id, billId: s.billId, paid: 'true' }}
-                    label={t('unpaid.markPaid')}
-                  />
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </Tile>
-
-      <Tile className="mt-4">
-        <TileHeader title={t('history.title')} />
-        {groups.map(([m, items]) => (
-          <div key={m} className="mt-4">
-            <p className="mb-1 text-[11px] font-semibold tracking-wide text-fg-muted uppercase">
-              {month(m, 'long-year')}
-            </p>
-            <ul className="divide-y divide-border text-sm">
-              {items.map((s) => (
-                <li key={s.id} className="flex items-center justify-between gap-3 py-2.5">
-                  <Link href={`/bills/${s.billId}`} className="flex min-w-0 items-center gap-3">
-                    <Swatch colour={s.service.colour} dot />
-                    <span className="min-w-0">
-                      <span className="block truncate">{s.service.name}</span>
-                      <span className="text-xs text-fg-muted">
-                        {s.paidAt
-                          ? s.paidMethod === 'payer'
-                            ? t('history.paidProvider')
-                            : t('history.paidOn', { date: date(s.paidAt, 'short') })
-                          : t('history.unpaid')}
-                      </span>
+            <div className="debts">
+              {v.youOwe.length ? (
+                v.youOwe.map((d) => debtRow(d, 'out'))
+              ) : (
+                <p className="muted">{t('squareAll')}</p>
+              )}
+            </div>
+          </Card>
+          <Card>
+            <SectionHead
+              title={t('owedToYouHead')}
+              right={<span className="muted">{money(v.owedToYouMinor)}</span>}
+            />
+            <div className="debts">
+              {v.owedToYou.length ? (
+                v.owedToYou.map((d) => debtRow(d, 'in'))
+              ) : (
+                <p className="muted">{t('nobodyOwes')}</p>
+              )}
+            </div>
+          </Card>
+          {v.between.length > 0 && (
+            <Card>
+              <SectionHead title={t('betweenHead')} />
+              <div className="debts">
+                {v.between.map((d) => (
+                  <Link key={d.shareId} href={`/bills/${d.billId}`} className="between">
+                    <Avatar
+                      name={name(d.fromId)}
+                      colour={
+                        v.people.find((p) => p.member.id === d.fromId)?.member.colour ?? '#888'
+                      }
+                      size="sm"
+                    />
+                    <span>
+                      {t('betweenLine', {
+                        from: name(d.fromId),
+                        to: name(d.toId),
+                        service: d.serviceName,
+                      })}
                     </span>
+                    <b>{money(d.amountMinor, d.currency)}</b>
+                    {d.dueDate < ctx.today ? (
+                      <Chip tone="bad" icon="alert">
+                        {t('overdue')}
+                      </Chip>
+                    ) : (
+                      <span />
+                    )}
                   </Link>
-                  <span className={`font-semibold tabular-nums ${s.paidAt ? '' : 'text-warning'}`}>
-                    {money(s.amountMinor, s.currency)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
-      </Tile>
-    </>
+                ))}
+              </div>
+            </Card>
+          )}
+        </div>
+      ) : (
+        <EmptyCard icon="money" title={t('empty.title')} body={t('empty.body')} />
+      )}
+    </div>
   );
 }

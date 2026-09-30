@@ -1,0 +1,958 @@
+/*
+  The shown screens (Services, a service, Bills, a bill, Inbox, Money,
+  Settings), carried over from the studio's Almanac 2 layouts (layouts.css,
+  app.css, more.css). Imported into Tailwind's components layer by
+  globals.css, so a utility on the same element wins. The studio switches
+  layouts on data-device; here the same breakpoints are media queries: a
+  phone under 640 px, an iPad held upright under 900 px.
+*/
+
+/* ---------- a screen and its title ---------- */
+.scr {
+  display: grid;
+  gap: var(--gap);
+  align-content: start;
+}
+.d3-title {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 24px;
+  align-items: end;
+  padding: 10px 2px 8px;
+}
+.d3-title h1 {
+  font-size: calc(var(--fs-h1) * 1.7);
+  line-height: 0.98;
+  grid-column: 1;
+  overflow-wrap: anywhere;
+}
+.d3-title > p {
+  margin: 6px 0 0;
+  font-size: 16.5px;
+  color: var(--p-fg2);
+  max-width: 60ch;
+  grid-column: 1;
+}
+.d3-title .eyebrow {
+  grid-column: 1;
+}
+.d3-title .sp-chips {
+  grid-column: 1 / -1;
+  margin-top: 2px;
+}
+.d3-title-r {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: end;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.d3-title > .lede {
+  font-size: 18px;
+  line-height: 1.5;
+  color: var(--p-fg);
+  max-width: 64ch;
+}
+.filters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* ---------- Services: a year of bills per service ---------- */
+.d3-svc {
+  display: grid;
+  grid-template-columns: 240px 150px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  gap: 8px 22px;
+  align-items: center;
+  padding: 20px 22px;
+}
+.d3-svc-l {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 0;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+.d3-svc-l > span {
+  display: grid;
+  min-width: 0;
+}
+.d3-svc-l b {
+  font-family: var(--f-display);
+  font-weight: var(--fw-display);
+  font-size: 21px;
+  letter-spacing: var(--ls-display);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.d3-svc-l .muted {
+  font-size: var(--fs-small);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.d3-svc-fig {
+  display: grid;
+  gap: 2px;
+}
+.d3-rib {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.d3-rib-track {
+  position: relative;
+  height: 34px;
+  border-radius: 10px;
+  background: var(--inset);
+}
+.d3-rib-axis {
+  position: relative;
+  height: 14px;
+}
+.d3-rib-axis span {
+  position: absolute;
+  font-size: 10.5px;
+  color: var(--p-fg2);
+  font-weight: 600;
+}
+.d3-svc-sum {
+  grid-column: 2 / -1;
+  margin: 0;
+  color: var(--p-fg2);
+}
+.rb {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 750;
+  overflow: hidden;
+  white-space: nowrap;
+  background: color-mix(in srgb, var(--svc) 34%, transparent);
+  color: var(--p-fg);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--svc) 55%, transparent);
+  transition: filter 0.15s;
+  text-decoration: none;
+}
+.rb:hover {
+  filter: brightness(1.1) saturate(1.2);
+}
+.rb.s-soon {
+  background: repeating-linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--svc) 34%, transparent) 0 5px,
+    color-mix(in srgb, var(--svc) 18%, transparent) 5px 10px
+  );
+  box-shadow: inset 0 0 0 1.5px var(--warn);
+}
+.rb.s-due {
+  background: color-mix(in srgb, var(--svc) 12%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--svc) 45%, transparent);
+}
+.rb.s-overdue {
+  box-shadow: inset 0 0 0 1.5px var(--bad);
+}
+.rb.clip {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 18px);
+  mask-image: linear-gradient(90deg, transparent, #000 18px);
+}
+.rb.flag::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--warn);
+}
+.today-line {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 0;
+  border-left: 1.5px solid var(--p-accent);
+  z-index: 2;
+  pointer-events: none;
+}
+.today-line span {
+  position: absolute;
+  top: -1px;
+  left: 4px;
+  font-size: 10px;
+  font-weight: 750;
+  color: var(--p-accent);
+  font-style: normal;
+}
+.d3-rib .today-line span {
+  display: none;
+}
+
+/* ---------- a service ---------- */
+.sp-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.sp-prov {
+  color: var(--p-fg2);
+  font-weight: 550;
+}
+.sp-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 14px;
+}
+.d3-cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
+  gap: var(--gap);
+  align-items: start;
+}
+.d3-main,
+.d3-aside {
+  display: grid;
+  gap: var(--gap);
+  min-width: 0;
+}
+.d3-main .chart-bars {
+  height: 230px;
+}
+.d3-tl .year-h {
+  font-size: 22px;
+  padding-top: 4px;
+}
+.d3-tl .rows {
+  border-left: 2px solid var(--line-2);
+  margin-left: 10px;
+  padding-left: 8px;
+}
+.d3-nums {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.d3-nums > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.d3-nums b {
+  font-family: var(--f-num);
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.d3-nums .muted {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------- Bills: month sections ---------- */
+.d3-month {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: var(--gap);
+  align-items: start;
+}
+.d3-month-h {
+  display: grid;
+  gap: 2px;
+  position: sticky;
+  top: 0;
+  padding-top: 8px;
+}
+.d3-month-h h2 {
+  font-size: 30px;
+}
+.d3-month .rows {
+  padding: 8px;
+}
+
+/* ---------- a bill: the document beside the details ---------- */
+.d3-bill-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.2fr);
+  gap: calc(var(--gap) * 1.5);
+  align-items: start;
+}
+.d3-doc {
+  display: grid;
+  gap: var(--gap);
+  position: sticky;
+  top: 12px;
+  min-width: 0;
+}
+.d3-doc .paper {
+  transform: rotate(-1.2deg);
+}
+.d3-bill-body {
+  display: grid;
+  gap: var(--gap);
+  min-width: 0;
+}
+.d3-bill-hero .bp-amt {
+  font-size: 62px;
+}
+.bp-hero {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+}
+.bp-id {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  max-width: 100%;
+}
+.bp-id > div {
+  min-width: 0;
+}
+.bp-prov {
+  font-family: var(--f-display);
+  font-weight: var(--fw-display);
+  font-size: 19px;
+  letter-spacing: var(--ls-display);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bp-status {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.bp-line {
+  margin: 0;
+  color: var(--p-fg2);
+}
+.bp-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+.bp-actions form {
+  display: contents;
+}
+.bp-notice {
+  margin: 0;
+}
+
+/* the document's first page (a real one when it can be drawn, else a stand-in) */
+.paper {
+  position: relative;
+  aspect-ratio: 1 / 1.3;
+  width: 100%;
+  max-width: 100%;
+  border-radius: 10px;
+  background: var(--paper);
+  color: var(--paper-ink);
+  padding: 7% 8%;
+  display: grid;
+  align-content: start;
+  gap: 5%;
+  box-shadow:
+    0 30px 60px -30px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(0, 0, 0, 0.06);
+  font-family: var(--f-body);
+  overflow: hidden;
+  text-decoration: none;
+}
+a.paper:hover .paper-stamp {
+  transform: rotate(-4deg) scale(1.04);
+}
+.paper.real {
+  padding: 0;
+  display: block;
+  aspect-ratio: auto;
+}
+.paper.real img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.paper.real.photo {
+  background: #1b1a18;
+}
+.paper.real.photo img {
+  max-height: 70vh;
+  object-fit: contain;
+}
+.paper.mail {
+  aspect-ratio: 1 / 0.9;
+}
+.paper-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  padding-bottom: 10px;
+  border-bottom: 3px solid var(--svc, #888);
+  min-width: 0;
+}
+.paper-top b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.paper-top span:last-child {
+  margin-left: auto;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #8a867d;
+  white-space: nowrap;
+}
+.paper-logo {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: var(--svc, #888);
+  color: #fff;
+  flex: none;
+}
+.paper-amt {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--svc, #888) 10%, #fff);
+  font-size: 11px;
+  color: #6c685f;
+}
+.paper-amt b {
+  font-size: 22px;
+  color: var(--paper-ink);
+  font-weight: 700;
+}
+.paper-lines,
+.paper-table {
+  display: grid;
+  gap: 7px;
+}
+.paper-lines i,
+.paper-table i {
+  height: 6px;
+  border-radius: 3px;
+  background: #e7e3db;
+}
+.paper-lines i:nth-child(3n) {
+  width: 62%;
+}
+.paper-lines i:nth-child(3n + 2) {
+  width: 84%;
+}
+.paper-table {
+  grid-template-columns: 3fr 1fr;
+}
+.paper-stamp {
+  position: absolute;
+  right: 7%;
+  top: 30%;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1.5px solid color-mix(in srgb, var(--p-accent) 70%, #555);
+  color: color-mix(in srgb, var(--p-accent) 80%, #333);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transform: rotate(-6deg);
+  background: rgba(255, 255, 255, 0.6);
+  transition: transform 0.2s;
+}
+.paper.real .paper-stamp {
+  top: 5%;
+}
+.paper-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 5px;
+  height: 46px;
+  padding: 6px 8px 0;
+  border-radius: 6px;
+  background: #f5f2ec;
+}
+.paper-bars i {
+  flex: 1;
+  border-radius: 2px 2px 0 0;
+  background: #d9d3c8;
+}
+.paper-slip {
+  display: grid;
+  gap: 6px;
+  padding-top: 10px;
+  border-top: 1.5px dashed #d6d1c7;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #9a958b;
+}
+.paper-slip i {
+  height: 6px;
+  width: 70%;
+  border-radius: 3px;
+  background: #e7e3db;
+}
+.paper.small {
+  max-width: 220px;
+  padding: 8%;
+}
+/* the mail stand-in: a header block and lines of text */
+.paper-mail-head {
+  display: grid;
+  gap: 4px;
+  font-size: 11px;
+  color: #6c685f;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e7e3db;
+}
+.paper-mail-head b {
+  color: var(--paper-ink);
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.paper-mail-head span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- Money ---------- */
+.d3-money-hero {
+  padding: 26px;
+}
+.mh {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+.mh-line {
+  margin: 0;
+  color: var(--p-fg2);
+}
+.mh-acts {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+.d3-people {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--gap);
+}
+.person {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  min-width: 0;
+}
+.person-top {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  min-width: 0;
+}
+.person-top > div {
+  display: grid;
+  min-width: 0;
+}
+.person-top b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.person-body {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.person-t {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.person-net {
+  font-family: var(--f-num);
+  font-weight: 650;
+  font-size: 18px;
+}
+.person-pay {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 2px 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+.person-pay .mono {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.d3-money-cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--gap);
+  align-items: start;
+}
+.between {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 4px;
+  border: 0;
+  background: none;
+  text-align: left;
+  border-radius: var(--r-inner);
+  cursor: pointer;
+  color: inherit;
+  text-decoration: none;
+  width: 100%;
+}
+.between:hover {
+  background: var(--inset);
+}
+.between > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.debt-row form {
+  display: contents;
+}
+.pay-list {
+  display: grid;
+  gap: 6px;
+}
+.pay-item {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: var(--r-inner);
+  background: var(--inset);
+  cursor: pointer;
+}
+.pay-item input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--p-accent);
+}
+.pay-item > span {
+  display: grid;
+  min-width: 0;
+}
+.pay-item > span > * {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pay-item > b {
+  font-family: var(--f-num);
+}
+
+/* ---------- small form pieces (a sheet's fields) ---------- */
+.fld {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.fld-l {
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--p-fg2);
+}
+.fld-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.inp {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--r-inner);
+  background: var(--ctl-bg, var(--inset-2));
+  box-shadow: inset 0 0 0 1px var(--ctl-rim, var(--line-2));
+  color: var(--p-fg2);
+  min-width: 0;
+  text-align: left;
+  font: inherit;
+}
+.inp input,
+.inp select {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--p-fg);
+  font: inherit;
+  font-size: 15px;
+}
+.inp:focus-within {
+  box-shadow:
+    inset 0 0 0 1.5px var(--p-accent),
+    0 0 0 4px color-mix(in srgb, var(--p-accent) 16%, transparent);
+}
+.form-acts {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.form-acts.mid {
+  justify-content: center;
+}
+
+/* ---------- Inbox ---------- */
+.d3-addr {
+  padding: 14px 16px;
+}
+.inbox-grp .rows {
+  margin-top: 4px;
+}
+
+/* ---------- Settings ---------- */
+.set-grid {
+  display: grid;
+  gap: var(--gap);
+}
+.set-col {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--gap);
+  align-items: start;
+}
+.set-col > * {
+  min-width: 0;
+}
+.set-lede {
+  margin: -4px 0 0;
+  max-width: 56ch;
+}
+.set-appear .presets {
+  margin: 16px 0 18px;
+}
+.set-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+.set-row > span,
+.tg-row > span {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+.tg-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 11px 0;
+  border-top: 1px solid var(--line);
+}
+.sec-head + .tg-row,
+.sec-head + form > .tg-row:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+.set-hh {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+  min-width: 0;
+}
+.set-hh > span:not(.avs) {
+  display: grid;
+  min-width: 0;
+}
+.set-hh b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.set-acts {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+.settings .address {
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+}
+.set-note {
+  margin: 0;
+  font-size: var(--fs-small);
+  color: var(--p-fg2);
+}
+
+/* ---------- empty states ---------- */
+.empty-card {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 44px 24px;
+  text-align: center;
+  max-width: 640px;
+  width: 100%;
+  margin: 10px auto 0;
+}
+.empty-card h2 {
+  font-size: 24px;
+  margin-top: 6px;
+}
+.empty-card p {
+  margin: 0;
+  max-width: 48ch;
+  color: var(--p-fg2);
+  line-height: 1.55;
+}
+.empty-ic {
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  color: var(--p-accent);
+  background: color-mix(in srgb, var(--p-accent) 14%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--p-accent) 24%, transparent);
+}
+
+/* ---------- an iPad held upright ---------- */
+@media (max-width: 899px) {
+  .d3-svc {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .d3-rib,
+  .d3-svc-sum {
+    grid-column: 1 / -1;
+  }
+  .d3-cols,
+  .d3-bill-grid {
+    grid-template-columns: 1fr;
+  }
+  .d3-doc {
+    position: static;
+  }
+  .d3-doc .paper {
+    max-width: 300px;
+    justify-self: center;
+  }
+  .d3-doc .paper.real {
+    max-width: 360px;
+  }
+}
+
+/* ---------- a phone ---------- */
+@media (max-width: 639px) {
+  .d3-title {
+    grid-template-columns: 1fr;
+  }
+  .d3-title-r {
+    grid-column: 1;
+    grid-row: auto;
+    justify-content: flex-start;
+  }
+  .d3-title h1 {
+    font-size: calc(var(--fs-h1) * 1.35);
+  }
+  .d3-title > p,
+  .d3-title > .lede {
+    font-size: 15px;
+  }
+  .d3-svc {
+    padding: 16px;
+  }
+  .d3-svc-fig {
+    justify-items: end;
+    text-align: right;
+  }
+  .d3-month {
+    grid-template-columns: 1fr;
+  }
+  .d3-month-h {
+    position: static;
+    grid-template-columns: auto 1fr;
+    align-items: baseline;
+    gap: 10px;
+  }
+  .d3-month-h h2 {
+    font-size: 24px;
+  }
+  .d3-bill-hero .bp-amt {
+    font-size: 46px;
+  }
+  .d3-money-hero {
+    padding: 20px;
+  }
+  .stats {
+    grid-template-columns: 1fr 1fr;
+  }
+  .hero-fig {
+    font-size: 44px;
+  }
+  .coming {
+    grid-template-columns: 1fr;
+  }
+  .d3-nums b {
+    font-size: 22px;
+  }
+  .fld-row {
+    grid-template-columns: 1fr;
+  }
+  .presets {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+}

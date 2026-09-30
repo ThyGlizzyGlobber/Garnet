@@ -60,6 +60,8 @@ export type BillListItem = Bill & {
   paidShareCount: number;
   /** Share counts per instalment (0 = the whole bill). */
   sharesByInstalment: Record<number, { count: number; paid: number }>;
+  /** Each share's member, instalment (0 = the whole bill), amount and payment. */
+  shares: Pick<Share, 'id' | 'memberId' | 'instalment' | 'amountMinor' | 'paidAt' | 'paidMethod'>[];
   instalments: BillInstalment[];
 };
 
@@ -358,6 +360,14 @@ export function listBills(
       shareCount: mine.length,
       paidShareCount: mine.filter((s) => s.paidAt).length,
       sharesByInstalment,
+      shares: mine.map((s) => ({
+        id: s.id,
+        memberId: s.memberId,
+        instalment: s.instalment,
+        amountMinor: s.amountMinor,
+        paidAt: s.paidAt,
+        paidMethod: s.paidMethod,
+      })),
       instalments: instalments.filter((i) => i.billId === r.bill.id),
     };
   });
@@ -462,7 +472,7 @@ export function setSharePaid(
   householdId: string,
   shareId: string,
   paid: boolean,
-  opts: { method?: string; markedByMemberId?: string | null } = {},
+  opts: { method?: string; markedByMemberId?: string | null; paidAt?: string } = {},
   db: Db = getDb(),
 ): Share {
   const now = new Date().toISOString();
@@ -470,7 +480,7 @@ export function setSharePaid(
     .set(
       paid
         ? {
-            paidAt: now,
+            paidAt: opts.paidAt ?? now,
             paidMethod: opts.method ?? 'transfer',
             markedByMemberId: opts.markedByMemberId ?? null,
             updatedAt: now,
@@ -491,6 +501,57 @@ export function setSharePaid(
     .get();
   if (!row) throw new Error('Share not found');
   return row;
+}
+
+/**
+ * Record one payment between housemates (Money → Record a payment): the
+ * shares it covers are marked paid together, on the day it was made, by the
+ * method given. Only unpaid shares of the household's bills, and only ones
+ * owed to `toMemberId` (the payer of their bills) by one person, are taken;
+ * the rest are left alone. Returns the shares marked and their total.
+ */
+export function recordPayment(
+  householdId: string,
+  input: {
+    shareIds: string[];
+    fromMemberId: string;
+    toMemberId: string;
+    method: 'transfer' | 'cash' | 'other';
+    /** YYYY-MM-DD in the household's time zone; today when left out. */
+    day?: string;
+    markedByMemberId: string;
+  },
+  db: Db = getDb(),
+): { shareIds: string[]; totalMinor: number } {
+  if (!input.shareIds.length) return { shareIds: [], totalMinor: 0 };
+  const rows = db
+    .select({ s: share, payer: service.payerMemberId, owner: bill.ownerMemberId })
+    .from(share)
+    .innerJoin(bill, eq(share.billId, bill.id))
+    .innerJoin(service, eq(bill.serviceId, service.id))
+    .where(and(eq(share.householdId, householdId), inArray(share.id, input.shareIds)))
+    .all()
+    .filter(
+      (r) =>
+        !r.s.paidAt &&
+        !r.owner &&
+        r.s.memberId === input.fromMemberId &&
+        r.payer === input.toMemberId &&
+        r.s.paidMethod !== 'payer',
+    );
+  const paidAt = input.day ? `${input.day}T12:00:00.000Z` : undefined;
+  for (const r of rows)
+    setSharePaid(
+      householdId,
+      r.s.id,
+      true,
+      { method: input.method, markedByMemberId: input.markedByMemberId, paidAt },
+      db,
+    );
+  return {
+    shareIds: rows.map((r) => r.s.id),
+    totalMinor: rows.reduce((sum, r) => sum + r.s.amountMinor, 0),
+  };
 }
 
 /**

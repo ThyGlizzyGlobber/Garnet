@@ -442,7 +442,7 @@ describe('a bill offering instalments', () => {
 });
 
 describe('the bills list', () => {
-  it('lists a bill paid by instalments once per instalment, in the month each is due', () => {
+  it('lists a bill paid by instalments once, carrying the next instalment (D2)', () => {
     const { hh, rates } = setup();
     const id = setPaymentPlan(hh.id, rates().id, 'instalments', db, TODAY).id;
     setInstalmentPaid(hh.id, id, 1, true, db, '2026-09-18T00:00:00Z');
@@ -450,23 +450,22 @@ describe('the bills list', () => {
     const all = listBills(hh.id, {}, db);
     const { entries, bills } = filterBills(all, {}, ctx);
     expect(bills).toHaveLength(1);
+    // One line, in the month the notice belongs to, with the next instalment's amount and date.
     expect(
-      entries.map((e) => [e.date.slice(0, 7), e.amountMinor, !!e.paidAt, e.instalment]),
-    ).toEqual([
-      ['2026-09', 50000, true, { seq: 1, of: 4 }],
-      ['2026-11', 50000, false, { seq: 2, of: 4 }],
-      ['2027-03', 50000, false, { seq: 3, of: 4 }],
-      ['2027-05', 50035, false, { seq: 4, of: 4 }],
-    ]);
-    // Each instalment has its own status and year.
-    expect(filterBills(all, { status: 'overdue' }, ctx).entries.map((e) => e.key)).toEqual([
-      `${id}:2`,
-    ]);
-    expect(filterBills(all, { status: 'paid' }, ctx).entries).toHaveLength(1);
-    expect(filterBills(all, { year: '2027' }, ctx).entries).toHaveLength(2);
-    expect(filterBills(all, { q: 'rates march' }, ctx).entries.map((e) => e.key)).toContain(
-      `${id}:3`,
-    );
+      entries.map((e) => [e.date.slice(0, 7), e.amountMinor, e.dueDate, !!e.paidAt, e.instalment]),
+    ).toEqual([['2026-08', 50000, '2026-11-30', false, { seq: 2, of: 4 }]]);
+    // Its status follows the next instalment: overdue on 5 December, not paid.
+    expect(filterBills(all, { status: 'overdue' }, ctx).entries).toHaveLength(1);
+    expect(filterBills(all, { status: 'paid' }, ctx).entries).toHaveLength(0);
+    expect(filterBills(all, { status: 'unpaid' }, ctx).entries).toHaveLength(1);
+    expect(filterBills(all, { year: '2026' }, ctx).entries).toHaveLength(1);
+    expect(filterBills(all, { year: '2027' }, ctx).entries).toHaveLength(0);
+    // Found by "instalment" and by any month it covers.
+    expect(filterBills(all, { q: 'rates instalments' }, ctx).entries).toHaveLength(1);
+    // Paid once every instalment is.
+    for (const seq of [2, 3, 4])
+      setInstalmentPaid(hh.id, id, seq, true, db, '2027-05-01T00:00:00Z');
+    expect(filterBills(listBills(hh.id, {}, db), { status: 'paid' }, ctx).entries).toHaveLength(1);
     // Each instalment's shares are counted on their own.
     expect(all[0]!.sharesByInstalment[2]).toEqual({ count: 2, paid: 1 });
   });

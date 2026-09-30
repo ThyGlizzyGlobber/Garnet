@@ -1,15 +1,23 @@
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import { Badge, Card, Figure, LinkButton } from '@/components/ui';
-import { IconDisc } from '@/components/ui/colour';
+import { rowCtx, statusLabel } from '@/components/app/bill-rows';
+import { Button, Card, LinkButton } from '@/components/ui';
+import { Eyebrow, Kv, Money, Notice, SectionHead } from '@/components/ui/blocks';
+import { Chip, StatusChip } from '@/components/ui/chip';
+import { Disc } from '@/components/ui/colour';
+import { BackLink } from '@/components/ui/controls';
 import { InlineAction } from '@/components/ui/form';
 import { billFiles, personNotes } from '@/lib/bill-files';
+import { billDue } from '@/lib/bill-status';
 import { getBill, housematesPaid } from '@/lib/bills';
 import { pageContext } from '@/lib/context';
-import { canChoosePlan, dueNow, paysByInstalments } from '@/lib/instalments';
-import { hasHousemates } from '@/lib/members';
+import { daysInclusive } from '@/lib/dates';
+import { formatMonthRange } from '@/lib/format';
+import { canChoosePlan, paysByInstalments } from '@/lib/instalments';
+import { getMember, hasHousemates } from '@/lib/members';
 import { asksMember, mayChangeOwner } from '@/lib/ownership';
 import { visibleTo } from '@/lib/scope';
+import { unusualOf } from '@/lib/service-overview';
 import { unitLabel } from '@/lib/units';
 import {
   answerOwnershipAction,
@@ -17,267 +25,388 @@ import {
   deleteBillAction,
   setWhoseAction,
   toggleBillPaidAction,
+  toggleSharePaidAction,
 } from '../actions';
 import { BillFilesCard } from './bill-files';
 import { FiguresCard } from './figures-card';
+import { Paper } from './paper';
 import { PaymentPlan } from './payment-plan';
 import { SharesCard } from './shares-card';
 
 /**
- * One page per bill: its cost and status, its details and whose it is, the
- * files that came with it, how it's paid (in full or by instalments), each
- * person's share, and every figure read off it.
+ * One page per bill, laid out like the document itself: the bill's first
+ * page and its files on the left; on the right its cost and status, the
+ * details, how it's split, how it's paid, and every figure read off it.
  */
 export default async function BillPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const ctx = await pageContext();
   const { hh, me, money, date, today } = ctx;
   const t = await getTranslations('bills');
+  const tu = await getTranslations('ui');
+  const rc = rowCtx(ctx, tu);
   const b = getBill(hh.id, id);
   // Another member's personal bill doesn't exist, as far as anyone else can tell.
   if (!b || !visibleTo(b.ownerMemberId, me.id)) notFound();
   const personal = !!b.ownerMemberId;
-  const overdue = !b.paidToProviderAt && b.dueDate < today;
+  const split = hh.splitMode === 'shared' && !personal;
   const byInstalments = paysByInstalments(b);
-  const dueNext = byInstalments ? dueNow(b) : null;
+  const due = billDue(b, today);
   const files = billFiles(hh.id, b.id);
-  const notes = personNotes(b.notes, files.find((f) => f.kind === 'bill')?.doc ?? null);
+  const billFile = files.find((f) => f.kind === 'bill');
+  const notes = personNotes(b.notes, billFile?.doc ?? null);
   // Whose it is matters once anyone else lives there, split or not.
   const housemates = hasHousemates(hh.id);
-  // A household that doesn't split bills: nothing is "split", only seen or not.
-  const split = hh.splitMode === 'shared' ? 'yes' : 'no';
+  const splitWord = hh.splitMode === 'shared' ? 'yes' : 'no';
+  const payer = b.service.payerMemberId ? getMember(hh.id, b.service.payerMemberId) : null;
+  const payerName = payer ? (payer.id === me.id ? t('page.you') : payer.name) : null;
+  const days = daysInclusive(b.periodStart, b.periodEnd);
+  const range = formatMonthRange(b.periodStart, b.periodEnd, hh.locale);
+  const enteredBy = b.createdByMemberId
+    ? (getMember(hh.id, b.createdByMemberId)?.name ?? null)
+    : null;
+  const unusual = b.isAnomaly ? unusualOf(b) : null;
+  const paidAt =
+    due.status.key === 'paid'
+      ? byInstalments
+        ? b.instalments.at(-1)?.paidToProviderAt
+        : b.paidToProviderAt
+      : null;
+
+  // The line under the amount: what it covers and who pays whom.
+  const line =
+    due.instalment && due.status.key !== 'paid'
+      ? t('page.lineInstalment', {
+          n: due.instalment.n,
+          of: due.instalment.of,
+          date: date(due.status.dueDate),
+          amount: money(b.amountMinor, b.currency),
+          range,
+        })
+      : paidAt
+        ? t('page.linePaid', {
+            range,
+            days,
+            who: personal ? t('page.you') : (payerName ?? t('page.someone')),
+            provider: b.service.provider,
+            date: date(paidAt),
+          })
+        : t('page.lineDue', {
+            range,
+            days,
+            who: personal ? t('page.you') : (payerName ?? t('page.nobody')),
+            provider: b.service.provider,
+          });
+
+  // The one thing to do: my share to pay back, or the bill to pay the provider.
+  const mine = split
+    ? b.shares.find((s) => s.memberId === me.id && s.instalment === (due.instalment?.n ?? 0))
+    : null;
+  const canPayShare = !!mine && mine.paidMethod !== 'payer' && !mine.paidAt;
+  const iPayProvider = personal || !split || payer?.id === me.id || !payer;
 
   return (
-    <div className="mx-auto max-w-4xl">
-      <header className="mb-5 flex flex-wrap items-center justify-between gap-4">
-        <div className="flex min-w-0 items-center gap-4">
-          <IconDisc icon={b.service.type.icon} colour={b.service.colour} variant="glow" size={56} />
-          <div className="min-w-0">
-            <h1 className="truncate font-display text-[26px] leading-tight font-semibold tracking-tight sm:text-[32px]">
-              {b.service.name}
-            </h1>
-            <p className="truncate text-sm text-fg-muted">
-              {b.service.provider} · {date(b.periodStart)} – {date(b.periodEnd)}
-            </p>
-          </div>
+    <div className="scr d3-bill">
+      <BackLink href={`/services/${b.service.id}`}>{b.service.name}</BackLink>
+      <div className="d3-bill-grid">
+        <div className="d3-doc">
+          <Paper bill={b} file={billFile} ctx={ctx} />
+          <BillFilesCard bill={b} files={files} enteredBy={enteredBy} rc={rc} />
         </div>
-        <LinkButton href={`/bills/${b.id}/edit`} variant="secondary">
-          {t('edit')}
-        </LinkButton>
-      </header>
 
-      {housemates && asksMember(b.service, me) && (
-        <Card className="mb-4 flex flex-col gap-3 border-accent/40 bg-accent-soft" id="whose">
-          <div>
-            <p className="font-display text-lg font-semibold">{t('whose.title')}</p>
-            <p className="text-sm text-fg-muted">
-              {t(personal ? 'whose.bodyMine' : 'whose.bodyHousehold', {
-                service: b.service.name,
-                split,
-              })}
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <InlineAction
-              action={answerOwnershipAction}
-              hidden={{ billId: b.id, answer: 'mine' }}
-              label={t('whose.mine')}
-              variant={personal ? 'primary' : 'secondary'}
-            />
-            <InlineAction
-              action={answerOwnershipAction}
-              hidden={{ billId: b.id, answer: 'household' }}
-              label={t('whose.household')}
-              variant={personal ? 'secondary' : 'primary'}
-            />
-          </div>
-        </Card>
-      )}
-
-      {b.alertKind && (
-        <Card className="mb-4 flex flex-col gap-3 border-danger/40 bg-danger-soft">
-          <p className="font-semibold text-danger">{t(`alert.${b.alertKind}`)}</p>
-          <p className="text-sm">
-            {t(`alert.${b.alertKind}Body`, {
-              provider: b.service.provider,
-              date: b.alertAt ? date(b.alertAt) : '',
-            })}
-          </p>
-          <div className="flex flex-wrap items-center gap-3">
-            {b.alertDocumentId && (
-              <a href="#files" className="text-sm font-semibold text-accent">
-                {t('alert.viewEmail')} <span aria-hidden="true">↓</span>
-              </a>
-            )}
-            <InlineAction
-              action={clearBillAlertAction}
-              hidden={{ id: b.id }}
-              label={t('alert.resolve')}
-              variant="secondary"
-            />
-          </div>
-        </Card>
-      )}
-
-      {/* The cost, and where it stands. */}
-      <section
-        className={`glass rounded-card p-5 sm:p-6 ${overdue ? 'bg-danger-soft' : 'bg-accent-soft'}`}
-      >
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="text-sm font-semibold text-fg-muted">{t('detail.amount')}</p>
-            <Figure size="hero">{money(b.amountMinor, b.currency)}</Figure>
-            {b.taxMinor !== null && (
-              <p className="mt-1 text-xs text-fg-muted">
-                {t('detail.includesTax', {
-                  amount: money(b.taxMinor, b.currency),
-                  label: b.taxLabel ?? t('detail.tax'),
-                })}
-              </p>
-            )}
-            <p className={`mt-3 text-sm font-semibold ${overdue ? 'text-danger' : ''}`}>
-              {b.paidToProviderAt
-                ? t('detail.paidOn', { date: date(b.paidToProviderAt) })
-                : dueNext
-                  ? t('detail.instalmentDue', {
-                      amount: money(dueNext.amountMinor, b.currency),
-                      n: dueNext.seq ?? 1,
-                      of: dueNext.of,
-                      date: date(dueNext.dueDate),
-                    })
-                  : overdue
-                    ? t('detail.wasDue', { date: date(b.dueDate) })
-                    : t('detail.dueOn', { date: date(b.dueDate) })}
-            </p>
-          </div>
-          <div className="flex flex-col items-end gap-2">
-            {b.paidToProviderAt ? (
-              <Badge tone="success">{t('detail.paidToProvider')}</Badge>
-            ) : overdue ? (
-              <Badge tone="danger">{t('overdue')}</Badge>
-            ) : (
-              <Badge tone="warning">{t('detail.unpaid')}</Badge>
-            )}
-            {personal && <Badge>{t('tile.onlyYou')}</Badge>}
-            {b.isAnomaly && <Badge tone="warning">{t('anomaly')}</Badge>}
-          </div>
-        </div>
-        {b.isAnomaly && b.anomalyNote && (
-          <p className="mt-4 rounded-xl bg-warning-soft px-4 py-3 text-sm text-warning">
-            {b.anomalyNote}
-          </p>
-        )}
-        {!byInstalments && (
-          <div className="mt-4">
-            <InlineAction
-              action={toggleBillPaidAction}
-              hidden={{ id: b.id, paid: b.paidToProviderAt ? 'false' : 'true' }}
-              label={
-                b.paidToProviderAt ? t('detail.markUnpaidProvider') : t('detail.markPaidProvider')
-              }
-              variant={b.paidToProviderAt ? 'ghost' : 'primary'}
-            />
-          </div>
-        )}
-      </section>
-
-      <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        {/* The details. */}
-        <Card>
-          <h2 className="font-display text-lg font-semibold">{t('detail.detailsTitle')}</h2>
-          <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-            <Row
-              label={byInstalments ? t('plan.nextDue') : t('detail.dueDate')}
-              value={date(b.dueDate)}
-            />
-            <Row label={t('detail.issueDate')} value={date(b.issueDate) || '—'} />
-            <Row
-              label={t('detail.period')}
-              value={`${date(b.periodStart, 'short')} – ${date(b.periodEnd, 'short')}`}
-            />
-            <Row label={t('detail.externalRef')} value={b.externalRef ?? '—'} />
-            <Row label={t('detail.account')} value={b.service.accountRef ?? '—'} />
-            <Row
-              label={t('detail.usage')}
-              value={
-                b.usageQuantity !== null
-                  ? `${ctx.qty(b.usageQuantity)} ${unitLabel(b.usageUnit)}`
-                  : '—'
-              }
-            />
-            <Row label={t('detail.paidToProviderAt')} value={date(b.paidToProviderAt) || '—'} />
-            <Row label={t('detail.type')} value={b.service.type.label} />
-          </dl>
-          {notes && <p className="mt-4 text-sm whitespace-pre-wrap text-fg-muted">{notes}</p>}
-          {housemates && (
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-surface-2 px-4 py-3">
-              <div className="min-w-0">
-                <p className="text-xs text-fg-muted">{t('whose.label')}</p>
-                <p className="text-sm font-medium">
-                  {t(personal ? 'whose.isMine' : 'whose.isHousehold', { split })}
-                </p>
+        <div className="d3-bill-body">
+          <Card className="d3-bill-hero">
+            <div className="bp-hero">
+              <div className="bp-id">
+                <Disc icon={b.service.type.icon} colour={b.service.colour} size="lg" />
+                <div>
+                  <Eyebrow>
+                    {b.service.name}
+                    {personal ? ` · ${t('page.yours')}` : ''}
+                  </Eyebrow>
+                  <div className="bp-prov">{b.service.provider}</div>
+                </div>
               </div>
-              {!personal && housematesPaid(hh.id, b.serviceId) ? (
-                <p className="text-xs text-fg-muted">{t('whose.lockedShares')}</p>
-              ) : (
-                mayChangeOwner(hh.id, me, b.service) && (
-                  <InlineAction
-                    action={setWhoseAction}
-                    hidden={{ billId: b.id, whose: personal ? 'household' : 'mine' }}
-                    label={personal ? t('whose.makeHousehold') : t('whose.makeMine')}
-                    variant="secondary"
-                    confirm={t(personal ? 'whose.confirmHousehold' : 'whose.confirmMine', {
-                      service: b.service.name,
-                      split,
-                    })}
-                  />
-                )
+              <Money
+                minor={due.amountMinor}
+                currency={b.currency}
+                locale={hh.locale}
+                className="bp-amt"
+              />
+              <div className="bp-status">
+                <StatusChip
+                  status={{ label: statusLabel(rc, due.status), tone: due.status.tone }}
+                />
+                {unusual && (
+                  <Chip tone="warn" icon="trend-up">
+                    {unusual.pct !== null
+                      ? t(unusual.pct >= 0 ? 'page.unusualHigher' : 'page.unusualLower', {
+                          pct: Math.round(Math.abs(unusual.pct) * 100),
+                        })
+                      : t('anomaly')}
+                  </Chip>
+                )}
+                {b.alertKind && (
+                  <Chip tone="bad" icon="alert">
+                    {t(`alert.${b.alertKind}`)}
+                  </Chip>
+                )}
+                {byInstalments && (
+                  <Chip tone="info" icon="repeat">
+                    {t('plan.byInstalments')}
+                  </Chip>
+                )}
+              </div>
+              <p className="bp-line">{line}</p>
+            </div>
+            <div className="bp-actions">
+              {canPayShare && mine && (
+                <form action={toggleSharePaidAction}>
+                  <input type="hidden" name="shareId" value={mine.id} />
+                  <input type="hidden" name="billId" value={b.id} />
+                  <input type="hidden" name="paid" value="true" />
+                  <Button type="submit" icon="check">
+                    {t('page.markMyShare', { amount: money(mine.amountMinor, b.currency) })}
+                  </Button>
+                </form>
+              )}
+              {!canPayShare && iPayProvider && !byInstalments && (
+                <form action={toggleBillPaidAction}>
+                  <input type="hidden" name="id" value={b.id} />
+                  <input type="hidden" name="paid" value={b.paidToProviderAt ? 'false' : 'true'} />
+                  <Button
+                    type="submit"
+                    variant={b.paidToProviderAt ? 'ghost' : 'primary'}
+                    icon={b.paidToProviderAt ? undefined : 'check'}
+                  >
+                    {b.paidToProviderAt
+                      ? t('detail.markUnpaidProvider')
+                      : t('page.markPaidProvider', { provider: b.service.provider })}
+                  </Button>
+                </form>
+              )}
+              <LinkButton href={`/bills/${b.id}/edit`} variant="secondary" icon="pencil">
+                {t('edit')}
+              </LinkButton>
+              {billFile && (
+                <a
+                  href={`/api/documents/${billFile.doc.id}/file`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn btn-glass"
+                >
+                  {t(
+                    `files.${billFile.view === 'pdf' ? 'viewPdf' : billFile.view === 'photo' ? 'viewPhoto' : 'viewEmail'}`,
+                  )}
+                </a>
               )}
             </div>
+          </Card>
+
+          {housemates && asksMember(b.service, me) && (
+            <Card id="whose" className="bg-accent-soft">
+              <SectionHead title={t('whose.title')} />
+              <p className="muted small">
+                {t(personal ? 'whose.bodyMine' : 'whose.bodyHousehold', {
+                  service: b.service.name,
+                  split: splitWord,
+                })}
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <InlineAction
+                  action={answerOwnershipAction}
+                  hidden={{ billId: b.id, answer: 'mine' }}
+                  label={t('whose.mine')}
+                  variant={personal ? 'primary' : 'secondary'}
+                />
+                <InlineAction
+                  action={answerOwnershipAction}
+                  hidden={{ billId: b.id, answer: 'household' }}
+                  label={t('whose.household')}
+                  variant={personal ? 'secondary' : 'primary'}
+                />
+              </div>
+            </Card>
           )}
-        </Card>
 
-        {/* The email and file it came from, and anything since. */}
-        <BillFilesCard
-          billId={b.id}
-          files={files}
-          enteredByHand={b.source === 'manual' && !b.sourceDocumentId}
-          ctx={ctx}
-        />
+          {b.alertKind && (
+            <Card className="bg-danger-soft">
+              <SectionHead title={t(`alert.${b.alertKind}`)} />
+              <p className="small">
+                {t(`alert.${b.alertKind}Body`, {
+                  provider: b.service.provider,
+                  date: b.alertAt ? date(b.alertAt) : '',
+                })}
+              </p>
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                {b.alertDocumentId && (
+                  <a href="#files" className="btn btn-plain btn-sm">
+                    {t('alert.viewEmail')}
+                  </a>
+                )}
+                <InlineAction
+                  action={clearBillAlertAction}
+                  hidden={{ id: b.id }}
+                  label={t('alert.resolve')}
+                  variant="secondary"
+                />
+              </div>
+            </Card>
+          )}
+
+          {unusual && (
+            <Notice
+              tone="warn"
+              icon="trend-up"
+              title={
+                unusual.pct !== null
+                  ? t(unusual.pct >= 0 ? 'page.unusualTitleHigher' : 'page.unusualTitleLower', {
+                      pct: Math.round(Math.abs(unusual.pct) * 100),
+                      basis: t(`page.basis.${unusual.basis ?? 'recent'}`),
+                    })
+                  : t('anomaly')
+              }
+              body={t('page.unusualBody', { service: b.service.name })}
+              href={`/services/${b.service.id}`}
+              className="bp-notice"
+            />
+          )}
+
+          <Card>
+            <SectionHead title={t('detail.detailsTitle')} />
+            <Kv
+              rows={[
+                [
+                  t('detail.period'),
+                  <span key="p">
+                    {date(b.periodStart)} – {date(b.periodEnd)}{' '}
+                    <span className="muted">· {t('page.days', { days })}</span>
+                  </span>,
+                ],
+                [t('detail.issueDate'), b.issueDate ? date(b.issueDate, 'long') : '—'],
+                [
+                  byInstalments && due.status.key !== 'paid'
+                    ? t('plan.nextDue')
+                    : t('detail.dueDate'),
+                  <span key="d">
+                    {date(due.status.dueDate, 'long')}
+                    {due.status.key !== 'paid' && (
+                      <span className="muted"> · {statusLabel(rc, due.status)}</span>
+                    )}
+                  </span>,
+                ],
+                [
+                  t('detail.paidToProvider'),
+                  paidAt
+                    ? t('page.paidBy', {
+                        date: date(paidAt),
+                        who: personal ? t('page.you') : (payerName ?? t('page.someone')),
+                      })
+                    : byInstalments
+                      ? t('page.instalmentsPaid', {
+                          paid: b.instalments.filter((i) => i.paidToProviderAt).length,
+                          of: b.instalments.length,
+                        })
+                      : t('page.notYet'),
+                ],
+                [
+                  t('detail.externalRef'),
+                  b.externalRef ? (
+                    <span key="r" className="mono">
+                      {b.externalRef}
+                    </span>
+                  ) : (
+                    '—'
+                  ),
+                ],
+                b.service.accountRef
+                  ? [
+                      t('detail.account'),
+                      <span key="a" className="mono">
+                        {b.service.accountRef}
+                      </span>,
+                    ]
+                  : null,
+                b.usageQuantity !== null
+                  ? [
+                      t('detail.usage'),
+                      <span key="u">
+                        {ctx.qty(b.usageQuantity)} {unitLabel(b.usageUnit)}{' '}
+                        <span className="muted">
+                          ·{' '}
+                          {t('page.perDay', {
+                            qty: ctx.qty(Math.round((b.usageQuantity / days) * 10) / 10),
+                            unit: unitLabel(b.usageUnit),
+                          })}
+                        </span>
+                      </span>,
+                    ]
+                  : null,
+                b.taxMinor !== null
+                  ? [
+                      t('detail.taxRow'),
+                      t('detail.includesTax', {
+                        amount: money(b.taxMinor, b.currency),
+                        label: b.taxLabel ?? t('detail.tax'),
+                      }),
+                    ]
+                  : null,
+                housemates
+                  ? [
+                      t('whose.label'),
+                      t(personal ? 'whose.isMine' : 'whose.isHousehold', { split: splitWord }),
+                    ]
+                  : null,
+              ]}
+            />
+            {notes && <p className="muted small mt-3 whitespace-pre-wrap">{notes}</p>}
+            {housemates &&
+              (!personal && housematesPaid(hh.id, b.serviceId) ? (
+                <p className="muted small mt-3">{t('whose.lockedShares')}</p>
+              ) : (
+                mayChangeOwner(hh.id, me, b.service) && (
+                  <div className="mt-3">
+                    <InlineAction
+                      action={setWhoseAction}
+                      hidden={{ billId: b.id, whose: personal ? 'household' : 'mine' }}
+                      label={personal ? t('whose.makeHousehold') : t('whose.makeMine')}
+                      variant="secondary"
+                      confirm={t(personal ? 'whose.confirmHousehold' : 'whose.confirmMine', {
+                        service: b.service.name,
+                        split: splitWord,
+                      })}
+                    />
+                  </div>
+                )
+              ))}
+          </Card>
+
+          {split ? (
+            <SharesCard bill={b} ctx={ctx} />
+          ) : personal ? (
+            <Card>
+              <SectionHead title={t('page.justYours')} />
+              <p className="muted small">{t('page.justYoursBody')}</p>
+            </Card>
+          ) : null}
+
+          {b.instalments.length > 0 && (
+            <PaymentPlan bill={b} canChoose={canChoosePlan(me, b)} ctx={ctx} />
+          )}
+
+          <FiguresCard bill={b} ctx={ctx} />
+
+          <div className="flex justify-end">
+            <InlineAction
+              action={deleteBillAction}
+              hidden={{ id: b.id }}
+              label={t('delete')}
+              variant="danger"
+              confirm={t('deleteConfirm')}
+            />
+          </div>
+        </div>
       </div>
-
-      {b.instalments.length > 0 && (
-        <PaymentPlan bill={b} canChoose={canChoosePlan(me, b)} ctx={ctx} />
-      )}
-
-      {personal && (
-        <p className="mt-4 rounded-card bg-surface-2 px-5 py-3 text-sm text-fg-muted">
-          {t('detail.personalNote')}
-        </p>
-      )}
-
-      {hh.splitMode === 'shared' && !personal && <SharesCard bill={b} ctx={ctx} />}
-
-      <FiguresCard bill={b} ctx={ctx} />
-
-      <div className="mt-8 flex justify-end">
-        <InlineAction
-          action={deleteBillAction}
-          hidden={{ id: b.id }}
-          label={t('delete')}
-          variant="danger"
-          confirm={t('deleteConfirm')}
-        />
-      </div>
-    </div>
-  );
-}
-
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <dt className="text-fg-muted">{label}</dt>
-      <dd className="font-medium">{value}</dd>
     </div>
   );
 }

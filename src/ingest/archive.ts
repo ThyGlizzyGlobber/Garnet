@@ -186,6 +186,8 @@ function deleteDocument(householdId: string, id: string, db: Db = getDb()): bool
   fs.rmSync(documentPath(doc), { force: true });
   // The file as it arrived goes too: deleting a bill deletes its file (owner).
   fs.rmSync(originalPath(doc), { force: true });
+  // And its drawn first page (see src/ingest/preview.ts).
+  fs.rmSync(path.join(dataPaths().root, 'previews', `${doc.id}.png`), { force: true });
   return true;
 }
 

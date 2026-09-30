@@ -137,6 +137,35 @@ export function formatMonth(
   }).format(new Date(`${month.slice(0, 7)}-01T00:00:00Z`));
 }
 
+/**
+ * A billing period as months: "Jun – Aug", "Aug" for one month, and with the
+ * years when they differ ("Dec 2025 – Feb 2026").
+ */
+export function formatMonthRange(from: string, to: string, locale: string): string {
+  const mon = (d: string, year = false) =>
+    new Intl.DateTimeFormat(locale, {
+      month: 'short',
+      ...(year ? { year: 'numeric' } : {}),
+      timeZone: 'UTC',
+    }).format(new Date(`${d.slice(0, 10)}T00:00:00Z`));
+  if (from.slice(0, 4) !== to.slice(0, 4)) return `${mon(from, true)} – ${mon(to, true)}`;
+  if (from.slice(0, 7) === to.slice(0, 7)) return mon(from);
+  return `${mon(from)} – ${mon(to)}`;
+}
+
+/** A period as days: "1 Jul – 30 Sept", or "1 Jul 2026 – 30 Jun 2027" across years. */
+export function formatDayRange(from: string, to: string, locale: string): string {
+  const years = from.slice(0, 4) !== to.slice(0, 4);
+  const f = (d: string) =>
+    new Intl.DateTimeFormat(locale, {
+      day: 'numeric',
+      month: 'short',
+      ...(years ? { year: 'numeric' } : {}),
+      timeZone: 'UTC',
+    }).format(new Date(`${d.slice(0, 10)}T00:00:00Z`));
+  return `${f(from)} – ${f(to)}`;
+}
+
 /** "2026-09-29" → "Tue" (short) or "Tuesday" (long). */
 export function formatWeekday(day: string, locale: string, style: 'short' | 'long' = 'short') {
   return new Intl.DateTimeFormat(locale, { weekday: style, timeZone: 'UTC' }).format(

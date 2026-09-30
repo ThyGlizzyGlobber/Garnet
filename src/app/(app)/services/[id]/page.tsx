@@ -1,54 +1,143 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import { SeasonAhead } from '@/components/app/season-ahead';
-import { ChangeText } from '@/components/app/usage';
-import { TrendLine } from '@/components/charts/trend-line';
-import { Badge, Card, Figure, LinkButton, PageHeader } from '@/components/ui';
-import { Swatch } from '@/components/ui/colour';
+import { billRowFor, rowCtx, statusLabel } from '@/components/app/bill-rows';
+import { PeriodBars } from '@/components/charts/period-bars';
+import { StackBar } from '@/components/charts/stack-bar';
+import { Card, LinkButton } from '@/components/ui';
+import { Delta, Kv, Notice, PageTitle, SectionHead } from '@/components/ui/blocks';
+import { Chip } from '@/components/ui/chip';
+import { Avatar, Disc } from '@/components/ui/colour';
+import { BackLink } from '@/components/ui/controls';
+import { BillRow, Rows } from '@/components/ui/rows';
 import { SAME_BAND } from '@/lib/averages';
 import { DAYS_PER_MONTH } from '@/lib/consumption';
 import { pageContext } from '@/lib/context';
-import { formatRate } from '@/lib/format';
-import { colourCss } from '@/lib/palette';
+import { formatMonthRange, formatRate } from '@/lib/format';
 import { isAdmin } from '@/lib/roles';
 import { visibleTo } from '@/lib/scope';
+import { seasonNoticeText } from '@/lib/season-text';
 import { serviceOverview } from '@/lib/service-overview';
 import { getService } from '@/lib/services';
 import { unitLabel } from '@/lib/units';
+import { formatMonth } from '@/lib/format';
 import { partText } from '../split-text';
 
 /**
- * A service at a glance: how much it uses and how that compares, then how
- * it's split, its area, what's coming up and its bills. Numbers come from
+ * A service, long-form: a sentence that says how it's going, its bills as
+ * bars, every bill by year, and beside them the year's figures, what it's
+ * compared with, how it's split and what's coming. Numbers come from
  * serviceOverview() (src/lib/service-overview.ts).
  */
 export default async function ServicePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { hh, me, money, date, month, qty, today } = await pageContext();
+  const ctx = await pageContext();
+  const { hh, me, money, month, qty, today } = ctx;
   const t = await getTranslations('usage');
   const ts = await getTranslations('services');
+  const tu = await getTranslations('ui');
+  const rc = rowCtx(ctx, tu);
   const svc = getService(hh.id, id);
   // Another member's personal service doesn't exist, as far as anyone else can tell.
   if (!svc || !visibleTo(svc.ownerMemberId, me.id)) notFound();
   const o = serviceOverview(hh, svc, today);
   const c = o.usage;
-  const unit = unitLabel(c?.unit ?? svc.usageUnit);
-  const words = (pct: number) => ({
-    more: t('more', { pct }),
-    less: t('less', { pct }),
-    same: t('same'),
-  });
+  const unit = unitLabel(o.unit);
   const pctOf = (x: number) => Math.round(Math.abs(x) * 100);
+  const dirOf = (x: number | null): 'up' | 'down' | 'flat' =>
+    x === null || Math.abs(x) < SAME_BAND ? 'flat' : x > 0 ? 'up' : 'down';
+  const personal = !!svc.ownerMemberId;
+  const split = o.split;
+  const payer = split?.parts.find((p) => p.member.id === svc.payerMemberId)?.member;
+  const payerName = payer?.name ?? null;
+
+  // "Northwind Energy, quarterly. $1,864 last financial year, about $155 a
+  // month. The latest bill used 5% more than the same time last year…"
+  const lastYear = o.comparisons.find((r) => r.against === 'lastYear');
+  const limit = o.comparisons.find((r) => r.against === 'limit');
+  const lede = [
+    ts('page.ledeProvider', {
+      provider: svc.provider,
+      cadence: ts(`form.cadences.${svc.cadence}`).toLowerCase(),
+    }),
+    o.stats.year.bills
+      ? ts(o.stats.year.current ? 'page.ledeYearSoFar' : 'page.ledeYear', {
+          total: money(o.stats.year.minor, hh.currency, { whole: true }),
+          month: money(o.stats.year.perMonthMinor, hh.currency, { whole: true }),
+          label: o.stats.year.label,
+        })
+      : ts('page.ledeNoBills'),
+    lastYear?.usage.pct != null && Math.abs(lastYear.usage.pct) >= SAME_BAND
+      ? ts('page.ledeLastYear', {
+          pct: pctOf(lastYear.usage.pct),
+          dir: lastYear.usage.pct > 0 ? 'more' : 'less',
+          limit:
+            limit?.usage.pct != null
+              ? ts(limit.usage.pct > 0 ? 'page.ledeOverLimit' : 'page.ledeUnderLimit', {
+                  pct: pctOf(limit.usage.pct),
+                })
+              : '',
+        })
+      : personal
+        ? ts('page.ledeYours')
+        : hh.splitMode === 'shared' && payerName
+          ? ts('page.ledePays', { name: payerName === me.name ? ts('page.you') : payerName })
+          : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  const chips = (
+    <>
+      {personal ? (
+        <Chip tone="info" icon="user">
+          {ts('page.chipYours')}
+        </Chip>
+      ) : (
+        <Chip tone="neutral" icon="users">
+          {ts('page.chipHousehold')}
+        </Chip>
+      )}
+      {(personal || payerName) && (
+        <Chip tone="neutral" icon="arrow-right">
+          {personal || payer?.id === me.id
+            ? ts('page.chipYouPay')
+            : ts('page.chipPays', { name: payerName ?? '' })}
+        </Chip>
+      )}
+      {svc.seasonal && (
+        <Chip tone="neutral" icon="sun">
+          {ts('form.seasonal')}
+        </Chip>
+      )}
+      {!svc.isActive && <Chip tone="neutral">{ts('inactive')}</Chip>}
+    </>
+  );
+
   const againstLabel = (r: (typeof o.comparisons)[number]) =>
     r.against === 'average'
       ? t('vs.average', { count: r.bills ?? 0 })
       : r.against === 'limit'
-        ? t('vs.limit', { qty: qty(r.limit ?? 0), unit })
+        ? t('vs.limitShort')
         : t(`vs.${r.against}`);
+  const againstSub = (r: (typeof o.comparisons)[number]) =>
+    r.period
+      ? `${formatMonthRange(r.period.periodStart, r.period.periodEnd, hh.locale)}${r.period.perDay !== null ? ` · ${t('perDay', { qty: qty(r.period.perDay), unit })}` : ''}`
+      : r.against === 'limit'
+        ? t('vs.limitSub', { qty: qty(r.limit ?? 0), unit })
+        : r.against === 'similar'
+          ? t('vs.similarSub')
+          : r.cost?.pct != null
+            ? t('costChange', {
+                change:
+                  Math.abs(r.cost.pct) < SAME_BAND
+                    ? t('same')
+                    : r.cost.pct > 0
+                      ? t('more', { pct: pctOf(r.cost.pct) })
+                      : t('less', { pct: pctOf(r.cost.pct) }),
+              })
+            : '';
 
-  // "Against the same time last year: you used 12% more; it was 18% colder.
-  // Adjusted for the weather, 5% less." Only when the weather model qualifies.
   const tw = await getTranslations('weather.adjusted');
   const adj = o.weather;
   const weatherLine = adj
@@ -68,282 +157,383 @@ export default async function ServicePage({ params }: { params: Promise<{ id: st
         tw('explains', { pct: pctOf(adj.r2) }),
       ].join(' ')
     : null;
-
+  const tse = await getTranslations('seasons');
+  const tr = (key: string, vars?: Record<string, string | number>) =>
+    tse(key as Parameters<typeof tse>[0], vars as Parameters<typeof tse>[1]);
+  const season = o.seasons[0]
+    ? seasonNoticeText(o.seasons[0], tr, {
+        money,
+        month: (ym: string) => formatMonth(ym, hh.locale, 'long-year'),
+      })
+    : null;
   const ta = await getTranslations('area');
   const area = o.area;
   const tsp = await getTranslations('services.split');
-  const split = o.split;
-  const payer = split?.parts.find((p) => p.member.id === svc.payerMemberId)?.member;
+  const chartTitle = o.barsAreUsage ? t('chartUsage') : t('chartCost');
 
   return (
-    <div className="mx-auto max-w-2xl">
-      <PageHeader
+    <div className="scr d3-service">
+      <BackLink href="/services">{ts('title')}</BackLink>
+      <PageTitle
+        eyebrow={`${svc.type.label} · ${ts(`form.cadences.${svc.cadence}`)}`}
         title={svc.name}
-        subtitle={`${svc.provider} · ${svc.type.label}${svc.ownerMemberId ? ` · ${ts('onlyYou')}` : ''}`}
-        action={
-          <LinkButton href={`/services/${svc.id}/edit`} variant="secondary">
+        lede={lede}
+        lead
+        chips={chips}
+        right={
+          <LinkButton href={`/services/${svc.id}/edit`} variant="secondary" size="sm" icon="pencil">
             {ts('edit')}
           </LinkButton>
         }
       />
-
-      <SeasonAhead
-        notices={o.seasons}
-        locale={hh.locale}
-        money={money}
-        linkToService={false}
-        className="mb-4"
-      />
-
-      <Card>
-        <h2 className="font-semibold">{t('title')}</h2>
-        {c && c.latest.perDay !== null ? (
-          <>
-            <Figure size="md" className="mt-2">
-              {t('perDay', { qty: qty(c.latest.perDay), unit })}
-            </Figure>
-            <p className="mt-1 text-sm text-fg-muted">
-              {t('perMonth', { qty: qty(c.latest.perDay * DAYS_PER_MONTH), unit })}
-            </p>
-            <p className="mt-0.5 text-xs text-fg-muted">
-              {t('latest', {
-                start: date(c.latest.periodStart, 'short'),
-                end: date(c.latest.periodEnd, 'short'),
-                cost: money(Math.round(c.latest.costPerDayMinor), c.latest.currency),
-              })}
-            </p>
-            {o.comparisons.length > 0 && (
-              <dl className="mt-4 divide-y divide-border text-sm">
-                {o.comparisons.map((r) => (
-                  <div key={r.against} className="flex items-baseline justify-between gap-4 py-2">
-                    <dt className="text-fg-muted">{againstLabel(r)}</dt>
-                    <dd className="text-right">
-                      <ChangeText change={r.usage} words={words} className="font-semibold" />
-                      {r.cost && r.cost.pct !== null && (
-                        <span className="block text-xs text-fg-muted">
-                          {t('costChange', {
-                            change:
-                              Math.abs(r.cost.pct) < SAME_BAND
-                                ? t('same')
-                                : r.cost.pct > 0
-                                  ? t('more', { pct: pctOf(r.cost.pct) })
-                                  : t('less', { pct: pctOf(r.cost.pct) }),
-                          })}
-                        </span>
-                      )}
-                    </dd>
+      <div className="d3-cols">
+        <div className="d3-main">
+          <Card>
+            <SectionHead
+              title={chartTitle}
+              right={o.bars.length > 0 && <span className="muted">{t('chartEach')}</span>}
+            />
+            {o.bars.length > 0 ? (
+              <PeriodBars
+                colour={svc.colour}
+                label={chartTitle}
+                bars={o.bars.slice(-12).map((b) => ({
+                  from: b.periodStart,
+                  to: b.periodEnd,
+                  value: b.value,
+                  label:
+                    Date.parse(b.periodEnd) - Date.parse(b.periodStart) > 45 * 86_400_000
+                      ? month(b.periodStart.slice(0, 7), 'short')
+                      : '',
+                  tip: `${formatMonthRange(b.periodStart, b.periodEnd, hh.locale)} · ${
+                    o.barsAreUsage && b.usage !== null
+                      ? t('perDay', { qty: qty(b.usage), unit })
+                      : t('costPerDay', { amount: money(Math.round(b.value)) })
+                  } · ${money(b.amountMinor)}`,
+                  href: `/bills/${b.billId}`,
+                  flag: b.unusual,
+                }))}
+                reference={
+                  o.barsAreUsage && svc.usageLimitMonthly
+                    ? {
+                        value: (svc.usageLimitMonthly * 12) / 365,
+                        label: t('limitLine', {
+                          qty: qty(Math.round(((svc.usageLimitMonthly * 12) / 365) * 10) / 10),
+                          unit,
+                        }),
+                      }
+                    : undefined
+                }
+              />
+            ) : (
+              <p className="muted">{t('none')}</p>
+            )}
+          </Card>
+          {o.bands.length > 0 && (
+            <Card>
+              <SectionHead
+                title={t('bands')}
+                right={<span className="muted">{t('bandsHint')}</span>}
+              />
+              <div className="compare">
+                {o.bands.map((p) => (
+                  <div key={p.key} className="cmp">
+                    <span className="cmp-l">{p.label}</span>
+                    <span className="cmp-v">
+                      <Delta dir={dirOf(p.change?.pct ?? null)}>
+                        {p.change?.pct != null && Math.abs(p.change.pct) >= SAME_BAND
+                          ? `${p.change.pct > 0 ? '+' : '−'}${pctOf(p.change.pct)}%`
+                          : t('same')}
+                      </Delta>
+                    </span>
+                    <span className="cmp-s">{t('perDay', { qty: qty(p.perDay), unit })}</span>
                   </div>
                 ))}
-              </dl>
-            )}
-          </>
-        ) : (
-          <p className="mt-1 text-sm text-fg-muted">{t('none')}</p>
-        )}
-        {weatherLine && (
-          <p className="mt-3 rounded-2xl bg-surface-2 px-4 py-3 text-sm">{weatherLine}</p>
-        )}
-      </Card>
-
-      {split && split.parts.length > 1 && (
-        <Card className="mt-4">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="font-semibold">{tsp('title')}</h2>
-            {isAdmin(me) && (
-              <Link
-                href={`/services/${svc.id}/edit#split`}
-                className="text-sm font-medium text-accent hover:underline"
-              >
-                {tsp('change')}
-              </Link>
-            )}
-          </div>
-          <p className="mt-1 text-sm text-fg-muted">
-            {ts(`form.splitModes.${split.mode}`)}
-            {payer ? ` · ${ts('paidBy', { name: payer.name })}` : ''}
-          </p>
-          {split.latestMinor !== null && split.latestMinor > 0 && (
-            <div className="mt-3 flex h-2.5 overflow-hidden rounded-full bg-surface-2">
-              {split.parts
-                .filter((p) => p.exampleMinor)
-                .map((p) => (
-                  <span
-                    key={p.member.id}
-                    style={{
-                      width: `${(p.exampleMinor! * 100) / split.latestMinor!}%`,
-                      background: colourCss(p.member.colour),
-                    }}
-                  />
-                ))}
-            </div>
+              </div>
+            </Card>
           )}
-          <ul className="mt-3 flex flex-col gap-2 text-sm">
-            {split.parts.map((p) => (
-              <li key={p.member.id} className="flex items-center gap-3">
-                <Swatch colour={p.member.colour} dot />
-                <span className="min-w-0 flex-1 truncate font-medium">{p.member.name}</span>
-                <span className="text-fg-muted">{partText(tsp, p.setting, money)}</span>
-                {p.exampleMinor !== null && (
-                  <span className="w-24 text-right font-semibold tabular-nums">
-                    {money(p.exampleMinor)}
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
-          {split.latestMinor !== null && (
-            <p className="mt-2 text-xs text-fg-muted">
-              {tsp('latest', { amount: money(split.latestMinor) })}
-            </p>
-          )}
-        </Card>
-      )}
-
-      {o.trend.length >= 2 && (
-        <Card className="mt-4">
-          <h2 className="font-semibold">{t('chart')}</h2>
-          <div className="mt-2">
-            <TrendLine
-              id={`usage-${svc.id}`}
-              colour={svc.colour}
-              height={200}
-              label={t('chartLabel')}
-              points={o.trend.map((p) => ({
-                key: p.billId,
-                label: date(p.periodEnd, 'short'),
-                value: Math.round(p.perDay * 10) / 10,
-                text: `${qty(p.perDay)} ${unit}`,
-              }))}
+          <Card className="d3-every">
+            <SectionHead
+              title={ts('page.everyBill')}
+              right={
+                <span className="muted">{ts('page.billCount', { count: o.bills.length })}</span>
+              }
             />
-          </div>
-        </Card>
-      )}
-
-      {o.bands.length > 0 && (
-        <Card className="mt-4">
-          <h2 className="font-semibold">{t('bands')}</h2>
-          <p className="mt-0.5 text-xs text-fg-muted">{t('bandsHint')}</p>
-          <dl className="mt-2 divide-y divide-border text-sm">
-            {o.bands.map((p) => (
-              <div key={p.key} className="flex items-baseline justify-between gap-4 py-2">
-                <dt>{p.label}</dt>
-                <dd className="text-right tabular-nums">
-                  <span className="font-medium">{t('perDay', { qty: qty(p.perDay), unit })}</span>
-                  {p.change && (
-                    <ChangeText className="block text-xs" words={words} change={p.change} />
-                  )}
-                </dd>
-              </div>
-            ))}
-          </dl>
-        </Card>
-      )}
-
-      {area && (
-        <Card className="mt-4">
-          <h2 className="font-semibold">{ta('title')}</h2>
-          <p className="mt-0.5 text-xs text-fg-muted">
-            {ta(area.sameSize ? 'basisSameSize' : 'basis', {
-              month: month(area.month, 'long-year'),
-              households: area.cost?.households ?? 0,
-              area: area.areaName,
-            })}
-          </p>
-          <dl className="mt-2 divide-y divide-border text-sm">
-            {(
-              [
-                ['cost', area.cost, (v: number) => money(Math.round(v))],
-                ['usage', area.usage, (v: number) => `${qty(v)} ${unitLabel(area.usage?.unit)}`],
-                [
-                  'rate',
-                  area.rate,
-                  (v: number) =>
-                    formatRate(v, area.rate?.unit ?? '', hh.locale, unitLabel, hh.currency),
-                ],
-              ] as const
-            )
-              .filter(([, f]) => f)
-              .map(([key, f, show]) => (
-                <div key={key} className="flex items-baseline justify-between gap-4 py-2">
-                  <dt>
-                    {ta(`metric.${key}`)}
-                    <span className="block text-xs text-fg-muted">
-                      {ta('range', { low: show(f!.p25), high: show(f!.p75) })}
-                    </span>
-                  </dt>
-                  <dd className="text-right tabular-nums">
-                    <span className="font-semibold">
-                      {ta('typical', { value: show(f!.median) })}
-                    </span>
-                    {f!.you !== null && (
-                      <span className="block text-xs">
-                        {ta('you', { value: show(f!.you) })}{' '}
-                        <ChangeText
-                          change={{
-                            from: f!.median,
-                            to: f!.you,
-                            pct: f!.median ? (f!.you - f!.median) / f!.median : null,
-                          }}
-                          words={words}
+            {o.bills.length === 0 ? (
+              <p className="muted">{ts('page.noBills')}</p>
+            ) : (
+              <div className="d3-tl">
+                {o.byYear.map((y) => (
+                  <div key={y.year} className="year-group">
+                    <div className="year-h">
+                      <span>{y.year}</span>
+                      <span className="muted">
+                        {ts('page.billCount', { count: y.bills.length })} ·{' '}
+                        {money(y.totalMinor, hh.currency, { whole: true })}
+                      </span>
+                    </div>
+                    <Rows>
+                      {y.bills.map((b) => (
+                        <BillRow
+                          key={b.id}
+                          bill={billRowFor(b, rc, { inService: true, noDisc: true })}
                         />
-                      </span>
-                    )}
-                  </dd>
-                </div>
-              ))}
-          </dl>
-        </Card>
-      )}
-
-      {o.comingUp.length > 0 && (
-        <Card className="mt-4">
-          <h2 className="font-semibold">{t('comingUp.title')}</h2>
-          <dl className="mt-2 divide-y divide-border text-sm">
-            {o.comingUp.map((u) => (
-              <div key={u.month} className="flex items-baseline justify-between gap-4 py-2">
-                <dt>
-                  {month(u.month, 'long-year')}
-                  <span className="block text-xs text-fg-muted">
-                    {t(`comingUp.${u.method}`, { month: month(u.month) })}
-                  </span>
-                </dt>
-                <dd className="font-semibold tabular-nums">{money(u.minor)}</dd>
+                      ))}
+                    </Rows>
+                  </div>
+                ))}
               </div>
-            ))}
-          </dl>
-        </Card>
-      )}
+            )}
+          </Card>
+        </div>
 
-      {o.bills.length > 0 && (
-        <Card className="mt-4">
-          <h2 className="font-semibold">{t('bills')}</h2>
-          <ul className="mt-2 divide-y divide-border text-sm">
-            {o.bills.map((b) => (
-              <li key={b.id}>
-                <Link
-                  href={`/bills/${b.id}`}
-                  className="flex items-center justify-between gap-4 py-2 hover:text-accent"
-                >
-                  <span>
-                    {date(b.periodStart, 'short')} – {date(b.periodEnd, 'short')}
-                    {b.usageQuantity !== null && (
-                      <span className="ml-2 text-xs text-fg-muted">
-                        {qty(b.usageQuantity)} {unitLabel(b.usageUnit)}
-                      </span>
-                    )}
-                  </span>
-                  <span className="flex items-center gap-2">
-                    {b.isAnomaly && <Badge tone="warning">{ts('unusual')}</Badge>}
-                    <span className="font-semibold tabular-nums">
-                      {money(b.amountMinor, b.currency)}
+        <aside className="d3-aside">
+          <Card className="d3-nums">
+            <div>
+              <span className="muted small">
+                {ts(o.stats.year.current ? 'page.statYearSoFar' : 'page.statYear')}
+              </span>
+              <b>{money(o.stats.year.minor, hh.currency, { whole: true })}</b>
+              <span className="muted small">
+                {ts('page.billCount', { count: o.stats.year.bills })} · {o.stats.year.label}
+              </span>
+            </div>
+            <div>
+              <span className="muted small">{ts('page.statMonth')}</span>
+              <b>{money(o.stats.year.perMonthMinor, hh.currency, { whole: true })}</b>
+              <span className="muted small">{o.stats.year.label}</span>
+            </div>
+            <div>
+              <span className="muted small">{ts('page.statLatest')}</span>
+              <b>{o.stats.latest ? money(o.stats.latest.amountMinor) : '—'}</b>
+              <span className="muted small">
+                {o.stats.latest ? statusLabel(rc, o.stats.latest.status) : ts('noHistory')}
+              </span>
+            </div>
+            <div>
+              <span className="muted small">{ts('page.statNext')}</span>
+              <b>
+                {o.stats.next
+                  ? `≈ ${money(o.stats.next.amountMinor, hh.currency, { whole: true })}`
+                  : '—'}
+              </b>
+              <span className="muted small">
+                {o.stats.next
+                  ? ts('page.expected', { date: rc.date(o.stats.next.dueDate) })
+                  : ts('page.noGuess')}
+              </span>
+            </div>
+          </Card>
+
+          {o.unusual && (
+            <Notice
+              tone="warn"
+              icon="trend-up"
+              title={ts('page.unusualTitle')}
+              body={
+                o.unusual.pct !== null
+                  ? ts(o.unusual.pct >= 0 ? 'page.unusualAbove' : 'page.unusualBelow', {
+                      pct: pctOf(o.unusual.pct),
+                      basis: ts(`page.basis.${o.unusual.basis ?? 'recent'}`),
+                    })
+                  : (o.unusual.note ?? '')
+              }
+              href={`/bills/${o.unusual.billId}`}
+            />
+          )}
+          {season && (
+            <Card>
+              <SectionHead title={tse('heading')} />
+              <p className="font-semibold">{season.title}</p>
+              <p className="muted small mt-1">{season.lines.join(' ')}</p>
+            </Card>
+          )}
+
+          <Card>
+            <SectionHead title={t('comparedWith')} />
+            {o.comparisons.length === 0 ? (
+              <p className="muted small">{t('none')}</p>
+            ) : (
+              <div className="compare">
+                {o.comparisons.map((r) => (
+                  <div key={r.against} className="cmp">
+                    <span className="cmp-l">{againstLabel(r)}</span>
+                    <span className="cmp-v">
+                      <Delta dir={dirOf(r.usage.pct)}>
+                        {r.usage.pct === null
+                          ? '—'
+                          : Math.abs(r.usage.pct) < SAME_BAND
+                            ? t('same')
+                            : r.against === 'limit'
+                              ? t(r.usage.pct > 0 ? 'overLimit' : 'underLimit', {
+                                  pct: pctOf(r.usage.pct),
+                                })
+                              : `${r.usage.pct > 0 ? '+' : '−'}${pctOf(r.usage.pct)}%`}
+                      </Delta>
                     </span>
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </Card>
-      )}
+                    <span className="cmp-s">{againstSub(r)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {c && c.latest.perDay !== null && (
+              <p className="muted small mt-3">
+                {t('latestLine', {
+                  qty: qty(c.latest.perDay),
+                  unit,
+                  month: qty(c.latest.perDay * DAYS_PER_MONTH),
+                })}
+              </p>
+            )}
+            {weatherLine && <p className="muted small mt-2">{weatherLine}</p>}
+          </Card>
+
+          {split && split.parts.length > 1 && (
+            <Card>
+              <SectionHead
+                title={tsp('title')}
+                right={
+                  isAdmin(me) && (
+                    <Link href={`/services/${svc.id}/edit#split`} className="btn btn-plain btn-sm">
+                      {tsp('change')}
+                    </Link>
+                  )
+                }
+              />
+              {split.latestMinor !== null && split.latestMinor > 0 && (
+                <StackBar
+                  parts={split.parts
+                    .filter((p) => p.exampleMinor)
+                    .map((p) => ({
+                      value: p.exampleMinor!,
+                      colour: p.member.colour,
+                      label: p.member.name,
+                      text: money(p.exampleMinor!),
+                    }))}
+                />
+              )}
+              <div className="split-people">
+                {split.parts.map((p) => (
+                  <div key={p.member.id} className="sp-person">
+                    <Avatar name={p.member.name} colour={p.member.colour} size="sm" />
+                    <span className="truncate">
+                      {p.member.id === me.id ? ts('page.you') : p.member.name}
+                    </span>
+                    <b>{partText(tsp, p.setting, money)}</b>
+                    {p.exampleMinor !== null && (
+                      <span className="muted">{money(p.exampleMinor)}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <p className="muted small">
+                {tsp(`hints.${split.mode}`)}
+                {split.latestMinor !== null &&
+                  ` ${tsp('latest', { amount: money(split.latestMinor) })}`}
+              </p>
+            </Card>
+          )}
+
+          {area && (
+            <Card>
+              <SectionHead title={ta('title')} />
+              <p className="muted small">
+                {ta(area.sameSize ? 'basisSameSize' : 'basis', {
+                  month: month(area.month, 'long-year'),
+                  households: area.cost?.households ?? 0,
+                  area: area.areaName,
+                })}
+              </p>
+              <div className="compare mt-2">
+                {(
+                  [
+                    ['cost', area.cost, (v: number) => money(Math.round(v))],
+                    [
+                      'usage',
+                      area.usage,
+                      (v: number) => `${qty(v)} ${unitLabel(area.usage?.unit)}`,
+                    ],
+                    [
+                      'rate',
+                      area.rate,
+                      (v: number) =>
+                        formatRate(v, area.rate?.unit ?? '', hh.locale, unitLabel, hh.currency),
+                    ],
+                  ] as const
+                )
+                  .filter(([, f]) => f)
+                  .map(([key, f, show]) => (
+                    <div key={key} className="cmp">
+                      <span className="cmp-l">{ta(`metric.${key}`)}</span>
+                      <span className="cmp-v">
+                        {f!.you !== null && f!.median ? (
+                          <Delta dir={dirOf((f!.you - f!.median) / f!.median)}>
+                            {Math.abs((f!.you - f!.median) / f!.median) < SAME_BAND
+                              ? t('same')
+                              : `${f!.you > f!.median ? '+' : '−'}${pctOf((f!.you - f!.median) / f!.median)}%`}
+                          </Delta>
+                        ) : (
+                          <span className="muted">{ta('typical', { value: show(f!.median) })}</span>
+                        )}
+                      </span>
+                      <span className="cmp-s">
+                        {ta('typical', { value: show(f!.median) })} ·{' '}
+                        {ta('range', { low: show(f!.p25), high: show(f!.p75) })}
+                      </span>
+                    </div>
+                  ))}
+              </div>
+            </Card>
+          )}
+
+          {o.comingUp.length > 0 && (
+            <Card>
+              <SectionHead
+                title={t('comingUp.title')}
+                right={<span className="muted">{t('comingUp.estimates')}</span>}
+              />
+              <div className="coming">
+                {o.comingUp.map((u) => (
+                  <div key={u.month} className="cm">
+                    <span className="cm-m">{month(u.month, 'long')}</span>
+                    <span className="cm-v">{money(u.minor, hh.currency, { whole: true })}</span>
+                    <span className="cm-s">{t(`comingUp.short.${u.method}`)}</span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          <Card>
+            <SectionHead title={ts('page.details')} />
+            <Kv
+              rows={[
+                [ts('form.provider'), svc.provider],
+                svc.accountRef
+                  ? [
+                      ts('form.accountRef'),
+                      <span key="a" className="mono">
+                        {svc.accountRef}
+                      </span>,
+                    ]
+                  : null,
+                [ts('form.type'), svc.type.label],
+                [ts('form.cadence'), ts(`form.cadences.${svc.cadence}`)],
+                o.unit ? [ts('form.usageUnit'), unit] : null,
+                svc.usageLimitMonthly
+                  ? [ts('page.limit'), `${qty(svc.usageLimitMonthly)} ${unit}`]
+                  : null,
+                svc.autoPay ? [ts('page.autoPay'), ts('page.autoPayOn')] : null,
+              ]}
+            />
+            {svc.notes && <p className="muted small mt-3 whitespace-pre-wrap">{svc.notes}</p>}
+            <div className="mt-3 flex items-center gap-3">
+              <Disc icon={svc.type.icon} colour={svc.colour} size="sm" />
+              <span className="muted small">{svc.type.label}</span>
+            </div>
+          </Card>
+        </aside>
+      </div>
     </div>
   );
 }

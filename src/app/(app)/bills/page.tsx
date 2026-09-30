@@ -1,34 +1,33 @@
 import Link from 'next/link';
-import { canExportHousehold } from '@/lib/export';
 import { getTranslations } from 'next-intl/server';
-import { ForwardAddress } from '@/components/app/forward-address';
-import { SearchBar } from '@/components/app/search-bar';
 import { Icon } from '@/components/app/icons';
-import {
-  Badge,
-  FilterChip,
-  DownloadButton,
-  EmptyState,
-  Figure,
-  LinkButton,
-  PageHeader,
-  Tile,
-} from '@/components/ui';
-import { IconDisc, Swatch } from '@/components/ui/colour';
+import { billRowFor, rowCtx } from '@/components/app/bill-rows';
+import { Highlight } from '@/components/app/highlight';
+import { Card, FilterChip, LinkButton } from '@/components/ui';
+import { EmptyCard, PageTitle } from '@/components/ui/blocks';
+import { Segmented, SearchField } from '@/components/ui/controls';
+import { BillRow, Rows } from '@/components/ui/rows';
+import { Swatch } from '@/components/ui/colour';
 import { billsAddress } from '@/lib/bills-address';
 import { listBills } from '@/lib/bills';
 import { pageContext } from '@/lib/context';
+import { canExportHousehold } from '@/lib/export';
 import { listServices } from '@/lib/services';
-import { Highlight } from '@/components/app/highlight';
 import { groupByMonth } from '@/lib/bill-month';
-import { billEntries, entryOverdue, filterBills } from '@/lib/bill-search';
+import { billEntry, filterBills } from '@/lib/bill-search';
 import { listDocuments, searchDocuments } from '@/lib/review';
+import { CopyButton } from '@/components/ui/copy';
 
-type Filter = 'all' | 'unpaid' | 'overdue' | 'unusual' | 'paid';
+type Filter = 'all' | 'unpaid' | 'paid' | 'unusual' | 'overdue';
 /** Household bills, my personal bills, or both. */
 type Whose = 'all' | 'household' | 'mine';
-const FILTERS: Filter[] = ['all', 'unpaid', 'overdue', 'unusual', 'paid'];
+const FILTERS: Filter[] = ['all', 'unpaid', 'paid', 'unusual'];
 
+/**
+ * Bills, filed by the month each belongs to (billDate), one row per bill (a
+ * bill paid by instalments carries its next instalment). The numbers come
+ * from filterBills; the rows from billRowFor.
+ */
 export default async function BillsPage({
   searchParams,
 }: {
@@ -36,11 +35,14 @@ export default async function BillsPage({
 }) {
   const params = await searchParams;
   const q = (params.q ?? '').trim();
-  const filter: Filter = (FILTERS as string[]).includes(params.f ?? '')
+  const filter: Filter = ([...FILTERS, 'overdue'] as string[]).includes(params.f ?? '')
     ? (params.f as Filter)
     : 'all';
-  const { hh, me, money, date, month, today } = await pageContext();
+  const ctx = await pageContext();
+  const { hh, me, money, month } = ctx;
   const t = await getTranslations('bills');
+  const tu = await getTranslations('ui');
+  const rc = rowCtx(ctx, tu);
   // The household's bills and this member's own (nobody else's personal bills).
   const everything = listBills(hh.id, { viewer: me.id });
   const hasPersonal = everything.some((b) => b.ownerMemberId);
@@ -53,22 +55,16 @@ export default async function BillsPage({
     all.some((b) => b.serviceId === svc.id),
   );
   const serviceId = services.some((svc) => svc.id === params.s) ? params.s! : null;
-  const years = [...new Set(all.flatMap(billEntries).map((e) => e.date.slice(0, 4)))]
-    .sort()
-    .reverse();
+  const years = [...new Set(all.map(billEntry).map((e) => e.date.slice(0, 4)))].sort().reverse();
   const year = years.includes(params.y ?? '') ? params.y! : null;
   const hasServices = listServices(hh.id, { viewer: me.id }).length > 0;
   const address = billsAddress(hh);
   const { entries, tokens } = filterBills(
     all,
     { q, status: filter, serviceId, year },
-    { locale: hh.locale, today },
+    { locale: hh.locale, today: ctx.today },
   );
-  // Grouped by month, newest first: the month a bill belongs to (see billMonth),
-  // or, paid by instalments, the month each instalment is due.
   const groups = groupByMonth(entries, (e) => e.date);
-  const total = entries.reduce((sum, e) => sum + e.amountMinor, 0);
-  const unpaid = entries.filter((e) => !e.paidAt).reduce((sum, e) => sum + e.amountMinor, 0);
   // Links that change one filter and keep the rest.
   const href = (change: {
     f?: Filter;
@@ -91,239 +87,171 @@ export default async function BillsPage({
   const inboxMatches = q
     ? searchDocuments(listDocuments(hh.id, { viewer: me.id }), q, hh.locale).docs.length
     : 0;
+  const canExport = canExportHousehold(me, hh) ? everything.length > 0 : hasPersonal;
 
-  return (
-    <>
-      <PageHeader
-        title={t('title')}
-        subtitle={
-          entries.length
-            ? `${t('summary.count', { count: entries.length })} · ${t('summary.total', { amount: money(total) })}${unpaid ? ` · ${t('summary.unpaid', { amount: money(unpaid) })}` : ''}`
-            : undefined
-        }
-        action={
-          <span className="flex items-center gap-2">
-            {/* Everything, zipped: spreadsheets plus every bill's file, filed by year,
-                month and service. Admins get the household's; anyone, their own. */}
-            {(canExportHousehold(me, hh) ? everything.length > 0 : hasPersonal) && (
-              <DownloadButton
-                href="/api/export?kind=zip"
-                label={t(canExportHousehold(me, hh) ? 'download' : 'downloadMine')}
-                title={t(canExportHousehold(me, hh) ? 'downloadHint' : 'downloadMineHint')}
-                icon={<Icon name="download" width={16} height={16} />}
-              />
-            )}
-            <LinkButton href="/bills/upload" variant="secondary">
-              {t('tile.upload')}
-            </LinkButton>
-            {hasServices && <LinkButton href="/bills/new">{t('add')}</LinkButton>}
-          </span>
-        }
-      />
-      {address && <ForwardAddress address={address} />}
-
-      {all.length > 0 && (
-        <div className="mb-5 flex flex-col gap-3">
-          <SearchBar
-            action="/bills"
-            q={q}
-            keep={{ f: filter !== 'all' ? filter : null, s: serviceId, y: year }}
-            placeholder={t('search.placeholder')}
-            label={t('search.label')}
-            submit={t('search.submit')}
-          />
-          {hasPersonal && (
-            <div className="flex flex-wrap items-center gap-2">
-              {(['all', 'household', 'mine'] as const).map((o) => (
-                <FilterChip key={o} href={href({ o })} active={whose === o}>
-                  {t(`whoseFilter.${o}`)}
-                </FilterChip>
-              ))}
-            </div>
-          )}
-          <div className="flex flex-wrap items-center gap-2">
-            {FILTERS.map((nf) => (
-              <FilterChip key={nf} href={href({ f: nf })} active={filter === nf}>
-                {t(`filters.${nf}`)}
-              </FilterChip>
-            ))}
-          </div>
-          {services.length > 1 && (
-            <div className="flex flex-wrap items-center gap-2">
-              <FilterChip href={href({ s: null })} active={!serviceId}>
-                {t('search.allServices')}
-              </FilterChip>
-              {services.map((svc) => (
-                <FilterChip
-                  key={svc.id}
-                  href={href({ s: svc.id })}
-                  active={serviceId === svc.id}
-                  className="flex items-center gap-2"
-                >
-                  <Swatch colour={svc.colour} />
-                  {svc.name}
-                </FilterChip>
-              ))}
-            </div>
-          )}
-          {years.length > 1 && (
-            <div className="flex flex-wrap items-center gap-2">
-              <FilterChip href={href({ y: null })} active={!year}>
-                {t('search.allYears')}
-              </FilterChip>
-              {years.map((y) => (
-                <FilterChip key={y} href={href({ y })} active={year === y}>
-                  {y}
-                </FilterChip>
-              ))}
-            </div>
-          )}
-          {filtered && (
-            <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-fg-muted">
-              {q
-                ? t('searchResults', { count: entries.length, q })
-                : t('filterResults', { count: entries.length })}
-              <Link href="/bills" className="font-semibold text-accent">
-                {t('clearSearch')}
-              </Link>
-              {inboxMatches > 0 && (
-                <Link
-                  href={`/inbox?f=all&q=${encodeURIComponent(q)}`}
-                  className="font-semibold text-accent"
-                >
-                  {t('search.inInbox', { count: inboxMatches })}
-                </Link>
-              )}
-            </p>
-          )}
-        </div>
-      )}
-
-      {all.length === 0 ? (
-        <EmptyState
+  if (all.length === 0)
+    return (
+      <div className="scr">
+        <PageTitle title={t('title')} lede={t('lede')} />
+        <EmptyCard
+          icon="bills"
           title={t('empty.title')}
           body={hasServices ? t('empty.body') : t('empty.noServices')}
-          action={
-            <LinkButton href={hasServices ? '/bills/new' : '/services/new'}>
-              {hasServices ? t('add') : t('empty.addService')}
-            </LinkButton>
-          }
-        />
-      ) : entries.length === 0 ? (
-        <EmptyState
+        >
+          {address && (
+            <CopyButton
+              value={address}
+              label={t('empty.copyAddress')}
+              className="btn btn-primary"
+            />
+          )}
+          <LinkButton href="/bills/upload" variant="secondary" icon="upload">
+            {t('tile.upload')}
+          </LinkButton>
+          <LinkButton href={hasServices ? '/bills/new' : '/services/new'} variant="ghost">
+            {hasServices ? t('empty.byHand') : t('empty.addService')}
+          </LinkButton>
+        </EmptyCard>
+      </div>
+    );
+
+  return (
+    <div className="scr d3-billsl">
+      <PageTitle
+        title={t('title')}
+        lede={t('lede')}
+        right={
+          <>
+            {canExport && (
+              <a
+                href="/api/export?kind=zip"
+                download
+                className="btn btn-glass btn-sm"
+                title={t(canExportHousehold(me, hh) ? 'downloadHint' : 'downloadMineHint')}
+                aria-label={t(canExportHousehold(me, hh) ? 'download' : 'downloadMine')}
+              >
+                <Icon name="download" width={15} height={15} />
+                <span className="hidden sm:inline">
+                  {t(canExportHousehold(me, hh) ? 'download' : 'downloadMine')}
+                </span>
+              </a>
+            )}
+            <Segmented
+              small
+              label={t('filters.label')}
+              value={filter}
+              items={FILTERS.map((f) => ({
+                value: f,
+                label: t(`filters.${f}`),
+                href: href({ f }),
+              }))}
+            />
+          </>
+        }
+      />
+      <div className="filters">
+        <form action="/bills" method="get" className="contents">
+          {whose !== 'all' && <input type="hidden" name="o" value={whose} />}
+          {filter !== 'all' && <input type="hidden" name="f" value={filter} />}
+          {serviceId && <input type="hidden" name="s" value={serviceId} />}
+          {year && <input type="hidden" name="y" value={year} />}
+          <SearchField
+            small
+            placeholder={t('search.placeholder')}
+            label={t('search.label')}
+            defaultValue={q}
+            className="w-full sm:w-72"
+          />
+        </form>
+        {hasPersonal && (
+          <Segmented
+            small
+            label={t('whoseFilter.label')}
+            value={whose}
+            items={(['all', 'household', 'mine'] as const).map((o) => ({
+              value: o,
+              label: t(`whoseFilter.${o}`),
+              href: href({ o }),
+            }))}
+          />
+        )}
+        {services.length > 1 &&
+          services.map((svc) => (
+            <FilterChip
+              key={svc.id}
+              href={href({ s: serviceId === svc.id ? null : svc.id })}
+              active={serviceId === svc.id}
+              className="flex items-center gap-2"
+            >
+              <Swatch colour={svc.colour} />
+              {svc.name}
+            </FilterChip>
+          ))}
+        {years.length > 1 &&
+          years.map((y) => (
+            <FilterChip key={y} href={href({ y: year === y ? null : y })} active={year === y}>
+              {y}
+            </FilterChip>
+          ))}
+      </div>
+      {filtered && (
+        <p className="muted small -mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+          {q
+            ? t('searchResults', { count: entries.length, q })
+            : t('filterResults', { count: entries.length })}
+          <Link href="/bills" className="font-semibold text-accent">
+            {t('clearSearch')}
+          </Link>
+          {inboxMatches > 0 && (
+            <Link
+              href={`/inbox?f=all&q=${encodeURIComponent(q)}`}
+              className="font-semibold text-accent"
+            >
+              {t('search.inInbox', { count: inboxMatches })}
+            </Link>
+          )}
+        </p>
+      )}
+
+      {entries.length === 0 ? (
+        <EmptyCard
+          icon="search"
           title={t('empty.noMatch')}
           body={q ? t('searchResults', { count: 0, q }) : t('filterResults', { count: 0 })}
-          action={
-            <LinkButton href="/bills" variant="secondary">
-              {t('clearSearch')}
-            </LinkButton>
-          }
-        />
+        >
+          <LinkButton href="/bills" variant="secondary">
+            {t('clearSearch')}
+          </LinkButton>
+        </EmptyCard>
       ) : (
         groups.map(([m, items]) => (
-          <section key={m} className="mb-6">
-            <h2 className="mb-3 flex flex-wrap items-baseline gap-x-3 font-display text-lg font-semibold">
-              <Highlight text={month(m, 'long-year')} tokens={tokens} />
-              <span className="font-sans text-xs font-normal text-fg-muted">
-                {t('summary.count', { count: items.length })} ·{' '}
-                {money(items.reduce((sum, e) => sum + e.amountMinor, 0))}
+          <section key={m} className="d3-month">
+            <div className="d3-month-h">
+              <h2>
+                <Highlight text={month(m, 'long')} tokens={tokens} />
+              </h2>
+              <span className="muted">
+                {m.slice(0, 4)} · {t('summary.count', { count: items.length })} ·{' '}
+                {money(
+                  items.reduce((sum, e) => sum + (e.bill.ownerMemberId ? 0 : e.amountMinor), 0),
+                  hh.currency,
+                  { whole: true },
+                )}
               </span>
-            </h2>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {items.map((e) => {
-                const b = e.bill;
-                const overdue = entryOverdue(e, today);
-                const sourceLabel = t(
-                  `tile.source.${b.extractor === 'review' ? 'review' : b.source}`,
-                );
-                const shares = b.sharesByInstalment[e.instalment?.seq ?? 0];
-                const sharePct = shares?.count
-                  ? Math.round((shares.paid / shares.count) * 100)
-                  : null;
-                return (
-                  <Tile
-                    key={e.key}
-                    href={`/bills/${b.id}${e.instalment ? '#plan' : ''}`}
-                    tone={overdue ? 'danger' : 'plain'}
-                    className="flex flex-col gap-3"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <span className="flex items-center gap-3">
-                        <IconDisc
-                          icon={b.service.type.icon}
-                          colour={b.service.colour}
-                          variant="glow"
-                          size={44}
-                        />
-                        <span className="flex flex-col leading-tight">
-                          <span className="font-display font-semibold">
-                            <Highlight text={b.service.name} tokens={tokens} />
-                          </span>
-                          <span className="text-xs text-fg-muted">
-                            <Highlight text={b.service.provider} tokens={tokens} />
-                          </span>
-                        </span>
-                      </span>
-                      {e.paidAt ? (
-                        <Badge tone="success">{t('tile.paidProvider')}</Badge>
-                      ) : overdue ? (
-                        <Badge tone="danger">{t('tile.overdue')}</Badge>
-                      ) : (
-                        <Badge tone="warning">{t('tile.unpaid')}</Badge>
-                      )}
-                    </div>
-                    <div>
-                      <Figure size="sm" className="tracking-tight">
-                        <Highlight text={money(e.amountMinor, b.currency)} tokens={tokens} />
-                      </Figure>
-                      <p className="mt-1.5 text-xs text-fg-muted">
-                        {e.instalment
-                          ? t('tile.instalment', { n: e.instalment.seq, of: e.instalment.of })
-                          : t('tile.period', {
-                              start: date(b.periodStart, 'short'),
-                              end: date(b.periodEnd, 'short'),
-                            })}{' '}
-                        · {t('tile.due', { date: date(e.dueDate, 'short') })}
-                      </p>
-                    </div>
-                    {hh.splitMode === 'shared' && sharePct !== null && (
-                      <div>
-                        <div className="h-1.5 rounded-full bg-surface-2">
-                          <div
-                            className="h-1.5 rounded-full bg-accent"
-                            style={{ width: `${Math.max(sharePct, 3)}%` }}
-                          />
-                        </div>
-                        <p className="mt-1 text-[11px] text-fg-muted">
-                          {t('tile.sharesBar', { paid: shares!.paid, total: shares!.count })}
-                        </p>
-                      </div>
-                    )}
-                    <div className="flex items-center justify-between rounded-2xl border border-border-strong bg-surface-2 px-3 py-2 text-xs">
-                      <span className="flex items-center gap-2 text-fg-muted">
-                        <span
-                          className={`size-1.5 rounded-full ${b.sourceDocumentId ? 'bg-accent' : 'bg-fg-muted'}`}
-                        />
-                        {sourceLabel}
-                      </span>
-                      <span className="flex items-center gap-2">
-                        {b.alertKind && <Badge tone="danger">{t(`alert.${b.alertKind}`)}</Badge>}
-                        {b.ownerMemberId && <Badge>{t('tile.onlyYou')}</Badge>}
-                        {b.isAnomaly && <Badge tone="warning">{t('anomaly')}</Badge>}
-                        {b.externalRef && (
-                          <span className="font-mono text-fg-muted">
-                            #<Highlight text={b.externalRef} tokens={tokens} />
-                          </span>
-                        )}
-                      </span>
-                    </div>
-                  </Tile>
-                );
-              })}
             </div>
+            <Card className="p-2">
+              <Rows>
+                {items.map((e) => (
+                  <BillRow
+                    key={e.bill.id}
+                    bill={billRowFor(e.bill, rc, { share: hh.splitMode === 'shared' })}
+                  />
+                ))}
+              </Rows>
+            </Card>
           </section>
         ))
       )}
-    </>
+    </div>
   );
 }

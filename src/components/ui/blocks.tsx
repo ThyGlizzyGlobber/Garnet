@@ -253,3 +253,61 @@ export function Stats({ stats, className }: { stats: StatModel[]; className?: st
     </div>
   );
 }
+
+/**
+ * A screen's title (the studio's Almanac heading): a big name, a line under
+ * it, an optional eyebrow above, and something on the right (a segmented
+ * control, a button). `chips` sit under the lede across the full width.
+ */
+export function PageTitle({
+  title,
+  lede,
+  eyebrow,
+  right,
+  chips,
+  lead = false,
+  className,
+}: {
+  title: ReactNode;
+  lede?: ReactNode;
+  eyebrow?: ReactNode;
+  right?: ReactNode;
+  chips?: ReactNode;
+  /** The lede is a full sentence or two in body colour (a service's page). */
+  lead?: boolean;
+  className?: string;
+}) {
+  return (
+    <header className={cx('d3-title', className)}>
+      {eyebrow && <div className="eyebrow">{eyebrow}</div>}
+      <h1>{title}</h1>
+      {lede && <p className={lead ? 'lede' : undefined}>{lede}</p>}
+      {right && <div className="d3-title-r">{right}</div>}
+      {chips && <div className="sp-chips">{chips}</div>}
+    </header>
+  );
+}
+
+/** A whole-screen empty state: an icon disc, a title, a sentence and one or two actions. */
+export function EmptyCard({
+  icon,
+  title,
+  body,
+  children,
+}: {
+  icon: string;
+  title: ReactNode;
+  body: ReactNode;
+  children?: ReactNode;
+}) {
+  return (
+    <section className="glass empty-card rounded-card">
+      <span className="empty-ic">
+        <Icon name={icon} width={26} height={26} />
+      </span>
+      <h2>{title}</h2>
+      <p>{body}</p>
+      {children && <div className="form-acts mid">{children}</div>}
+    </section>
+  );
+}

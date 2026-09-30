@@ -31,15 +31,31 @@ export function fileView(doc: Pick<SourceDocument, 'mimeType' | 'path'>): FileVi
 
 export type BillFile = FiledDocument & { arrival: Arrival; view: FileView; canTurn: boolean };
 
+/**
+ * How a document reached the household: an upload (by whom), a forward from
+ * a member's own address, or mail straight from the provider. `names` is the
+ * household's members by id, so a list can look each one up once.
+ */
+export function arrivalOf(
+  householdId: string,
+  doc: SourceDocument,
+  names: Map<string, string>,
+  db: Db = getDb(),
+): Arrival {
+  if (doc.kind === 'upload')
+    return { kind: 'upload', name: (doc.memberId && names.get(doc.memberId)) || null };
+  const member = actingMember(householdId, doc, db);
+  if (member) return { kind: 'forward', name: names.get(member) ?? '', from: doc.emailFrom };
+  return { kind: 'email', from: doc.emailFrom };
+}
+
+export function memberNames(householdId: string, db: Db = getDb()): Map<string, string> {
+  return new Map(listMembers(householdId, db).map((m) => [m.id, m.name]));
+}
+
 export function billFiles(householdId: string, billId: string, db: Db = getDb()): BillFile[] {
-  const names = new Map(listMembers(householdId, db).map((m) => [m.id, m.name]));
-  const arrival = (doc: SourceDocument): Arrival => {
-    if (doc.kind === 'upload')
-      return { kind: 'upload', name: (doc.memberId && names.get(doc.memberId)) || null };
-    const member = actingMember(householdId, doc, db);
-    if (member) return { kind: 'forward', name: names.get(member) ?? '', from: doc.emailFrom };
-    return { kind: 'email', from: doc.emailFrom };
-  };
+  const names = memberNames(householdId, db);
+  const arrival = (doc: SourceDocument): Arrival => arrivalOf(householdId, doc, names, db);
   return filedDocuments(householdId, { everyone: true }, db)
     .filter((f) => f.billId === billId)
     .sort((x, y) =>

@@ -1,8 +1,10 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import { Toggle } from '@/components/ui/controls';
 import { ActionForm, type FormAction } from '@/components/ui/form';
 
+/** Which emails this person gets: a switch per kind, saved with one button. */
 export function NotifyForm({
   action,
   initial,
@@ -12,21 +14,19 @@ export function NotifyForm({
 }) {
   const t = useTranslations('notify.prefs');
   return (
-    <ActionForm action={action} submitLabel={t('save')}>
+    <ActionForm action={action} submitLabel={t('save')} className="grid">
       {() => (
-        <div className="flex flex-col gap-3">
+        <>
           {(['bills', 'reminders', 'problems'] as const).map((k) => (
-            <label key={k} className="flex items-center gap-3 text-sm font-medium">
-              <input
-                type="checkbox"
-                name={k}
-                defaultChecked={initial[k]}
-                className="size-5 accent-accent"
-              />
-              {t(k)}
-            </label>
+            <div key={k} className="tg-row">
+              <span>
+                <b>{t(`${k}Title`)}</b>
+                <span className="muted small">{t(`${k}Sub`)}</span>
+              </span>
+              <Toggle name={k} label={t(`${k}Title`)} defaultChecked={initial[k]} />
+            </div>
           ))}
-        </div>
+        </>
       )}
     </ActionForm>
   );

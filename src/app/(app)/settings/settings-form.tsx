@@ -2,10 +2,12 @@
 
 import { useActionState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Button, Card, Field, Input, Select } from '@/components/ui';
+import { Button, Field, Input, Select } from '@/components/ui';
+import { Toggle } from '@/components/ui/controls';
 import type { ActionState } from '@/components/ui/form';
 import { updateSettingsAction } from './actions';
 
+/** The household's own settings (admins change them; members read them), inside the Household card. */
 export function SettingsForm({
   initial,
   timezones,
@@ -33,12 +35,12 @@ export function SettingsForm({
   const [state, action, pending] = useActionState<ActionState, FormData>(updateSettingsAction, {});
   const e = state.fieldErrors ?? {};
   return (
-    <form action={action} className="flex flex-col gap-4">
+    <form action={action} className="mt-2 grid gap-3">
       <fieldset disabled={readOnly} className="contents">
         {state.error && (
           <p
             role="alert"
-            className="rounded-xl bg-danger-soft px-4 py-3 text-sm font-medium text-danger"
+            className="rounded-inner bg-danger-soft px-4 py-3 text-sm font-medium text-danger"
           >
             {state.error}
           </p>
@@ -46,97 +48,96 @@ export function SettingsForm({
         {state.ok && (
           <p
             role="status"
-            className="rounded-xl bg-success-soft px-4 py-3 text-sm font-medium text-success"
+            className="rounded-inner bg-success-soft px-4 py-3 text-sm font-medium text-success"
           >
             {t('saved')}
           </p>
         )}
-        <Card className="flex flex-col gap-4">
-          <Field label={t('fields.name')} error={e.name}>
-            <Input name="name" defaultValue={initial.name} required />
-          </Field>
-          <Field label={t('fields.splitMode')} hint={t('hints.splitMode')}>
-            <Select name="splitMode" defaultValue={initial.splitMode}>
-              <option value="shared">{t('splitModes.shared')}</option>
-              <option value="single">{t('splitModes.single')}</option>
-            </Select>
-          </Field>
-          <Field
-            label={t('fields.paymentReferenceTemplate')}
-            error={e.paymentReferenceTemplate}
-            hint={t('hints.paymentReferenceTemplate')}
-          >
-            <Input
-              name="paymentReferenceTemplate"
-              defaultValue={initial.paymentReferenceTemplate}
-            />
-          </Field>
-          <label className="flex items-start gap-3 text-sm font-medium">
-            <input
-              type="checkbox"
-              name="membersCanExport"
-              defaultChecked={initial.membersCanExport}
-              className="mt-0.5 size-5 accent-accent"
-            />
-            <span>
-              {t('fields.membersCanExport')}
-              <span className="block text-xs font-normal text-fg-muted">
-                {t('hints.membersCanExport')}
-              </span>
-            </span>
-          </label>
-        </Card>
-        <Card className="flex flex-col gap-4">
-          <h2 className="font-semibold">{t('region')}</h2>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label={t('fields.currency')} error={e.currency}>
+        <div className="tg-row">
+          <span>
+            <b>{t('fields.membersCanExport')}</b>
+            <span className="muted small">{t('hints.membersCanExportShort')}</span>
+          </span>
+          <Toggle
+            name="membersCanExport"
+            label={t('fields.membersCanExport')}
+            defaultChecked={initial.membersCanExport}
+          />
+        </div>
+        <details className="group mt-1">
+          <summary className="btn btn-plain btn-sm cursor-pointer list-none">
+            {readOnly ? t('showDetails') : t('editDetails')}
+          </summary>
+          <div className="mt-3 grid gap-3">
+            <Field label={t('fields.name')} error={e.name}>
+              <Input name="name" defaultValue={initial.name} required />
+            </Field>
+            <Field label={t('fields.splitMode')} hint={t('hints.splitMode')}>
+              <Select name="splitMode" defaultValue={initial.splitMode}>
+                <option value="shared">{t('splitModes.shared')}</option>
+                <option value="single">{t('splitModes.single')}</option>
+              </Select>
+            </Field>
+            <Field
+              label={t('fields.paymentReferenceTemplate')}
+              error={e.paymentReferenceTemplate}
+              hint={t('hints.paymentReferenceTemplate')}
+            >
               <Input
-                name="currency"
-                defaultValue={initial.currency}
-                maxLength={3}
-                className="uppercase"
+                name="paymentReferenceTemplate"
+                defaultValue={initial.paymentReferenceTemplate}
               />
             </Field>
-            <Field label={t('fields.locale')} error={e.locale}>
-              <Input name="locale" defaultValue={initial.locale} />
-            </Field>
-          </div>
-          <Field label={t('fields.timezone')} error={e.timezone}>
-            <Select name="timezone" defaultValue={initial.timezone}>
-              {timezones.map((tz) => (
-                <option key={tz} value={tz}>
-                  {tz}
-                </option>
-              ))}
-            </Select>
-          </Field>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label={t('fields.fiscalYearStartMonth')}>
-              <Select
-                name="fiscalYearStartMonth"
-                defaultValue={String(initial.fiscalYearStartMonth)}
-              >
-                {months.map((m, i) => (
-                  <option key={m} value={i + 1}>
-                    {m}
+            <div className="grid grid-cols-2 gap-3">
+              <Field label={t('fields.currency')} error={e.currency}>
+                <Input
+                  name="currency"
+                  defaultValue={initial.currency}
+                  maxLength={3}
+                  className="uppercase"
+                />
+              </Field>
+              <Field label={t('fields.locale')} error={e.locale}>
+                <Input name="locale" defaultValue={initial.locale} />
+              </Field>
+            </div>
+            <Field label={t('fields.timezone')} error={e.timezone}>
+              <Select name="timezone" defaultValue={initial.timezone}>
+                {timezones.map((tz) => (
+                  <option key={tz} value={tz}>
+                    {tz}
                   </option>
                 ))}
               </Select>
             </Field>
-            <Field label={t('fields.weekStartsOn')}>
-              <Select name="weekStartsOn" defaultValue={String(initial.weekStartsOn)}>
-                {days.map((d, i) => (
-                  <option key={d} value={i}>
-                    {d}
-                  </option>
-                ))}
-              </Select>
-            </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label={t('fields.fiscalYearStartMonth')}>
+                <Select
+                  name="fiscalYearStartMonth"
+                  defaultValue={String(initial.fiscalYearStartMonth)}
+                >
+                  {months.map((m, i) => (
+                    <option key={m} value={i + 1}>
+                      {m}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <Field label={t('fields.weekStartsOn')}>
+                <Select name="weekStartsOn" defaultValue={String(initial.weekStartsOn)}>
+                  {days.map((d, i) => (
+                    <option key={d} value={i}>
+                      {d}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            </div>
           </div>
-        </Card>
+        </details>
         {!readOnly && (
-          <div className="flex justify-end">
-            <Button type="submit" disabled={pending}>
+          <div className="set-acts">
+            <Button type="submit" size="sm" disabled={pending}>
               {pending ? '…' : t('save')}
             </Button>
           </div>

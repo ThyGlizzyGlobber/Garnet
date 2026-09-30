@@ -1,93 +1,135 @@
 import { getTranslations } from 'next-intl/server';
-import { Card } from '@/components/ui';
-import { Swatch } from '@/components/ui/colour';
-import { InlineAction } from '@/components/ui/form';
+import { StackBar } from '@/components/charts/stack-bar';
+import { Button, Card } from '@/components/ui';
+import { SectionHead } from '@/components/ui/blocks';
+import { ShareRow, type ShareRowModel } from '@/components/ui/rows';
 import type { BillDetail } from '@/lib/bills';
 import type { PageContext } from '@/lib/context';
+import { splitView } from '@/lib/split-view';
 import { toggleSharePaidAction } from '../actions';
 
-/** Each person's share of the bill (per instalment when paying by instalments), with "paid". */
+/**
+ * "Split": each person's part of the bill as a bar and a row (for the
+ * instalment due next when paying by instalments), with who has paid the
+ * payer back, and how to pay them.
+ */
 export async function SharesCard({ bill: b, ctx }: { bill: BillDetail; ctx: PageContext }) {
-  const t = await getTranslations('bills');
-  const { me, money, date } = ctx;
+  const t = await getTranslations('bills.shares');
+  const tsp = await getTranslations('services.split');
+  const { me, money, date, today } = ctx;
   const payer = b.shares.find((s) => s.paidMethod === 'payer')?.member;
-  // One group per instalment when paying by instalments (one group otherwise).
-  const groups = [...new Set(b.shares.map((s) => s.instalment))].map((n) => ({
-    n,
-    instalment: b.instalments.find((i) => i.seq === n),
-    shares: b.shares.filter((s) => s.instalment === n),
-  }));
+  const byInstalments = b.paymentPlan === 'instalments' && b.instalments.length > 0;
+  const next = byInstalments
+    ? (b.instalments.find((i) => !i.paidToProviderAt) ?? b.instalments.at(-1)!)
+    : null;
+  const shown = byInstalments ? b.shares.filter((s) => s.instalment === next!.seq) : b.shares;
+  const whole = byInstalments
+    ? b.shares.filter((s) => s.instalment === b.instalments[0]!.seq)
+    : b.shares;
+  const total = whole.reduce((s, x) => s + x.amountMinor, 0);
+  const split = splitView(ctx.hh.id, b.service);
+  const how =
+    split.mode === 'percent'
+      ? tsp('howPercent', {
+          parts: split.parts
+            .filter((p) => p.setting.kind === 'percent' && p.setting.value > 0)
+            .map((p) => (p.setting.kind === 'percent' ? p.setting.value : 0))
+            .join(' / '),
+        })
+      : split.mode === 'fixed'
+        ? tsp('howFixed')
+        : tsp('howEven');
+  const who = (name: string, id: string) => (id === me.id ? t('youCap') : name);
+  const whoLow = (name: string, id: string) => (id === me.id ? t('you') : name);
+  const dueDate = next?.dueDate ?? b.dueDate;
+  const row = (s: BillDetail['shares'][number]): ShareRowModel => {
+    const state: ShareRowModel['state'] =
+      s.paidMethod === 'payer'
+        ? {
+            label: t('paysProvider', { provider: b.service.provider }),
+            tone: 'neutral',
+            icon: 'arrow-right',
+          }
+        : s.paidAt
+          ? { label: t('paidOn', { date: date(s.paidAt, 'short') }), tone: 'ok', icon: 'check' }
+          : (s.dueDate ?? dueDate) < today
+            ? {
+                label: t('overdueOwes', { name: payer ? whoLow(payer.name, payer.id) : '' }),
+                tone: 'bad',
+                icon: 'alert',
+              }
+            : {
+                label: payer ? t('owes', { name: whoLow(payer.name, payer.id) }) : t('unpaid'),
+                tone: 'warn',
+                icon: 'clock',
+              };
+    return {
+      member: { name: s.member.name, colour: s.member.colour },
+      who: who(s.member.name, s.member.id),
+      note:
+        s.basisDays !== s.periodDays
+          ? t('prorated', { days: s.basisDays, total: s.periodDays })
+          : s.paymentReference && !s.paidAt && s.paidMethod !== 'payer'
+            ? t('ref', { ref: s.paymentReference })
+            : undefined,
+      amount: money(s.amountMinor, s.currency),
+      state,
+    };
+  };
   return (
-    <Card className="mt-4">
-      <h2 className="font-semibold">{t('shares.title')}</h2>
-      {payer && (
-        <p className="mt-0.5 text-xs text-fg-muted">
-          {t('shares.payerNote', { name: payer.name })}
-        </p>
-      )}
+    <Card id="split" className="scroll-mt-24">
+      <SectionHead
+        title={next ? t('titleInstalment', { n: next.seq }) : t('title')}
+        right={<span className="muted">{how}</span>}
+      />
       {b.shares.length === 0 ? (
-        <p className="mt-3 text-sm text-fg-muted">{t('shares.none')}</p>
+        <p className="muted small">{t('none')}</p>
       ) : (
-        groups.map((g) => (
-          <div key={g.n}>
-            {g.instalment && (
-              <h3 className="mt-4 text-xs font-semibold tracking-wide text-fg-muted uppercase">
-                {t('shares.instalment', { n: g.n, date: date(g.instalment.dueDate, 'short') })}
-              </h3>
-            )}
-            <ul className="mt-3 divide-y divide-border">
-              {g.shares.map((s) => (
-                <li key={s.id} className="flex items-center justify-between gap-3 py-3">
-                  <div className="flex items-center gap-3">
-                    <Swatch colour={s.member.colour} dot />
-                    <div>
-                      <p className="font-medium">
-                        {s.member.name}{' '}
-                        {s.memberId === me.id && (
-                          <span className="text-xs text-fg-muted">({t('shares.you')})</span>
-                        )}
-                      </p>
-                      <p className="text-xs text-fg-muted">
-                        {s.paidAt
-                          ? s.paidMethod === 'payer'
-                            ? t('shares.paidProvider')
-                            : t('shares.paidOn', { date: date(s.paidAt, 'short') })
-                          : s.paymentReference
-                            ? t('shares.ref', { ref: s.paymentReference })
-                            : t('shares.unpaid')}
-                        {s.basisDays !== s.periodDays &&
-                          ` · ${t('shares.prorated', { days: s.basisDays, total: s.periodDays })}`}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="font-semibold tabular-nums">
-                      {money(s.amountMinor, s.currency)}
-                    </span>
-                    {s.paidMethod !== 'payer' && (
-                      <InlineAction
-                        action={toggleSharePaidAction}
-                        hidden={{ shareId: s.id, billId: b.id, paid: s.paidAt ? 'false' : 'true' }}
-                        label={s.paidAt ? t('shares.markUnpaid') : t('shares.markPaid')}
-                        variant={s.paidAt ? 'ghost' : 'primary'}
-                      />
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ul>
+        <>
+          <StackBar
+            parts={whole
+              .filter((s) => s.amountMinor > 0)
+              .map((s) => ({
+                value: s.amountMinor,
+                colour: s.member.colour,
+                label: who(s.member.name, s.member.id),
+                text: money(s.amountMinor, s.currency),
+                tip: `${who(s.member.name, s.member.id)} · ${money(s.amountMinor, s.currency)} ${t('ofTotal', { total: money(total, b.currency) })}`,
+              }))}
+          />
+          <div className="shares">
+            {shown.map((s) => (
+              <div key={s.id} className="flex flex-wrap items-center gap-x-3">
+                <div className="min-w-0 flex-1">
+                  <ShareRow share={row(s)} />
+                </div>
+                {s.paidMethod !== 'payer' &&
+                  (s.memberId === me.id || payer?.id === me.id || !s.paidAt) && (
+                    <form action={toggleSharePaidAction}>
+                      <input type="hidden" name="shareId" value={s.id} />
+                      <input type="hidden" name="billId" value={b.id} />
+                      <input type="hidden" name="paid" value={s.paidAt ? 'false' : 'true'} />
+                      <Button
+                        type="submit"
+                        size="sm"
+                        variant={
+                          s.paidAt ? 'ghost' : s.memberId === me.id ? 'primary' : 'secondary'
+                        }
+                      >
+                        {s.paidAt ? t('markUnpaid') : t('markPaid')}
+                      </Button>
+                    </form>
+                  )}
+              </div>
+            ))}
           </div>
-        ))
-      )}
-      {payer && payer.paymentDetails.length > 0 && (
-        <div className="mt-3 rounded-xl bg-surface-2 p-3 text-xs">
-          <p className="font-semibold">{t('shares.payTo', { name: payer.name })}</p>
-          {payer.paymentDetails.map((d) => (
-            <p key={d.label} className="text-fg-muted">
-              {d.label}: <span className="font-medium text-fg">{d.value}</span>
+          {payer && payer.paymentDetails.length > 0 && payer.id !== me.id && (
+            <p className="muted small mt-3">
+              {t('payTo', { name: payer.name })}:{' '}
+              {payer.paymentDetails.map((d) => `${d.label} ${d.value}`).join(' · ')}
             </p>
-          ))}
-        </div>
+          )}
+        </>
       )}
     </Card>
   );

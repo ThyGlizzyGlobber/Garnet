@@ -1,6 +1,6 @@
 import type { BillListItem } from '@/lib/bills';
 import { billDate, billMonth } from '@/lib/bill-month';
-import { paysByInstalments } from '@/lib/instalments';
+import { dueNow, paysByInstalments } from '@/lib/instalments';
 import { minorUnitDigits } from '@/lib/format';
 import { amountWords, matchesAll, monthWords, searchTokens } from '@/lib/search';
 
@@ -41,49 +41,42 @@ function billHaystack(b: BillListItem, locale: string, today: string): string {
 }
 
 /**
- * One line in the bills list. A bill paid by instalments is listed once per
- * instalment, in the month that instalment is due, with its own amount and
- * payment; any other bill is one entry in the month it belongs to.
+ * One line in the bills list: a bill is listed once, in the month it belongs
+ * to, whatever it is paid by (D2). By instalments, the line carries the next
+ * instalment's amount and date, and the bill is paid once every instalment is.
  */
 export interface BillEntry {
   bill: BillListItem;
-  /** Unique within the list: the bill id, plus the instalment number. */
-  key: string;
   /** The date it's filed under (YYYY-MM-DD). */
   date: string;
+  /** What is due to the provider next: the next instalment, or the bill. */
   amountMinor: number;
   dueDate: string;
-  /** Paid to the provider. */
+  /** Paid to the provider (every instalment, or the bill). */
   paidAt: string | null;
+  /** The next unpaid instalment (or the last one, once all are paid). */
   instalment: { seq: number; of: number } | null;
 }
 
-export function billEntries(b: BillListItem): BillEntry[] {
-  if (!paysByInstalments(b))
-    return [
-      {
-        bill: b,
-        key: b.id,
-        date: billDate(b),
-        amountMinor: b.amountMinor,
-        dueDate: b.dueDate,
-        paidAt: b.paidToProviderAt,
-        instalment: null,
-      },
-    ];
-  return b.instalments.map((i) => ({
-    bill: b,
-    key: `${b.id}:${i.seq}`,
-    date: i.dueDate,
-    amountMinor: i.amountMinor,
-    dueDate: i.dueDate,
-    paidAt: i.paidToProviderAt,
-    instalment: { seq: i.seq, of: b.instalments.length },
-  }));
-}
+const entryOverdue = (e: BillEntry, today: string): boolean => !e.paidAt && e.dueDate < today;
 
-export const entryOverdue = (e: BillEntry, today: string): boolean =>
-  !e.paidAt && e.dueDate < today;
+export function billEntry(b: BillListItem): BillEntry {
+  const due = dueNow(b);
+  const byInstalments = paysByInstalments(b);
+  const paidAt = byInstalments
+    ? b.instalments.every((i) => i.paidToProviderAt)
+      ? (b.instalments.at(-1)!.paidToProviderAt ?? b.paidToProviderAt)
+      : null
+    : b.paidToProviderAt;
+  return {
+    bill: b,
+    date: billDate(b),
+    amountMinor: due.amountMinor,
+    dueDate: due.dueDate,
+    paidAt,
+    instalment: due.seq === null ? null : { seq: due.seq, of: due.of },
+  };
+}
 
 /**
  * The list entries (see BillEntry) that pass every filter, the bills they come
@@ -95,7 +88,7 @@ export function filterBills(
   ctx: { locale: string; today: string },
 ): { bills: BillListItem[]; entries: BillEntry[]; tokens: string[] } {
   const tokens = searchTokens(f.q ?? '');
-  const entries = bills.flatMap(billEntries).filter((e) => {
+  const entries = bills.map(billEntry).filter((e) => {
     const b = e.bill;
     if (f.serviceId && b.serviceId !== f.serviceId) return false;
     if (f.year && e.date.slice(0, 4) !== f.year) return false;
@@ -104,7 +97,7 @@ export function filterBills(
     if (f.status === 'overdue' && !entryOverdue(e, ctx.today)) return false;
     if (f.status === 'unusual' && !b.isAnomaly) return false;
     if (!tokens.length) return true;
-    const hay = `${billHaystack(b, ctx.locale, ctx.today)} ${monthWords(e.date.slice(0, 7), ctx.locale).join(' ')}${e.instalment ? ' instalment' : ''}`;
+    const hay = `${billHaystack(b, ctx.locale, ctx.today)} ${monthWords(e.date.slice(0, 7), ctx.locale).join(' ')}${b.instalments.length ? ' instalment instalments' : ''}`;
     return matchesAll(hay.toLowerCase(), tokens);
   });
   const out = [...new Set(entries.map((e) => e.bill))];

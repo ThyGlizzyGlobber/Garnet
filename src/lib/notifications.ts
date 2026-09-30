@@ -533,6 +533,92 @@ export async function sendDueReminders(now = new Date(), db: Db = getDb()): Prom
   return sent;
 }
 
+/**
+ * "Remind everyone" (Money): email each housemate who owes the member their
+ * unpaid shares, at most once a day each (the day in the household's time
+ * zone is part of the send-once key). Says who was emailed, who had been
+ * reminded already today, and who couldn't be (no sign-in email, or
+ * reminders off).
+ */
+export async function remindDebtors(
+  householdId: string,
+  memberId: string,
+  now = new Date(),
+  db: Db = getDb(),
+): Promise<{ sent: string[]; already: string[]; unreachable: string[] }> {
+  const out = { sent: [] as string[], already: [] as string[], unreachable: [] as string[] };
+  const hh = getHousehold(householdId, db);
+  const me = getMember(householdId, memberId, db);
+  if (!hh || !me) return out;
+  const f = fmt(hh);
+  const today = todayIn(hh.timezone, now);
+  const rows = db
+    .select({ s: share, b: bill, svc: service })
+    .from(share)
+    .innerJoin(bill, eq(share.billId, bill.id))
+    .innerJoin(service, eq(bill.serviceId, service.id))
+    .where(
+      and(
+        eq(share.householdId, householdId),
+        isNull(share.paidAt),
+        isNull(bill.ownerMemberId),
+        eq(service.payerMemberId, memberId),
+      ),
+    )
+    .all()
+    .filter((r) => r.s.memberId !== memberId && r.s.paidMethod !== 'payer');
+  const byMember = new Map<string, typeof rows>();
+  for (const r of rows) byMember.set(r.s.memberId, [...(byMember.get(r.s.memberId) ?? []), r]);
+  for (const [id, owed] of byMember) {
+    const m = getMember(householdId, id, db);
+    if (!m) continue;
+    const total = owed.reduce((sum, r) => sum + r.s.amountMinor, 0);
+    const currency = owed[0]!.s.currency;
+    const already = db
+      .select({ id: notificationLog.id })
+      .from(notificationLog)
+      .where(
+        and(
+          eq(notificationLog.memberId, m.id),
+          eq(notificationLog.kind, 'nudge'),
+          eq(notificationLog.refId, `${memberId}:${today}`),
+        ),
+      )
+      .get();
+    if (already) {
+      out.already.push(m.name);
+      continue;
+    }
+    const ok = await sendOnce(
+      hh,
+      m,
+      'reminders',
+      'nudge',
+      `${memberId}:${today}`,
+      () => ({
+        subject: t('nudge.subject', { name: me.name, amount: f.money(total, currency) }),
+        blocks: [
+          { p: t('nudge.intro', { name: me.name, amount: f.money(total, currency) }) },
+          ...owed.map((r) => ({
+            p: t('nudge.line', {
+              service: r.svc.name,
+              amount: f.money(r.s.amountMinor, r.s.currency),
+              due: f.day(shareDueDate(r.s, r.b)),
+            }),
+          })),
+          ...(payDetails(me)
+            ? [{ p: t('newBill.payDetails', { payer: me.name, details: payDetails(me) }) }]
+            : []),
+          { button: { label: t('nudge.open'), href: `${appUrl()}/money` } },
+        ],
+      }),
+      db,
+    );
+    (ok ? out.sent : out.unreachable).push(m.name);
+  }
+  return out;
+}
+
 /** Fire-and-forget wrapper for request handlers: a failed email never fails the action. */
 export function notifyInBackground(p: Promise<unknown>): void {
   p.catch((e) => console.error('[notify]', (e as Error).message));

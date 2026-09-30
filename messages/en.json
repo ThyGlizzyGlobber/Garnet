@@ -106,10 +106,12 @@
     "overdue": "Overdue",
     "empty": {
       "title": "No bills yet",
-      "body": "Add your first bill by hand, upload one, or forward it to your bills address.",
+      "body": "Forward a bill’s email, upload a PDF or photo, or enter one by hand. It’s filed here and split automatically.",
       "noServices": "Create a service first, then add bills against it.",
       "addService": "Add a service",
-      "noMatch": "No matching bills"
+      "noMatch": "No matching bills",
+      "copyAddress": "Copy the bills address",
+      "byHand": "Enter one by hand"
     },
     "detail": {
       "amount": "Amount",
@@ -132,22 +134,26 @@
       "instalmentDue": "Next: {amount} (instalment {n} of {of}) due {date}",
       "detailsTitle": "Details",
       "period": "Covers",
-      "type": "Type"
+      "type": "Type",
+      "taxRow": "Tax"
     },
     "shares": {
-      "title": "Shares",
-      "payerNote": "{name} pays the provider; everyone else pays {name} back.",
+      "title": "Split",
+      "titleInstalment": "Split · instalment {n}",
       "none": "No members were active during this billing period.",
       "you": "you",
-      "paidProvider": "Paid the provider",
+      "youCap": "You",
+      "paysProvider": "Pays {provider}",
       "paidOn": "Paid {date}",
+      "owes": "Owes {name}",
+      "overdueOwes": "Overdue · owes {name}",
       "unpaid": "Unpaid",
-      "ref": "Reference: {ref}",
+      "ref": "Reference {ref}",
       "prorated": "{days} of {total} days",
       "markPaid": "Mark paid",
       "markUnpaid": "Undo",
       "payTo": "Pay {name}",
-      "instalment": "Instalment {n} · due {date}"
+      "ofTotal": "of {total}"
     },
     "plan": {
       "title": "How will you pay?",
@@ -171,7 +177,17 @@
       "markPaid": "Mark paid to {provider}",
       "undo": "Undo",
       "nextDue": "Next instalment due",
-      "ordinal": "{n, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} instalment"
+      "ordinal": "{n, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} instalment",
+      "titleChosen": "How you’re paying",
+      "byInstalments": "By instalments",
+      "undecidedChip": "Not chosen yet",
+      "dueOn": "Due {date}",
+      "fullOpenUntil": "Paying in full ({amount}) is open until {date}.",
+      "fullClosedOn": "Paying in full ({amount}) closed {date}.",
+      "payByInstalments": "Pay in {count} instalments",
+      "payInFull": "Pay in full",
+      "markNext": "Mark instalment {n} paid to {provider}",
+      "undoLast": "Undo instalment {n}"
     },
     "form": {
       "create": "Add bill",
@@ -228,11 +244,12 @@
     "searchResults": "{count, plural, =0 {No bills match} one {# bill matches} other {# bills match}} “{q}”",
     "clearSearch": "Clear",
     "filters": {
+      "label": "Show",
       "all": "All",
-      "unpaid": "Unpaid",
-      "overdue": "Overdue",
+      "unpaid": "To pay",
+      "paid": "Paid",
       "unusual": "Unusual",
-      "paid": "Paid"
+      "overdue": "Overdue"
     },
     "summary": {
       "count": "{count, plural, one {# bill} other {# bills}}",
@@ -249,7 +266,7 @@
     },
     "metrics": {
       "title": "From the bill",
-      "body": "Every figure the AI read from this bill. Arrows show the change since the last bill (per day for usage and charges).",
+      "vsLast": "vs last bill",
       "kind": {
         "usage": "Usage",
         "reading": "Meter readings",
@@ -288,29 +305,64 @@
     "downloadMine": "Download my bills",
     "downloadMineHint": "A zip of your personal bills: a spreadsheet plus each bill's file, filed by year, month and service",
     "files": {
-      "title": "Bill email & file",
-      "byHand": "Entered by hand, so there's no email or file.",
+      "title": "Bill & files",
+      "count": "{count, plural, one {# file} other {# files}}",
+      "byHandTitle": "Entered by hand",
+      "byHandBy": "Added by {name} · {date}",
+      "byHandOn": "Added {date}",
       "none": "The email or file this bill came from is no longer stored.",
       "kind": {
         "bill": "The bill",
         "receipt": "Payment receipt",
         "notice": "Payment notice"
       },
-      "uploadedBy": "Uploaded by {name} · {date}",
-      "uploaded": "Uploaded · {date}",
-      "forwardedBy": "Forwarded by {name} · {date}",
-      "emailed": "Emailed to the household · {date}",
-      "signed": "Verified {domain}",
-      "from": "From {from}",
       "viewPdf": "View PDF",
       "viewPhoto": "View photo",
       "viewEmail": "View email",
-      "turn": "Turn page ↻"
+      "turn": "Turn page"
     },
     "whoseFilter": {
       "all": "All",
       "household": "The household's",
-      "mine": "Just mine"
+      "mine": "Just mine",
+      "label": "Whose bills"
+    },
+    "lede": "Filed by the month each bill belongs to, not the day it arrived.",
+    "paper": {
+      "label": "The {provider} bill",
+      "invoice": "Tax invoice",
+      "email": "Email",
+      "amountDue": "Amount due",
+      "by": "by {date}",
+      "slip": "Payment slip"
+    },
+    "page": {
+      "you": "You",
+      "yours": "Yours",
+      "someone": "someone",
+      "nobody": "nobody in particular",
+      "lineInstalment": "Instalment {n} of {of}, due {date}. {amount} for {range}.",
+      "linePaid": "{range} · {days} days · {who} paid {provider} on {date}.",
+      "lineDue": "{range} · {days} days · {who} {who, select, You {pay} other {pays}} {provider}.",
+      "markMyShare": "Mark my {amount} paid",
+      "markPaidProvider": "Mark paid to {provider}",
+      "unusualHigher": "Unusual · {pct}% higher",
+      "unusualLower": "Unusual · {pct}% lower",
+      "unusualTitleHigher": "{pct}% higher than {basis}",
+      "unusualTitleLower": "{pct}% lower than {basis}",
+      "unusualBody": "See how {service} compares over the year.",
+      "basis": {
+        "last_year": "the same time last year",
+        "recent": "your recent bills",
+        "seasonal_allowance": "your recent bills, more than the seasons explain"
+      },
+      "days": "{days} days",
+      "paidBy": "{date} by {who}",
+      "instalmentsPaid": "{paid} of {of} instalments",
+      "notYet": "Not yet",
+      "perDay": "{qty} {unit} a day",
+      "justYours": "Just yours",
+      "justYoursBody": "Personal bills aren’t split and don’t appear in the household’s totals."
     }
   },
   "services": {
@@ -322,7 +374,9 @@
     "paidBy": "paid by {name}",
     "empty": {
       "title": "No services yet",
-      "body": "A service is one thing you pay for: internet, electricity, gas, water, rent. Bills belong to services."
+      "bodyAddress": "Services set themselves up when each provider’s first bill arrives. Forward one to <address></address>, or add a service by hand.",
+      "copyAddress": "Copy the bills address",
+      "add": "Add a service"
     },
     "types": {
       "title": "Service types",
@@ -441,9 +495,70 @@
         "none": "Doesn’t pay"
       },
       "latest": "Latest bill: {amount}",
-      "newMembers": "Someone who moves in later isn’t included until an admin gives them a part."
+      "newMembers": "Someone who moves in later isn’t included until an admin gives them a part.",
+      "howPercent": "By percentage · {parts}",
+      "howFixed": "Set amounts, the rest shared",
+      "howEven": "Evenly, by the days each person lived here"
     },
-    "unusual": "Unusual"
+    "unusual": "Unusual",
+    "lede": "{count, plural, =0 {No services yet.} one {One service keeps} other {# services keep}} {household} running. Each line is a year of its bills, one block per bill; the thin line marks today.",
+    "ledeEmpty": "Every provider gets a service, and each service holds its bills.",
+    "scope": {
+      "label": "Whose services",
+      "all": "All",
+      "household": "Household",
+      "mine": "Mine"
+    },
+    "ribbon": {
+      "year": "last 12 months · {count, plural, one {# bill} other {# bills}}",
+      "today": "Today",
+      "instalments": "Paying by instalments, {n} of {of} due {when}.",
+      "vsLastYear": "Latest bill {pct}% {dir, select, up {above} other {below}} the same time last year.",
+      "levelLastYear": "Latest bill level with the same time last year.",
+      "yours": "Just yours.",
+      "split": "Split {parts}.",
+      "unusual": "Flagged as unusual.",
+      "next": "Next bill expected around {date}.",
+      "last": "Last bill {amount}, {status}."
+    },
+    "page": {
+      "ledeProvider": "{provider}, {cadence}.",
+      "ledeYear": "{total} last financial year, about {month} a month.",
+      "ledeYearSoFar": "{total} so far this financial year, about {month} a month.",
+      "ledeNoBills": "No bills yet.",
+      "ledeLastYear": "The latest bill used {pct}% {dir} than the same time last year{limit}.",
+      "ledeOverLimit": ", and sits {pct}% over the limit you set",
+      "ledeUnderLimit": ", and still sits {pct}% under the limit you set",
+      "ledeYours": "Only you see this service.",
+      "ledePays": "{name} {name, select, You {pay} other {pays}} it and the household splits it.",
+      "you": "You",
+      "chipYours": "Yours · only you see it",
+      "chipHousehold": "Household",
+      "chipYouPay": "You pay it",
+      "chipPays": "{name} pays it",
+      "everyBill": "Every bill",
+      "billCount": "{count, plural, one {# bill} other {# bills}}",
+      "noBills": "No bills yet. Forward one, upload it, or enter it by hand.",
+      "statYear": "Last financial year",
+      "statYearSoFar": "This financial year",
+      "statMonth": "Average a month",
+      "statLatest": "Latest bill",
+      "statNext": "Next bill",
+      "expected": "Expected around {date}",
+      "noGuess": "Nothing to go on yet",
+      "unusualTitle": "Latest bill is unusual",
+      "unusualAbove": "{pct}% above {basis}.",
+      "unusualBelow": "{pct}% below {basis}.",
+      "basis": {
+        "last_year": "the same time last year",
+        "recent": "your recent bills",
+        "seasonal_allowance": "your recent bills, more than the seasons explain"
+      },
+      "details": "Details",
+      "limit": "Usage limit a month",
+      "autoPay": "Payment",
+      "autoPayOn": "Paid automatically"
+    }
   },
   "members": {
     "title": "Members",
@@ -552,8 +667,9 @@
     },
     "hints": {
       "splitMode": "Switching to single stops new bills being split. Existing shares are kept.",
-      "paymentReferenceTemplate": "Placeholders: {service}, {period}, {member}, {ref}. Trimmed to 18 characters.",
-      "membersCanExport": "Lets every member download the zip of the household's bills and their files (Bills → Download everything), not just admins. Personal bills are only ever in their owner's download."
+      "paymentReferenceTemplate": "Placeholders: '{service}', '{period}', '{member}', '{ref}'. Trimmed to 18 characters.",
+      "membersCanExport": "Lets every member download the zip of the household's bills and their files (Bills → Download everything), not just admins. Personal bills are only ever in their owner's download.",
+      "membersCanExportShort": "Otherwise only admins can"
     },
     "splitModes": {
       "shared": "split between members",
@@ -568,7 +684,8 @@
       "notConfigured": "Not configured",
       "on": "On",
       "off": "Off",
-      "billsAddresses": "Bills addresses"
+      "billsAddresses": "Bills addresses",
+      "status": "Status"
     },
     "demo": {
       "title": "Demo mode",
@@ -617,7 +734,34 @@
       "aiReads": "AI reads this month",
       "noCap": "No monthly cap",
       "ofLimit": "of {limit} this month"
-    }
+    },
+    "lede": "How the app looks for you, what it emails you, and your household.",
+    "account": {
+      "name": "Name",
+      "email": "Email",
+      "signsInWith": "Signs in with",
+      "google": "Google",
+      "code": "An emailed code",
+      "demo": "Demo household",
+      "demoSignIn": "A name and PIN (demo)",
+      "pin": "PIN",
+      "pinSet": "Set · asked again every {days, plural, one {day} other {# days}}",
+      "pinNone": "Not set",
+      "changePin": "Change PIN"
+    },
+    "emails": {
+      "title": "Emails"
+    },
+    "household": {
+      "title": "Household",
+      "justYou": "Just you",
+      "youAdmin": "you’re an admin",
+      "youMember": "you’re a member",
+      "notSplit": "bills aren’t split",
+      "noAddress": "No bills address yet: set BILLS_ADDRESS_TEMPLATE and the inbound secret."
+    },
+    "showDetails": "Household details",
+    "editDetails": "Edit household details"
   },
   "dashboard": {
     "greeting": "Hey, {name}.",
@@ -792,18 +936,21 @@
     "subtitle": "{review} to review · {total} documents archived",
     "upload": "Upload a bill",
     "filter": {
-      "review": "Needs review",
+      "label": "Show",
+      "all": "All",
+      "confirm": "To confirm",
       "bills": "Bills",
       "receipts": "Receipts",
-      "other": "Other emails",
-      "all": "All"
+      "other": "Other"
     },
     "reprocessAll": "Re-read everything waiting",
-    "reprocessAllConfirm": "Read every document waiting for review again? Useful after fixing the AI key.",
+    "reprocessAllConfirm": "Analyse every waiting document again?",
     "empty": {
-      "title": "Nothing to review",
+      "title": "Nothing to confirm",
       "allTitle": "Nothing here yet",
-      "body": "Bills that can't be read confidently land here with the file beside a pre-filled form. Upload one to try it."
+      "body": "Nothing matches. Forwarded bills appear as soon as they’re analysed.",
+      "fresh": "When you forward a bill, it lands here, is analysed in under a minute and filed under its service.",
+      "confirmBody": "Everything that arrived has been analysed and filed."
     },
     "kind": {
       "email": "Email",
@@ -867,7 +1014,9 @@
     },
     "why": {
       "check": "Some details need checking"
-    }
+    },
+    "lede": "Forward a bill from your own email and it’s analysed and filed within a minute.",
+    "forwardTo": "Forward bills to"
   },
   "upload": {
     "title": "Upload a bill",
@@ -1016,7 +1165,7 @@
     "title": "Household bills address",
     "body": "Forward bills to this address and they're added automatically. Forward a provider's “payment failed” or “overdue” email and the bill is flagged.",
     "label": "Forward bills to",
-    "howForward": "When a bill arrives in your own inbox, forward it here as it is: the PDF, the bill email itself, or a photo of a paper bill. No need to change anything with your providers.",
+    "howForward": "Forward a bill from your own inbox as it is: the PDF, the email itself, or a photo. No need to change anything with your providers.",
     "howReview": "Only the attachments from a forwarded email are kept; the email itself isn't stored. Receipts mark the bill they paid.",
     "replace": "Get a new address",
     "replaceConfirm": "Replace the address? The current one stops working immediately, so let everyone in the household know the new one.",
@@ -1080,7 +1229,13 @@
       "reminders": "Reminders before and after my share is due",
       "problems": "Payment problems (failed or overdue)",
       "save": "Save",
-      "noEmail": "You'll need to join with an account before emails can be sent to you."
+      "noEmail": "You'll need to join with an account before emails can be sent to you.",
+      "billsTitle": "New bills",
+      "billsSub": "When a bill for the household is analysed",
+      "remindersTitle": "Reminders",
+      "remindersSub": "Before and after your share is due",
+      "problemsTitle": "Payment problems",
+      "problemsSub": "When a provider says a payment failed or is overdue"
     },
     "serviceCreated": {
       "subject": "New service: {service} ({provider})",
@@ -1094,6 +1249,12 @@
       "more": "costs",
       "less": "saves",
       "open": "See {service}"
+    },
+    "nudge": {
+      "subject": "{name} asks for {amount} back",
+      "intro": "{name} asks you to pay back {amount} for your shares of these bills:",
+      "line": "{service}: {amount}, due {due}",
+      "open": "See what you owe"
     }
   },
   "usage": {
@@ -1109,7 +1270,10 @@
       "lastYear": "Same time last year",
       "average": "Average of the last {count} bills",
       "limit": "Your limit ({qty} {unit} a month)",
-      "similar": "Similar households"
+      "similar": "Similar households",
+      "limitShort": "Your limit",
+      "limitSub": "{qty} {unit} a month",
+      "similarSub": "Printed on the bill"
     },
     "costChange": "cost per day {change}",
     "chart": "Usage per day, by bill",
@@ -1131,8 +1295,25 @@
       "recent": "Average of your recent bills (no bill from {month} last year yet)",
       "single": "Based on your only bill so far",
       "weather": "Based on normal {month} weather where you live and how your bills follow the weather",
-      "area": "Typical {month} cost for similar households in your area (not enough bills of your own yet)"
-    }
+      "area": "Typical {month} cost for similar households in your area (not enough bills of your own yet)",
+      "estimates": "Estimates",
+      "short": {
+        "seasonal": "Last year, adjusted",
+        "recent": "Average of recent bills",
+        "single": "From your only bill",
+        "weather": "Normal weather, your bills",
+        "area": "Similar households nearby",
+        "none": ""
+      }
+    },
+    "chartUsage": "Usage per day, each bill",
+    "chartCost": "Cost per day, each bill",
+    "chartEach": "One bar per bill",
+    "costPerDay": "{amount} a day",
+    "limitLine": "Your limit · {qty} {unit} a day",
+    "comparedWith": "Compared with",
+    "sameShort": "same",
+    "latestLine": "Latest bill: {qty} {unit} a day, about {month} {unit} a month."
   },
   "seasons": {
     "name": {
@@ -1476,10 +1657,52 @@
     "doc": {
       "analysed": "Analysed",
       "waiting": "Waiting to be analysed",
-      "failed": "Couldn’t be analysed"
+      "failed": "Couldn’t be analysed",
+      "kind": {
+        "bill": "Bill",
+        "receipt": "Receipt",
+        "email": "Email",
+        "notice": "Payment notice",
+        "document": "Document"
+      },
+      "toConfirm": "{count, plural, one {# detail to confirm} other {# details to confirm}}",
+      "tryAgain": "Try again"
     },
     "instalments": "Instalments",
-    "verified": "Verified {domain}"
+    "verified": "Verified {domain}",
+    "status": {
+      "paid": "Paid",
+      "overdue": "{n, plural, one {# day} other {# days}} overdue",
+      "today": "Due today",
+      "tomorrow": "Due tomorrow",
+      "soon": "Due in {n} days",
+      "due": "Due {date}"
+    },
+    "rel": {
+      "today": "Today",
+      "tomorrow": "Tomorrow",
+      "inDays": "In {n} days",
+      "overdue": "{n, plural, one {# day} other {# days}} overdue"
+    },
+    "row": {
+      "notice": "{from}–{to} notice",
+      "instalment": "Instalment {n} of {of} · {amount} in all",
+      "paidInstalments": "Paid in {of} instalments · {range}",
+      "issued": "Issued {date}",
+      "unusual": "Unusual",
+      "yours": "Yours",
+      "you": "You {amount}",
+      "alert": {
+        "payment_failed": "Payment failed",
+        "overdue": "Provider says overdue"
+      }
+    },
+    "how": {
+      "upload": "Uploaded",
+      "uploadedBy": "Uploaded by {name}",
+      "forward": "Forwarded by {name}",
+      "email": "Emailed in"
+    }
   },
   "design": {
     "title": "Components",
@@ -1914,6 +2137,76 @@
       "remove": "Remove",
       "size": "Change size",
       "page": "Page {n}"
+    }
+  },
+  "money": {
+    "title": "Money",
+    "lede": "Who owes whom in the house. The app keeps count; the money moves however you like.",
+    "ledeShort": "Balances between housemates.",
+    "settleUp": "Settle up",
+    "hero": {
+      "owedAfter": "Owed to you, after the {amount} you owe {names}.",
+      "owed": "Owed to you.",
+      "square": "You’re square with everyone.",
+      "youOweAfter": "You owe, after the {amount} owed to you."
+    },
+    "remind": {
+      "button": "Remind everyone",
+      "sent": "Reminders emailed to {names}",
+      "already": "{names} already had a reminder today",
+      "unreachable": "{names} can’t be emailed yet",
+      "nobody": "Nobody owes you anything right now"
+    },
+    "record": {
+      "button": "Record a payment",
+      "title": "Record a payment",
+      "who": "Who paid",
+      "paid": "Paid",
+      "you": "You",
+      "for": "For",
+      "owesNothing": "{name} doesn’t owe you anything right now.",
+      "how": "How",
+      "methods": {
+        "transfer": "Bank transfer",
+        "cash": "Cash",
+        "other": "Other"
+      },
+      "when": "When",
+      "submit": "Record {amount}",
+      "cancel": "Cancel",
+      "note": "The app keeps count; it never moves money.",
+      "done": "Recorded · {name} paid you {amount}",
+      "nothing": "Nothing was recorded",
+      "instalment": "instalment {n}"
+    },
+    "admin": "Admin",
+    "member": "Member",
+    "since": "since {date}",
+    "owesYou": "Owes you {amount}",
+    "youOwe": "You owe {amount}",
+    "square": "Square",
+    "paidBack": "{paid} of {total} shares paid back this year",
+    "youOweHead": "You owe",
+    "owedToYouHead": "Owed to you",
+    "betweenHead": "Between housemates",
+    "betweenLine": "{from} owes {to} · {service}",
+    "squareAll": "You’re square with everyone.",
+    "nobodyOwes": "Nobody owes you right now.",
+    "to": "to {name}",
+    "from": "from {name}",
+    "markPaid": "Mark paid",
+    "paid": "Paid",
+    "dueOn": "due {date}",
+    "instalment": "instalment {n}",
+    "overdue": "Overdue",
+    "notSplit": {
+      "title": "This household doesn’t split bills",
+      "body": "Everyone sees the bills, and nobody owes anybody. An admin can turn on splitting in Settings.",
+      "settings": "Open Settings"
+    },
+    "empty": {
+      "title": "Nothing to settle yet",
+      "body": "Once bills arrive, each person’s share is worked out and shows here, with who owes whom."
     }
   }
 }
