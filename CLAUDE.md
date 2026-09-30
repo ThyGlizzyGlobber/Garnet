@@ -13,8 +13,8 @@ DB, never hardcoded.
 ## Current status (handoff — keep this section up to date)
 
 _Last updated 2026-09-30._ Prototype 1 plus the multi-household build-out and the
-seasons project (S1–S4) are built; the redesign (`SCOPE-redesign.md`) is built through R8 (bar the owner's device check and the merge) on the
-`redesign/almanac-2` branch. Details of every change are in the decisions
+seasons project (S1–S4) are built; the redesign (`SCOPE-redesign.md`) is built through R8 and merged into
+`main` (the release image builds from there; install it from Settings → Software update). Details of every change are in the decisions
 log below; this section is the quick orientation.
 
 - **Where the code lives.** Primary working copy: `/Users/bejaysmith/Desktop/Home Utilities Software (Prototype-1) 03.48.04`.
@@ -79,11 +79,12 @@ log below; this section is the quick orientation.
   a Colours step, joining with a Colours step, the wall as the Home grid, Status, not found, error,
   loading, offline), R7 (the wording audit; `tests/messages.test.ts` fails on reader words) and R8's
   build work (the demo seed is the studio's Riverside House data, documents included; the match check
-  against the studio ran at four sizes, light and dark, all five presets) are done. Left for the owner:
-  a look on a real iPad and iPhone (and the wall iPad), then merging `redesign/almanac-2` into `main`
-  and the NAS update.
-- **Likely next steps.** Finish R8 on real devices and merge the redesign into `main`. Then the household
-  alpha (SCOPE.md §10); PDF statements; digests.
+  against the studio ran at four sizes, light and dark, all five presets) are done, and `redesign/almanac-2`
+  is merged into `main`. Left for the owner: a look on a real iPad and iPhone (and the wall iPad), and the
+  NAS update from Settings once the release image has built. The NAS's demo household keeps its old data
+  until the demo is exited and re-entered there (the new seed only runs on a fresh install).
+- **Likely next steps.** The real-device look and the NAS update. Then the household alpha (SCOPE.md §10);
+  PDF statements; digests.
 
 ## Hard constraints
 
