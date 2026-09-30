@@ -95,7 +95,7 @@ export async function VehiclesPage({ ctx, view }: { ctx: PageContext; view: Vehi
                     </>
                   }
                   figure={whole(v.yearMinor)}
-                  figureSub={tv('tileYear', { amount: whole(v.perMonthMinor) })}
+                  figureSub={tv('tileYear', { count: v.yearBills })}
                   mix={
                     v.bySeries.length > 0 ? (
                       <span className="vx-mix">

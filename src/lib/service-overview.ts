@@ -1,18 +1,14 @@
 import { getDb, type Db } from '@/db/client';
 import type { Household } from '@/db/schema';
-import { costPerDay, mean } from '@/lib/averages';
+import { costPerDay } from '@/lib/averages';
 import { billDue } from '@/lib/bill-status';
 import { listBills, type BillListItem } from '@/lib/bills';
 import { compareUsage, usageHistory, type Change } from '@/lib/consumption';
-import { daysInclusive } from '@/lib/dates';
-import { addMonths, fiscalYearBounds } from '@/lib/periods';
-import {
-  estimatePerDay,
-  fixedPrice,
-  MONTHS_PER_BILL,
-  nextBillGuess,
-  projectMonth,
-} from '@/lib/projections';
+import { MONTHS_PER_BILL } from '@/lib/cadence';
+import { addMonths, fiscalYearBounds, monthBounds } from '@/lib/periods';
+import { eachBill, expectedBills } from '@/lib/expected';
+import { dueParts } from '@/lib/instalments';
+import { perDayFallback } from '@/lib/projections';
 import { areaComparison } from '@/lib/regional';
 import { recurringView } from '@/lib/recurring';
 import { seasonAhead } from '@/lib/seasons';
@@ -26,14 +22,11 @@ const changeOf = (from: number, to: number): Change => ({
   pct: from ? (to - from) / from : null,
 });
 
-/** The part of a bill's cost that falls inside [start, end], pro-rata by days. */
-function accrued(b: BillListItem, start: string, end: string): number {
-  const s = b.periodStart > start ? b.periodStart : start;
-  const e = b.periodEnd < end ? b.periodEnd : end;
-  if (e < s) return 0;
-  return Math.round(
-    (b.amountMinor * daysInclusive(s, e)) / daysInclusive(b.periodStart, b.periodEnd),
-  );
+/** What a bill had due in [start, end]: the bill in full on its due date, or its instalments due then. */
+function dueWithin(b: BillListItem, start: string, end: string): number {
+  return dueParts(b)
+    .filter((p) => p.dueDate >= start && p.dueDate <= end)
+    .reduce((s, p) => s + p.amountMinor, 0);
 }
 
 /** One bar on the service page's chart: a bill's period and its usage, or its cost (per day or per bill). */
@@ -110,38 +103,24 @@ export function serviceOverview(
     addMonths(thisFy.start.slice(0, 7), -1) + '-01',
     hh.fiscalYearStartMonth,
   );
+  // Every figure counts a bill in full when it's due (owner, 2026-10-01).
   const inFy = (fy: { start: string; end: string }) =>
-    bills.filter((b) => b.periodEnd >= fy.start && b.periodStart <= fy.end);
+    bills.filter((b) => dueWithin(b, fy.start, fy.end) > 0);
   const year = inFy(lastFy).length ? { ...lastFy, current: false } : { ...thisFy, current: true };
   const yearEnd = year.end > today ? today : year.end;
-  const yearBills = inFy(year);
-  const yearMinor = yearBills.reduce((s, b) => s + accrued(b, year.start, yearEnd), 0);
+  const yearBills = bills.filter((b) => dueWithin(b, year.start, yearEnd) > 0);
+  const yearMinor = yearBills.reduce((s, b) => s + dueWithin(b, year.start, yearEnd), 0);
   const unit = history?.unit ?? svc.usageUnit;
-  // A month's average over the part of the year its bills cover: a service
-  // that began in December isn't averaged over the months before it.
-  const coveredStart = yearBills.reduce(
-    (min, b) => (b.periodStart < min ? b.periodStart : min),
-    yearEnd,
-  );
-  const coveredEnd = yearBills.reduce((max, b) => (b.periodEnd > max ? b.periodEnd : max), '');
-  const from = coveredStart > year.start ? coveredStart : year.start;
-  const to = coveredEnd && coveredEnd < yearEnd ? coveredEnd : yearEnd;
-  const yearMonths = Math.max(1, (to >= from ? daysInclusive(from, to) : 0) / (365 / 12));
-  // Bills that follow the calendar: a month is the year's average bill over
-  // the months one covers, so a fixed price (internet, rent) is exactly its
-  // price, whether a month has 30 days or 31.
-  const monthsPerBill = MONTHS_PER_BILL[svc.cadence];
-  const calendar = !!monthsPerBill;
-  const billMonthMinor =
-    monthsPerBill && yearBills.length
-      ? Math.round(mean(yearBills.map((b) => b.amountMinor)) / monthsPerBill)
-      : null;
+  const calendar = !!MONTHS_PER_BILL[svc.cadence];
 
-  const est = estimatePerDay(bills, today.slice(0, 7));
-  const guess =
-    svc.cadence === 'irregular'
-      ? null
-      : nextBillGuess(latest, svc.cadence, est.perDay, calendar ? fixedPrice(bills) : null);
+  // What's expected: the next bill, and the next three months' bills.
+  const expected = expectedBills(
+    svc,
+    bills,
+    addMonths(today.slice(0, 7), 12),
+    perDayFallback(hh.id, svc, today, db),
+  );
+  const guess = expected[0] ?? null;
   const barsAreUsage = !!unit && (history?.periods ?? []).some((p) => p.perDay !== null);
   // Recurring: the next charge is expected at the latest bill's price.
   const recurring = recurringView(svc, bills);
@@ -163,8 +142,9 @@ export function serviceOverview(
         current: year.current,
         minor: yearMinor,
         bills: yearBills.length,
-        perMonthMinor: billMonthMinor ?? Math.round(yearMinor / yearMonths),
       },
+      /** What a bill costs when it comes, and how often. */
+      each: eachBill(svc, bills, today),
       latest: latest
         ? {
             billId: latest.id,
@@ -172,19 +152,9 @@ export function serviceOverview(
             status: billDue(latest, today).status,
           }
         : null,
-      next: recurring.upcoming
-        ? {
-            amountMinor: recurring.upcoming.amountMinor,
-            dueDate: recurring.upcoming.dueDate,
-            method: 'fixed' as const,
-          }
-        : guess
-          ? {
-              amountMinor: guess.amountMinor,
-              dueDate: guess.dueDate,
-              method: calendar && fixedPrice(bills) !== null ? 'fixed' : est.method,
-            }
-          : null,
+      next: guess
+        ? { amountMinor: guess.amountMinor, dueDate: guess.dueDate, method: guess.basis }
+        : null,
     },
     /**
      * Each bill, oldest first, as a bar: usage per day when the service has
@@ -228,10 +198,19 @@ export function serviceOverview(
     // "Households like yours" (scope S4): only for households that share.
     area: areaComparison(hh.id, svc.id, today, db),
     /** The next three months' estimates, and what each is based on. */
-    comingUp: [0, 1, 2].flatMap((i) => {
+    comingUp: [0, 1, 2].map((i) => {
       const month = addMonths(today.slice(0, 7), i);
-      const p = projectMonth(hh.id, month, db).services.find((x) => x.service.id === svc.id);
-      return p && p.method !== 'none' ? [{ month, minor: p.monthMinor, method: p.method }] : [];
+      const { start, end } = monthBounds(month);
+      const known = bills.reduce((sum, b) => sum + dueWithin(b, start, end), 0);
+      // This month also takes an expected bill that's late.
+      const due = expected.filter((e) =>
+        i === 0 ? e.dueDate.slice(0, 7) <= month : e.dueDate.slice(0, 7) === month,
+      );
+      return {
+        month,
+        minor: known + due.reduce((sum, e) => sum + e.amountMinor, 0),
+        method: due[0]?.basis ?? (known ? ('known' as const) : ('none' as const)),
+      };
     }),
     // Who pays what (household services, in households that split bills).
     split: hh.splitMode === 'shared' && !svc.ownerMemberId ? splitView(hh.id, svc, db) : null,

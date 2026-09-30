@@ -142,11 +142,12 @@ describe('a personal service', () => {
 
   it('stays out of every household figure', () => {
     const { hh } = setup();
-    const s = dashboardSummary(hh.id, '2026-09-20', 7, db);
+    // Both are due in October (power on the 14th, the rego on the 1st); only power counts.
+    const s = dashboardSummary(hh.id, '2026-10-20', 7, db);
     expect(s.thisMonth.total).toBe(30000);
     expect(s.services.map((x) => x.name)).toEqual(['Electricity']);
     expect([...s.upcoming, ...s.overdue].map((b) => b.service.name)).toEqual(['Electricity']);
-    expect(monthlySeries(hh.id, ['2026-09'], db)[0]!.total).toBe(30000);
+    expect(monthlySeries(hh.id, ['2026-10'], db)[0]!.total).toBe(30000);
   });
 
   it('is only emailed to its owner', async () => {
@@ -203,18 +204,26 @@ describe('the personal dashboard', () => {
   it('adds my shares and my personal bills, apart and together', () => {
     const { hh, jo, sam } = setup();
     const mine = personalSummary(hh.id, jo.id, '2026-09-20', 7, db);
-    // September: half the power ($150) + 30 days of rego ($30).
-    expect(mine.thisMonth).toEqual({ shares: 15000, personal: 3000, total: 18000 });
-    expect(mine.series.at(-1)).toMatchObject({ month: '2026-09', total: 18000 });
+    // Each counts in full in the month it's due: nothing was due in September;
+    // October has half the power ($150, due the 14th) and the whole rego ($365, the 1st).
+    expect(mine.thisMonth).toEqual({ shares: 0, personal: 0, total: 0 });
+    const october = personalSummary(hh.id, jo.id, '2026-10-20', 7, db);
+    expect(october.thisMonth).toEqual({ shares: 15000, personal: 36500, total: 51500 });
+    expect(october.series.at(-1)).toMatchObject({ month: '2026-10', total: 51500 });
     expect(mine.personalServices.map((s) => s.name)).toEqual(['Car rego']);
     expect(mine.upcoming.map((b) => [b.service.name, b.dueMinor])).toEqual([['Car rego', 36500]]);
-    expect(mine.byService.map((x) => [x.service.name, x.personal])).toEqual([
-      ['Electricity', false],
+    // Largest first: the whole rego ($365) before half the power ($150).
+    expect(october.byService.map((x) => [x.service.name, x.personal])).toEqual([
       ['Car rego', true],
+      ['Electricity', false],
     ]);
     // Sam owes Jo their half; Sam sees none of Jo's personal bills.
     const his = personalSummary(hh.id, sam.id, '2026-09-20', 7, db);
-    expect(his.thisMonth).toEqual({ shares: 15000, personal: 0, total: 15000 });
+    expect(personalSummary(hh.id, sam.id, '2026-10-20', 7, db).thisMonth).toEqual({
+      shares: 15000,
+      personal: 0,
+      total: 15000,
+    });
     expect(his.owed).toBe(15000);
     expect(his.upcoming).toEqual([]);
     expect(mine.owedToMe).toBe(15000);

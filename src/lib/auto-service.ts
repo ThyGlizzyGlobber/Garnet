@@ -37,6 +37,8 @@ export function cleanProviderName(name: string): string {
 /** Billing frequency from the length of one billing period. */
 export function cadenceFromPeriod(start: string, end: string): Cadence {
   const days = daysInclusive(start, end);
+  // A charge on a day (a car service, a one-off donation) doesn't say how often it comes.
+  if (days <= 3) return 'irregular';
   if (days <= 8) return 'weekly';
   if (days <= 16) return 'fortnightly';
   if (days <= 35) return 'monthly';

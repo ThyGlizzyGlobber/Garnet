@@ -2,15 +2,9 @@ import { and, eq } from 'drizzle-orm';
 import { getDb, type Db } from '@/db/client';
 import { bill, share } from '@/db/schema';
 import { listBills, type BillListItem } from '@/lib/bills';
-import { daysInclusive, monthOf } from '@/lib/dates';
-import { dueNow } from '@/lib/instalments';
-import {
-  addMonths,
-  allocateToMonths,
-  daysUntil,
-  fiscalYearBounds,
-  lastMonths,
-} from '@/lib/periods';
+import { monthOf } from '@/lib/dates';
+import { dueNow, dueParts, shareDueDate } from '@/lib/instalments';
+import { addMonths, daysUntil, fiscalYearBounds, lastMonths } from '@/lib/periods';
 import { listServices, type ServiceWithType } from '@/lib/services';
 import { memberLedger } from '@/lib/stats';
 
@@ -60,20 +54,6 @@ const split = (shares: number, personal: number): SpendSplit => ({
   total: shares + personal,
 });
 
-/** The part of an amount spread over [periodStart, periodEnd] that falls in [start, end]. */
-function accrued(
-  amountMinor: number,
-  periodStart: string,
-  periodEnd: string,
-  start: string,
-  end: string,
-): number {
-  const s = periodStart > start ? periodStart : start;
-  const e = periodEnd < end ? periodEnd : end;
-  if (e < s) return 0;
-  return Math.round((amountMinor * daysInclusive(s, e)) / daysInclusive(periodStart, periodEnd));
-}
-
 export function personalSummary(
   householdId: string,
   memberId: string,
@@ -86,9 +66,10 @@ export function personalSummary(
   const fy = fiscalYearBounds(today, fiscalYearStartMonth);
   const fyEnd = fy.end > today ? today : fy.end;
 
-  // Every amount I carry: each of my shares (over its bill's period), and each
-  // personal bill (over its own).
-  const items: { serviceId: string; amount: number; start: string; end: string; own: boolean }[] = [
+  // Every amount I carry, on the day it's due (owner, 2026-10-01: a bill
+  // counts in full when it's due): each of my shares, and each part of my
+  // personal bills (by instalments, each instalment).
+  const items: { serviceId: string; amount: number; due: string; own: boolean }[] = [
     ...db
       .select({ s: share, b: bill })
       .from(share)
@@ -98,27 +79,26 @@ export function personalSummary(
       .map(({ s, b }) => ({
         serviceId: b.serviceId,
         amount: s.amountMinor,
-        start: b.periodStart,
-        end: b.periodEnd,
+        due: shareDueDate(s, b),
         own: false,
       })),
-    ...listBills(householdId, { owner: memberId }, db).map((b) => ({
-      serviceId: b.serviceId,
-      amount: b.amountMinor,
-      start: b.periodStart,
-      end: b.periodEnd,
-      own: true,
-    })),
+    ...listBills(householdId, { owner: memberId }, db).flatMap((b) =>
+      dueParts(b).map((p) => ({
+        serviceId: b.serviceId,
+        amount: p.amountMinor,
+        due: p.dueDate,
+        own: true,
+      })),
+    ),
   ];
 
   const byMonth = new Map(months.map((m) => [m, { shares: 0, personal: 0 }]));
-  for (const it of items)
-    for (const a of allocateToMonths(it.amount, it.start, it.end)) {
-      const row = byMonth.get(a.month);
-      if (!row) continue;
-      if (it.own) row.personal += a.minor;
-      else row.shares += a.minor;
-    }
+  for (const it of items) {
+    const row = byMonth.get(it.due.slice(0, 7));
+    if (!row) continue;
+    if (it.own) row.personal += it.amount;
+    else row.shares += it.amount;
+  }
   const series = months.map((m) => {
     const r = byMonth.get(m)!;
     return { month: m, ...split(r.shares, r.personal) };
@@ -138,8 +118,8 @@ export function personalSummary(
   let fyPersonal = 0;
   const perService = new Map<string, number>();
   for (const it of items) {
-    const minor = accrued(it.amount, it.start, it.end, fy.start, fyEnd);
-    if (!minor) continue;
+    if (it.due < fy.start || it.due > fyEnd) continue;
+    const minor = it.amount;
     if (it.own) fyPersonal += minor;
     else fyShares += minor;
     perService.set(it.serviceId, (perService.get(it.serviceId) ?? 0) + minor);

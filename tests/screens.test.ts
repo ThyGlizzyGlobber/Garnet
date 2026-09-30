@@ -184,8 +184,9 @@ describe('serviceOverview', () => {
     // The last complete financial year (Jul 2025 – Jun 2026) had bills, so it is the year shown.
     expect(o.stats.year.current).toBe(false);
     expect(o.stats.year.label).toContain('2025');
-    expect(o.stats.year.bills).toBe(5);
-    expect(o.stats.year.perMonthMinor).toBeGreaterThan(0);
+    // The bills due in it (the June 2026 quarter falls due in the next year).
+    expect(o.stats.year.bills).toBe(4);
+    expect(o.stats.each).toMatchObject({ cadence: 'quarterly', exact: false });
     expect(o.stats.latest?.amountMinor).toBe(48_621);
     expect(o.stats.next?.dueDate).toBe('2026-12-21');
     expect(o.barsAreUsage).toBe(true);

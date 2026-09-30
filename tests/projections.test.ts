@@ -7,113 +7,113 @@ import { runMigrations } from '@/db/migrate';
 import { createBill } from '@/lib/bills';
 import { createHousehold } from '@/lib/households';
 import { createMember } from '@/lib/members';
-import {
-  estimatePerDay,
-  fixedMonthly,
-  fixedPrice,
-  nextBillGuess,
-  projectMonth,
-} from '@/lib/projections';
+import { fixedPrice } from '@/lib/cadence';
+import { eachBill, expectedBills, nextExpected } from '@/lib/expected';
+import { projectMonth } from '@/lib/projections';
 import { remindersFor, summariseReminders } from '@/lib/reminders';
 import { createService } from '@/lib/services';
 
-const m = (amt: number, start: string, end: string) => ({
+const m = (amt: number, start: string, end: string, due = end) => ({
   amountMinor: amt,
   periodStart: start,
   periodEnd: end,
+  dueDate: due,
+});
+type Cadence = 'monthly' | 'quarterly' | 'annual' | 'irregular';
+const svc = (cadence: Cadence, byUse = false) => ({
+  id: 's',
+  isActive: true,
+  cancelledAt: null,
+  cadence,
+  usageUnit: byUse ? 'kWh' : null,
+  seasonal: byUse,
+  recurringSince: null,
 });
 
-describe('estimatePerDay', () => {
-  it('handles no history and a single bill', () => {
-    expect(estimatePerDay([], '2026-10').method).toBe('none');
-    const one = estimatePerDay([m(3000, '2026-09-01', '2026-09-30')], '2026-10');
-    expect(one.method).toBe('single');
-    expect(one.perDay).toBe(100);
-  });
-  it('uses the recent average when there is no same-month history', () => {
-    const r = estimatePerDay(
-      [
-        m(3000, '2026-06-01', '2026-06-30'),
-        m(3100, '2026-07-01', '2026-07-31'),
-        m(3000, '2026-08-01', '2026-08-31'),
-      ],
-      '2026-10',
-    );
-    expect(r.method).toBe('recent');
-    expect(r.perDay).toBeCloseTo((100 + 100 + 96.77) / 3, 1);
-  });
-  it('goes seasonal once last year covers the target month, with bounded drift', () => {
-    const bills = [
-      m(3000, '2025-08-01', '2025-08-31'),
-      m(3000, '2025-09-01', '2025-09-30'),
-      m(6000, '2025-10-01', '2025-10-31'), // winter gas spike last year
-      m(3000, '2026-07-01', '2026-07-31'),
-      m(3300, '2026-08-01', '2026-08-31'),
-      m(3300, '2026-09-01', '2026-09-30'),
-    ];
-    const r = estimatePerDay(bills, '2026-10');
-    expect(r.method).toBe('seasonal');
-    // last year's October per-day (~193.5) × drift (recent ~106 vs before ~98 → ~1.08)
-    expect(r.perDay).toBeGreaterThan(190);
-    expect(r.perDay).toBeLessThan(230);
-  });
-});
-
-describe('fixedPrice', () => {
-  it('is the price when the latest bills all cost the same', () => {
+describe('expected bills', () => {
+  it('are a fixed price exactly, every month, whatever its length', () => {
     const flat = [
-      m(12900, '2026-04-14', '2026-05-13'),
-      m(12900, '2026-05-14', '2026-06-13'),
-      m(12900, '2026-06-14', '2026-07-13'),
+      m(12900, '2026-06-14', '2026-07-13', '2026-06-14'),
+      m(12900, '2026-07-14', '2026-08-13', '2026-07-14'),
+      m(12900, '2026-08-14', '2026-09-13', '2026-08-14'),
     ];
     expect(fixedPrice(flat)).toBe(12900);
-    expect(fixedMonthly('monthly', flat)).toBe(12900);
-    expect(fixedMonthly('quarterly', flat)).toBe(4300);
-    // Weekly and irregular bills don't follow the calendar's months.
-    expect(fixedMonthly('weekly', flat)).toBeNull();
-    // A price rise: the last three differ, so it's worked out per day again.
-    expect(fixedPrice([...flat.slice(0, 2), m(13900, '2026-06-14', '2026-07-13')])).toBeNull();
-    // One bill isn't a pattern.
+    const next = expectedBills(svc('monthly'), flat, '2027-01');
+    expect(next.map((e) => [e.dueDate, e.amountMinor, e.basis])).toEqual([
+      ['2026-09-14', 12900, 'fixed'],
+      ['2026-10-14', 12900, 'fixed'],
+      ['2026-11-14', 12900, 'fixed'],
+      ['2026-12-14', 12900, 'fixed'],
+      ['2027-01-14', 12900, 'fixed'],
+    ]);
+    // A price rise: no longer fixed. One bill isn't a pattern.
+    expect(fixedPrice([...flat.slice(0, 2), m(13900, '2026-08-14', '2026-09-13')])).toBeNull();
     expect(fixedPrice(flat.slice(0, 1))).toBeNull();
   });
 
-  it('keeps per-day estimates for bills that vary', () => {
-    const r = estimatePerDay(
-      [
-        m(3000, '2026-06-01', '2026-06-30'),
-        m(4100, '2026-07-01', '2026-07-31'),
-        m(3500, '2026-08-01', '2026-08-31'),
-      ],
-      '2026-10',
-    );
-    expect(r.method).toBe('recent');
-  });
-});
-
-describe('nextBillGuess', () => {
-  it('uses a fixed price as it is, whatever the length of the next period', () => {
-    const n = nextBillGuess(
-      { periodStart: '2026-06-14', periodEnd: '2026-07-13', dueDate: '2026-06-14' },
-      'monthly',
-      412,
-      12900,
-    );
-    expect(n?.amountMinor).toBe(12900);
+  it('follow last year for bills priced by use, moved by recent bills', () => {
+    const bills = [
+      m(30000, '2025-04-01', '2025-06-30'),
+      m(60000, '2025-07-01', '2025-09-30'), // winter
+      m(30000, '2025-10-01', '2025-12-31'),
+      m(33000, '2026-01-01', '2026-03-31'),
+      m(33000, '2026-04-01', '2026-06-30'),
+    ];
+    const [winter] = expectedBills(svc('quarterly', true), bills, '2026-09');
+    expect(winter?.basis).toBe('lastYear');
+    expect(winter?.periodStart).toBe('2026-07-01');
+    // Last winter's $600, moved up by the recent bills (≈ 10% dearer).
+    expect(winter!.amountMinor).toBeGreaterThan(60000);
+    expect(winter!.amountMinor).toBeLessThan(70000);
   });
 
-  it('projects the next period and due date from the cadence', () => {
-    const n = nextBillGuess(
-      { periodStart: '2026-09-14', periodEnd: '2026-10-13', dueDate: '2026-09-28' },
-      'monthly',
-      430,
-    )!;
-    expect(n.periodStart).toBe('2026-10-14');
-    expect(n.periodEnd).toBe('2026-11-13');
-    expect(n.dueDate).toBe('2026-10-28');
-    expect(n.amountMinor).toBe(430 * 31);
+  it('use the recent cost per day, times its days, without last year', () => {
+    const bills = [m(9000, '2026-06-01', '2026-06-30'), m(9300, '2026-07-01', '2026-07-31')];
+    const [next] = expectedBills(svc('monthly', true), bills, '2026-08');
+    expect(next?.basis).toBe('recent');
+    expect(next?.amountMinor).toBe(Math.round(((9000 / 30 + 9300 / 31) / 2) * 31));
   });
-  it('returns null with no history', () => {
-    expect(nextBillGuess(undefined, 'monthly', 1)).toBeNull();
+
+  it('keep a yearly bill whole, at its latest price, a year on', () => {
+    const rego = [m(80000, '2025-03-01', '2026-02-28'), m(82500, '2026-03-01', '2027-02-28')];
+    const next = expectedBills(svc('annual'), rego, '2028-12');
+    expect(next.map((e) => [e.dueDate.slice(0, 7), e.amountMinor, e.basis])).toEqual([
+      ['2028-02', 82500, 'latest'],
+    ]);
+  });
+
+  it('price a car service as one payment, never per day (the $267,421 BMW)', () => {
+    const visits = [m(73300, '2025-07-14', '2025-07-14'), m(73300, '2026-07-14', '2026-07-14')];
+    const [next] = expectedBills(svc('annual'), visits, '2027-12');
+    expect(next).toMatchObject({ dueDate: '2027-07-14', amountMinor: 73300 });
+    // Irregular servicing has no date to expect.
+    expect(nextExpected(svc('irregular'), visits)).toBeNull();
+    const varying = [
+      m(40000, '2025-01-10', '2025-01-10'),
+      m(90000, '2025-07-10', '2025-07-10'),
+      m(50000, '2026-01-10', '2026-01-10'),
+    ];
+    expect(nextExpected(svc('irregular'), varying)).toBeNull();
+    expect(eachBill(svc('irregular'), varying, '2026-10-01')).toMatchObject({
+      amountMinor: 60000,
+      cadence: 'irregular',
+      exact: false,
+      everyMonths: 6,
+    });
+  });
+
+  it('say what a bill costs when it comes, never spread over the months', () => {
+    const rego = [m(80000, '2025-03-01', '2026-02-28'), m(82500, '2026-03-01', '2027-02-28')];
+    expect(eachBill(svc('annual'), rego, '2026-10-01')).toMatchObject({
+      amountMinor: 82500,
+      cadence: 'annual',
+    });
+    const net = [m(12900, '2026-08-01', '2026-08-31'), m(12900, '2026-09-01', '2026-09-30')];
+    expect(eachBill(svc('monthly'), net, '2026-10-01')).toMatchObject({
+      amountMinor: 12900,
+      exact: true,
+    });
+    expect(eachBill(svc('monthly'), [], '2026-10-01')).toBeNull();
   });
 });
 
@@ -184,22 +184,22 @@ describe('projectMonth + reminders', () => {
   });
 
   it('projects October and splits the set-aside between members', () => {
-    const p = projectMonth(hid, '2026-10', db);
+    const p = projectMonth(hid, '2026-10', db, '2026-09-20');
     expect(p.services).toHaveLength(1);
     // The same $31 every month: October is $31 too, not 31 days at a
     // 30-day month's daily rate.
     expect(p.services[0]?.method).toBe('fixed');
     expect(p.totalMinor).toBe(3100);
-    expect(p.services[0]?.nextBill?.amountMinor).toBe(3100);
+    expect(p.services[0]?.expected.map((e) => e.dueDate)).toEqual(['2026-10-15']);
     expect(p.setAside.map((s) => s.minor).sort()).toEqual([1550, 1550]);
     expect(p.setAsideEach).toBe(1550);
-    expect(projectMonth(hid, '2026-10', db).totalMinor).toBe(3100);
+    expect(projectMonth(hid, '2026-10', db, '2026-09-20').totalMinor).toBe(3100);
   });
 
-  it('counts known accrual in a partly billed month', () => {
-    // September is fully billed, so its "projection" is just the known cost.
-    const p = projectMonth(hid, '2026-09', db);
+  it('counts a month gone by as the bills that were due in it, nothing expected', () => {
+    const p = projectMonth(hid, '2026-09', db, '2026-10-20');
     expect(p.totalMinor).toBe(3100);
+    expect(p.services[0]?.method).toBe('known');
   });
 
   it('ranks reminders by urgency', () => {

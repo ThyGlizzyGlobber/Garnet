@@ -133,7 +133,9 @@ Key properties:
 ### Projections
 
 - Next-bill estimate per service from recent cycles, seasonally aware (winter gas ≠ summer gas)
-- "Set aside ~$X each this fortnight/month" recommendation per member
+- "Set aside ~$X each this fortnight/month" recommendation per member: their share of the bills due next month
+- Every money figure by month counts a bill in full in the month it's due (an instalment in its own month), never spread over the months it covers: a car service, rego or rates notice is one payment. Expected bills are whole bills on a date: a fixed price or recurring charge at that price; bills priced by use (electricity, gas, water) from the same time last year, adjusted, else normal weather or the area, else recent bills per day × its days; anything else at its latest price (yearly bills, a price paid twice running or changed after a steady run) or the average of the last three. Irregular bills have no expected date.
+- A service's price is shown as what it costs when it comes and how often ("$733 each time", "$825 a year", "$59 a month"), never as a month's average
 
 ### Wall view (`/wall`)
 

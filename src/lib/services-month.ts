@@ -1,12 +1,12 @@
 import type { Household } from '@/db/schema';
 import { getDb, type Db } from '@/db/client';
 import { SAME_BAND } from '@/lib/averages';
-import { paysByInstalments } from '@/lib/instalments';
+import { dueParts } from '@/lib/instalments';
 import { billStatus, type BillStatus } from '@/lib/bill-status';
 import { listBills, type BillListItem } from '@/lib/bills';
 import { addMonths } from '@/lib/periods';
-import { estimatePerDay, fixedPrice, MONTHS_PER_BILL, nextBillGuess } from '@/lib/projections';
-import { upcomingCharge } from '@/lib/recurring';
+import { expectedBills } from '@/lib/expected';
+import { perDayFallback } from '@/lib/projections';
 import type { GroupedCategory } from '@/lib/service-categories';
 import { groupServices, listServices, type ServiceWithType } from '@/lib/services';
 
@@ -34,7 +34,7 @@ export interface MonthItem {
   expected: { dueDate: string; amountMinor: number | null } | null;
   /** Nothing this month and nothing expected: the month it last billed. */
   lastMonth: string | null;
-  /** What it cost each of the twelve months to this one (bills spread over their periods), for a sparkline. */
+  /** What fell due each of the twelve months to this one (bills in full when due), for a sparkline. */
   spark: number[];
 }
 
@@ -78,22 +78,6 @@ const RANK: Record<BillStatus['key'], number> = {
 const worst = (xs: (BillStatus | null)[]): BillStatus | null =>
   xs.reduce<BillStatus | null>((w, s) => (s && (!w || RANK[s.key] < RANK[w.key]) ? s : w), null);
 
-/**
- * What a bill has due: the bill itself, or, paid by instalments, each
- * instalment, with its due date and whether it's paid.
- */
-export function dueParts(
-  b: BillListItem,
-): { amountMinor: number; dueDate: string; paidAt: string | null }[] {
-  return paysByInstalments(b)
-    ? b.instalments.map((i) => ({
-        amountMinor: i.amountMinor,
-        dueDate: i.dueDate,
-        paidAt: i.paidToProviderAt,
-      }))
-    : [{ amountMinor: b.amountMinor, dueDate: b.dueDate, paidAt: b.paidToProviderAt }];
-}
-
 /** What a bill has due in a month (the bill, or its instalments due then). */
 function dueIn(b: BillListItem, month: string, today: string): MonthItem['bills'] {
   return dueParts(b)
@@ -103,25 +87,6 @@ function dueIn(b: BillListItem, month: string, today: string): MonthItem['bills'
       amountMinor: p.amountMinor,
       status: billStatus(p.paidAt, p.dueDate, today),
     }));
-}
-
-/** When a service's next bill is expected: a recurring charge, or a guess from its cadence. */
-export function expectedNext(
-  svc: ServiceWithType,
-  bills: BillListItem[],
-  today: string,
-): { dueDate: string; amountMinor: number | null } | null {
-  if (!svc.isActive || svc.cancelledAt || svc.cadence === 'irregular' || !bills[0]) return null;
-  const charge = upcomingCharge(svc, bills);
-  if (charge) return { dueDate: charge.dueDate, amountMinor: charge.amountMinor };
-  const est = estimatePerDay(bills, today.slice(0, 7));
-  const guess = nextBillGuess(
-    bills[0],
-    svc.cadence,
-    est.perDay,
-    MONTHS_PER_BILL[svc.cadence] ? fixedPrice(bills) : null,
-  );
-  return guess ? { dueDate: guess.dueDate, amountMinor: guess.amountMinor } : null;
 }
 
 export function servicesMonth(
@@ -153,8 +118,17 @@ export function servicesMonth(
       : undefined;
     const pct =
       first && before && before.amountMinor > 0 ? first.amountMinor / before.amountMinor - 1 : null;
-    // Only this month and the months ahead expect anything.
-    const next = !inMonth.length && month >= thisMonth ? expectedNext(svc, own, today) : null;
+    // Only this month and the months ahead expect anything: the bill
+    // expected this month (this month also takes a late one), else the next.
+    const next =
+      !inMonth.length && month >= thisMonth
+        ? (expectedBills(
+            svc,
+            own,
+            addMonths(month, 24),
+            perDayFallback(hh.id, svc, today, db),
+          ).find((e) => (month === thisMonth ? true : e.dueDate.slice(0, 7) >= month)) ?? null)
+        : null;
     const last = own.find((b) => b.dueDate.slice(0, 7) < month);
     items.set(svc.id, {
       service: svc,
@@ -169,9 +143,9 @@ export function servicesMonth(
               pct,
               month: before.dueDate.slice(0, 7),
             },
-      expected: next,
+      expected: next && { dueDate: next.dueDate, amountMinor: next.amountMinor },
       lastMonth: !inMonth.length && !next && last ? last.dueDate.slice(0, 7) : null,
-      spark: accrued(own, sparkMonths),
+      spark: dueByMonth(own, sparkMonths),
     });
   }
 
@@ -224,19 +198,16 @@ export function servicesMonth(
   };
 }
 
-/** What bills cost each month: each spread over the days of its period (a quarter's bill is three months of it). */
-function accrued(bills: BillListItem[], months: string[]): number[] {
-  const ms = (d: string) => Date.parse(`${d}T00:00:00Z`);
-  const DAY = 86_400_000;
-  return months.map((m) => {
-    const start = ms(`${m}-01`);
-    const end = ms(`${addMonths(m, 1)}-01`) - DAY;
-    return bills.reduce((sum, b) => {
-      const from = Math.max(start, ms(b.periodStart));
-      const to = Math.min(end, ms(b.periodEnd));
-      if (to < from) return sum;
-      const days = (ms(b.periodEnd) - ms(b.periodStart)) / DAY + 1;
-      return sum + (b.amountMinor * ((to - from) / DAY + 1)) / Math.max(days, 1);
-    }, 0);
-  });
+/** What fell due each month: each bill in full in its due month, each instalment in its own. */
+function dueByMonth(bills: BillListItem[], months: string[]): number[] {
+  return months.map((m) =>
+    bills.reduce(
+      (sum, b) =>
+        sum +
+        dueParts(b)
+          .filter((p) => p.dueDate.slice(0, 7) === m)
+          .reduce((s, p) => s + p.amountMinor, 0),
+      0,
+    ),
+  );
 }

@@ -4,7 +4,7 @@ import { bill, service, type Bill, type Service } from '@/db/schema';
 import { createBill } from '@/lib/bills';
 import { listHouseholds } from '@/lib/households';
 import { addDays, daysBetween, daysInclusive, todayIn } from '@/lib/dates';
-import { addCalendarMonths, MONTHS_PER_BILL } from '@/lib/projections';
+import { addCalendarMonths, MONTHS_PER_BILL } from '@/lib/cadence';
 import { listServices, type ServiceWithType } from '@/lib/services';
 
 /**
@@ -38,14 +38,24 @@ type ChargeBill = Pick<Bill, 'amountMinor' | 'periodStart' | 'periodEnd' | 'dueD
 
 const STEP_DAYS: Partial<Record<Service['cadence'], number>> = { weekly: 7, fortnightly: 14 };
 
-/**
- * The charge after this one, at its price: the same day a cadence later
- * (5 Sep → 5 Oct), with the same shape of period (a whole month, or a single
- * day for a one-off donation) and its due date as far into the period.
- */
+/** The charge after this one, at its price (see billAfter). */
 function chargeAfter(svc: RecurringFields, b: ChargeBill): ExpectedCharge | null {
-  const months = MONTHS_PER_BILL[svc.cadence];
-  const days = STEP_DAYS[svc.cadence];
+  const next = billAfter(svc.cadence, b);
+  return next && { serviceId: svc.id, ...next, amountMinor: b.amountMinor };
+}
+
+/**
+ * The bill after this one, by its cadence: the same day a cadence later
+ * (5 Sep → 5 Oct), with the same shape of period (a whole month, or a single
+ * day for a car service or a one-off donation) and its due date as far into
+ * the period. Null for irregular bills.
+ */
+export function billAfter(
+  cadence: Service['cadence'],
+  b: ChargeBill,
+): { periodStart: string; periodEnd: string; dueDate: string } | null {
+  const months = MONTHS_PER_BILL[cadence];
+  const days = STEP_DAYS[cadence];
   if (!months && !days) return null;
   const step = (d: string) => (months ? addCalendarMonths(d, months) : addDays(d, days!));
   const periodStart = step(b.periodStart);
@@ -55,7 +65,7 @@ function chargeAfter(svc: RecurringFields, b: ChargeBill): ExpectedCharge | null
     ? addDays(step(periodStart), -1)
     : addDays(periodStart, daysInclusive(b.periodStart, b.periodEnd) - 1);
   const dueDate = addDays(periodStart, Math.max(0, daysBetween(b.periodStart, b.dueDate)));
-  return { serviceId: svc.id, periodStart, periodEnd, dueDate, amountMinor: b.amountMinor };
+  return { periodStart, periodEnd, dueDate };
 }
 
 /** The latest of a service's bills, by the period it covers. */

@@ -218,11 +218,15 @@ describe('weather-aware comparisons and forecasts', () => {
   it('forecast a month with no bill from last year from normal weather', async () => {
     const { hh, power } = household(monthsBetween('2025-10', '2026-08'));
     await syncWeather(fakeProvider().provider, NOW, db);
-    const sept = projectMonth(hh.id, '2026-09', db).services.find(
+    // September's bill (1–28 Sep, due in October) has no bill from last September.
+    const oct = projectMonth(hh.id, '2026-10', db, TODAY).services.find(
       (s) => s.service.id === power.id,
     )!;
-    expect(sept.method).toBe('weather');
-    expect(sept.perDay).toBeCloseTo(150 + 25 * 7, 0); // normal September: 11 °C
+    expect(oct.method).toBe('weather');
+    const [sept] = oct.expected;
+    expect(sept?.periodStart).toBe('2026-09-01');
+    // Normal September (11 °C): $1.50 + 7 × $0.25 a day, for its 28 days, in full.
+    expect(sept!.amountMinor).toBeCloseTo((150 + 25 * 7) * 28, -1);
   });
 
   it('warn about the coming season from normal weather when last year has no bills', async () => {

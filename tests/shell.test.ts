@@ -64,15 +64,15 @@ describe('shellView', () => {
       },
       db,
     );
-    // A quarterly bill: only September's days count for this month.
+    // A quarterly bill due this month counts in full in it.
     createBill(
       hh.id,
       {
         serviceId: power.id,
         amountMinor: 92_000,
-        periodStart: '2026-07-01',
-        periodEnd: '2026-09-30',
-        dueDate: '2026-10-10',
+        periodStart: '2026-06-01',
+        periodEnd: '2026-08-31',
+        dueDate: '2026-09-25',
         source: 'manual',
       },
       db,
@@ -93,7 +93,7 @@ describe('shellView', () => {
     const v = shellView(hh, jordan, '2026-09-29', db);
     expect(v.household).toEqual({ name: 'Riverside House', members: ['Alex', 'Jordan'] });
     expect(v.split).toBe(true);
-    expect(v.services.map((s) => [s.name, s.minor])).toEqual([['Electricity', 30_000]]);
+    expect(v.services.map((s) => [s.name, s.minor])).toEqual([['Electricity', 92_000]]);
     // An everyday bill: listed under Essentials.
     expect(v.services[0]!.kind === 'service' && v.services[0]!.essential).toBe(true);
     // Rego is under Vehicles, one line per kind of vehicle bill.

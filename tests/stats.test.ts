@@ -75,7 +75,7 @@ beforeAll(() => {
       db,
     );
   }
-  // Quarterly power Jul–Sep 2026 $300 → $100/month accrued.
+  // Quarterly power Jul–Sep 2026 $300, due 20 October: October's, in full.
   createBill(
     hid,
     {
@@ -97,30 +97,32 @@ afterAll(() => {
 });
 
 describe('monthly series', () => {
-  it('accrues bills into months per service', () => {
-    const rows = monthlySeries(hid, ['2026-07', '2026-08', '2026-09'], db);
-    expect(rows.map((r) => r.total)).toEqual([20108, 20108, 19784]); // 92-day quarter, remainder to September
-    expect(rows[0]?.byService[power]).toBe(10108);
-    expect(rows.reduce((t, r) => t + (r.byService[power] ?? 0), 0)).toBe(30000);
+  it('counts each bill in full in the month it is due', () => {
+    const rows = monthlySeries(hid, ['2026-07', '2026-08', '2026-09', '2026-10'], db);
+    // Internet $100 each month; the quarter's power bill all in October, when it's due.
+    expect(rows.map((r) => r.total)).toEqual([10000, 10000, 10000, 30000]);
+    expect(rows[3]?.byService[power]).toBe(30000);
+    expect(rows[0]?.byService[power]).toBeUndefined();
   });
-  it('totals a range with the same accrual', () => {
-    const t = totalsForRange(hid, '2026-08-01', '2026-08-31', db);
-    expect(t.total).toBe(20109); // 10000 + round(30000 × 31 / 92)
-    expect(t.byService[0]?.minor).toBe(10109);
+  it('totals a range by due date the same way', () => {
+    expect(totalsForRange(hid, '2026-08-01', '2026-08-31', db).total).toBe(10000);
+    const oct = totalsForRange(hid, '2026-10-01', '2026-10-31', db);
+    expect(oct.total).toBe(30000);
+    expect(oct.byService[0]?.minor).toBe(30000);
   });
 });
 
 describe('dashboard summary', () => {
   it('reports this month, upcoming and overdue', () => {
     const s = dashboardSummary(hid, '2026-09-20', 7, db);
-    expect(s.thisMonth.total).toBe(19783); // 10000 + round(30000 × 30 / 92)
-    expect(s.lastMonthTotal).toBe(20109);
+    expect(s.thisMonth.total).toBe(10000); // September's internet; power is due in October
+    expect(s.lastMonthTotal).toBe(10000);
     expect(s.fiscalYear.label).toBe('2026–27');
     expect(s.overdue.map((x) => x.externalRef)).toEqual(['2026-09']); // due 15 Sep, unpaid
     expect(s.upcoming.map((x) => x.externalRef)).toEqual(['Q3']);
     expect(s.upcoming[0]?.daysUntilDue).toBe(30);
     expect(s.activeMemberCount).toBe(2);
-    expect(s.costPerPersonPerDay).toBe(Math.round(19783 / 30 / 2));
+    expect(s.costPerPersonPerDay).toBe(Math.round(10000 / 30 / 2));
   });
 });
 

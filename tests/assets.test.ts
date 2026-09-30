@@ -540,12 +540,15 @@ describe('the pages', () => {
     const lifestyle = serviceCardsView(hh, mum, { category: 'lifestyle' }, TODAY, db);
     expect(lifestyle.cards.map((c) => c.service.name)).toContain('Red Cross');
     const subs = subscriptionsView(hh, mum, TODAY, db);
-    // Largest a month first; a yearly plan counts a twelfth.
-    expect(subs.going.map((l) => [l.service.name, l.monthlyMinor])).toEqual([
-      ['Netflix', 2299],
-      ['Cloud', 1000],
+    // Each at its own price and how often; a yearly plan stays yearly, never
+    // a twelfth. Largest over a year first; the monthly total is the monthly ones.
+    expect(
+      subs.going.map((l) => [l.service.name, l.each?.amountMinor, l.each?.cadence, l.aYearMinor]),
+    ).toEqual([
+      ['Netflix', 2299, 'monthly', 27588],
+      ['Cloud', 12000, 'annual', 12000],
     ]);
-    expect(subs.monthlyMinor).toBe(3299);
+    expect(subs.monthlyMinor).toBe(2299);
     // The year ahead repeats each expected charge by its cadence: Netflix
     // (monthly) through the year, the yearly plan once.
     const marks = (label: string) =>

@@ -155,7 +155,7 @@ describe('reads are scoped', () => {
     expect(s.thisMonth.total).toBe(10000);
     expect(s.activeMemberCount).toBe(2);
     expect(settlementRate(A.hh.id, '2026-09', db).total).toBe(1);
-    const p = projectMonth(A.hh.id, '2026-10', db);
+    const p = projectMonth(A.hh.id, '2026-10', db, '2026-09-20');
     expect(p.services.map((x) => x.service.id)).toEqual([A.svc.id]);
   });
 });

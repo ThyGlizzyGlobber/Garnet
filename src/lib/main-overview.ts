@@ -3,15 +3,16 @@ import { billStatus, type BillStatus } from '@/lib/bill-status';
 import type { BillListItem } from '@/lib/bills';
 import { PALETTE, shadesOf } from '@/lib/palette';
 import { addMonths } from '@/lib/periods';
-import { MONTHS_PER_BILL } from '@/lib/projections';
 import type { ServiceWithType } from '@/lib/services';
-import { dueParts, expectedNext } from '@/lib/services-month';
+import { dueParts } from '@/lib/instalments';
+import { expectedBills, type PerDayFallback } from '@/lib/expected';
 
 /**
  * The overview at the top of a main service's page (Vehicles, Health,
  * Lifestyle, Subscriptions), like a service's own page: the last twelve
  * months by due date, month by month and by series (a kind of vehicle bill,
- * or a service), the average month, the next thing due, and the year ahead:
+ * or a service), the next thing due, and the year ahead (every bill in full
+ * in the month it's due, never spread over the months it covers):
  * for each row (a vehicle, or a service), what's due or expected in each of
  * the next twelve months. Pure numbers; the page words them.
  */
@@ -48,7 +49,8 @@ export interface MainOverview {
   months: { month: string; parts: { key: string; minor: number }[]; totalMinor: number }[];
   yearMinor: number;
   yearBills: number;
-  perMonthMinor: number;
+  /** Everything in the year ahead: still to pay, and every bill expected in the next twelve months. */
+  aheadMinor: number;
   /** The soonest unpaid bill (overdue first), else the next expected one. */
   next: {
     rowLabel: string;
@@ -105,6 +107,8 @@ export function mainOverview(input: {
   seriesOf: (b: BillListItem) => string;
   /** The series an expected bill of a service belongs to. */
   seriesOfService: (s: ServiceWithType) => string;
+  /** Normal weather or the area's cost for a service's expected bills, when the page has them. */
+  fallbackOf?: (s: ServiceWithType) => PerDayFallback;
   today: string;
 }): MainOverview {
   const { rows, series, seriesOf, today } = input;
@@ -167,29 +171,23 @@ export function mainOverview(input: {
   const aheadRows = rows
     .map((r) => {
       const open = dues(r.bills).filter((d) => !d.paidAt);
-      const expected = r.services.flatMap((svc): Due[] => {
-        const own = r.bills.filter((b) => b.serviceId === svc.id);
-        // Expected after its latest bill, paid or still to pay.
-        const next = expectedNext(svc, own, today);
-        if (!next) return [];
-        // Then again each cadence through the year (a monthly subscription is
-        // twelve marks, a quarterly bill four), at the same amount.
-        const every = MONTHS_PER_BILL[svc.cadence];
-        const dates = [next.dueDate];
-        while (every && dates.length < 12) {
-          const d = stepMonths(next.dueDate, every * dates.length);
-          if (d.slice(0, 7) > last) break;
-          dates.push(d);
-        }
-        return dates.map((dueDate) => ({
+      const expected = r.services.flatMap((svc): Due[] =>
+        // Every bill each service is expected to send through the year, each
+        // in full on its due date (src/lib/expected.ts).
+        expectedBills(
+          svc,
+          r.bills.filter((b) => b.serviceId === svc.id),
+          last,
+          input.fallbackOf?.(svc),
+        ).map((e) => ({
           billId: null,
           seriesKey: input.seriesOfService(svc),
-          amountMinor: next.amountMinor,
-          dueDate,
+          amountMinor: e.amountMinor,
+          dueDate: e.dueDate,
           paidAt: null,
           expected: true,
-        }));
-      });
+        })),
+      );
       const items = [...open, ...expected]
         .map((d) => ({ ...d, month: d.dueDate.slice(0, 7) }))
         .map((d) => (d.month < thisMonth ? { ...d, month: thisMonth } : d))
@@ -213,7 +211,7 @@ export function mainOverview(input: {
     months,
     yearMinor,
     yearBills: new Set(year.map((d) => d.billId)).size,
-    perMonthMinor: perMonth([...rows.flatMap((r) => r.bills), ...(input.loose ?? [])], today),
+    aheadMinor: aheadRows.flatMap((r) => r.items).reduce((sum, i) => sum + (i.amountMinor ?? 0), 0),
     next: first
       ? {
           rowLabel: rowOf(first.billId, first.dueDate)?.label ?? '',
@@ -228,38 +226,4 @@ export function mainOverview(input: {
     byRow,
     ahead: { months: aheadMonths, rows: aheadRows },
   };
-}
-
-/**
- * What it costs a month: each bill counted over the days of its period that
- * fall in the last twelve months (a yearly insurance paid in March counts
- * seven months of it by October), over twelve months, or over the months
- * since the first bill began when that's more recent (a gym joined in
- * January is $59 a month, not nine payments spread over a year).
- */
-function perMonth(bills: BillListItem[], today: string): number {
-  if (!bills.length) return 0;
-  const from = addDays(today, -365);
-  const ms = (d: string) => Date.parse(`${d}T00:00:00Z`);
-  let accrued = 0;
-  for (const b of bills) {
-    const start = b.periodStart > from ? b.periodStart : from;
-    const end = b.periodEnd < today ? b.periodEnd : today;
-    if (end < start) continue;
-    const days = (ms(b.periodEnd) - ms(b.periodStart)) / 86_400_000 + 1;
-    const inside = (ms(end) - ms(start)) / 86_400_000 + 1;
-    accrued += (b.amountMinor * inside) / Math.max(days, 1);
-  }
-  const first = bills.reduce((m, b) => (b.periodStart < m ? b.periodStart : m), today);
-  const months =
-    first > from ? Math.max(1, (ms(today) - ms(first)) / (86_400_000 * (365.25 / 12))) : 12;
-  return Math.round(accrued / Math.min(12, months));
-}
-
-/** A date some months on, on the same day or the month's last ("2026-01-31" + 1 → "2026-02-28"). */
-function stepMonths(date: string, months: number): string {
-  const month = addMonths(date.slice(0, 7), months);
-  const [y, m] = month.split('-').map(Number) as [number, number];
-  const lastDay = new Date(Date.UTC(y, m, 0)).getUTCDate();
-  return `${month}-${String(Math.min(Number(date.slice(8, 10)), lastDay)).padStart(2, '0')}`;
 }

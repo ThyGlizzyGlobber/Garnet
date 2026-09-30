@@ -11,6 +11,24 @@ export const paysByInstalments = (b: WithInstalments): boolean =>
   b.paymentPlan === 'instalments' && b.instalments.length > 0;
 
 /**
+ * What a bill has due: the bill itself, or, paid by instalments, each
+ * instalment, with its due date and whether it's paid. Every money figure by
+ * month counts these in full in the month they're due.
+ */
+export function dueParts(
+  b: WithInstalments & { paidToProviderAt: string | null },
+): { amountMinor: number; dueDate: string; paidAt: string | null; seq: number }[] {
+  return paysByInstalments(b)
+    ? b.instalments.map((i) => ({
+        amountMinor: i.amountMinor,
+        dueDate: i.dueDate,
+        paidAt: i.paidToProviderAt,
+        seq: i.seq,
+      }))
+    : [{ amountMinor: b.amountMinor, dueDate: b.dueDate, paidAt: b.paidToProviderAt, seq: 0 }];
+}
+
+/**
  * Who chooses how a bill is paid (in full or by instalments): for a personal
  * bill its owner; for the household's, an admin or the service's payer.
  */

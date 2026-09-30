@@ -3,18 +3,11 @@ import { getDb, type Db } from '@/db/client';
 import { bill, member, share, type Bill, type Member, type Share } from '@/db/schema';
 import { type BillListItem, listBills } from '@/lib/bills';
 import { daysInclusive, monthOf } from '@/lib/dates';
-import {
-  addMonths,
-  allocateToMonths,
-  daysUntil,
-  fiscalYearBounds,
-  lastMonths,
-  monthBounds,
-} from '@/lib/periods';
+import { addMonths, daysUntil, fiscalYearBounds, lastMonths, monthBounds } from '@/lib/periods';
 import { isActiveOn } from '@/lib/members';
 import { listServices, type ServiceWithType } from '@/lib/services';
-import { ownerCondition, type Scope } from '@/lib/scope';
-import { shareDueDate } from '@/lib/instalments';
+import type { Scope } from '@/lib/scope';
+import { dueParts, shareDueDate } from '@/lib/instalments';
 
 export interface ServiceTotal {
   service: ServiceWithType;
@@ -27,29 +20,28 @@ export interface MonthRow {
   byService: Record<string, number>;
 }
 
-/** Bills whose billing period overlaps [start, end]: household bills unless the scope says otherwise. */
-function billsOverlapping(
+/**
+ * What falls due in [start, end] (ISO dates), part by part: each bill in
+ * full on its due date, a bill paid by instalments as each instalment on its
+ * own (owner, 2026-10-01: a car service or a rates notice is one payment,
+ * never spread over the months it covers). Household bills unless the scope
+ * says otherwise.
+ */
+function dueBetween(
   householdId: string,
   start: string,
   end: string,
   db: Db = getDb(),
   scope: Scope = {},
-): Bill[] {
-  return db
-    .select()
-    .from(bill)
-    .where(
-      and(
-        eq(bill.householdId, householdId),
-        lte(bill.periodStart, end),
-        gte(bill.periodEnd, start),
-        ownerCondition(bill.ownerMemberId, scope),
-      ),
-    )
-    .all();
+): { serviceId: string; amountMinor: number; dueDate: string }[] {
+  return listBills(householdId, scope, db).flatMap((b) =>
+    dueParts(b)
+      .filter((p) => p.dueDate >= start && p.dueDate <= end)
+      .map((p) => ({ serviceId: b.serviceId, amountMinor: p.amountMinor, dueDate: p.dueDate })),
+  );
 }
 
-/** Accrued cost per month per service, pro-rata by days, for the given months. */
+/** What fell due each of the given months ("2026-09"), per service (see dueBetween). */
 export function monthlySeries(
   householdId: string,
   months: string[],
@@ -59,28 +51,20 @@ export function monthlySeries(
   const first = months[0];
   const last = months[months.length - 1];
   if (!first || !last) return [];
-  const bills = billsOverlapping(
-    householdId,
-    monthBounds(first).start,
-    monthBounds(last).end,
-    db,
-    scope,
-  );
   const rows = new Map<string, MonthRow>(
     months.map((m) => [m, { month: m, total: 0, byService: {} }]),
   );
-  for (const b of bills) {
-    for (const a of allocateToMonths(b.amountMinor, b.periodStart, b.periodEnd)) {
-      const row = rows.get(a.month);
-      if (!row) continue;
-      row.total += a.minor;
-      row.byService[b.serviceId] = (row.byService[b.serviceId] ?? 0) + a.minor;
-    }
+  const parts = dueBetween(householdId, monthBounds(first).start, monthBounds(last).end, db, scope);
+  for (const p of parts) {
+    const row = rows.get(p.dueDate.slice(0, 7));
+    if (!row) continue;
+    row.total += p.amountMinor;
+    row.byService[p.serviceId] = (row.byService[p.serviceId] ?? 0) + p.amountMinor;
   }
   return months.map((m) => rows.get(m)!);
 }
 
-/** Accrued total for a date range, per service. */
+/** What fell due in a date range, per service, largest first (see dueBetween). */
 export function totalsForRange(
   householdId: string,
   start: string,
@@ -91,18 +75,11 @@ export function totalsForRange(
   const services = new Map(
     listServices(householdId, { includeInactive: true, ...scope }, db).map((s) => [s.id, s]),
   );
-  const bills = billsOverlapping(householdId, start, end, db, scope);
   const byId = new Map<string, number>();
   let total = 0;
-  for (const b of bills) {
-    // Portion of the bill's period inside the range.
-    const s = b.periodStart > start ? b.periodStart : start;
-    const e = b.periodEnd < end ? b.periodEnd : end;
-    const days = daysInclusive(s, e);
-    if (days <= 0) continue;
-    const minor = Math.round((b.amountMinor * days) / daysInclusive(b.periodStart, b.periodEnd));
-    total += minor;
-    byId.set(b.serviceId, (byId.get(b.serviceId) ?? 0) + minor);
+  for (const p of dueBetween(householdId, start, end, db, scope)) {
+    total += p.amountMinor;
+    byId.set(p.serviceId, (byId.get(p.serviceId) ?? 0) + p.amountMinor);
   }
   const byService = [...byId.entries()]
     .map(([id, minor]) => ({ service: services.get(id)!, minor }))
@@ -143,8 +120,8 @@ export function dashboardSummary(
   const lm = monthBounds(addMonths(month, -1));
   const lastMonthTotal = totalsForRange(householdId, lm.start, lm.end, db).total;
   const ly = monthBounds(addMonths(month, -12));
-  const lyBills = billsOverlapping(householdId, ly.start, ly.end, db);
-  const sameMonthLastYearTotal = lyBills.length
+  const lyParts = dueBetween(householdId, ly.start, ly.end, db);
+  const sameMonthLastYearTotal = lyParts.length
     ? totalsForRange(householdId, ly.start, ly.end, db).total
     : null;
   const fy = fiscalYearBounds(today, fiscalYearStartMonth);

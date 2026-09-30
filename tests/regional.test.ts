@@ -186,7 +186,7 @@ describe('area figures', () => {
     for (const h of bendigo.slice(0, 4)) setRegionalSharing(h.hh.id, true, 'settings', null, db);
   });
 
-  it('fill a new household’s estimates when it has no history of its own', () => {
+  it('price a new household’s next bill when it has little history of its own', () => {
     computeRegionalStats(db, NOW);
     const hh = createHousehold(
       {
@@ -206,13 +206,31 @@ describe('area figures', () => {
       { typeSlug: 'electricity', name: 'Electricity', provider: 'AGL', payerMemberId: jo.id },
       db,
     );
-    const june = projectMonth(hh.id, '2026-06', db).services.find((s) => s.service.id === svc.id)!;
+    // Its first bill, for April (due in May): June's bill for May is expected
+    // at the area's typical cost, not April's.
+    createBill(
+      hh.id,
+      {
+        serviceId: svc.id,
+        amountMinor: 3000,
+        periodStart: '2026-04-01',
+        periodEnd: '2026-04-30',
+        dueDate: '2026-05-14',
+        source: 'manual',
+      },
+      db,
+    );
+    const june = projectMonth(hh.id, '2026-06', db, '2026-05-20').services.find(
+      (s) => s.service.id === svc.id,
+    )!;
     expect(june.method).toBe('area');
-    expect(june.perDay).toBeGreaterThan(300);
-    // Not sharing: no area estimate either.
+    expect(june.monthMinor / 31).toBeGreaterThan(300);
+    // Not sharing: no area figure, so its own bill's cost per day.
     setRegionalSharing(hh.id, false, 'settings', null, db);
     expect(
-      projectMonth(hh.id, '2026-06', db).services.find((s) => s.service.id === svc.id)!.method,
-    ).toBe('none');
+      projectMonth(hh.id, '2026-06', db, '2026-05-20').services.find(
+        (s) => s.service.id === svc.id,
+      )!.method,
+    ).toBe('single');
   });
 });

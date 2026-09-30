@@ -238,7 +238,7 @@ export function seasonAhead(
         currency: bills[0]!.currency,
         basis: 'weather',
         basisYear: '',
-        setAsideCovers: cadence === 'seasonal' || cadence === 'weather',
+        setAsideCovers: cadence === 'lastYear' || cadence === 'weather',
       });
       continue;
     }
@@ -290,7 +290,7 @@ export function seasonAhead(
       currency: bills[0]!.currency,
       basis: 'last_year',
       basisYear: nextStart.slice(0, 4),
-      setAsideCovers: cadence === 'seasonal',
+      setAsideCovers: cadence === 'lastYear',
     });
   }
   return notices;

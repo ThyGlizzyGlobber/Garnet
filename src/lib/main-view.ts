@@ -6,8 +6,9 @@ import { addDays } from '@/lib/dates';
 import { mainOverview, seriesColours, type MainOverview } from '@/lib/main-overview';
 import { upcomingCharge, type ExpectedCharge } from '@/lib/recurring';
 import { billDue, type BillStatus } from '@/lib/bill-status';
-import { fixedMonthly, MONTHS_PER_BILL } from '@/lib/projections';
-import { dueParts } from '@/lib/services-month';
+import { billsAYear, eachBill, type EachBill } from '@/lib/expected';
+import { perDayFallback } from '@/lib/projections';
+import { dueParts } from '@/lib/instalments';
 import { assetKindOf, inMainCategory, type GroupedCategory } from '@/lib/service-categories';
 import {
   chargedAfterCancel,
@@ -40,7 +41,9 @@ export interface ServiceCard {
   upcoming: ExpectedCharge | null;
   /** Bills dated after it was cancelled (it's still charging). */
   afterCancel: number;
-  /** Its own figures (for its tile): the last 12 months, a month's average, what's next. */
+  /** What a bill costs when it comes, and how often ("$733 each time", "$825 a year"). */
+  each: EachBill | null;
+  /** Its own figures (for its tile): the last 12 months, the year ahead, what's next. */
   overview: MainOverview;
   /** The colour it wears in the charts (distinct from its neighbours'). */
   colour: string;
@@ -75,6 +78,7 @@ export function serviceCardsView(
   );
   const bills = listBills(hh.id, { viewer: me.id }, db);
   const going = (svc: ServiceWithType) => svc.isActive && !svc.cancelledAt;
+  const fallbackOf = (svc: ServiceWithType) => perDayFallback(hh.id, svc, today, db);
   const series = seriesColours(
     services.map((svc) => ({ key: svc.id, label: svc.name, colour: svc.colour })),
   );
@@ -87,11 +91,13 @@ export function serviceCardsView(
       upcoming: upcomingCharge(svc, own),
       afterCancel: own.filter((b) => chargedAfterCancel(svc, b)).length,
       colour: series[i]!.colour,
+      each: eachBill(svc, own, today),
       overview: mainOverview({
         rows: [{ key: svc.id, label: svc.name, bills: own, services: going(svc) ? [svc] : [] }],
         series: [series[i]!],
         seriesOf: () => svc.id,
         seriesOfService: () => svc.id,
+        fallbackOf,
         today,
       }),
     };
@@ -117,6 +123,7 @@ export function serviceCardsView(
       series,
       seriesOf: (b) => b.serviceId,
       seriesOfService: (svc) => svc.id,
+      fallbackOf,
       today,
     }),
   };
@@ -124,10 +131,12 @@ export function serviceCardsView(
 
 /** What was due on a vehicle's (or a set of vehicles') bills, by kind: see mainOverview. */
 function vehicleOverview(
+  householdId: string,
   rows: { key: string; label: string; bills: BillListItem[] }[],
   kinds: ServiceType[],
   services: Map<string, ServiceWithType>,
   today: string,
+  db: Db,
   loose: BillListItem[] = [],
 ): MainOverview {
   return mainOverview({
@@ -141,6 +150,7 @@ function vehicleOverview(
     series: kinds.map((k) => ({ key: k.slug, label: k.label, colour: k.colour })),
     seriesOf: (b) => b.service.typeSlug,
     seriesOfService: (svc) => svc.typeSlug,
+    fallbackOf: (svc) => perDayFallback(householdId, svc, today, db),
     today,
   });
 }
@@ -202,6 +212,7 @@ export function vehiclesView(
       canEdit: canEditAsset(me, a),
       bills: own,
       overview: vehicleOverview(
+        hh.id,
         kinds
           .map((k) => ({
             key: k.slug,
@@ -212,6 +223,7 @@ export function vehiclesView(
         kinds,
         services,
         today,
+        db,
       ),
     };
   });
@@ -220,10 +232,12 @@ export function vehiclesView(
     cards,
     waiting,
     overview: vehicleOverview(
+      hh.id,
       cards.map((c) => ({ key: c.asset.id, label: c.asset.name, bills: c.bills })),
       kinds,
       services,
       today,
+      db,
       waiting,
     ),
   };
@@ -263,7 +277,7 @@ export function vehicleView(
     asset: a,
     canEdit: canEditAsset(me, a),
     bills: own,
-    overview: vehicleOverview(rows, kinds, services, today),
+    overview: vehicleOverview(hh.id, rows, kinds, services, today, db),
     kinds: rows.map((r) => ({
       type: kinds.find((k) => k.slug === r.key)!,
       providers: [...new Set(r.bills.map((b) => b.service.provider))],
@@ -276,8 +290,8 @@ export function vehicleView(
 export interface SubscriptionLine {
   service: ServiceWithType;
   colour: string;
-  /** What it costs a month (a yearly plan over twelve), or null before its first bill. */
-  monthlyMinor: number | null;
+  /** Its price and how often ("$22.99 a month", "$120 a year"), or null before its first charge. */
+  each: EachBill | null;
   /** Its next charge (expected), or the latest bill still to pay. */
   next: { dueDate: string; amountMinor: number | null; status: BillStatus | null } | null;
   latest: BillListItem | null;
@@ -286,6 +300,8 @@ export interface SubscriptionLine {
   afterCancel: number;
   /** Charged in the last 12 months. */
   yearMinor: number;
+  /** What a year of it costs at its price, to compare subscriptions charged at different times. */
+  aYearMinor: number;
   /** Its own last twelve months and what's next (see mainOverview). */
   overview: MainOverview;
 }
@@ -293,17 +309,21 @@ export interface SubscriptionLine {
 export interface SubscriptionsView {
   going: SubscriptionLine[];
   cancelled: SubscriptionLine[];
-  /** Every subscription still going, a month. */
+  /** The monthly ones still going, added up: what leaves each month. */
   monthlyMinor: number;
+  /** Every one still going, a year at its price. */
+  aYearMinor: number;
   yearMinor: number;
   /** All of them together: the year ahead, each month (see mainOverview). */
   overview: MainOverview;
 }
 
 /**
- * Subscriptions, built like Health: each one's price a month, its last
- * twelve months and its next charge, the cancelled ones after; and
- * together, what they cost a month, which take the most, and the year ahead.
+ * Subscriptions, built like Health: each one's price and how often it's
+ * charged, its last twelve months and its next charge, the cancelled ones
+ * after; and together, what the monthly ones cost a month, what each costs
+ * over a year, and the year ahead. A yearly plan is its yearly price, never
+ * spread over the months (owner, 2026-10-01).
  */
 export function subscriptionsView(
   hh: Household,
@@ -314,16 +334,12 @@ export function subscriptionsView(
   const v = serviceCardsView(hh, me, { typeSlug: 'subscriptions' }, today, db);
   const line = (c: ServiceCard): SubscriptionLine => {
     const latest = c.bills[0] ?? null;
-    const months = MONTHS_PER_BILL[c.service.cadence];
-    const monthlyMinor =
-      fixedMonthly(c.service.cadence, c.bills) ??
-      (latest && months ? Math.round(latest.amountMinor / months) : null);
     const open = latest ? billDue(latest, today) : null;
     const expected = c.overview.next;
     return {
       service: c.service,
       colour: c.colour,
-      monthlyMinor,
+      each: c.each,
       next:
         open && open.status.key !== 'paid'
           ? { dueDate: open.status.dueDate, amountMinor: open.amountMinor, status: open.status }
@@ -334,14 +350,18 @@ export function subscriptionsView(
       bills: c.bills.length,
       afterCancel: c.afterCancel,
       yearMinor: c.yearMinor,
+      aYearMinor: c.each ? Math.round(c.each.amountMinor * billsAYear(c.each)) : 0,
       overview: c.overview,
     };
   };
-  const going = v.cards.map(line).sort((a, b) => (b.monthlyMinor ?? 0) - (a.monthlyMinor ?? 0));
+  const going = v.cards.map(line).sort((a, b) => b.aYearMinor - a.aYearMinor);
   return {
     going,
     cancelled: v.stopped.map(line),
-    monthlyMinor: going.reduce((sum, l) => sum + (l.monthlyMinor ?? 0), 0),
+    monthlyMinor: going
+      .filter((l) => l.each?.cadence === 'monthly')
+      .reduce((sum, l) => sum + l.each!.amountMinor, 0),
+    aYearMinor: going.reduce((sum, l) => sum + l.aYearMinor, 0),
     yearMinor: v.yearMinor,
     overview: v.overview,
   };

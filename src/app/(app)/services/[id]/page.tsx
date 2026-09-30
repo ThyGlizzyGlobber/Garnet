@@ -4,7 +4,7 @@ import { getTranslations } from 'next-intl/server';
 import { billRowFor, rowCtx, statusLabel, upcomingRowFor } from '@/components/app/bill-rows';
 import { PeriodBars } from '@/components/charts/period-bars';
 import { PriceSteps } from '@/components/charts/price-steps';
-import { MONTHS_PER_BILL } from '@/lib/projections';
+import { MONTHS_PER_BILL } from '@/lib/cadence';
 import { StackBar } from '@/components/charts/stack-bar';
 import { Card, LinkButton } from '@/components/ui';
 import { Delta, Kv, Notice, PageTitle, SectionHead } from '@/components/ui/blocks';
@@ -23,6 +23,7 @@ import { isAdmin } from '@/lib/roles';
 import { visibleTo } from '@/lib/scope';
 import { seasonNoticeText } from '@/lib/season-text';
 import { serviceOverview } from '@/lib/service-overview';
+import { eachText, everyText } from '../overview';
 import { getMember } from '@/lib/members';
 import { chargedAfterCancel, getService, mainServiceOf } from '@/lib/services';
 import { listBills } from '@/lib/bills';
@@ -81,16 +82,19 @@ export default async function ServicePage({
   // "Northwind Energy, quarterly. $1,864 last financial year, about $155 a
   // month. The latest bill used 5% more than the same time last year…"
   const lastYear = o.comparisons.find((r) => r.against === 'lastYear');
+  // What a bill costs when it comes, and how often (never spread over months).
+  const each = o.stats.each ? await eachText(ctx, o.stats.each) : null;
+  const every = o.stats.each ? await everyText(o.stats.each) : null;
   const limit = o.comparisons.find((r) => r.against === 'limit');
   const lede = [
     ts('page.ledeProvider', {
       provider: svc.provider,
       cadence: ts(`form.cadences.${svc.cadence}`).toLowerCase(),
     }),
-    o.stats.year.bills
+    o.stats.year.bills && each
       ? ts(o.stats.year.current ? 'page.ledeYearSoFar' : 'page.ledeYear', {
           total: money(o.stats.year.minor, hh.currency, { whole: true }),
-          month: money(o.stats.year.perMonthMinor, hh.currency, { whole: true }),
+          each,
           label: o.stats.year.label,
         })
       : ts('page.ledeNoBills'),
@@ -477,8 +481,14 @@ export default async function ServicePage({
             </div>
             <div>
               <span className="muted small">{ts('page.statMonth')}</span>
-              <b>{money(o.stats.year.perMonthMinor, hh.currency, { whole: true })}</b>
-              <span className="muted small">{o.stats.year.label}</span>
+              <b>
+                {o.stats.each
+                  ? o.stats.each.exact
+                    ? money(o.stats.each.amountMinor)
+                    : `≈ ${money(o.stats.each.amountMinor, hh.currency, { whole: true })}`
+                  : '—'}
+              </b>
+              <span className="muted small">{every ?? ts('noHistory')}</span>
             </div>
             <div>
               <span className="muted small">{ts('page.statLatest')}</span>
@@ -491,7 +501,7 @@ export default async function ServicePage({
               <span className="muted small">{ts('page.statNext')}</span>
               <b>
                 {o.stats.next
-                  ? o.stats.next.method === 'fixed'
+                  ? o.stats.next.method === 'fixed' || o.stats.next.method === 'recurring'
                     ? money(o.stats.next.amountMinor)
                     : `≈ ${money(o.stats.next.amountMinor, hh.currency, { whole: true })}`
                   : '—'}
@@ -686,7 +696,7 @@ export default async function ServicePage({
             </Card>
           )}
 
-          {o.comingUp.length > 0 && (
+          {o.comingUp.some((u) => u.method !== 'none') && (
             <Card>
               <SectionHead
                 title={t('comingUp.title')}
@@ -696,7 +706,11 @@ export default async function ServicePage({
                 {o.comingUp.map((u) => (
                   <div key={u.month} className="cm">
                     <span className="cm-m">{month(u.month, 'long')}</span>
-                    <span className="cm-v">{money(u.minor, hh.currency, { whole: true })}</span>
+                    <span className="cm-v">
+                      {u.method === 'none'
+                        ? '—'
+                        : `${u.method === 'known' || u.method === 'fixed' || u.method === 'recurring' ? '' : '≈ '}${money(u.minor, hh.currency, { whole: true })}`}
+                    </span>
                     <span className="cm-s">{t(`comingUp.short.${u.method}`)}</span>
                   </div>
                 ))}

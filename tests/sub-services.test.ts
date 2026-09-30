@@ -190,7 +190,13 @@ describe('sub-services', () => {
     expect(groups.filter((g) => !g.typeSlug).every((g) => g.services.length === 1)).toBe(true);
 
     const streamly = listServices(hh.id, {}, db).find((s) => s.name === 'Streamly')!;
-    bill(streamly.id, { periodStart: '2026-09-05', periodEnd: '2026-10-04', amountMinor: 3100 });
+    bill(streamly.id, {
+      periodStart: '2026-09-05',
+      periodEnd: '2026-10-04',
+      issueDate: '2026-09-05',
+      dueDate: '2026-09-05',
+      amountMinor: 3100,
+    });
     const shell = shellView(hh, alex, TODAY, db);
     const entry = shell.services.find((e) => e.kind === 'group')!;
     expect(entry).toMatchObject({

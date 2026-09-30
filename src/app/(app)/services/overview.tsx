@@ -8,14 +8,41 @@ import { SectionHead } from '@/components/ui/blocks';
 import { Swatch } from '@/components/ui/colour';
 import { Chip, StatusChip } from '@/components/ui/chip';
 import type { PageContext } from '@/lib/context';
+import type { EachBill } from '@/lib/expected';
 import type { MainOverview } from '@/lib/main-overview';
 
 /**
  * The pieces of a main service's overview (numbers from mainOverview()):
  * the year ahead, what was due each month, the four figures and where the
- * money goes. OverviewLayout puts them beside a page's cards like a
- * service's own page; Vehicles and a vehicle's page use them one by one.
+ * money goes. Every figure counts a bill in full when it's due.
  */
+
+/**
+ * What a bill costs when it comes, and how often: "$22.99 a month", "about
+ * $466 a quarter", "$733 each time, about every 12 months". Never spread
+ * over the months (owner, 2026-10-01).
+ */
+export async function eachText(ctx: PageContext, each: EachBill): Promise<string> {
+  const t = await getTranslations('main.each');
+  const amount = each.exact
+    ? ctx.money(each.amountMinor)
+    : ctx.money(each.amountMinor, ctx.hh.currency, { whole: true });
+  const text =
+    each.cadence === 'irregular' && each.everyMonths
+      ? t('irregularEvery', { amount, months: each.everyMonths })
+      : t(each.cadence, { amount });
+  return each.exact ? text : t('about', { text });
+}
+
+/** How often, under a bill's price: "a month", "a quarter, on average", "each time, about every 12 months". */
+export async function everyText(each: EachBill): Promise<string> {
+  const t = await getTranslations('main.each');
+  const tp = await getTranslations('main.per');
+  if (each.cadence === 'irregular' && each.everyMonths)
+    return t('every', { months: each.everyMonths });
+  const per = tp(each.cadence);
+  return each.exact ? per : t('onAverage', { per });
+}
 
 /** A series' name as the page words it ("Rego" for Vehicle registration). */
 type SeriesName = (key: string, label: string) => string;
@@ -133,7 +160,7 @@ export async function MonthsCard({
   );
 }
 
-/** The four figures: last 12 months, a month on average, next due, and a fourth of the page's own. */
+/** The four figures: last 12 months, the next 12 (to pay and expected), next due, and a fourth of the page's own. */
 export async function NumsCard({
   ctx,
   overview: o,
@@ -162,7 +189,7 @@ export async function NumsCard({
       </div>
       <div>
         <span className="muted small">{t('month')}</span>
-        <b>{whole(o.perMonthMinor)}</b>
+        <b>{o.aheadMinor ? `≈ ${whole(o.aheadMinor)}` : '—'}</b>
         <span className="muted small">{t('monthSub')}</span>
       </div>
       <div>

@@ -123,6 +123,8 @@ describe('provider names and billing frequency', () => {
     expect(cadenceFromPeriod('2026-06-01', '2026-08-31')).toBe('quarterly');
     expect(cadenceFromPeriod('2026-06-01', '2026-07-31')).toBe('bimonthly');
     expect(cadenceFromPeriod('2026-01-01', '2026-12-31')).toBe('annual');
+    expect(cadenceFromPeriod('2026-07-14', '2026-07-14')).toBe('irregular');
+    expect(cadenceFromPeriod('2026-07-01', '2026-07-07')).toBe('weekly');
     expect(sameProvider('AGL', 'AGL Energy')).toBe(true);
     expect(sameProvider('Red Energy', 'Origin Energy')).toBe(false);
   });

@@ -14,7 +14,7 @@ import type {
   SubscriptionLine,
   SubscriptionsView,
 } from '@/lib/main-view';
-import { BreakdownCard, MonthsCard, NextLine, NumsCard, YearAheadCard } from './overview';
+import { BreakdownCard, eachText, MonthsCard, NextLine, NumsCard, YearAheadCard } from './overview';
 
 /**
  * Health and Lifestyle, built like Vehicles: a tile per service first (its
@@ -43,6 +43,13 @@ export async function ServiceTilesPage({
   const o = view.overview;
   const name = (_: string, label: string) => label;
   const count = view.cards.length + view.stopped.length;
+  const eachLine = new Map(
+    await Promise.all(
+      [...view.cards, ...view.stopped]
+        .filter((c) => c.each)
+        .map(async (c) => [c.service.id, await eachText(ctx, c.each!)] as const),
+    ),
+  );
 
   const tile = (c: ServiceCard) => {
     const svc = c.service;
@@ -63,8 +70,8 @@ export async function ServiceTilesPage({
           .join(' · ')}
         figure={c.overview.yearBills ? whole(c.overview.yearMinor) : '—'}
         figureSub={
-          c.overview.yearBills
-            ? t('tileYear', { amount: whole(c.overview.perMonthMinor) })
+          c.overview.yearBills && c.each
+            ? t('tileYear', { each: eachLine.get(svc.id)! })
             : t('tileNoBills')
         }
         next={<NextLine ctx={ctx} next={c.overview.next} name={null} />}
@@ -189,9 +196,11 @@ export async function SubscriptionsPage({
         ]
           .filter(Boolean)
           .join(' · ')}
-        figure={l.monthlyMinor === null ? '—' : money(l.monthlyMinor)}
+        figure={l.each ? money(l.each.amountMinor) : '—'}
         figureSub={
-          l.monthlyMinor === null ? t('noCharges') : t('tileSub', { amount: whole(l.yearMinor) })
+          l.each
+            ? t('tileSub', { per: tm(`per.${l.each.cadence}`), amount: whole(l.yearMinor) })
+            : t('noCharges')
         }
         next={
           cancelled ? (
@@ -215,7 +224,15 @@ export async function SubscriptionsPage({
   const coming = view.going
     .filter((l) => l.next)
     .sort((a, b) => a.next!.dueDate.localeCompare(b.next!.dueDate));
-  const priced = view.going.filter((l) => l.monthlyMinor);
+  const priced = view.going.filter((l) => l.each && l.aYearMinor > 0);
+  const monthly = view.going.filter((l) => l.each?.cadence === 'monthly');
+  // Charged less often than monthly (a yearly plan): its own price, never spread.
+  const lessOften = view.going.filter((l) => l.each && l.each.cadence !== 'monthly');
+  const eachOf = new Map(
+    await Promise.all(
+      priced.map(async (l) => [l.service.id, await eachText(ctx, l.each!)] as const),
+    ),
+  );
   const charging = view.cancelled.filter((l) => l.afterCancel);
 
   return (
@@ -226,7 +243,11 @@ export async function SubscriptionsPage({
         title={title}
         lede={
           count
-            ? t('lede', { count: view.going.length, amount: money(view.monthlyMinor) })
+            ? t('lede', {
+                count: view.going.length,
+                amount: money(view.monthlyMinor),
+                others: lessOften.length,
+              })
             : undefined
         }
         right={
@@ -280,19 +301,25 @@ export async function SubscriptionsPage({
               <div className="subs-total">
                 <span className="fig hero-fig">{money(view.monthlyMinor)}</span>
                 <span className="muted">
-                  {t('aMonthFor', { count: view.going.length })} ·{' '}
-                  {t('aYear', { amount: whole(view.monthlyMinor * 12) })}
+                  {t('aMonthFor', { count: monthly.length })}
+                  {lessOften.length > 0 &&
+                    ` · ${t('plus', {
+                      list: new Intl.ListFormat(hh.locale, { type: 'conjunction' }).format(
+                        lessOften.map((l) => `${l.service.name} ${eachOf.get(l.service.id)}`),
+                      ),
+                    })}`}
                 </span>
               </div>
               {priced.length > 0 && (
                 <>
+                  <span className="muted small">{t('overYear')}</span>
                   <StackBar
                     parts={priced.map((l) => ({
-                      value: l.monthlyMinor!,
+                      value: l.aYearMinor,
                       colour: l.colour,
                       label: l.service.name,
-                      text: money(l.monthlyMinor!),
-                      tip: `${l.service.name} · ${money(l.monthlyMinor!)} ${t('aMonth')}`,
+                      text: whole(l.aYearMinor),
+                      tip: `${l.service.name} · ${eachOf.get(l.service.id)}`,
                     }))}
                   />
                   <ul className="ov-list">
@@ -300,9 +327,9 @@ export async function SubscriptionsPage({
                       <li key={l.service.id}>
                         <Swatch colour={l.colour} />
                         <span>{l.service.name}</span>
-                        <b>{money(l.monthlyMinor!)}</b>
+                        <b>{eachOf.get(l.service.id)}</b>
                         <span className="muted small">
-                          {Math.round((l.monthlyMinor! / view.monthlyMinor) * 100)}%
+                          {Math.round((l.aYearMinor / view.aYearMinor) * 100)}%
                         </span>
                       </li>
                     ))}
@@ -310,7 +337,9 @@ export async function SubscriptionsPage({
                 </>
               )}
               <p className="muted small mt-3">
-                {t('yearSpent', { amount: whole(view.yearMinor) })}
+                {t('yearSpent', { amount: whole(view.yearMinor) })}{' '}
+                {view.overview.aheadMinor > 0 &&
+                  t('aheadLine', { amount: whole(view.overview.aheadMinor) })}
               </p>
             </Card>
             <Card>

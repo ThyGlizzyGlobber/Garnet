@@ -2,7 +2,7 @@ import type { Household, Member } from '@/db/schema';
 import { getDb, type Db } from '@/db/client';
 import { listAssets } from '@/lib/assets';
 import { listBills } from '@/lib/bills';
-import { dueParts } from '@/lib/services-month';
+import { dueParts } from '@/lib/instalments';
 import { listActiveMembers } from '@/lib/members';
 import { monthBounds } from '@/lib/periods';
 import { documentCounts } from '@/lib/review';

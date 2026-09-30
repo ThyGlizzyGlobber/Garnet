@@ -113,11 +113,13 @@ afterAll(() => {
 describe('a fixed-price service', () => {
   it('averages, guesses and estimates at its price, whatever the month’s length', () => {
     const o = serviceOverview(hh, getService(hh.id, internetId, db)!, '2026-08-20', db);
-    // Averaged over the months it had bills, not all twelve.
-    expect(o.stats.year.perMonthMinor).toBe(12900);
+    // Each bill is its price, exactly: $129 a month.
+    expect(o.stats.each).toMatchObject({ amountMinor: 12900, cadence: 'monthly', exact: true });
     expect(o.stats.next).toMatchObject({ amountMinor: 12900, method: 'fixed' });
-    expect(o.comingUp.map((c) => c.minor)).toEqual([12900, 12900, 12900]);
-    expect(o.comingUp.every((c) => c.method === 'fixed')).toBe(true);
+    // Each month ahead: the bills due in it, in full. The latest bill is June's,
+    // so July's and August's haven't come in: both are still to come this month.
+    expect(o.comingUp.map((c) => c.minor)).toEqual([25800, 12900, 12900]);
+    expect(o.comingUp.every((c) => c.method === 'fixed' || c.method === 'known')).toBe(true);
     // One bar per bill at its cost, so every bar is the same height.
     expect(o.barsPerBill).toBe(true);
     expect(new Set(o.bars.map((b) => b.value))).toEqual(new Set([12900]));
@@ -125,17 +127,16 @@ describe('a fixed-price service', () => {
 });
 
 describe('a service whose bills vary', () => {
-  it('averages a month over its bills, not the whole year', () => {
+  it('says what a bill costs when it comes: the average of its bills', () => {
     const o = serviceOverview(hh, getService(hh.id, gasId, db)!, '2026-04-10', db);
-    // $211 over three monthly bills (this financial year so far): $70.33 a
-    // month, not $211 over the nine months since July.
+    // $211 over three monthly bills this financial year so far: about $70.33 each.
     expect(o.stats.year.minor).toBe(21100);
-    expect(o.stats.year.perMonthMinor).toBe(7033);
+    expect(o.stats.each).toMatchObject({ amountMinor: 7033, cadence: 'monthly', exact: false });
     expect(o.stats.next?.method).not.toBe('fixed');
   });
 
-  it('averages last year at last year’s prices', () => {
-    // Internet went from $129 to $139 in July: 2025–26 still averages $129.
+  it('takes a new price as the price, and keeps last year at last year’s', () => {
+    // Internet went from $129 to $139 in July: the next bill is $139.
     const svc = getService(hh.id, internetId, db)!;
     createBill(
       hh.id,
@@ -151,7 +152,8 @@ describe('a service whose bills vary', () => {
       db,
     );
     const o = serviceOverview(hh, svc, '2026-08-20', db);
-    expect(o.stats.year.perMonthMinor).toBe(12900);
+    expect(o.stats.each?.amountMinor).toBe(13900);
+    expect(o.stats.next?.amountMinor).toBe(13900);
     expect(o.stats.year.label).toBe('2025–26');
   });
 });

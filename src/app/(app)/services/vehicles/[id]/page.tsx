@@ -68,7 +68,7 @@ export default async function VehiclePage({
                     }),
                   ),
                 ),
-              })} ${tv('costs', { amount: whole(o.yearMinor), month: whole(o.perMonthMinor) })}`
+              })} ${tv('costs', { amount: whole(o.yearMinor), ahead: whole(o.aheadMinor) })}`
             : tv('noBillsLede')
         }
         lead

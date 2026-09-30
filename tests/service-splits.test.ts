@@ -134,7 +134,7 @@ describe('a service split by percentage or set amounts', () => {
     ]);
 
     // The month's set-aside follows it too.
-    const month = projectMonth(hh.id, '2026-11', db);
+    const month = projectMonth(hh.id, '2026-11', db, '2026-10-01');
     const byMember = Object.fromEntries(month.setAside.map((s) => [s.member.id, s.minor]));
     expect(byMember[jordan.id]! / month.totalMinor).toBeCloseTo(0.4, 2);
   });
