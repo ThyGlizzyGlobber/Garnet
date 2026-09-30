@@ -1,7 +1,9 @@
 import Link from 'next/link';
+import type { ReactNode } from 'react';
 import { getTranslations } from 'next-intl/server';
 import { rowCtx, statusLabel } from '@/components/app/bill-rows';
 import { Icon } from '@/components/app/icons';
+import { Sparkline } from '@/components/charts/sparkline';
 import { Badge, Button, Card, Field, Input, LinkButton, Select } from '@/components/ui';
 import { EmptyCard, PageTitle, Stats } from '@/components/ui/blocks';
 import { StatusChip } from '@/components/ui/chip';
@@ -27,10 +29,11 @@ import { createServiceTypeAction } from './actions';
 const SCOPES: MonthScope[] = ['all', 'household', 'mine'];
 
 /**
- * Services, one month at a time: what each service billed this month, where
- * it stands and how it compares with the bill before, or when the next is
- * expected. Main services (Vehicles, Subscriptions…) fold their services
- * away, closed by default. Numbers from servicesMonth().
+ * Services, one month at a time: a tile per service (and per main service:
+ * Vehicles, Health, Lifestyle, Subscriptions, each opening its page) with
+ * what's due this month, a year's line, where it stands and how it compares
+ * with the bill before, in the order they need attention. Numbers from
+ * servicesMonth().
  */
 export default async function ServicesPage({
   searchParams,
@@ -77,6 +80,7 @@ export default async function ServicesPage({
       ) : (
         <span className="muted small">
           {tm('nextOn', { date: rc.dateYear(i.expected.dueDate) })}
+          {i.expected.amountMinor ? ` · ~${money0(i.expected.amountMinor)}` : ''}
         </span>
       );
     return (
@@ -102,86 +106,110 @@ export default async function ServicesPage({
         ? tm('bills', { count: i.bills.length })
         : '';
 
-  const row = (i: MonthItem) => {
-    const s = i.service;
-    return (
-      <Link
-        key={s.id}
-        href={`/services/${s.id}`}
-        className={`sm-row${i.bills.length ? '' : ' is-quiet'}`}
-        style={{ ['--svc' as string]: colourCss(s.colour) }}
-      >
-        <Disc icon={s.type.icon} colour={s.colour} size="sm" />
-        <span className="sm-name">
-          <b>{s.name}</b>
-          <span className="muted small">
-            {[s.provider !== s.name ? s.provider : null, s.ownerMemberId ? tmain('yours') : null]
-              .filter(Boolean)
-              .join(' · ')}
+  /** A tile: the service (or main service), this month's amount, a year's line, where it stands. */
+  const tile = (t: {
+    key: string;
+    href: string;
+    icon: string;
+    colour: string;
+    name: string;
+    meta: string;
+    amount: string;
+    quiet: boolean;
+    spark: number[];
+    foot: ReactNode;
+    change?: MonthItem['change'];
+    changeText?: string;
+  }) => (
+    <Link
+      key={t.key}
+      href={t.href}
+      className={`glass st-tile rounded-card${t.quiet ? ' is-quiet' : ''}`}
+      style={{ ['--svc' as string]: colourCss(t.colour) }}
+    >
+      <span className="st-h">
+        <Disc icon={t.icon} colour={t.colour} size="sm" />
+        <span className="st-t">
+          <b>{t.name}</b>
+          {t.meta && <span className="muted small">{t.meta}</span>}
+        </span>
+      </span>
+      <span className="st-fig fig">{t.amount}</span>
+      {t.spark.some((v) => v > 0) ? (
+        <Sparkline values={t.spark} colour={t.colour} className="st-spark" />
+      ) : (
+        <span className="st-spark" />
+      )}
+      <span className="st-foot">
+        {t.foot}
+        {t.changeText && (
+          <span
+            className={`st-ch small${t.change?.dir === 'up' ? ' up' : t.change?.dir === 'down' ? ' down' : ''}`}
+          >
+            {t.change && t.change.dir !== 'same' && (
+              <Icon
+                name={t.change.dir === 'up' ? 'arrow-up' : 'arrow-down'}
+                width={12}
+                height={12}
+              />
+            )}
+            {t.changeText}
           </span>
-        </span>
-        <span className="sm-amt fig">
-          {i.bills.length
-            ? money(i.amountMinor)
-            : i.expected?.amountMinor
-              ? `~${money0(i.expected.amountMinor)}`
-              : '—'}
-        </span>
-        <span className="sm-st">{standing(i)}</span>
-        <span
-          className={`sm-ch small${i.change?.dir === 'up' ? ' up' : i.change?.dir === 'down' ? ' down' : ''}`}
-        >
-          {i.change && i.change.dir !== 'same' && (
-            <Icon name={i.change.dir === 'up' ? 'arrow-up' : 'arrow-down'} width={13} height={13} />
-          )}
-          {change(i)}
-        </span>
-      </Link>
-    );
-  };
+        )}
+      </span>
+    </Link>
+  );
 
   const entry = (e: MonthEntry) => {
-    if (e.kind === 'service') return row(e.item);
+    if (e.kind === 'service') {
+      const i = e.item;
+      const s = i.service;
+      return tile({
+        key: s.id,
+        href: `/services/${s.id}`,
+        icon: s.type.icon,
+        colour: s.colour,
+        name: s.name,
+        meta: [s.provider !== s.name ? s.provider : null, s.ownerMemberId ? tmain('yours') : null]
+          .filter(Boolean)
+          .join(' · '),
+        // This month's figure: what's due, or what's expected this month.
+        amount: i.bills.length
+          ? money(i.amountMinor)
+          : i.expected?.amountMinor && i.expected.dueDate.slice(0, 7) === picked
+            ? `~${money0(i.expected.amountMinor)}`
+            : '—',
+        quiet: !i.bills.length,
+        spark: i.spark,
+        foot: standing(i),
+        change: i.change,
+        changeText: change(i),
+      });
+    }
     const name = e.category ? tmain(`main.${e.category}`) : e.label;
-    const page = e.category ? `/services/category/${e.category}` : `/services/group/${e.typeSlug}`;
     const billed = e.items.some((i) => i.bills.length);
     // Nothing due yet: what's expected this month, added up.
     const expectedMinor = e.items
       .filter((i) => i.expected && i.expected.dueDate.slice(0, 7) === picked)
       .reduce((sum, i) => sum + (i.expected!.amountMinor ?? 0), 0);
-    return (
-      <details key={e.key} className="sm-grp" style={{ ['--svc' as string]: colourCss(e.colour) }}>
-        <summary className={`sm-row${billed ? '' : ' is-quiet'}`}>
-          <Disc icon={e.icon} colour={e.colour} size="sm" />
-          <span className="sm-name">
-            <b>{name}</b>
-            <span className="muted small">{tm('count', { count: e.items.length })}</span>
-          </span>
-          <span className="sm-amt fig">
-            {billed ? money(e.amountMinor) : expectedMinor ? `~${money0(expectedMinor)}` : '—'}
-          </span>
-          <span className="sm-st">
-            {e.status ? (
-              <StatusChip status={{ label: statusLabel(rc, e.status), tone: e.status.tone }} />
-            ) : e.toCome ? (
-              <StatusChip status={{ label: tm('toComeChip', { count: e.toCome }), tone: 'info' }} />
-            ) : (
-              <span className="muted small">{tm('nothing')}</span>
-            )}
-          </span>
-          <span className="sm-ch">
-            <Icon name="chevron-down" width={16} height={16} className="sm-chev" />
-          </span>
-        </summary>
-        <div className="sm-sub">
-          {e.items.map((i) => row(i))}
-          <Link href={page} className="sm-open small">
-            {tm('open', { name })}
-            <Icon name="chevron-right" width={14} height={14} />
-          </Link>
-        </div>
-      </details>
-    );
+    return tile({
+      key: e.key,
+      href: e.category ? `/services/category/${e.category}` : `/services/group/${e.typeSlug}`,
+      icon: e.icon,
+      colour: e.colour,
+      name,
+      meta: tm('count', { count: e.items.length }),
+      amount: billed ? money(e.amountMinor) : expectedMinor ? `~${money0(expectedMinor)}` : '—',
+      quiet: !billed,
+      spark: e.spark,
+      foot: e.status ? (
+        <StatusChip status={{ label: statusLabel(rc, e.status), tone: e.status.tone }} />
+      ) : e.toCome ? (
+        <StatusChip status={{ label: tm('toComeChip', { count: e.toCome }), tone: 'info' }} />
+      ) : (
+        <span className="muted small">{tm('nothing')}</span>
+      ),
+    });
   };
 
   const c = view.counts;
@@ -274,7 +302,7 @@ export default async function ServicesPage({
               ]}
             />
           </Card>
-          <Card className="sm-list">{view.entries.map(entry)}</Card>
+          <div className="st-grid">{view.entries.map(entry)}</div>
         </>
       )}
       {operator && (

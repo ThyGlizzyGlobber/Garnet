@@ -16,7 +16,7 @@ import { groupServices, listServices, type ServiceWithType } from '@/lib/service
  * each instalment in its own month), where it stands, and how it compares
  * with the bill before; a service with nothing due that month says when the
  * next is expected, or when it last had a bill due. Main services (Vehicles,
- * Subscriptions…) gather theirs. Pure numbers; the page words them.
+ * Subscriptions…) gather theirs. Listed in the order they need attention. Pure numbers; the page words them.
  */
 
 export type MonthScope = 'all' | 'household' | 'mine';
@@ -34,6 +34,8 @@ export interface MonthItem {
   expected: { dueDate: string; amountMinor: number | null } | null;
   /** Nothing this month and nothing expected: the month it last billed. */
   lastMonth: string | null;
+  /** What it cost each of the twelve months to this one (bills spread over their periods), for a sparkline. */
+  spark: number[];
 }
 
 export type MonthEntry =
@@ -51,6 +53,8 @@ export type MonthEntry =
       status: BillStatus | null;
       /** Of its services, how many have something expected this month. */
       toCome: number;
+      /** Its services' months added up. */
+      spark: number[];
     };
 
 export interface ServicesMonth {
@@ -134,6 +138,7 @@ export function servicesMonth(
   const bills = listBills(hh.id, opts, db);
   const services = listServices(hh.id, { ...opts, includeInactive: true }, db);
 
+  const sparkMonths = Array.from({ length: 12 }, (_, i) => addMonths(month, i - 11));
   const items = new Map<string, MonthItem>();
   for (const svc of services) {
     const own = bills.filter((b) => b.serviceId === svc.id);
@@ -166,6 +171,7 @@ export function servicesMonth(
             },
       expected: next,
       lastMonth: !inMonth.length && !next && last ? last.dueDate.slice(0, 7) : null,
+      spark: accrued(own, sparkMonths),
     });
   }
 
@@ -185,8 +191,20 @@ export function servicesMonth(
       amountMinor: its.reduce((s, i) => s + i.amountMinor, 0),
       status: worst(its.map((i) => i.status)),
       toCome: its.filter((i) => i.expected && i.expected.dueDate.slice(0, 7) === month).length,
+      spark: sparkMonths.map((_, k) => its.reduce((sum, i) => sum + i.spark[k]!, 0)),
     };
   });
+  // What needs attention first: overdue, due soon, due later, expected this
+  // month, paid, then nothing this month; the nav's order within each.
+  const rank = (i: MonthItem) =>
+    i.status
+      ? { overdue: 0, today: 1, tomorrow: 1, soon: 1, due: 2, paid: 4 }[i.status.key]
+      : i.expected && i.expected.dueDate.slice(0, 7) === month
+        ? 3
+        : 5;
+  const rankOf = (e: MonthEntry) =>
+    e.kind === 'service' ? rank(e.item) : Math.min(...e.items.map(rank));
+  entries.sort((a, b) => rankOf(a) - rankOf(b));
 
   const all = [...items.values()];
   const monthBills = all.flatMap((i) => i.bills);
@@ -204,4 +222,21 @@ export function servicesMonth(
     },
     entries,
   };
+}
+
+/** What bills cost each month: each spread over the days of its period (a quarter's bill is three months of it). */
+function accrued(bills: BillListItem[], months: string[]): number[] {
+  const ms = (d: string) => Date.parse(`${d}T00:00:00Z`);
+  const DAY = 86_400_000;
+  return months.map((m) => {
+    const start = ms(`${m}-01`);
+    const end = ms(`${addMonths(m, 1)}-01`) - DAY;
+    return bills.reduce((sum, b) => {
+      const from = Math.max(start, ms(b.periodStart));
+      const to = Math.min(end, ms(b.periodEnd));
+      if (to < from) return sum;
+      const days = (ms(b.periodEnd) - ms(b.periodStart)) / DAY + 1;
+      return sum + (b.amountMinor * ((to - from) / DAY + 1)) / Math.max(days, 1);
+    }, 0);
+  });
 }

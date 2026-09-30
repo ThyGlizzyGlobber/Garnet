@@ -126,7 +126,7 @@ Key properties:
 
 ### The Services page and the Bills filters (owner, 2026-10-01)
 
-- The Services page shows one month at a time (‹ October 2026 ›, up to next month): what's due, paid, to pay and still to come that month, then a line per service with what it has due that month (by due date; each instalment in its own month), where it stands and the change from the bill before, or when its next bill is expected. Main services fold their services away, closed by default.
+- The Services page shows one month at a time (‹ October 2026 ›, up to next month): what's due, paid, to pay and still to come that month, then a tile per service and per main service (Vehicles, Health, Lifestyle, Subscriptions, each opening its page), in the order they need attention (overdue, due soon, due later, expected this month, paid, nothing this month). A tile shows what's due that month (by due date; each instalment in its own month) or what's expected this month, a line of the last twelve months, where it stands, and the change from the bill before; a service with nothing due says when its next bill is expected.
 - A service whose bills follow the calendar at a (nearly) fixed price (internet, a subscription) shows its price over time (a step line, a dot per bill) instead of cost bars of one height.
 - The Bills page has one filter bar: search, All · To pay · Paid · Unusual, and a Filters button (service, year, whose, which months) whose choices show as removable pills.
 
