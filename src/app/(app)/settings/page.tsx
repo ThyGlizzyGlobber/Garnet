@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
-import { Card, PageHeader } from '@/components/ui';
+import { Button, Card, LinkButton, PageHeader } from '@/components/ui';
+import { logout } from '@/app/login/actions';
 import { Icon } from '@/components/app/icons';
 import { IconDisc } from '@/components/ui/colour';
 import { Ring } from '@/components/ui/ring';
@@ -42,6 +43,7 @@ export default async function SettingsPage() {
   const t = await getTranslations('settings');
   const env = getEnv();
   const ta = await getTranslations('appearance');
+  const tn = await getTranslations('nav');
   const tl = await getTranslations('location');
   const ts = await getTranslations('sharing');
   const tg = await getTranslations('settings.glance');
@@ -196,6 +198,22 @@ export default async function SettingsPage() {
           )}
         </div>
         <div className="flex flex-col gap-4">
+          <Card className="flex flex-col gap-3" id="account">
+            <SectionTitle icon="user">{tn('account')}</SectionTitle>
+            <div className="flex flex-wrap gap-2">
+              <LinkButton href="/members" variant="secondary" size="sm" icon="users">
+                {tn('members')}
+              </LinkButton>
+              <LinkButton href="/wall" variant="secondary" size="sm" icon="desktop">
+                {tn('wall')}
+              </LinkButton>
+              <form action={logout}>
+                <Button variant="secondary" size="sm" icon="chevron-right">
+                  {tn('logout')}
+                </Button>
+              </form>
+            </div>
+          </Card>
           <Card className="flex flex-col gap-3" id="location">
             <SectionTitle icon="pin">{tl('title')}</SectionTitle>
             <p className="text-xs text-fg-muted">{tl('body')}</p>

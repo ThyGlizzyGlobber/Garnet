@@ -74,7 +74,7 @@ export async function PersonalView({ ctx, toggle }: { ctx: PageContext; toggle: 
 
         {/* Shares only exist in a household that splits its bills. */}
         {hh.splitMode === 'shared' && (
-          <Tile href="/ledger" className="flex flex-col">
+          <Tile href="/money" className="flex flex-col">
             <TileHeader
               small
               title={t('owe.title')}

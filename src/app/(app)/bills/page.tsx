@@ -188,7 +188,7 @@ export default async function BillsPage({
               </Link>
               {inboxMatches > 0 && (
                 <Link
-                  href={`/review?f=all&q=${encodeURIComponent(q)}`}
+                  href={`/inbox?f=all&q=${encodeURIComponent(q)}`}
                   className="font-semibold text-accent"
                 >
                   {t('search.inInbox', { count: inboxMatches })}

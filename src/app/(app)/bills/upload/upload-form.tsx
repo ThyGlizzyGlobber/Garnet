@@ -3,7 +3,7 @@
 import { useTranslations } from 'next-intl';
 import { Card, Field, Input } from '@/components/ui';
 import { ActionForm } from '@/components/ui/form';
-import { uploadBillAction } from '@/app/(app)/review/actions';
+import { uploadBillAction } from '@/app/(app)/inbox/actions';
 
 export function UploadForm() {
   const t = useTranslations('upload');

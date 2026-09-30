@@ -1,140 +1,167 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { Icon } from './icons';
 import { Avatar } from '@/components/ui/colour';
-import { NavLinks } from './nav-links';
-
-export interface NavItem {
-  href: string;
-  label: string;
-  icon: string;
-}
+import { IconButton, SearchField } from '@/components/ui/controls';
+import { LinkButton } from '@/components/ui';
+import { colourCss } from '@/lib/palette';
+import type { ShellView } from '@/lib/shell';
+import { Icon } from './icons';
+import { NavItems, SectionName, type NavItem } from './nav-items';
 
 /**
- * App frame: ambient scene → one big frosted window holding the top bar and
- * content → floating segmented nav pill.
+ * The app's frame (BRAND.md §9): the scene behind, a floating nav column
+ * beside the page (a rail of icons on an iPad, a bottom bar on a phone),
+ * and a simple top bar: search, Inbox, Add bill. Layout in
+ * src/styles/shell.css; the numbers come from shellView().
  */
+export interface ShellLabels {
+  nav: { home: string; services: string; bills: string; money: string; inbox: string };
+  settings: string;
+  addBill: string;
+  search: string;
+  /** "Just you", for a household of one. */
+  justYou: string;
+  admin: string;
+  member: string;
+  servicesHead: string;
+  thisMonth: string;
+  justYours: string;
+  noServices: string;
+  /** The product's name, under the household's on a phone's Home. */
+  product: string;
+  householdHome: string;
+}
+
 export function AppShell({
-  householdName,
-  memberName,
-  memberColour,
-  nav,
-  logoutAction,
-  logoutLabel,
-  settingsHref,
-  settingsLabel,
-  wallHref,
-  wallLabel,
-  reviewHref,
-  reviewLabel,
-  reviewCount,
-  addHref,
-  addLabel,
-  searchLabel,
+  view,
+  labels,
+  locale,
+  money,
   children,
 }: {
-  householdName: string;
-  memberName: string;
-  memberColour: string;
-  nav: NavItem[];
-  logoutAction: () => Promise<void>;
-  logoutLabel: string;
-  settingsHref: string;
-  settingsLabel: string;
-  wallHref: string;
-  wallLabel: string;
-  reviewHref: string;
-  reviewLabel: string;
-  reviewCount: number;
-  addHref: string;
-  addLabel: string;
-  searchLabel: string;
+  view: ShellView;
+  labels: ShellLabels;
+  locale: string;
+  /** Formats minor units as whole money ("$2,300"). */
+  money: (minor: number) => string;
   children: ReactNode;
 }) {
-  const iconBtn =
-    'relative grid size-11 place-items-center rounded-full bg-surface-2 text-fg transition hover:bg-border-strong';
+  const items: NavItem[] = [
+    { href: '/', label: labels.nav.home, icon: 'home' },
+    { href: '/services', label: labels.nav.services, icon: 'services' },
+    { href: '/bills', label: labels.nav.bills, icon: 'bills' },
+    ...(view.split ? [{ href: '/money', label: labels.nav.money, icon: 'money' }] : []),
+    { href: '/inbox', label: labels.nav.inbox, icon: 'inbox', badge: view.inboxCount },
+  ];
+  const who =
+    view.household.members.length <= 1
+      ? labels.justYou
+      : new Intl.ListFormat(locale, { type: 'conjunction' }).format(view.household.members);
+  const row = (s: ShellView['services'][number]) => (
+    <Link
+      key={s.id}
+      href={`/services/${s.id}`}
+      className="nc-s"
+      style={{ ['--svc' as string]: colourCss(s.colour) }}
+    >
+      <i aria-hidden="true" />
+      <span>{s.name}</span>
+      <b>{money(s.minor)}</b>
+    </Link>
+  );
   return (
-    <div className="min-h-dvh px-3 pt-3 pb-32 sm:px-6 sm:pt-6">
-      <div className="window mx-auto max-w-[1400px] px-4 pt-4 pb-8 sm:px-8 sm:pt-6 sm:pb-10">
-        <header className="flex items-center justify-between gap-4">
-          <Link
-            href="/"
-            className="flex min-w-0 items-center gap-2.5 font-display text-lg font-bold"
-          >
-            <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-accent text-accent-fg">
-              <Icon name="home" width={19} height={19} />
-            </span>
-            <span className="truncate">{householdName}</span>
-          </Link>
-          <form
-            action="/bills"
-            method="get"
-            className="hidden min-w-0 flex-1 justify-center md:flex"
-          >
-            <label className="flex h-11 w-full max-w-md items-center gap-3 rounded-full bg-surface-2 px-4 text-fg-muted">
-              <Icon name="search" width={18} height={18} />
-              <input
-                name="q"
-                type="search"
-                placeholder={searchLabel}
-                className="min-w-0 flex-1 bg-transparent text-sm text-fg outline-none placeholder:text-fg-muted"
-              />
-            </label>
-          </form>
-          <div className="flex items-center gap-2">
-            <Link
-              href={reviewHref}
-              title={reviewLabel}
-              aria-label={reviewLabel}
-              className={iconBtn}
-            >
-              <Icon name="inbox" width={19} height={19} />
-              {reviewCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 grid min-w-4 place-items-center rounded-full bg-warning px-1 text-[11px] font-bold text-bg">
-                  {reviewCount}
-                </span>
+    <div className="app">
+      <nav className="nav glass-strong vertical column" aria-label="Main">
+        <Link href="/" className="nc-brand" aria-label={labels.householdHome}>
+          <span className="mark">
+            <Icon name="home" width={17} height={17} />
+          </span>
+          <span className="nc-bt">
+            <b>{view.household.name}</b>
+            <span>{who}</span>
+          </span>
+        </Link>
+        <NavItems items={items} />
+        <div className="nc-svcs">
+          {view.services.length + view.mine.length > 0 ? (
+            <>
+              <div className="nav-sec">
+                {labels.servicesHead}
+                <span>{labels.thisMonth}</span>
+              </div>
+              {view.services.map(row)}
+              {view.mine.length > 0 && (
+                <>
+                  <div className="nav-sec">{labels.justYours}</div>
+                  {view.mine.map(row)}
+                </>
               )}
-            </Link>
-            <Link
-              href={wallHref}
-              title={wallLabel}
-              aria-label={wallLabel}
-              className={`${iconBtn} hidden md:grid`}
-            >
-              <Icon name="wall" width={19} height={19} />
-            </Link>
-            <Link
-              href={settingsHref}
-              title={settingsLabel}
-              aria-label={settingsLabel}
-              className={iconBtn}
-            >
-              <Icon name="gear" width={19} height={19} />
-            </Link>
-            <form action={logoutAction} className="hidden items-center sm:flex">
-              <button
-                title={logoutLabel}
-                className="flex h-11 items-center gap-2 rounded-full bg-surface-2 py-1 pr-3 pl-1 text-sm font-semibold hover:bg-border-strong"
-              >
-                <Avatar name={memberName} colour={memberColour} className="size-8 text-xs" />
-                {memberName}
-              </button>
-            </form>
-            <Link
-              href={addHref}
-              className="inline-flex h-11 items-center gap-2 rounded-full bg-accent px-4 text-sm font-bold text-accent-fg hover:opacity-90 sm:px-5"
-            >
-              <Icon name="plus" width={18} height={18} />
-              <span className="hidden sm:inline">{addLabel}</span>
-            </Link>
-          </div>
-        </header>
-        <main className="pt-7">{children}</main>
-      </div>
-      <nav className="fixed inset-x-0 bottom-[max(16px,env(safe-area-inset-bottom))] z-10 flex justify-center px-3 sm:bottom-7">
-        <div className="glass-nav flex w-full max-w-md gap-1 rounded-full p-1.5 sm:w-auto sm:max-w-none sm:gap-1.5 sm:p-2">
-          <NavLinks items={nav} />
+            </>
+          ) : (
+            <>
+              <div className="nav-sec">{labels.servicesHead}</div>
+              <p className="nc-empty">{labels.noServices}</p>
+            </>
+          )}
         </div>
+        <Link
+          href="/settings"
+          className="nc-me"
+          aria-label={`${view.me.name} · ${labels.settings}`}
+        >
+          <Avatar name={view.me.name} colour={view.me.colour} />
+          <span className="nc-bt">
+            <b>{view.me.name}</b>
+            <span>
+              {view.me.admin ? labels.admin : labels.member} · {labels.settings}
+            </span>
+          </span>
+          <Icon name="sliders" width={18} height={18} />
+        </Link>
+      </nav>
+
+      <header className="topbar">
+        <div className="tb-l">
+          <Link href="/" className="brand" aria-label={labels.householdHome}>
+            <span className="mark">
+              <Icon name="home" width={17} height={17} />
+            </span>
+            <span className="brand-t">
+              <b>{view.household.name}</b>
+              <span>
+                <SectionName items={items} fallback={labels.product} />
+              </span>
+            </span>
+          </Link>
+          <form action="/bills" method="get" className="tb-search">
+            <SearchField placeholder={labels.search} />
+          </form>
+          <IconButton icon="search" label={labels.search} href="/bills" className="tb-search-btn" />
+        </div>
+        <div className="tb-r">
+          <IconButton
+            icon="inbox"
+            label={labels.nav.inbox}
+            href="/inbox"
+            badge={view.inboxCount || undefined}
+          />
+          <LinkButton href="/bills/new" size="sm" icon="plus" className="tb-add">
+            {labels.addBill}
+          </LinkButton>
+          <Link href="/settings" className="me tb-me" aria-label={labels.settings}>
+            <Avatar name={view.me.name} colour={view.me.colour} />
+          </Link>
+        </div>
+      </header>
+
+      <main className="main">
+        <div className="main-in">
+          <div className="page">{children}</div>
+        </div>
+      </main>
+
+      <nav className="nav glass-strong horizontal bar" aria-label="Main">
+        <NavItems items={items} iconSize={22} />
       </nav>
     </div>
   );

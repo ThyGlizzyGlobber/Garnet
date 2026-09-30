@@ -3,9 +3,10 @@ import { getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
 import { AppShell } from '@/components/app/shell';
 import { authState, pathFor } from '@/lib/auth/session';
+import { todayIn } from '@/lib/dates';
+import { formatMoney } from '@/lib/format';
 import { getHousehold } from '@/lib/households';
-import { logout } from '@/app/login/actions';
-import { documentCounts } from '@/lib/review';
+import { shellView } from '@/lib/shell';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,31 +17,34 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   const hh = getHousehold(me.householdId);
   if (!hh) redirect('/login');
   const t = await getTranslations('nav');
-  const nav = [
-    { href: '/', label: t('home'), icon: 'home' },
-    { href: '/bills', label: t('bills'), icon: 'receipt' },
-    ...(hh.splitMode === 'shared' ? [{ href: '/ledger', label: t('ledger'), icon: 'ledger' }] : []),
-    { href: '/services', label: t('services'), icon: 'bolt' },
-    { href: '/members', label: t('members'), icon: 'people' },
-  ];
+  const ta = await getTranslations('app');
+  const view = shellView(hh, me, todayIn(hh.timezone));
   return (
     <AppShell
-      householdName={hh.name}
-      memberName={me.name}
-      memberColour={me.colour}
-      nav={nav}
-      logoutAction={logout}
-      logoutLabel={t('logout')}
-      settingsHref="/settings"
-      settingsLabel={t('settings')}
-      wallHref="/wall"
-      wallLabel={t('wall')}
-      reviewHref="/review"
-      reviewLabel={t('review')}
-      reviewCount={documentCounts(hh.id, { viewer: me.id }).needs_review}
-      addHref="/bills/new"
-      addLabel={t('addBill')}
-      searchLabel={t('search')}
+      view={view}
+      locale={hh.locale}
+      money={(minor) => formatMoney(minor, hh.currency, hh.locale, { whole: true })}
+      labels={{
+        nav: {
+          home: t('home'),
+          services: t('services'),
+          bills: t('bills'),
+          money: t('money'),
+          inbox: t('inbox'),
+        },
+        settings: t('settings'),
+        addBill: t('addBill'),
+        search: t('search'),
+        justYou: t('justYou'),
+        admin: t('admin'),
+        member: t('member'),
+        servicesHead: t('servicesHead'),
+        thisMonth: t('thisMonth'),
+        justYours: t('justYours'),
+        noServices: t('noServices'),
+        product: ta('name'),
+        householdHome: t('householdHome', { household: hh.name }),
+      }}
     >
       {children}
     </AppShell>

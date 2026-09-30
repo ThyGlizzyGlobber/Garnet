@@ -188,7 +188,7 @@ export async function deleteBillAction(fd: FormData): Promise<void> {
   const me = await requireMember();
   if (visibleBill(me, str(fd, 'id'))) deleteBillWithDocument(me.householdId, str(fd, 'id'));
   revalidatePath('/bills');
-  revalidatePath('/review');
+  revalidatePath('/inbox');
   redirect('/bills');
 }
 

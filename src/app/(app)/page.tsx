@@ -130,7 +130,7 @@ export default async function HomePage({
         </Banner>
       ))}
       {v.banners.waitingInInbox > 0 && (
-        <Banner href="/review" tone="warning" open={t('reviewLink')}>
+        <Banner href="/inbox" tone="warning" open={t('reviewLink')}>
           {t('reviewBanner', { count: v.banners.waitingInInbox })}
         </Banner>
       )}
@@ -139,7 +139,7 @@ export default async function HomePage({
         <Card className="mb-4 flex flex-col gap-2 border-warning/30">
           <div className="flex items-center justify-between">
             <span className="font-display font-semibold">{t('reminders.title')}</span>
-            <Link href="/ledger" className="text-sm font-semibold text-accent">
+            <Link href="/money" className="text-sm font-semibold text-accent">
               {t('reminders.open')} →
             </Link>
           </div>

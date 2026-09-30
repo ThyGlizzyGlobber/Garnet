@@ -98,7 +98,7 @@ export async function approveReviewAction(_prev: ActionState, fd: FormData): Pro
   } catch (e) {
     return { error: (e as Error).message };
   }
-  revalidatePath('/review');
+  revalidatePath('/inbox');
   revalidatePath('/bills');
   redirect(`/bills/${billId}`);
 }
@@ -107,35 +107,35 @@ export async function ignoreDocumentAction(fd: FormData): Promise<void> {
   const me = await requireMember();
   if (getReviewItem(me.householdId, str(fd, 'documentId'), undefined, { viewer: me.id }))
     setDocumentStatus(me.householdId, str(fd, 'documentId'), 'ignored', undefined);
-  revalidatePath('/review');
-  redirect('/review');
+  revalidatePath('/inbox');
+  redirect('/inbox');
 }
 
 /** "It's a bill": read a filed-away document again as a bill (a person vouches for it). */
 export async function readAsBillAction(fd: FormData): Promise<void> {
   const me = await requireMember();
   const id = str(fd, 'documentId');
-  if (!getReviewItem(me.householdId, id, undefined, { viewer: me.id })) redirect('/review');
+  if (!getReviewItem(me.householdId, id, undefined, { viewer: me.id })) redirect('/inbox');
   const outcome = await processDocument(me.householdId, id, undefined, {
     asBill: true,
     by: me.id,
   });
-  revalidatePath('/review');
+  revalidatePath('/inbox');
   revalidatePath('/bills');
   redirect(
-    outcome.status === 'extracted' && outcome.billId ? `/bills/${outcome.billId}` : `/review/${id}`,
+    outcome.status === 'extracted' && outcome.billId ? `/bills/${outcome.billId}` : `/inbox/${id}`,
   );
 }
 
 export async function reprocessDocumentAction(fd: FormData): Promise<void> {
   const me = await requireMember();
   const id = str(fd, 'documentId');
-  if (!getReviewItem(me.householdId, id, undefined, { viewer: me.id })) redirect('/review');
+  if (!getReviewItem(me.householdId, id, undefined, { viewer: me.id })) redirect('/inbox');
   const outcome = await processDocument(me.householdId, id);
-  revalidatePath('/review');
+  revalidatePath('/inbox');
   revalidatePath('/bills');
   redirect(
-    outcome.status === 'extracted' && outcome.billId ? `/bills/${outcome.billId}` : `/review/${id}`,
+    outcome.status === 'extracted' && outcome.billId ? `/bills/${outcome.billId}` : `/inbox/${id}`,
   );
 }
 
@@ -147,9 +147,9 @@ export async function reprocessAllAction(): Promise<void> {
     if (d.status !== 'needs_review' && d.status !== 'unprocessed') continue;
     await processDocument(me.householdId, d.id);
   }
-  revalidatePath('/review');
+  revalidatePath('/inbox');
   revalidatePath('/bills');
-  redirect('/review');
+  redirect('/inbox');
 }
 
 export async function uploadBillAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
@@ -171,14 +171,14 @@ export async function uploadBillAction(_prev: ActionState, fd: FormData): Promis
   if (duplicate) {
     const existing = listDocuments(me.householdId, { viewer: me.id }).find((d) => d.id === doc.id);
     if (existing?.billId) redirect(`/bills/${existing.billId}`);
-    redirect(`/review/${doc.id}`);
+    redirect(`/inbox/${doc.id}`);
   }
   const outcome = await processDocument(me.householdId, doc.id);
-  revalidatePath('/review');
+  revalidatePath('/inbox');
   revalidatePath('/bills');
   redirect(
     outcome.status === 'extracted' && outcome.billId
       ? `/bills/${outcome.billId}`
-      : `/review/${doc.id}`,
+      : `/inbox/${doc.id}`,
   );
 }

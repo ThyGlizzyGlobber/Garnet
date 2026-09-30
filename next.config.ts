@@ -15,6 +15,14 @@ const nextConfig: NextConfig = {
     'mailparser',
   ],
   poweredByHeader: false,
+  // The redesign renamed two sections (SCOPE-redesign.md D3); old links and bookmarks still work.
+  async redirects() {
+    return [
+      { source: '/ledger', destination: '/money', permanent: true },
+      { source: '/review', destination: '/inbox', permanent: true },
+      { source: '/review/:id', destination: '/inbox/:id', permanent: true },
+    ];
+  },
   async headers() {
     const common = [
       { key: 'X-Content-Type-Options', value: 'nosniff' },

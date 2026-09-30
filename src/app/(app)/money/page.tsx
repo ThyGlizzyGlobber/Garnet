@@ -23,7 +23,7 @@ export default async function LedgerPage({
   const { member: requested } = await searchParams;
   const viewingId = isAdmin(me) && requested ? requested : me.id;
   const ledger = memberLedger(hh.id, viewingId, today, hh.fiscalYearStartMonth);
-  if (!ledger) redirect('/ledger');
+  if (!ledger) redirect('/money');
   const isMe = ledger.member.id === me.id;
   const members = isAdmin(me) ? listMembers(hh.id) : [];
   const paidPct = ledger.paidPct;
@@ -46,7 +46,7 @@ export default async function LedgerPage({
           {members.map((m) => (
             <Link
               key={m.id}
-              href={m.id === me.id ? '/ledger' : `/ledger?member=${m.id}`}
+              href={m.id === me.id ? '/money' : `/money?member=${m.id}`}
               className={`flex items-center gap-2 rounded-full py-1.5 pr-4 pl-1.5 text-sm font-semibold transition ${m.id === ledger.member.id ? 'bg-accent text-accent-fg' : 'bg-surface-2 text-fg-muted hover:text-fg'}`}
             >
               <Avatar name={m.name} colour={m.colour} className="size-7 text-[11px]" />

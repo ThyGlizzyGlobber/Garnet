@@ -60,7 +60,7 @@ export async function ShareTile({ v, ctx }: Props) {
   const { money } = ctx;
   const share = v.share!;
   return (
-    <Tile href="/ledger" className="flex flex-col">
+    <Tile href="/money" className="flex flex-col">
       <TileHeader
         small
         title={t('tiles.yourShare')}

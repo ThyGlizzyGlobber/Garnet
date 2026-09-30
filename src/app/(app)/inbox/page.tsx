@@ -65,7 +65,7 @@ export default async function ReviewPage({
     const u = new URLSearchParams();
     if (key !== 'review') u.set('f', key);
     if (q) u.set('q', q);
-    return u.size ? `/review?${u}` : '/review';
+    return u.size ? `/inbox?${u}` : '/inbox';
   };
   const tone = STATUS_TONE;
 
@@ -86,7 +86,7 @@ export default async function ReviewPage({
       {address && <ForwardAddress address={address} />}
       <div className="mb-3">
         <SearchBar
-          action="/review"
+          action="/inbox"
           q={q}
           keep={{ f: filter !== 'review' ? filter : null }}
           placeholder={t('search.placeholder')}
@@ -143,7 +143,7 @@ export default async function ReviewPage({
                   // Anything that belongs with a bill opens that bill's one page.
                   <ListRow
                     key={d.id}
-                    href={d.linkedBillId ? `/bills/${d.linkedBillId}` : `/review/${d.id}`}
+                    href={d.linkedBillId ? `/bills/${d.linkedBillId}` : `/inbox/${d.id}`}
                   >
                     <div className="min-w-0">
                       <p className="truncate font-semibold">

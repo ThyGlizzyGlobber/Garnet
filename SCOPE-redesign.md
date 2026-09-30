@@ -158,7 +158,7 @@ state). Choices made while designing them, worth a conscious yes:
 
 **R3 · Shell and nav (M).**
 
-- Floating column (≥ 1100 px wide), rail (640–1099), bottom bar (< 640), with safe areas.
+- Floating column (≥ 1200 px wide: the studio's iPad landscape at 1180 shows the rail), rail (640–1199), bottom bar (< 640), with safe areas.
 - The column's household header, services list with this month's amounts, and you → Settings.
 - The simplified top bar. The route changes from D3. Members reached from Settings.
 

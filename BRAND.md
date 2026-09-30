@@ -233,16 +233,19 @@ The studio's `.ring` is `.gauge` here (Tailwind owns `ring`):
 
 ## 9. Layout and navigation
 
-- **Desktop (≥ 1100 px): the nav column.** A floating strong-glass column,
+- **Desktop (≥ 1200 px): the nav column.** A floating strong-glass column,
   250 px wide, 16 px from the screen edges, radius 30: the household at the
   top, then Home · Services · Bills · Money · Inbox (42 px items, radius 14),
   then the services list with this month's amount beside each (it scrolls
   after about 8, with "All services"), and you at the bottom → Settings.
-- **iPad (640–1099 px): the rail.** The same column at 92 px, icons only.
+- **iPad (640–1199 px): the rail.** (An iPad in landscape, 1180 px, keeps the rail.) The same column at 92 px, icons only.
 - **iPhone (< 640 px): the bottom bar.** Five items, 58 px, strong glass,
   above the safe area.
-- Money is hidden in households that don't split bills. Members live inside
-  Settings.
+- Money is hidden in households that don't split bills. Members, the wall
+  display and Sign out live inside Settings. Old links to `/ledger` and
+  `/review` redirect to `/money` and `/inbox`.
+- The frame lives in `src/components/app/shell.tsx` with its CSS in
+  `src/styles/shell.css`; its numbers come from `shellView()` (`src/lib/shell.ts`).
 - **Top bar**: search on the left; Inbox and Add bill on the right.
 - Pages keep a reading width of 1240 px; very wide screens cap at about 1600.
 - **Home is a widget grid** sized to the screen, like the iPhone home screen:
