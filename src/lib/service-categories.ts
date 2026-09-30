@@ -84,3 +84,19 @@ export const inMainCategory = (ty: { slug: string; category?: string | null }): 
 export function assetKindOf(category: string | null | undefined): 'vehicle' | null {
   return category === 'vehicle' ? 'vehicle' : null;
 }
+
+/**
+ * The everyday bills: shown first, under Essentials, on the Services page
+ * and in the nav, each on its own (never folded into a main service).
+ */
+const ESSENTIAL_TYPES = new Set([
+  'internet',
+  'electricity',
+  'gas',
+  'water',
+  'phone',
+  'rent',
+  'council_rates',
+]);
+
+export const isEssential = (ty: { slug: string }): boolean => ESSENTIAL_TYPES.has(ty.slug);

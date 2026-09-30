@@ -26,7 +26,9 @@
     "householdHome": "{household}, Home",
     "account": "Your account",
     "showSubs": "Show sub-services",
-    "hideSubs": "Hide sub-services"
+    "hideSubs": "Hide sub-services",
+    "essentials": "Essentials",
+    "everythingElse": "Everything else"
   },
   "setup": {
     "title": "Set up your household.",
@@ -725,7 +727,9 @@
       "none": "No bills yet",
       "nothing": "Nothing this month",
       "count": "{count, plural, one {# service} other {# services}}",
-      "open": "Open {name}"
+      "open": "Open {name}",
+      "essentials": "Essentials",
+      "everythingElse": "Everything else"
     }
   },
   "members": {

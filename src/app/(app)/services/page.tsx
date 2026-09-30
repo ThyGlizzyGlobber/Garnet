@@ -5,7 +5,7 @@ import { rowCtx, statusLabel } from '@/components/app/bill-rows';
 import { Icon } from '@/components/app/icons';
 import { Sparkline } from '@/components/charts/sparkline';
 import { Badge, Button, Card, Field, Input, LinkButton, Select } from '@/components/ui';
-import { EmptyCard, PageTitle, Stats } from '@/components/ui/blocks';
+import { EmptyCard, PageTitle, SectionHead, Stats } from '@/components/ui/blocks';
 import { StatusChip } from '@/components/ui/chip';
 import { Disc } from '@/components/ui/colour';
 import { Segmented } from '@/components/ui/controls';
@@ -15,7 +15,7 @@ import { billsAddress } from '@/lib/bills-address';
 import { pageContext } from '@/lib/context';
 import { colourCss } from '@/lib/palette';
 import { addMonths } from '@/lib/periods';
-import { groupTypes } from '@/lib/service-categories';
+import { groupTypes, isEssential } from '@/lib/service-categories';
 import { listServiceTypes, listServices } from '@/lib/services';
 import {
   servicesMonth,
@@ -212,6 +212,9 @@ export default async function ServicesPage({
     });
   };
 
+  const isEveryday = (e: MonthEntry) => e.kind === 'service' && isEssential(e.item.service.type);
+  const essentials = view.entries.filter(isEveryday);
+  const others = view.entries.filter((e) => !isEveryday(e));
   const c = view.counts;
   const right = (
     <>
@@ -302,7 +305,23 @@ export default async function ServicesPage({
               ]}
             />
           </Card>
-          <div className="st-grid">{view.entries.map(entry)}</div>
+          {/* The everyday bills first, then the main services and the rest;
+              each in the order they need attention. */}
+          {essentials.length > 0 && (
+            <>
+              <SectionHead title={tm('essentials')} />
+              <div className="st-grid">{essentials.map(entry)}</div>
+            </>
+          )}
+          {others.length > 0 && (
+            <>
+              <SectionHead
+                title={tm('everythingElse')}
+                className={essentials.length ? 'mt-2' : ''}
+              />
+              <div className="st-grid">{others.map(entry)}</div>
+            </>
+          )}
         </>
       )}
       {operator && (

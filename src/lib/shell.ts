@@ -9,7 +9,7 @@ import { documentCounts } from '@/lib/review';
 import { billsAddress } from '@/lib/bills-address';
 import { isAdmin } from '@/lib/roles';
 import { byType, groupServices, listServices, type ServiceWithType } from '@/lib/services';
-import type { GroupedCategory } from '@/lib/service-categories';
+import { isEssential, type GroupedCategory } from '@/lib/service-categories';
 import { totalsForRange } from '@/lib/stats';
 
 /**
@@ -34,7 +34,7 @@ interface ShellService {
  * category's name (Vehicles) is the shell's to word.
  */
 export type ShellEntry =
-  | ({ kind: 'service' } & ShellService)
+  | ({ kind: 'service'; /** An everyday bill (Essentials). */ essential: boolean } & ShellService)
   | {
       kind: 'group';
       key: string;
@@ -111,7 +111,12 @@ function entries(
     href: `/services/${s.id}`,
   });
   return groupServices(services).map((g): ShellEntry => {
-    if (!g.category && !g.typeSlug) return { kind: 'service', ...line(g.services[0]!) };
+    if (!g.category && !g.typeSlug)
+      return {
+        kind: 'service',
+        essential: isEssential(g.services[0]!.type),
+        ...line(g.services[0]!),
+      };
     // Vehicles → its vehicles, each opening its own page (until there are
     // none: one line per kind of bill); every other main service → its services.
     const children =

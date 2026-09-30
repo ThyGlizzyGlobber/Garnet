@@ -94,6 +94,8 @@ describe('shellView', () => {
     expect(v.household).toEqual({ name: 'Riverside House', members: ['Alex', 'Jordan'] });
     expect(v.split).toBe(true);
     expect(v.services.map((s) => [s.name, s.minor])).toEqual([['Electricity', 30_000]]);
+    // An everyday bill: listed under Essentials.
+    expect(v.services[0]!.kind === 'service' && v.services[0]!.essential).toBe(true);
     // Rego is under Vehicles, one line per kind of vehicle bill.
     const mine = v.mine[0]!;
     expect(mine.kind === 'group' && mine.category).toBe('vehicle');

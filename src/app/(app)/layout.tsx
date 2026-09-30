@@ -39,6 +39,8 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         admin: t('admin'),
         member: t('member'),
         servicesHead: t('servicesHead'),
+        essentials: t('essentials'),
+        everythingElse: t('everythingElse'),
         thisMonth: t('thisMonth'),
         justYours: t('justYours'),
         noServices: t('noServices'),

@@ -26,6 +26,9 @@ export interface ShellLabels {
   admin: string;
   member: string;
   servicesHead: string;
+  /** The nav's two service sections: the everyday bills, and the rest. */
+  essentials: string;
+  everythingElse: string;
   thisMonth: string;
   justYours: string;
   noServices: string;
@@ -71,6 +74,8 @@ export function AppShell({
       <b>{money(s.minor)}</b>
     </>
   );
+  const essentials = view.services.filter((s) => s.kind === 'service' && s.essential);
+  const others = view.services.filter((s) => !(s.kind === 'service' && s.essential));
   const row = (s: ShellEntry) =>
     s.kind === 'group' ? (
       <NavGroup
@@ -120,11 +125,23 @@ export function AppShell({
         <div className="nc-svcs">
           {view.services.length + view.mine.length > 0 ? (
             <>
-              <div className="nav-sec">
-                {labels.servicesHead}
-                <span>{labels.thisMonth}</span>
-              </div>
-              {view.services.map(row)}
+              {/* The everyday bills first, then the main services and the rest. */}
+              {essentials.length > 0 && (
+                <>
+                  <div className="nav-sec">
+                    {labels.essentials}
+                    <span>{labels.thisMonth}</span>
+                  </div>
+                  {essentials.map(row)}
+                </>
+              )}
+              {others.length > 0 && (
+                <div className="nav-sec">
+                  {labels.everythingElse}
+                  {essentials.length === 0 && <span>{labels.thisMonth}</span>}
+                </div>
+              )}
+              {others.map(row)}
               {view.mine.length > 0 && (
                 <>
                   <div className="nav-sec">{labels.justYours}</div>

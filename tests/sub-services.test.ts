@@ -33,7 +33,7 @@ import {
 import { serviceCardsView } from '@/lib/main-view';
 import { shellView } from '@/lib/shell';
 import { shadesOf } from '@/lib/palette';
-import { CATEGORY_COLOURS, inMainCategory } from '@/lib/service-categories';
+import { CATEGORY_COLOURS, inMainCategory, isEssential } from '@/lib/service-categories';
 
 const TODAY = '2026-09-29';
 let dir: string;
@@ -122,6 +122,12 @@ describe('the catalog', () => {
     // Every top-level entry on the Services page wears its own colour: the
     // everyday bills, each main service, Subscriptions and Other.
     const everyday = ['internet', 'electricity', 'gas', 'water', 'phone', 'rent', 'council_rates'];
+    expect(
+      types
+        .filter(isEssential)
+        .map((t) => t.slug)
+        .sort(),
+    ).toEqual([...everyday].sort());
     const top = [
       ...everyday.map(colour),
       ...Object.values(CATEGORY_COLOURS),
