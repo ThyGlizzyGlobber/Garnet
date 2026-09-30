@@ -6,6 +6,5 @@
     "tests/**/*.ts",
     "deploy/**/*.js",
     "*.{ts,mts,mjs}"
-  ],
-  "ignore": ["deploy/email-worker/worker.d.ts"]
+  ]
 }
