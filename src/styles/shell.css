@@ -439,3 +439,55 @@
     transition: none;
   }
 }
+
+/* A main service with sub-services (Subscriptions → Netflix): its line, an
+   arrow beside it, and the sub-services indented under it. */
+.nc-g-h {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+.nc-g-t {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin-left: 2px;
+  border: 0;
+  border-radius: 9px;
+  background: none;
+  color: var(--p-fg2);
+  cursor: pointer;
+}
+.nc-g-t:hover {
+  background: var(--inset);
+  color: var(--p-fg);
+}
+.nc-g-t .ic {
+  transition: transform 0.18s ease;
+  transform: rotate(-90deg);
+}
+.nc-g[data-open] .nc-g-t .ic {
+  transform: none;
+}
+.nc-g-c {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-left: 16px;
+  padding-left: 6px;
+  border-left: 1px solid var(--line);
+}
+.nc-sub {
+  min-height: 30px;
+  font-size: 13px;
+}
+.nc-sub i {
+  width: 7px;
+  height: 7px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .nc-g-t .ic {
+    transition: none;
+  }
+}

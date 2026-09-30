@@ -134,6 +134,42 @@
   margin: 0;
   color: var(--p-fg2);
 }
+/* A main service with sub-services (Subscriptions): a heading line, then its
+   sub-services' ribbons, drawn a little inset. */
+.d3-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+.d3-group-h {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 6px;
+  color: inherit;
+}
+.d3-group-h b {
+  font-family: var(--f-display);
+  font-weight: var(--fw-display);
+  font-size: 19px;
+  letter-spacing: var(--ls-display);
+}
+.d3-group-h .ic {
+  margin-left: auto;
+  color: var(--p-fg2);
+}
+.d3-group-h:hover b {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.d3-svc-sub {
+  margin-left: 18px;
+  border-left: 3px solid var(--svc);
+}
+.d3-svc.is-cancelled .d3-rib,
+.d3-svc.is-cancelled .d3-svc-fig {
+  opacity: 0.6;
+}
 .rb {
   position: absolute;
   top: 3px;
@@ -877,6 +913,9 @@ a.paper:hover .paper-stamp {
   .d3-rib,
   .d3-svc-sum {
     grid-column: 1 / -1;
+  }
+  .d3-svc-sub {
+    margin-left: 0;
   }
   .d3-cols,
   .d3-bill-grid {

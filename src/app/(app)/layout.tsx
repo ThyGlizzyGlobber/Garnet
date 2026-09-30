@@ -41,6 +41,8 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         thisMonth: t('thisMonth'),
         justYours: t('justYours'),
         noServices: t('noServices'),
+        showSubs: t('showSubs'),
+        hideSubs: t('hideSubs'),
         product: ta('name'),
         householdHome: t('householdHome', { household: hh.name }),
       }}

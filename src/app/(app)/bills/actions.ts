@@ -1,6 +1,6 @@
 'use server';
 
-import { answerOwnership, asksMember, mayChangeOwner } from '@/lib/ownership';
+import { answerOwnership, asksMember, mayChangeOwner, mayMoveBill } from '@/lib/ownership';
 import { rotateDocument } from '@/ingest/rotate';
 import { getReviewItem } from '@/lib/review';
 import { refileDocuments } from '@/lib/filing';
@@ -17,6 +17,7 @@ import {
   clearBillAlert,
   createBill,
   getBill,
+  moveBill,
   setBillPaidToProvider,
   setInstalmentPaid,
   setPaymentPlan,
@@ -149,13 +150,14 @@ export async function updateBillAction(_prev: ActionState, fd: FormData): Promis
   if ('fieldErrors' in input) return fieldErrors(input.fieldErrors);
   const target = visibleService(me, input.serviceId);
   if (!target) return { error: te('serviceNotFound') };
-  // One bill can't slip between the household and someone's own services;
-  // "Whose is it?" moves a whole service and its bills, with its own checks.
-  if ((target.ownerMemberId ?? null) !== (existing.ownerMemberId ?? null))
+  // Moving it to another service: the same rule as "Move to" on the bill page.
+  const moving = target.id !== existing.serviceId;
+  if (moving && !mayMoveBill(hh.id, me, existing, target))
     return {
-      fieldErrors: { serviceId: te('sameOwner') },
+      fieldErrors: { serviceId: te('moveNotAllowed') },
     };
   try {
+    if (moving) moveBill(hh.id, id, target.id);
     // Keep the original paid timestamp if it was already paid and still is.
     const paidToProviderAt = input.paidToProviderAt
       ? (existing.paidToProviderAt ?? input.paidToProviderAt)
@@ -297,4 +299,29 @@ export async function setWhoseAction(fd: FormData): Promise<void> {
   revalidatePath('/bills');
   revalidatePath('/services');
   revalidatePath('/');
+}
+
+/** "Move to": file a bill under another service or sub-service (see moveBill). */
+export async function moveBillAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
+  const me = await requireMember();
+  const id = str(fd, 'id');
+  const te = await errorText();
+  const b = visibleBill(me, id);
+  if (!b) return { error: te('billNotFound') };
+  const target = visibleService(me, str(fd, 'serviceId'));
+  if (!target) return { error: te('serviceNotFound') };
+  if (!mayMoveBill(me.householdId, me, b, target)) return { error: te('moveNotAllowed') };
+  try {
+    moveBill(me.householdId, id, target.id);
+    // Its files move to the new service's folder.
+    refileDocuments(me.householdId);
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+  revalidatePath('/bills');
+  revalidatePath('/services');
+  revalidatePath(`/services/${b.serviceId}`);
+  revalidatePath(`/services/${target.id}`);
+  revalidatePath('/');
+  redirect(`/bills/${id}`);
 }

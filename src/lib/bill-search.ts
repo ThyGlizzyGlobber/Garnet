@@ -11,6 +11,13 @@ export interface BillFilters {
   serviceId?: string | null;
   /** YYYY. */
   year?: string | null;
+  /**
+   * Which months: up to and including this one (the default), or the months
+   * after it (bills issued ahead, instalments not due yet), or every month.
+   */
+  when?: 'now' | 'upcoming' | 'all';
+  /** Every sub-service of a main service (Subscriptions), by type slug. */
+  typeSlug?: string | null;
 }
 
 /** Everything a person might type to find a bill, lower case. */
@@ -86,11 +93,15 @@ export function filterBills(
   bills: BillListItem[],
   f: BillFilters,
   ctx: { locale: string; today: string },
-): { bills: BillListItem[]; entries: BillEntry[]; tokens: string[] } {
+): { bills: BillListItem[]; entries: BillEntry[]; tokens: string[]; later: number } {
   const tokens = searchTokens(f.q ?? '');
-  const entries = bills.map(billEntry).filter((e) => {
+  const thisMonth = ctx.today.slice(0, 7);
+  const isLater = (e: BillEntry) => e.date.slice(0, 7) > thisMonth;
+  const when = f.when ?? 'now';
+  const passing = bills.map(billEntry).filter((e) => {
     const b = e.bill;
     if (f.serviceId && b.serviceId !== f.serviceId) return false;
+    if (f.typeSlug && b.service.typeSlug !== f.typeSlug) return false;
     if (f.year && e.date.slice(0, 4) !== f.year) return false;
     if (f.status === 'unpaid' && e.paidAt) return false;
     if (f.status === 'paid' && !e.paidAt) return false;
@@ -100,8 +111,12 @@ export function filterBills(
     const hay = `${billHaystack(b, ctx.locale, ctx.today)} ${monthWords(e.date.slice(0, 7), ctx.locale).join(' ')}${b.instalments.length ? ' instalment instalments' : ''}`;
     return matchesAll(hay.toLowerCase(), tokens);
   });
+  const entries = passing.filter((e) =>
+    when === 'all' ? true : when === 'upcoming' ? isLater(e) : !isLater(e),
+  );
   const out = [...new Set(entries.map((e) => e.bill))];
-  return { bills: out, entries, tokens };
+  // Entries in later months that every other filter lets through.
+  return { bills: out, entries, tokens, later: passing.filter(isLater).length };
 }
 
 /** YYYY-MM for each month from start to end, at most 13. */

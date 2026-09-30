@@ -402,10 +402,11 @@ export function updateBill(
   if (merged.periodEnd < merged.periodStart)
     throw new Error('Billing period end is before its start');
   const locked = existing.shares.some((s) => s.paidAt && s.paidMethod !== 'payer');
+  // Only a real change counts: the edit form sends every field, changed or not.
   const affectsShares =
-    patch.amountMinor !== undefined ||
-    patch.periodStart !== undefined ||
-    patch.periodEnd !== undefined ||
+    (patch.amountMinor !== undefined && patch.amountMinor !== existing.amountMinor) ||
+    (patch.periodStart !== undefined && patch.periodStart !== existing.periodStart) ||
+    (patch.periodEnd !== undefined && patch.periodEnd !== existing.periodEnd) ||
     (patch.serviceId !== undefined && patch.serviceId !== existing.serviceId);
   if (locked && affectsShares)
     throw new Error('Shares have been paid; amount and period are locked');
@@ -453,6 +454,68 @@ export function updateBill(
     if (merged.serviceId !== existing.serviceId)
       refreshAnomalies(householdId, existing.serviceId, db);
   }
+  return getBill(householdId, id, db)!;
+}
+
+/**
+ * Move a bill to another service or sub-service (a Netflix bill filed under
+ * Spotify). It takes the new service's owner: household or someone's own.
+ * Split again by the new service's rules, unless a housemate has already paid
+ * a share: then its shares stay as they are, and it can only move between
+ * household services. The caller checks who may move it (mayMoveBill).
+ */
+export function moveBill(
+  householdId: string,
+  id: string,
+  toServiceId: string,
+  db: Db = getDb(),
+): BillDetail {
+  const existing = getBill(householdId, id, db);
+  if (!existing) throw new Error('Bill not found');
+  if (existing.serviceId === toServiceId) return existing;
+  const target = getService(householdId, toServiceId, db);
+  if (!target) throw new Error('Service not found');
+  const hh = getHousehold(householdId, db)!;
+  if (existing.externalRef) {
+    const dup = db
+      .select({ id: bill.id })
+      .from(bill)
+      .where(and(eq(bill.serviceId, toServiceId), eq(bill.externalRef, existing.externalRef)))
+      .get();
+    if (dup)
+      throw new Error(
+        `A bill with reference ${existing.externalRef} already exists for that service`,
+      );
+  }
+  const locked = existing.shares.some((s) => s.paidAt && s.paidMethod !== 'payer');
+  const sameSide = (existing.ownerMemberId ?? null) === (target.ownerMemberId ?? null);
+  if (locked && !sameSide)
+    throw new Error('Housemates have paid shares of this bill, so it stays with the household');
+  const now = new Date().toISOString();
+  db.transaction((tx) => {
+    tx.update(bill)
+      .set({ serviceId: toServiceId, ownerMemberId: target.ownerMemberId, updatedAt: now })
+      .where(and(eq(bill.householdId, householdId), eq(bill.id, id)))
+      .run();
+    if (locked) return;
+    tx.delete(share)
+      .where(and(eq(share.householdId, householdId), eq(share.billId, id)))
+      .run();
+    if (hh.splitMode !== 'shared') return;
+    insertShares(
+      tx,
+      householdId,
+      id,
+      target,
+      { ...existing, currency: existing.currency },
+      hh.paymentReferenceTemplate,
+      hh.locale,
+      now,
+      existing.paymentPlan === 'instalments' ? existing.instalments : [],
+    );
+  });
+  refreshAnomalies(householdId, existing.serviceId, db);
+  refreshAnomalies(householdId, toServiceId, db);
   return getBill(householdId, id, db)!;
 }
 

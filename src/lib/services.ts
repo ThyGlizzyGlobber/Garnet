@@ -10,7 +10,7 @@ import {
   type SplitMode,
 } from '@/db/schema';
 import { ulid } from '@/lib/ids';
-import { DEFAULT_COLOUR } from '@/lib/palette';
+import { DEFAULT_COLOUR, PALETTE } from '@/lib/palette';
 import { getMember } from '@/lib/members';
 import { ownerCondition, type Scope } from '@/lib/scope';
 
@@ -40,9 +40,23 @@ export function createServiceType(
     isBuiltin: false,
     personalByDefault: false,
     category: 'other',
+    // Custom types take the palette in turn: the same colour in every household.
+    colour: PALETTE[listServiceTypes(db).length % PALETTE.length]!.light,
+    hasSubServices: false,
   };
   db.insert(serviceType).values(row).run();
   return row;
+}
+
+/** The colour every service of a type wears (service_type.colour). */
+function typeColour(slug: string, db: Db): string {
+  return (
+    db
+      .select({ colour: serviceType.colour })
+      .from(serviceType)
+      .where(eq(serviceType.slug, slug))
+      .get()?.colour ?? DEFAULT_COLOUR
+  );
 }
 
 /**
@@ -138,7 +152,6 @@ export interface ServiceInput {
   seasonal?: boolean;
   splitMode?: SplitMode;
   payerMemberId?: string | null;
-  colour?: string;
   isActive?: boolean;
   notes?: string | null;
   /** Email domains whose signed bills may be created automatically. */
@@ -197,7 +210,7 @@ export function createService(
       ownerMemberId: rest.ownerMemberId ?? null,
       setUpByMemberId: rest.setUpByMemberId ?? null,
       ownerAskedAt: rest.ownerAskedAt ?? null,
-      colour: rest.colour ?? DEFAULT_COLOUR,
+      colour: typeColour(rest.typeSlug, db),
       isActive: rest.isActive ?? true,
       notes: rest.notes ?? null,
       trustedSenders: rest.trustedSenders ?? [],
@@ -230,6 +243,9 @@ export function updateService(
       ...rest,
       ...(rest.name ? { name: rest.name.trim() } : {}),
       ...(rest.provider ? { provider: rest.provider.trim() } : {}),
+      // Its colour is its type's.
+      ...(rest.typeSlug ? { colour: typeColour(rest.typeSlug, db) } : {}),
+      ...(rest.isActive ? { cancelledAt: null, cancelledByMemberId: null } : {}),
       updatedAt: new Date().toISOString(),
     })
     .where(and(eq(service.householdId, householdId), eq(service.id, id)))
@@ -279,4 +295,92 @@ export function setCustomSplits(
     .filter(([memberId, w]) => w > 0 && getMember(householdId, memberId, db))
     .map(([memberId, weight]) => ({ householdId, serviceId, memberId, weight }));
   if (rows.length) db.insert(serviceSplit).values(rows).run();
+}
+
+/**
+ * Someone cancelled a sub-service (their Netflix): it stops being active and
+ * says who cancelled it and when; its bills stay. A bill dated after this is
+ * flagged as charged after cancelling (chargedAfterCancel).
+ */
+export function cancelService(
+  householdId: string,
+  id: string,
+  memberId: string,
+  db: Db = getDb(),
+): ServiceWithType {
+  const svc = getService(householdId, id, db);
+  if (!svc) throw new Error('Service not found');
+  if (svc.cancelledAt) return svc;
+  db.update(service)
+    .set({
+      isActive: false,
+      cancelledAt: new Date().toISOString(),
+      cancelledByMemberId: getMember(householdId, memberId, db) ? memberId : null,
+      updatedAt: new Date().toISOString(),
+    })
+    .where(and(eq(service.householdId, householdId), eq(service.id, id)))
+    .run();
+  return getService(householdId, id, db)!;
+}
+
+/** Undo a cancellation: the sub-service is active again. */
+export function resumeService(householdId: string, id: string, db: Db = getDb()): ServiceWithType {
+  return updateService(householdId, id, { isActive: true }, db);
+}
+
+/**
+ * Was this bill charged after its service was cancelled? Yes when the day it
+ * belongs to (its issue date, else its period) falls after the cancelling day.
+ */
+export function chargedAfterCancel(
+  svc: Pick<Service, 'cancelledAt'>,
+  b: { issueDate: string | null; periodStart: string },
+): boolean {
+  if (!svc.cancelledAt) return false;
+  return (b.issueDate ?? b.periodStart) > svc.cancelledAt.slice(0, 10);
+}
+
+export interface ServiceGroup<S> {
+  /** The type slug for a main service with sub-services; null for a service on its own. */
+  typeSlug: string | null;
+  label: string;
+  icon: string;
+  colour: string;
+  services: S[];
+}
+
+/**
+ * Services in list order, with each main service's sub-services gathered
+ * under it where the first of them would have been (Subscriptions → Netflix,
+ * Spotify). Every other service stands on its own.
+ */
+export function groupServices<S extends { type: ServiceType }>(services: S[]): ServiceGroup<S>[] {
+  const out: ServiceGroup<S>[] = [];
+  const byType = new Map<string, ServiceGroup<S>>();
+  for (const s of services) {
+    if (!s.type.hasSubServices) {
+      out.push({
+        typeSlug: null,
+        label: '',
+        icon: s.type.icon,
+        colour: s.type.colour,
+        services: [s],
+      });
+      continue;
+    }
+    let g = byType.get(s.type.slug);
+    if (!g) {
+      g = {
+        typeSlug: s.type.slug,
+        label: s.type.label,
+        icon: s.type.icon,
+        colour: s.type.colour,
+        services: [],
+      };
+      byType.set(s.type.slug, g);
+      out.push(g);
+    }
+    g.services.push(s);
+  }
+  return out;
 }

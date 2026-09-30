@@ -32,7 +32,8 @@ export default async function NewBillPage({
         action={createBillAction}
         services={services.map((s) => ({
           id: s.id,
-          name: s.ownerMemberId ? `${s.name} · ${t('tile.onlyYou')}` : s.name,
+          // A sub-service reads "Subscriptions › Netflix".
+          name: `${s.type.hasSubServices ? `${s.type.label} › ` : ''}${s.name}${s.ownerMemberId ? ` · ${t('tile.onlyYou')}` : ''}`,
           provider: s.provider,
           usageUnit: s.usageUnit,
           cadence: s.cadence,

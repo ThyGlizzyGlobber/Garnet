@@ -686,6 +686,13 @@ const CATALOG: WidgetDef[] = [
         n: HomeData['notices'][number],
       ): { tone: Tone; icon: string; title: string; body: string } => {
         switch (n.kind) {
+          case 'cancelled':
+            return {
+              tone: 'bad',
+              icon: 'alert',
+              title: t('notices.cancelledTitle', { service: n.serviceName }),
+              body: t('notices.cancelledBody'),
+            };
           case 'unusual':
             return {
               tone: 'warn',

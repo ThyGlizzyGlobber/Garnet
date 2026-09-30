@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { ToggleRow } from '@/components/app/pieces';
-import { SwatchPick, TypePicker } from '@/components/app/pieces-client';
+import { TypePicker } from '@/components/app/pieces-client';
 import { Button, Card, Field, Input, LinkButton, Select, Textarea } from '@/components/ui';
 import { SectionHead } from '@/components/ui/blocks';
 import { Avatar } from '@/components/ui/colour';
@@ -37,7 +37,6 @@ export interface ServiceFormValues {
   usageLimit: string;
   splitMode: string;
   payerMemberId: string;
-  colour: string;
   isActive: boolean;
   notes: string;
   trustedSenders: string;
@@ -49,7 +48,7 @@ export interface ServiceFormValues {
 
 /**
  * Adding or editing a service: what it is on the left (type, name, provider,
- * how often, usage, colour, the switches), and beside it who pays and how it's
+ * how often, usage, the switches; its colour is its type's), and beside it who pays and how it's
  * split (admins), and, when editing, stop tracking.
  */
 export function ServiceForm({
@@ -75,6 +74,8 @@ export function ServiceForm({
     defaultUnit: string | null;
     personalByDefault?: boolean;
     category?: string;
+    /** A main service: each provider is a sub-service named after it (Netflix). */
+    hasSubServices?: boolean;
   }[];
   units: { key: string; label: string }[];
   members: SplitMemberOption[];
@@ -100,6 +101,8 @@ export function ServiceForm({
   const [typeSlug, setTypeSlug] = useState(initial.typeSlug);
   const [usageUnit, setUsageUnit] = useState(initial.usageUnit);
   const [name, setName] = useState(initial.name);
+  const [provider, setProvider] = useState(initial.provider);
+  const sub = !!types.find((x) => x.slug === typeSlug)?.hasSubServices;
   const [personal, setPersonal] = useState(initial.personal);
   const [personalTouched, setPersonalTouched] = useState(false);
   const unitLabel = units.find((u) => u.key === usageUnit)?.label ?? usageUnit;
@@ -123,7 +126,8 @@ export function ServiceForm({
                     const ty = types.find((x) => x.slug === slug);
                     if (ty) {
                       setUsageUnit(ty.defaultUnit ?? '');
-                      if (!name || types.some((x) => x.label === name)) setName(ty.label);
+                      if (!name || types.some((x) => x.label === name))
+                        setName(ty.hasSubServices ? '' : ty.label);
                       // A new car rego or car insurance is usually one person's own.
                       if (!initial.id && !personalTouched && canBePersonal)
                         setPersonal(!!ty.personalByDefault);
@@ -132,24 +136,45 @@ export function ServiceForm({
                 />
                 {errors.typeSlug && <span className="fld-h bad-text">{errors.typeSlug}</span>}
               </div>
-              <div className="fld-row">
-                <Field label={t('name')} error={errors.name}>
-                  <Input
-                    name="name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    required
-                  />
-                </Field>
-                <Field label={t('provider')} error={errors.provider}>
-                  <Input
-                    name="provider"
-                    defaultValue={initial.provider}
-                    placeholder={t('providerPlaceholder')}
-                    required
-                  />
-                </Field>
-              </div>
+              {sub ? (
+                <>
+                  {/* A sub-service is named after its provider: Netflix, Red Cross. */}
+                  <input type="hidden" name="name" value={provider} />
+                  <Field
+                    label={t('subProvider')}
+                    hint={t('subProviderHint')}
+                    error={errors.provider ?? errors.name}
+                  >
+                    <Input
+                      name="provider"
+                      value={provider}
+                      onChange={(e) => setProvider(e.target.value)}
+                      placeholder={t('subProviderPlaceholder')}
+                      required
+                    />
+                  </Field>
+                </>
+              ) : (
+                <div className="fld-row">
+                  <Field label={t('name')} error={errors.name}>
+                    <Input
+                      name="name"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      required
+                    />
+                  </Field>
+                  <Field label={t('provider')} error={errors.provider}>
+                    <Input
+                      name="provider"
+                      value={provider}
+                      onChange={(e) => setProvider(e.target.value)}
+                      placeholder={t('providerPlaceholder')}
+                      required
+                    />
+                  </Field>
+                </div>
+              )}
               <div className="fld-row">
                 <Field label={t('cadence')} error={errors.cadence}>
                   <Select name="cadence" defaultValue={initial.cadence}>
@@ -198,11 +223,6 @@ export function ServiceForm({
                 <Field label={t('accountRef')} error={errors.accountRef} optional>
                   <Input name="accountRef" defaultValue={initial.accountRef} className="mono" />
                 </Field>
-              </div>
-              <div className="fld">
-                <span className="fld-l">{t('colour')}</span>
-                <SwatchPick name="colour" value={initial.colour} label={t('colour')} />
-                <span className="fld-h">{t('colourHint')}</span>
               </div>
               <Field label={t('notes')} optional>
                 <Textarea name="notes" defaultValue={initial.notes} rows={2} />
@@ -287,7 +307,11 @@ export function ServiceForm({
                   <input type="hidden" name="payerMemberId" value="" />
                 </>
               )}
-              {initial.id && (
+              {initial.id && sub && (
+                // Cancelling a sub-service is on its page (Cancel), which records who and when.
+                <input type="hidden" name="isActive" value={initial.isActive ? 'on' : ''} />
+              )}
+              {initial.id && !sub && (
                 <Card className="danger">
                   <SectionHead title={t('stop.title')} />
                   <p className="muted small">{t('stop.body')}</p>

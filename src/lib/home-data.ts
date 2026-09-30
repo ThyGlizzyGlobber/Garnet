@@ -2,6 +2,7 @@ import { inArray } from 'drizzle-orm';
 import { getDb, type Db } from '@/db/client';
 import { share, type Household, type Member } from '@/db/schema';
 import { recentActivity, type ActivityEvent } from '@/lib/activity';
+import { billDate } from '@/lib/bill-month';
 import { billStatus, type BillStatus } from '@/lib/bill-status';
 import { listBills } from '@/lib/bills';
 import { billsAddress } from '@/lib/bills-address';
@@ -14,7 +15,7 @@ import { addMonths, lastMonths, monthBounds } from '@/lib/periods';
 import { nextMonth, projectMonth } from '@/lib/projections';
 import { documentCounts } from '@/lib/review';
 import { seasonAhead } from '@/lib/seasons';
-import { listServices } from '@/lib/services';
+import { chargedAfterCancel, listServices } from '@/lib/services';
 import { hasAnyBills, monthlySeries, totalsForRange } from '@/lib/stats';
 import { weatherWeek } from '@/lib/weather-week';
 import { weekFacts, type WeekFacts } from '@/lib/week-summary';
@@ -120,6 +121,7 @@ export interface HomeData {
     spark: number[];
   } | null;
   notices: (
+    | { kind: 'cancelled'; serviceName: string; href: string }
     | { kind: 'unusual'; serviceName: string; pct: number | null; href: string }
     | { kind: 'plan'; serviceName: string; href: string }
     | { kind: 'whose'; serviceName: string; href: string }
@@ -418,6 +420,11 @@ export function homeData(hh: Household, me: Member, today: string, db: Db = getD
 
   // Heads up.
   const notices: HomeData['notices'] = [];
+  // A cancelled subscription that's still charging, in the last three months.
+  for (const b of bills.filter(
+    (x) => chargedAfterCancel(x.service, x) && billDate(x) >= addDays(today, -90),
+  ))
+    notices.push({ kind: 'cancelled', serviceName: b.service.name, href: `/bills/${b.id}` });
   for (const b of bills.filter((x) => x.isAnomaly).slice(0, 2))
     notices.push({
       kind: 'unusual',

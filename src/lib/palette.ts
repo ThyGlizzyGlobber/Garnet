@@ -36,14 +36,3 @@ export function nextPaletteColour(used: string[]): string {
     PALETTE.find((p) => !taken.has(p.light))?.light ?? PALETTE[used.length % PALETTE.length]!.light
   );
 }
-
-/** Suggested colour for a built-in service type, so demos and seeds look consistent. */
-export const TYPE_COLOUR: Record<string, string> = {
-  internet: '#2a78d6',
-  electricity: '#eda100',
-  gas: '#eb6834',
-  water: '#1baf7a',
-  rent: '#4a3aa7',
-  council_rates: '#008300',
-  other: '#e87ba4',
-};

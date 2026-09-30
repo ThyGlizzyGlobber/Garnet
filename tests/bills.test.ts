@@ -80,6 +80,7 @@ describe('service type catalog', () => {
       'vehicle_maintenance',
       'subscriptions',
       'gym',
+      'donations',
       'gardening',
       'cleaning',
       'pest_control',

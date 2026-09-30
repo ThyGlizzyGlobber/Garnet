@@ -8,7 +8,13 @@ import { addDays, daysInclusive, toUtcMs } from '@/lib/dates';
 import { paysByInstalments } from '@/lib/instalments';
 import { addMonths, monthBounds } from '@/lib/periods';
 import { estimatePerDay, nextBillGuess } from '@/lib/projections';
-import { listServices, getCustomSplits, type ServiceWithType } from '@/lib/services';
+import {
+  chargedAfterCancel,
+  getCustomSplits,
+  groupServices,
+  listServices,
+  type ServiceWithType,
+} from '@/lib/services';
 
 /**
  * The Services page: one ribbon per service, a year of its bills as blocks
@@ -51,11 +57,30 @@ export interface ServiceRibbon {
   percentages: number[] | null;
   /** The next bill's expected due date, when the cadence allows a guess. */
   nextDue: string | null;
+  /** A sub-service someone cancelled: when, and by whom (a member id). */
+  cancelled: { at: string; by: string | null } | null;
+  /** Bills dated after it was cancelled (it's still charging). */
+  afterCancel: number;
+}
+
+/**
+ * The ribbons in list order, a main service's sub-services gathered under
+ * it (Subscriptions → Netflix, Spotify) with their year added up; any other
+ * service is a group of one with no type.
+ */
+export interface RibbonGroup {
+  typeSlug: string | null;
+  label: string;
+  icon: string;
+  colour: string;
+  yearMinor: number;
+  ribbons: ServiceRibbon[];
 }
 
 export interface ServicesView {
   window: { start: string; end: string; today: number; months: { label: string; left: number }[] };
   services: ServiceRibbon[];
+  groups: RibbonGroup[];
 }
 
 export type ServiceScope = 'all' | 'household' | 'mine';
@@ -66,6 +91,8 @@ export function servicesView(
   today: string,
   scope: ServiceScope = 'all',
   db: Db = getDb(),
+  /** Only this main service's sub-services, cancelled ones included (its own page). */
+  typeSlug: string | null = null,
 ): ServicesView {
   const month = today.slice(0, 7);
   const start = monthBounds(addMonths(month, -11)).start;
@@ -81,9 +108,23 @@ export function servicesView(
 
   const services = listServices(
     hh.id,
-    scope === 'mine' ? { owner: memberId } : scope === 'household' ? {} : { viewer: memberId },
+    {
+      ...(scope === 'mine'
+        ? { owner: memberId }
+        : scope === 'household'
+          ? {}
+          : { viewer: memberId }),
+      includeInactive: !!typeSlug,
+    },
     db,
-  );
+  )
+    .filter((svc) => !typeSlug || svc.typeSlug === typeSlug)
+    // Still going first (in list order), then the cancelled ones, latest first.
+    .sort((a, b) =>
+      a.cancelledAt && b.cancelledAt
+        ? b.cancelledAt.localeCompare(a.cancelledAt)
+        : Number(!!a.cancelledAt) - Number(!!b.cancelledAt),
+    );
   const ribbons = services.map((svc): ServiceRibbon => {
     const bills = listBills(hh.id, { serviceId: svc.id }, db);
     const latest = bills[0];
@@ -133,12 +174,27 @@ export function servicesView(
           ? { n: due.instalment.n, of: due.instalment.of, dueDate: due.status.dueDate }
           : null,
       percentages: percentagesOf(hh.id, svc, db),
-      nextDue: nextDueGuess(svc, bills, today),
+      nextDue: svc.cancelledAt ? null : nextDueGuess(svc, bills, today),
+      cancelled: svc.cancelledAt ? { at: svc.cancelledAt, by: svc.cancelledByMemberId } : null,
+      afterCancel: bills.filter((b) => chargedAfterCancel(svc, b)).length,
+    };
+  });
+  const byId = new Map(ribbons.map((r) => [r.id, r]));
+  const groups = groupServices(services).map((g): RibbonGroup => {
+    const rs = g.services.map((svc) => byId.get(svc.id)!);
+    return {
+      typeSlug: g.typeSlug,
+      label: g.label,
+      icon: g.icon,
+      colour: g.colour,
+      yearMinor: rs.reduce((sum, r) => sum + r.yearMinor, 0),
+      ribbons: rs,
     };
   });
   return {
     window: { start, end, today: x(today), months },
     services: ribbons,
+    groups,
   };
 }
 

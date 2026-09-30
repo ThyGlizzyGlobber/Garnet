@@ -9,7 +9,6 @@ import { z } from 'zod';
 import { CADENCES, SPLIT_MODES, type SplitMode } from '@/db/schema';
 import type { ActionState } from '@/components/ui/form';
 import { errorText, optStr, str, zodToState } from '@/lib/actions';
-import { DEFAULT_COLOUR } from '@/lib/palette';
 import { requireMember, requireOperator } from '@/lib/auth/session';
 import { refreshAnomalies, resplitBills, setServiceOwner } from '@/lib/bills';
 import { parseMoneyToMinor } from '@/lib/format';
@@ -17,11 +16,13 @@ import { getHousehold } from '@/lib/households';
 import { visibleTo } from '@/lib/scope';
 import { listMembers } from '@/lib/members';
 import {
+  cancelService,
   createService,
   createServiceType,
   getCustomSplits,
   getFixedAmounts,
   getService,
+  resumeService,
   updateService,
   type ServiceInput,
 } from '@/lib/services';
@@ -41,7 +42,6 @@ const schema = z.object({
     .refine((v) => v === '' || (Number.isFinite(Number(v)) && Number(v) > 0), 'numberAboveZero'),
   splitMode: z.enum(SPLIT_MODES).catch('equal'),
   payerMemberId: z.string(),
-  colour: z.string().regex(/^#[0-9a-fA-F]{6}$/, 'pickColour'),
   isActive: z.boolean(),
   notes: z.string().max(500),
 });
@@ -68,7 +68,6 @@ async function read(
     usageLimit: str(fd, 'usageLimit'),
     splitMode: str(fd, 'splitMode'),
     payerMemberId: str(fd, 'payerMemberId'),
-    colour: str(fd, 'colour') || DEFAULT_COLOUR,
     isActive: fd.get('isActive') === 'on',
     notes: str(fd, 'notes'),
   });
@@ -122,7 +121,6 @@ async function read(
       usageLimitMonthly: v.usageUnit && v.usageLimit ? Number(v.usageLimit) : null,
       splitMode: v.splitMode,
       payerMemberId: v.payerMemberId || null,
-      colour: v.colour,
       isActive: v.isActive,
       notes: v.notes || null,
       trustedSenders: parseSenderList(str(fd, 'trustedSenders')),
@@ -172,19 +170,26 @@ export async function createServiceAction(_prev: ActionState, fd: FormData): Pro
   // "Just for me": the member creating it owns it.
   const personal = fd.get('personal') === 'on';
   const admin = isAdmin(me);
-  let id: string;
+  let created: ReturnType<typeof createService>;
   try {
-    id = createService(me.householdId, {
+    created = createService(me.householdId, {
       // A member setting one up splits it evenly and pays it; an admin can change that.
       ...(admin ? r.input : { ...withoutSplit(r.input), splitMode: 'equal', payerMemberId: me.id }),
       isActive: true,
       ownerMemberId: personal ? me.id : null,
-    }).id;
+    });
   } catch (e) {
     return { error: (e as Error).message };
   }
   revalidatePath('/services');
-  redirect(personal ? `/services/${id}` : '/services');
+  // A new sub-service (Netflix) lands with its main service's others.
+  redirect(
+    created.type.hasSubServices
+      ? `/services/group/${created.typeSlug}`
+      : personal
+        ? `/services/${created.id}`
+        : '/services',
+  );
 }
 
 export async function updateServiceAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
@@ -240,4 +245,28 @@ export async function createServiceTypeAction(fd: FormData): Promise<void> {
     // Already in the catalog.
   }
   revalidatePath('/services');
+}
+
+/** Cancel a sub-service (their Netflix): kept with its bills, marked who cancelled it and when. */
+export async function cancelServiceAction(fd: FormData): Promise<void> {
+  const me = await requireMember();
+  const id = str(fd, 'id');
+  const svc = getService(me.householdId, id);
+  if (!svc || !visibleTo(svc.ownerMemberId, me.id) || !svc.type.hasSubServices) return;
+  cancelService(me.householdId, id, me.id);
+  revalidatePath('/services');
+  revalidatePath(`/services/${id}`);
+  revalidatePath('/');
+}
+
+/** Undo a cancellation: the sub-service is going again. */
+export async function resumeServiceAction(fd: FormData): Promise<void> {
+  const me = await requireMember();
+  const id = str(fd, 'id');
+  const svc = getService(me.householdId, id);
+  if (!svc || !visibleTo(svc.ownerMemberId, me.id) || !svc.cancelledAt) return;
+  resumeService(me.householdId, id);
+  revalidatePath('/services');
+  revalidatePath(`/services/${id}`);
+  revalidatePath('/');
 }

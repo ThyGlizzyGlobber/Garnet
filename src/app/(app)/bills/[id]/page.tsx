@@ -15,7 +15,8 @@ import { daysInclusive } from '@/lib/dates';
 import { formatMonthRange, formatPeriod } from '@/lib/format';
 import { canChoosePlan, paysByInstalments } from '@/lib/instalments';
 import { getMember, hasHousemates } from '@/lib/members';
-import { asksMember, mayChangeOwner } from '@/lib/ownership';
+import { asksMember, mayChangeOwner, mayMoveBill } from '@/lib/ownership';
+import { chargedAfterCancel, groupServices, listServices } from '@/lib/services';
 import { visibleTo } from '@/lib/scope';
 import { unusualOf } from '@/lib/service-overview';
 import { unitLabel } from '@/lib/units';
@@ -23,12 +24,14 @@ import {
   answerOwnershipAction,
   clearBillAlertAction,
   deleteBillAction,
+  moveBillAction,
   setWhoseAction,
   toggleBillPaidAction,
   toggleSharePaidAction,
 } from '../actions';
 import { BillFilesCard } from './bill-files';
 import { FiguresCard } from './figures-card';
+import { MoveBill, type MoveTarget } from './move-bill';
 import { Paper } from './paper';
 import { PaymentPlan } from './payment-plan';
 import { SharesCard } from './shares-card';
@@ -103,6 +106,32 @@ export default async function BillPage({ params }: { params: Promise<{ id: strin
     ? b.shares.find((s) => s.memberId === me.id && s.instalment === (due.instalment?.n ?? 0))
     : null;
   const canPayShare = !!mine && mine.paidMethod !== 'payer' && !mine.paidAt;
+
+  // "Move to": every service it may go to, a main service's sub-services
+  // together, then the viewer's own.
+  const movable = listServices(hh.id, { includeInactive: true, viewer: me.id }).filter(
+    (s) => s.id === b.serviceId || mayMoveBill(hh.id, me, b, s),
+  );
+  const optionName = (s: (typeof movable)[number]) =>
+    `${s.name}${!s.type.hasSubServices && s.provider && s.provider !== s.name ? ` · ${s.provider}` : ''}${s.cancelledAt ? ` (${t('move.cancelled')})` : ''}`;
+  const moveTargets: MoveTarget[] = [
+    { owner: false, label: '' },
+    { owner: true, label: t('move.yours') },
+  ]
+    .flatMap(({ owner, label }) =>
+      groupServices(movable.filter((s) => !!s.ownerMemberId === owner)).map((g) => ({
+        label: g.typeSlug ? (owner ? `${g.label} · ${label}` : g.label) : label,
+        options: g.services.map((s) => ({ id: s.id, name: optionName(s) })),
+      })),
+    )
+    // Services on their own next to each other share one list.
+    .reduce<MoveTarget[]>((out, g) => {
+      const last = out.at(-1);
+      if (last && last.label === g.label) last.options.push(...g.options);
+      else out.push(g);
+      return out;
+    }, []);
+  const afterCancel = chargedAfterCancel(b.service, b);
   const iPayProvider = personal || !split || payer?.id === me.id || !payer;
 
   return (
@@ -121,7 +150,8 @@ export default async function BillPage({ params }: { params: Promise<{ id: strin
                 <Disc icon={b.service.type.icon} colour={b.service.colour} size="lg" />
                 <div>
                   <Eyebrow>
-                    {b.service.name}
+                    {/* A sub-service reads "Subscriptions", its provider under it. */}
+                    {b.service.type.hasSubServices ? b.service.type.label : b.service.name}
                     {personal ? ` · ${t('page.yours')}` : ''}
                   </Eyebrow>
                   <div className="bp-prov">{b.service.provider}</div>
@@ -252,6 +282,19 @@ export default async function BillPage({ params }: { params: Promise<{ id: strin
                 />
               </div>
             </Card>
+          )}
+
+          {afterCancel && (
+            <Notice
+              tone="bad"
+              icon="alert"
+              title={t('page.afterCancelTitle', { service: b.service.name })}
+              body={t('page.afterCancelBody', {
+                date: date(b.service.cancelledAt!.slice(0, 10)),
+              })}
+              href={`/services/${b.service.id}`}
+              className="bp-notice"
+            />
           )}
 
           {unusual && (
@@ -395,6 +438,17 @@ export default async function BillPage({ params }: { params: Promise<{ id: strin
           )}
 
           <FiguresCard bill={b} ctx={ctx} />
+
+          {movable.length > 1 && (
+            <Card>
+              <MoveBill
+                action={moveBillAction}
+                billId={b.id}
+                currentId={b.serviceId}
+                targets={moveTargets}
+              />
+            </Card>
+          )}
 
           <div className="flex justify-end">
             <InlineAction

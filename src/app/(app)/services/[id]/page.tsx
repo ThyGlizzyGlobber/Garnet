@@ -18,7 +18,11 @@ import { isAdmin } from '@/lib/roles';
 import { visibleTo } from '@/lib/scope';
 import { seasonNoticeText } from '@/lib/season-text';
 import { serviceOverview } from '@/lib/service-overview';
-import { getService } from '@/lib/services';
+import { getMember } from '@/lib/members';
+import { chargedAfterCancel, getService } from '@/lib/services';
+import { listBills } from '@/lib/bills';
+import { InlineAction } from '@/components/ui/form';
+import { cancelServiceAction, resumeServiceAction } from '../actions';
 import { unitLabel } from '@/lib/units';
 import { formatMonth } from '@/lib/format';
 import { partText } from '../split-text';
@@ -50,6 +54,13 @@ export default async function ServicePage({ params }: { params: Promise<{ id: st
   const split = o.split;
   const payer = split?.parts.find((p) => p.member.id === svc.payerMemberId)?.member;
   const payerName = payer?.name ?? null;
+  // A sub-service (Netflix under Subscriptions): back to its main service,
+  // and it can be cancelled.
+  const sub = svc.type.hasSubServices;
+  const cancelledBy = svc.cancelledByMemberId ? getMember(hh.id, svc.cancelledByMemberId) : null;
+  const afterCancel = svc.cancelledAt
+    ? listBills(hh.id, { serviceId: svc.id }).filter((b) => chargedAfterCancel(svc, b))
+    : [];
 
   // "Northwind Energy, quarterly. $1,864 last financial year, about $155 a
   // month. The latest bill used 5% more than the same time last year…"
@@ -110,7 +121,13 @@ export default async function ServicePage({ params }: { params: Promise<{ id: st
           {ts('form.seasonal')}
         </Chip>
       )}
-      {!svc.isActive && <Chip tone="neutral">{ts('inactive')}</Chip>}
+      {svc.cancelledAt ? (
+        <Chip tone={afterCancel.length ? 'bad' : 'neutral'} icon="x">
+          {ts('cancelled')}
+        </Chip>
+      ) : (
+        !svc.isActive && <Chip tone="neutral">{ts('inactive')}</Chip>
+      )}
     </>
   );
 
@@ -173,7 +190,11 @@ export default async function ServicePage({ params }: { params: Promise<{ id: st
 
   return (
     <div className="scr d3-service">
-      <BackLink href="/services">{ts('title')}</BackLink>
+      {sub ? (
+        <BackLink href={`/services/group/${svc.typeSlug}`}>{svc.type.label}</BackLink>
+      ) : (
+        <BackLink href="/services">{ts('title')}</BackLink>
+      )}
       <PageTitle
         eyebrow={`${svc.type.label} · ${ts(`form.cadences.${svc.cadence}`)}`}
         title={svc.name}
@@ -288,6 +309,26 @@ export default async function ServicePage({ params }: { params: Promise<{ id: st
         </div>
 
         <aside className="d3-aside">
+          {svc.cancelledAt && (
+            <Notice
+              tone={afterCancel.length ? 'bad' : 'neutral'}
+              icon={afterCancel.length ? 'alert' : 'x'}
+              title={
+                cancelledBy
+                  ? ts('cancel.byOn', {
+                      name: cancelledBy.id === me.id ? ts('page.you') : cancelledBy.name,
+                      date: ctx.date(svc.cancelledAt.slice(0, 10)),
+                    })
+                  : ts('cancel.on', { date: ctx.date(svc.cancelledAt.slice(0, 10)) })
+              }
+              body={
+                afterCancel.length
+                  ? ts('cancel.afterBody', { count: afterCancel.length })
+                  : ts('cancel.keptBody')
+              }
+              href={afterCancel.length ? `/bills/${afterCancel[0]!.id}` : `/bills?s=${svc.id}`}
+            />
+          )}
           <Card className="d3-nums">
             <div>
               <span className="muted small">
@@ -532,6 +573,33 @@ export default async function ServicePage({ params }: { params: Promise<{ id: st
               <span className="muted small">{svc.type.label}</span>
             </div>
           </Card>
+
+          {sub && (
+            <Card className={svc.cancelledAt ? undefined : 'danger'}>
+              <SectionHead title={ts(svc.cancelledAt ? 'cancel.resumeTitle' : 'cancel.title')} />
+              <p className="muted small">
+                {ts(svc.cancelledAt ? 'cancel.resumeBody' : 'cancel.body', { name: svc.name })}
+              </p>
+              <div className="mt-3">
+                {svc.cancelledAt ? (
+                  <InlineAction
+                    action={resumeServiceAction}
+                    hidden={{ id: svc.id }}
+                    label={ts('cancel.resume')}
+                    variant="secondary"
+                  />
+                ) : (
+                  <InlineAction
+                    action={cancelServiceAction}
+                    hidden={{ id: svc.id }}
+                    label={ts('cancel.button', { name: svc.name })}
+                    variant="danger"
+                    confirm={ts('cancel.confirm', { name: svc.name })}
+                  />
+                )}
+              </div>
+            </Card>
+          )}
         </aside>
       </div>
     </div>

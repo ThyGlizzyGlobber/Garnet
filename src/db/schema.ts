@@ -174,6 +174,17 @@ export const serviceType = sqliteTable('service_type', {
   personalByDefault: integer('personal_by_default', { mode: 'boolean' }).notNull().default(false),
   /** Group in pickers: see SERVICE_CATEGORIES (src/lib/service-categories.ts). */
   category: text('category').notNull().default('other'),
+  /**
+   * The colour every service of this type wears, in every household (a
+   * palette colour, src/lib/palette.ts). Households don't pick service colours.
+   */
+  colour: text('colour').notNull().default('#e87ba4'),
+  /**
+   * A main service that holds sub-services (Subscriptions → Netflix, Spotify;
+   * Donations → Red Cross): each provider is its own service of this type,
+   * listed under the type in the nav and on the Services page.
+   */
+  hasSubServices: integer('has_sub_services', { mode: 'boolean' }).notNull().default(false),
 });
 
 export const CADENCES = [
@@ -237,8 +248,18 @@ export const service = sqliteTable(
     }),
     ownerAskedAt: text('owner_asked_at'),
     ownerConfirmedAt: text('owner_confirmed_at'),
+    /** Always its type's colour (service_type.colour), kept here for the queries that join it. */
     colour: text('colour').notNull().default('#0a84ff'),
     isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
+    /**
+     * A sub-service someone cancelled (Netflix): it stops being active, keeps
+     * every bill, and a bill dated after this is flagged as charged after
+     * cancelling. Null = not cancelled.
+     */
+    cancelledAt: text('cancelled_at'),
+    cancelledByMemberId: text('cancelled_by_member_id').references(() => member.id, {
+      onDelete: 'set null',
+    }),
     /**
      * The provider takes payment automatically (card on file, direct debit):
      * bills count as paid to the provider once the due date passes, unless a

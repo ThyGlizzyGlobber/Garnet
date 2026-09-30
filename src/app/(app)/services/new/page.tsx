@@ -8,8 +8,6 @@ import { listMembers } from '@/lib/members';
 import { listServiceTypes, SEASONAL_TYPES } from '@/lib/services';
 import { listUnits } from '@/lib/units';
 import { todayIn } from '@/lib/dates';
-import { nextPaletteColour, TYPE_COLOUR } from '@/lib/palette';
-import { listServices } from '@/lib/services';
 import { createServiceAction } from '../actions';
 import { ServiceForm } from '../service-form';
 import { isAdmin } from '@/lib/roles';
@@ -17,7 +15,7 @@ import { isAdmin } from '@/lib/roles';
 export default async function NewServicePage({
   searchParams,
 }: {
-  searchParams: Promise<{ personal?: string }>;
+  searchParams: Promise<{ personal?: string; type?: string }>;
 }) {
   const { hh, me } = await pageContext();
   const t = await getTranslations('services');
@@ -28,16 +26,19 @@ export default async function NewServicePage({
   const types = listServiceTypes();
   // From the personal dashboard: start on a kind of service that's usually one person's own.
   const housemates = hasHousemates(hh.id);
-  const personal = housemates && !!(await searchParams).personal;
-  const first = (personal ? types.find((ty) => ty.personalByDefault) : undefined) ?? types[0]!;
-  const used = listServices(hh.id, { includeInactive: true }).map((s) => s.colour);
-  const colour =
-    TYPE_COLOUR[first.slug] && !used.includes(TYPE_COLOUR[first.slug]!)
-      ? TYPE_COLOUR[first.slug]!
-      : nextPaletteColour(used);
+  const params = await searchParams;
+  const personal = housemates && !!params.personal;
+  // "Add a subscription" from a main service's page starts on its type.
+  const first =
+    types.find((ty) => ty.slug === params.type) ??
+    (personal ? types.find((ty) => ty.personalByDefault) : undefined) ??
+    types[0]!;
+  const back = first.hasSubServices && params.type ? `/services/group/${first.slug}` : '/services';
   return (
     <div className="scr">
-      <BackLink href="/services">{t('title')}</BackLink>
+      <BackLink href={back}>
+        {first.hasSubServices && params.type ? first.label : t('title')}
+      </BackLink>
       <PageTitle title={t('form.newTitle')} lede={t('form.newLede')} />
       <ServiceForm
         action={createServiceAction}
@@ -64,10 +65,10 @@ export default async function NewServicePage({
         sharedHousehold={hh.splitMode === 'shared'}
         canBePersonal={housemates}
         submitLabel={t('form.create')}
-        cancelHref="/services"
+        cancelHref={back}
         initial={{
           typeSlug: first.slug,
-          name: first.label,
+          name: first.hasSubServices ? '' : first.label,
           provider: '',
           accountRef: '',
           cadence: 'monthly',
@@ -75,7 +76,6 @@ export default async function NewServicePage({
           usageLimit: '',
           splitMode: 'equal',
           payerMemberId: me.id,
-          colour,
           isActive: true,
           notes: '',
           trustedSenders: '',

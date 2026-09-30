@@ -3,9 +3,10 @@ import type { ReactNode } from 'react';
 import { Avatar } from '@/components/ui/colour';
 import { IconButton, SearchField } from '@/components/ui/controls';
 import { colourCss } from '@/lib/palette';
-import type { ShellView } from '@/lib/shell';
+import type { ShellEntry, ShellView } from '@/lib/shell';
 import { AddBillButton } from './add-bill';
 import { Icon } from './icons';
+import { NavGroup } from './nav-group';
 import { OfflineBar } from './offline-bar';
 import { NavItems, SectionName, type NavItem } from './nav-items';
 
@@ -27,6 +28,9 @@ export interface ShellLabels {
   thisMonth: string;
   justYours: string;
   noServices: string;
+  /** The arrow on a main service with sub-services. */
+  showSubs: string;
+  hideSubs: string;
   /** The product's name, under the household's on a phone's Home. */
   product: string;
   householdHome: string;
@@ -57,18 +61,46 @@ export function AppShell({
     view.household.members.length <= 1
       ? labels.justYou
       : new Intl.ListFormat(locale, { type: 'conjunction' }).format(view.household.members);
-  const row = (s: ShellView['services'][number]) => (
-    <Link
-      key={s.id}
-      href={`/services/${s.id}`}
-      className="nc-s"
-      style={{ ['--svc' as string]: colourCss(s.colour) }}
-    >
+  const line = (s: { name: string; minor: number }) => (
+    <>
       <i aria-hidden="true" />
       <span>{s.name}</span>
       <b>{money(s.minor)}</b>
-    </Link>
+    </>
   );
+  const row = (s: ShellEntry) =>
+    s.kind === 'group' ? (
+      <NavGroup
+        key={`g-${s.typeSlug}`}
+        href={`/services/group/${s.typeSlug}`}
+        childHrefs={s.children.map((c) => `/services/${c.id}`)}
+        label={s.name}
+        showLabel={labels.showSubs}
+        hideLabel={labels.hideSubs}
+        colour={colourCss(s.colour)}
+        row={line(s)}
+      >
+        {s.children.map((c) => (
+          <Link
+            key={c.id}
+            href={`/services/${c.id}`}
+            className="nc-s nc-sub"
+            style={{ ['--svc' as string]: colourCss(c.colour) }}
+          >
+            {line(c)}
+          </Link>
+        ))}
+      </NavGroup>
+    ) : (
+      <Link
+        key={s.id}
+        href={`/services/${s.id}`}
+        className="nc-s"
+        style={{ ['--svc' as string]: colourCss(s.colour) }}
+      >
+        {line(s)}
+      </Link>
+    );
   return (
     <div className="app">
       <nav className="nav glass-strong vertical column" aria-label="Main">
