@@ -55,6 +55,24 @@ export const CATEGORY_COLOURS: Record<GroupedCategory, string> = {
   home: '#9a6a3a',
 };
 
+/**
+ * "Something else" inside each main service (migration 0038): a physio under
+ * Health, tolls under Vehicles. Whoever picks it wasn't sure which kind it
+ * is, so a service of it takes any bill of its main service (typeFits).
+ */
+const SOMETHING_ELSE: Record<GroupedCategory, string> = {
+  vehicle: 'vehicle_other',
+  health: 'health_other',
+  lifestyle: 'lifestyle_other',
+  home: 'home_other',
+};
+const SOMETHING_ELSE_OF = new Map<string, GroupedCategory>(
+  Object.entries(SOMETHING_ELSE).map(([c, slug]) => [slug, c as GroupedCategory]),
+);
+/** The main service this type is "Something else" in, or null. */
+export const somethingElseIn = (slug: string): GroupedCategory | null =>
+  SOMETHING_ELSE_OF.get(slug) ?? null;
+
 export function isGroupedCategory(
   category: string | null | undefined,
 ): category is GroupedCategory {
@@ -100,3 +118,53 @@ const ESSENTIAL_TYPES = new Set([
 ]);
 
 export const isEssential = (ty: { slug: string }): boolean => ESSENTIAL_TYPES.has(ty.slug);
+
+/** One choice on the Add a service page's first step: an everyday bill, a main service, or a type of its own. */
+export interface TopChoice<T> {
+  /** The type's slug, or "cat:<category>" for a main service. */
+  key: string;
+  essential: boolean;
+  /** A main service's category, when it is one. */
+  category: GroupedCategory | null;
+  /** Its kinds: one for a type of its own; a main service's, "Something else" last. */
+  types: T[];
+}
+
+/**
+ * What the Add a service page offers first, laid out like the Services page:
+ * the everyday bills, then the main services (Home & property, Health,
+ * Lifestyle, Vehicles), Subscriptions and any other type, and "Other" last.
+ */
+export function topChoices<T extends { slug: string; category?: string | null }>(
+  types: T[],
+): TopChoice<T>[] {
+  const own = (ty: T): TopChoice<T> => ({
+    key: ty.slug,
+    essential: isEssential(ty),
+    category: null,
+    types: [ty],
+  });
+  const mains = (['home', 'health', 'lifestyle', 'vehicle'] as const)
+    .map((category): TopChoice<T> => {
+      const kinds = types.filter((ty) => ty.category === category && inMainCategory(ty));
+      const unsure = kinds.filter((ty) => somethingElseIn(ty.slug));
+      return {
+        key: `cat:${category}`,
+        essential: false,
+        category,
+        types: [...kinds.filter((ty) => !somethingElseIn(ty.slug)), ...unsure],
+      };
+    })
+    .filter((c) => c.types.length > 0);
+  const rest = types.filter((ty) => !isEssential(ty) && !inMainCategory(ty));
+  return [
+    ...types.filter(isEssential).map(own),
+    ...mains,
+    ...rest.filter((ty) => ty.slug !== 'other').map(own),
+    ...rest.filter((ty) => ty.slug === 'other').map(own),
+  ];
+}
+
+/** The first-step choice a type belongs to. */
+export const topKeyOf = (ty: { slug: string; category?: string | null }): string =>
+  inMainCategory(ty) ? `cat:${ty.category}` : ty.slug;

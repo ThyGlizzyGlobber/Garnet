@@ -13,6 +13,7 @@ import {
   type ServiceWithType,
 } from '@/lib/services';
 import { isAdmin } from '@/lib/roles';
+import { somethingElseIn } from '@/lib/service-categories';
 
 /**
  * A readable bill arrived from a provider the household has no service for:
@@ -47,10 +48,26 @@ export function cadenceFromPeriod(start: string, end: string): Cadence {
 
 /**
  * Could a service of this type take a bill of that type? Yes when they're the
- * same, or either is "other" (unknown), so an unsure reading never splits a service.
+ * same, or either is "other" (unknown), so an unsure reading never splits a
+ * service; and a service filed as "Something else" under a main service
+ * (Physio under Health) takes any bill of that main service, since whoever
+ * added it wasn't sure which kind it was. `categoryOf` gives a type's category.
  */
-export function typeFits(serviceType: string, billType: string | null | undefined): boolean {
-  return !billType || billType === 'other' || serviceType === 'other' || serviceType === billType;
+export function typeFits(
+  serviceType: string,
+  billType: string | null | undefined,
+  categoryOf: (slug: string) => string | null = () => null,
+): boolean {
+  if (!billType || billType === 'other' || serviceType === 'other' || serviceType === billType)
+    return true;
+  const unsure = somethingElseIn(serviceType);
+  return !!unsure && categoryOf(billType) === unsure;
+}
+
+/** Each type's category, for typeFits. */
+export function categoryLookup(db: Db = getDb()): (slug: string) => string | null {
+  const byType = new Map(listServiceTypes(db).map((t) => [t.slug, t.category]));
+  return (slug) => byType.get(slug) ?? null;
 }
 
 /**
@@ -125,7 +142,8 @@ export function serviceForNewProvider(
   // a person picks. A sub-service someone cancelled stays cancelled: its new
   // bill is flagged as charged after cancelling instead.
   const same = all.filter((s) => sameProvider(s.provider, provider));
-  const typed = same.filter((s) => typeFits(s.typeSlug, bill.serviceType));
+  const categoryOf = categoryLookup(db);
+  const typed = same.filter((s) => typeFits(s.typeSlug, bill.serviceType, categoryOf));
   if (typed.length) {
     const exact = typed.filter((s) => s.typeSlug === bill.serviceType);
     const existing = typed.length === 1 ? typed[0]! : exact.length === 1 ? exact[0]! : null;

@@ -5,13 +5,13 @@ import { BackLink } from '@/components/ui/controls';
 import { CADENCES, SPLIT_MODES } from '@/db/schema';
 import { pageContext } from '@/lib/context';
 import { listMembers } from '@/lib/members';
-import { listServiceTypes, SEASONAL_TYPES } from '@/lib/services';
+import { listServices, listServiceTypes, SEASONAL_TYPES } from '@/lib/services';
 import { listUnits } from '@/lib/units';
 import { todayIn } from '@/lib/dates';
 import { createServiceAction } from '../actions';
 import { ServiceForm } from '../service-form';
 import { isAdmin } from '@/lib/roles';
-import { inMainCategory, isGroupedCategory } from '@/lib/service-categories';
+import { isGroupedCategory } from '@/lib/service-categories';
 
 export default async function NewServicePage({
   searchParams,
@@ -26,36 +26,37 @@ export default async function NewServicePage({
     (m) => m.activeTo === null || m.activeTo >= todayIn(hh.timezone),
   );
   const params = await searchParams;
-  // "Add a service" on Health or Lifestyle: only that main service's kinds.
+  // "Add a service" on Health, Lifestyle or Home & property starts inside it.
   const category = isGroupedCategory(params.category) ? params.category : null;
-  const all = listServiceTypes();
-  const types = category ? all.filter((ty) => ty.category === category && inMainCategory(ty)) : all;
-  // From the personal dashboard: start on a kind of service that's usually one person's own.
+  const types = listServiceTypes().map((ty) => ({
+    ...ty,
+    seasonal: SEASONAL_TYPES.includes(ty.slug),
+  }));
+  // From the personal dashboard: it's usually one person's own.
   const housemates = hasHousemates(hh.id);
   const personal = housemates && !!params.personal;
   // "Add a subscription" from a main service's page starts on its type.
-  const first =
-    types.find((ty) => ty.slug === params.type) ??
-    (personal ? types.find((ty) => ty.personalByDefault) : undefined) ??
-    types[0]!;
+  const first = types.find((ty) => ty.slug === params.type) ?? null;
   const back = category
     ? `/services/category/${category}`
-    : first.hasSubServices && params.type
+    : first?.hasSubServices
       ? `/services/group/${first.slug}`
       : '/services';
   return (
     <div className="scr">
       <BackLink href={back}>
-        {category
-          ? tm(`main.${category}`)
-          : first.hasSubServices && params.type
-            ? first.label
-            : t('title')}
+        {category ? tm(`main.${category}`) : first?.hasSubServices ? first.label : t('title')}
       </BackLink>
       <PageTitle title={t('form.newTitle')} lede={t('form.newLede')} />
       <ServiceForm
         action={createServiceAction}
         types={types}
+        initialTop={category ? `cat:${category}` : null}
+        existing={listServices(hh.id, { viewer: me.id, includeInactive: true }).map((s) => ({
+          id: s.id,
+          name: s.name,
+          provider: s.provider,
+        }))}
         units={listUnits()}
         members={current.map((m) => ({
           id: m.id,
@@ -80,12 +81,12 @@ export default async function NewServicePage({
         submitLabel={t('form.create')}
         cancelHref={back}
         initial={{
-          typeSlug: first.slug,
-          name: first.hasSubServices ? '' : first.label,
+          typeSlug: first?.slug ?? '',
+          name: !first || first.hasSubServices ? '' : first.label,
           provider: '',
           accountRef: '',
           cadence: 'monthly',
-          usageUnit: first.defaultUnit ?? '',
+          usageUnit: first?.defaultUnit ?? '',
           usageLimit: '',
           splitMode: 'equal',
           payerMemberId: me.id,
@@ -93,9 +94,9 @@ export default async function NewServicePage({
           notes: '',
           trustedSenders: '',
           autoPay: false,
-          seasonal: SEASONAL_TYPES.includes(first.slug),
-          recurring: !!first.hasSubServices,
-          personal: personal || (housemates && first.personalByDefault),
+          seasonal: !!first?.seasonal,
+          recurring: !!first?.hasSubServices,
+          personal: personal || (housemates && !!first?.personalByDefault),
         }}
       />
     </div>

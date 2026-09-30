@@ -115,48 +115,6 @@ export function CodeBoxes({ name = 'code', label }: { name?: string; label: stri
   );
 }
 
-export interface TypeOption {
-  slug: string;
-  label: string;
-}
-
-/** The service types as chips, grouped by what they are; a radio per chip. */
-export function TypePicker({
-  name,
-  groups,
-  value,
-  onChange,
-}: {
-  name: string;
-  groups: { category: string; label: string; types: TypeOption[] }[];
-  value: string;
-  onChange: (slug: string) => void;
-}) {
-  return (
-    <div className="type-pick">
-      {groups.map((g) => (
-        <div key={g.category} className="tp-g">
-          <span className="tp-h">{g.label}</span>
-          <div className="tp-list">
-            {g.types.map((ty) => (
-              <label key={ty.slug}>
-                <input
-                  type="radio"
-                  name={name}
-                  value={ty.slug}
-                  checked={value === ty.slug}
-                  onChange={() => onChange(ty.slug)}
-                />
-                <span className={cx('chip-btn', value === ty.slug && 'on')}>{ty.label}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 /** Who pays the provider: one pill per person, with their avatar. */
 export function PayerPick({
   name,

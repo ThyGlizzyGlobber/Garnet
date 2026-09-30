@@ -8,7 +8,7 @@ import { BackLink } from '@/components/ui/controls';
 import { CADENCES, SPLIT_MODES } from '@/db/schema';
 import { pageContext } from '@/lib/context';
 import { formatMoney } from '@/lib/format';
-import { getService, listServiceTypes } from '@/lib/services';
+import { getService, listServices, listServiceTypes, SEASONAL_TYPES } from '@/lib/services';
 import { splitView } from '@/lib/split-view';
 import { partText } from '../../split-text';
 import { listUnits } from '@/lib/units';
@@ -34,7 +34,15 @@ export default async function EditServicePage({ params }: { params: Promise<{ id
       />
       <ServiceForm
         action={updateServiceAction}
-        types={listServiceTypes()}
+        types={listServiceTypes().map((ty) => ({
+          ...ty,
+          seasonal: SEASONAL_TYPES.includes(ty.slug),
+        }))}
+        existing={listServices(hh.id, { viewer: me.id, includeInactive: true }).map((x) => ({
+          id: x.id,
+          name: x.name,
+          provider: x.provider,
+        }))}
         units={listUnits()}
         members={view.parts.map(({ member: m }) => ({
           id: m.id,

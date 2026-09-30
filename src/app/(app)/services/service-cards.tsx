@@ -62,8 +62,12 @@ export async function ServiceTilesPage({
         ]
           .filter(Boolean)
           .join(' · ')}
-        figure={whole(c.overview.yearMinor)}
-        figureSub={t('tileYear', { amount: whole(c.overview.perMonthMinor) })}
+        figure={c.overview.yearBills ? whole(c.overview.yearMinor) : '—'}
+        figureSub={
+          c.overview.yearBills
+            ? t('tileYear', { amount: whole(c.overview.perMonthMinor) })
+            : t('tileNoBills')
+        }
         next={<NextLine ctx={ctx} next={c.overview.next} name={null} />}
         muted={stopped}
       />

@@ -33,7 +33,12 @@ import {
 import { serviceCardsView } from '@/lib/main-view';
 import { shellView } from '@/lib/shell';
 import { shadesOf } from '@/lib/palette';
-import { CATEGORY_COLOURS, inMainCategory, isEssential } from '@/lib/service-categories';
+import {
+  CATEGORY_COLOURS,
+  inMainCategory,
+  isEssential,
+  topChoices,
+} from '@/lib/service-categories';
 
 const TODAY = '2026-09-29';
 let dir: string;
@@ -353,5 +358,38 @@ describe('the bills list', () => {
     ).entries;
     expect(subs.length).toBeGreaterThan(0);
     expect(subs.every((e) => e.bill.service.typeSlug === 'subscriptions')).toBe(true);
+  });
+});
+
+describe('the Add a service picker', () => {
+  it('offers the everyday bills, then each main service with its kinds and "Something else" last', () => {
+    const types = listServiceTypes(db);
+    const choices = topChoices(types);
+    const keys = choices.map((c) => c.key);
+    expect(choices.filter((c) => c.essential).map((c) => c.key)).toEqual(
+      types.filter(isEssential).map((t) => t.slug),
+    );
+    expect(keys).toEqual(
+      expect.arrayContaining([
+        'cat:home',
+        'cat:health',
+        'cat:lifestyle',
+        'cat:vehicle',
+        'subscriptions',
+      ]),
+    );
+    expect(keys.at(-1)).toBe('other');
+    const health = choices.find((c) => c.key === 'cat:health')!;
+    expect(health.types.map((t) => t.slug)).toEqual([
+      'health_insurance',
+      'ambulance_cover',
+      'health_other',
+    ]);
+    for (const c of choices.filter((x) => x.category))
+      expect(c.types.at(-1)!.slug).toBe(`${c.category}_other`);
+    // Every type is offered exactly once.
+    expect(choices.flatMap((c) => c.types.map((t) => t.slug)).sort()).toEqual(
+      types.map((t) => t.slug).sort(),
+    );
   });
 });

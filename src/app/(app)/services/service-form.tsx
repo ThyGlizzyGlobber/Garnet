@@ -3,14 +3,16 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { ToggleRow } from '@/components/app/pieces';
-import { TypePicker } from '@/components/app/pieces-client';
+import { Icon } from '@/components/app/icons';
 import { Button, Card, Field, Input, LinkButton, Select, Textarea } from '@/components/ui';
-import { SectionHead } from '@/components/ui/blocks';
+import { Notice, SectionHead } from '@/components/ui/blocks';
 import { Avatar } from '@/components/ui/colour';
 import { Toggle } from '@/components/ui/controls';
 import { ActionForm, type FormAction } from '@/components/ui/form';
-import { groupTypes } from '@/lib/service-categories';
+import { sameProvider } from '@/lib/provider-match';
+import { somethingElseIn } from '@/lib/service-categories';
 import { SplitEditor, type SplitMemberOption } from './split-editor';
+import { ServiceTypePicker, type PickerType } from './type-picker';
 
 /** How it's split, for the form: what's stored, and what admins need to change it. */
 export interface ServiceFormSplit {
@@ -57,6 +59,8 @@ export function ServiceForm({
   action,
   initial,
   types,
+  initialTop = null,
+  existing = [],
   units,
   members,
   split,
@@ -70,15 +74,18 @@ export function ServiceForm({
 }: {
   action: FormAction;
   initial: ServiceFormValues;
-  types: {
-    slug: string;
-    label: string;
+  types: (PickerType & {
     defaultUnit: string | null;
     personalByDefault?: boolean;
-    category?: string;
     /** A main service: each provider is a sub-service named after it (Netflix). */
     hasSubServices?: boolean;
-  }[];
+    /** Changes with the seasons by default (electricity, gas). */
+    seasonal?: boolean;
+  })[];
+  /** Start inside a main service ("cat:health"), from its page's Add a service. */
+  initialTop?: string | null;
+  /** The household's other services, to say when one already gets this business's bills. */
+  existing?: { id: string; name: string; provider: string }[];
   units: { key: string; label: string }[];
   members: SplitMemberOption[];
   split: ServiceFormSplit;
@@ -93,13 +100,7 @@ export function ServiceForm({
   cancelHref: string;
 }) {
   const t = useTranslations('services.form');
-  const tc = useTranslations('services.categories');
   const tco = useTranslations('common');
-  const groups = groupTypes(types).map((g) => ({
-    category: g.category,
-    label: tc(g.category),
-    types: g.types.map((ty) => ({ slug: ty.slug, label: ty.label })),
-  }));
   const [typeSlug, setTypeSlug] = useState(initial.typeSlug);
   const [usageUnit, setUsageUnit] = useState(initial.usageUnit);
   const [name, setName] = useState(initial.name);
@@ -109,7 +110,33 @@ export function ServiceForm({
   const [personalTouched, setPersonalTouched] = useState(false);
   const [recurring, setRecurring] = useState(initial.recurring);
   const [recurringTouched, setRecurringTouched] = useState(false);
+  const [seasonal, setSeasonal] = useState(initial.seasonal);
+  // The rest of the form shows once it's known what kind of service it is.
+  const [shown, setShown] = useState(!!initial.typeSlug);
   const unitLabel = units.find((u) => u.key === usageUnit)?.label ?? usageUnit;
+  // "Something else" (or Other): the name says what it is, so it starts empty.
+  const unsureOf = (slug: string) => somethingElseIn(slug) ?? (slug === 'other' ? 'other' : null);
+  const unsure = unsureOf(typeSlug);
+  // Another service already gets bills from this business.
+  const already =
+    provider.trim().length >= 3
+      ? existing.find((s) => s.id !== initial.id && sameProvider(s.provider, provider))
+      : undefined;
+
+  const chooseType = (slug: string) => {
+    setTypeSlug(slug);
+    const ty = types.find((x) => x.slug === slug);
+    if (!ty) return;
+    setShown(true);
+    setUsageUnit(ty.defaultUnit ?? '');
+    if (!initial.id) setSeasonal(!!ty.seasonal);
+    if (!name || types.some((x) => x.label === name))
+      setName(ty.hasSubServices || unsureOf(ty.slug) ? '' : ty.label);
+    // A new car rego or car insurance is usually one person's own.
+    if (!initial.id && !personalTouched && canBePersonal) setPersonal(!!ty.personalByDefault);
+    // A new subscription or donation repeats unless told otherwise.
+    if (!initial.id && !recurringTouched) setRecurring(!!ty.hasSubServices);
+  };
 
   return (
     <ActionForm action={action} submitLabel={submitLabel} hideSubmit className="form-scr">
@@ -119,166 +146,196 @@ export function ServiceForm({
           <div className="form-grid">
             <Card className="form-main">
               <SectionHead title={t('whatItIs')} />
-              <div className="fld">
-                <span className="fld-l">{t('type')}</span>
-                <TypePicker
-                  name="typeSlug"
-                  groups={groups}
-                  value={typeSlug}
-                  onChange={(slug) => {
-                    setTypeSlug(slug);
-                    const ty = types.find((x) => x.slug === slug);
-                    if (ty) {
-                      setUsageUnit(ty.defaultUnit ?? '');
-                      if (!name || types.some((x) => x.label === name))
-                        setName(ty.hasSubServices ? '' : ty.label);
-                      // A new car rego or car insurance is usually one person's own.
-                      if (!initial.id && !personalTouched && canBePersonal)
-                        setPersonal(!!ty.personalByDefault);
-                      // A new subscription or donation repeats unless told otherwise.
-                      if (!initial.id && !recurringTouched) setRecurring(!!ty.hasSubServices);
-                    }
-                  }}
-                />
-                {errors.typeSlug && <span className="fld-h bad-text">{errors.typeSlug}</span>}
-              </div>
-              {sub ? (
+              <input type="hidden" name="typeSlug" value={typeSlug} />
+              <ServiceTypePicker
+                types={types}
+                value={typeSlug}
+                initialTop={initialTop}
+                onChange={chooseType}
+              />
+              {errors.typeSlug && <span className="fld-h bad-text">{errors.typeSlug}</span>}
+              {shown && (
                 <>
-                  {/* A sub-service is named after its provider: Netflix, Red Cross. */}
-                  <input type="hidden" name="name" value={provider} />
-                  <Field
-                    label={t('subProvider')}
-                    hint={t('subProviderHint')}
-                    error={errors.provider ?? errors.name}
-                  >
-                    <Input
-                      name="provider"
-                      value={provider}
-                      onChange={(e) => setProvider(e.target.value)}
-                      placeholder={t('subProviderPlaceholder')}
-                      required
-                    />
-                  </Field>
-                </>
-              ) : (
-                <div className="fld-row">
-                  <Field label={t('name')} error={errors.name}>
-                    <Input
-                      name="name"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      required
-                    />
-                  </Field>
-                  <Field label={t('provider')} error={errors.provider}>
-                    <Input
-                      name="provider"
-                      value={provider}
-                      onChange={(e) => setProvider(e.target.value)}
-                      placeholder={t('providerPlaceholder')}
-                      required
-                    />
-                  </Field>
-                </div>
-              )}
-              <div className="fld-row">
-                <Field label={t('cadence')} error={errors.cadence}>
-                  <Select name="cadence" defaultValue={initial.cadence}>
-                    {cadences.map((c) => (
-                      <option key={c} value={c}>
-                        {t(`cadences.${c}`)}
-                      </option>
-                    ))}
-                  </Select>
-                </Field>
-                <Field label={t('usageUnit')} error={errors.usageUnit} optional>
-                  <Select
-                    name="usageUnit"
-                    value={usageUnit}
-                    onChange={(e) => setUsageUnit(e.target.value)}
-                  >
-                    <option value="">{t('noUsage')}</option>
-                    {units.map((u) => (
-                      <option key={u.key} value={u.key}>
-                        {u.label}
-                      </option>
-                    ))}
-                  </Select>
-                </Field>
-              </div>
-              <div className="fld-row">
-                {usageUnit ? (
-                  <Field
-                    label={t('usageLimit', { unit: unitLabel })}
-                    hint={t('usageLimitHint')}
-                    error={errors.usageLimit}
-                    optional
-                  >
-                    <Input
-                      name="usageLimit"
-                      type="number"
-                      inputMode="decimal"
-                      min="0"
-                      step="any"
-                      defaultValue={initial.usageLimit}
-                    />
-                  </Field>
-                ) : (
-                  <input type="hidden" name="usageLimit" value="" />
-                )}
-                <Field label={t('accountRef')} error={errors.accountRef} optional>
-                  <Input name="accountRef" defaultValue={initial.accountRef} className="mono" />
-                </Field>
-              </div>
-              <Field label={t('notes')} optional>
-                <Textarea name="notes" defaultValue={initial.notes} rows={2} />
-              </Field>
-              <Field label={t('trustedSenders')} hint={t('trustedSendersHint')} optional>
-                <Input
-                  name="trustedSenders"
-                  defaultValue={initial.trustedSenders}
-                  placeholder={t('trustedSendersPlaceholder')}
-                  autoComplete="off"
-                />
-              </Field>
-              <ToggleRow title={t('seasonal')} sub={t('seasonalHint')}>
-                <Toggle name="seasonal" label={t('seasonal')} defaultChecked={initial.seasonal} />
-              </ToggleRow>
-              <ToggleRow title={t('recurring')} sub={t('recurringHint')}>
-                <Toggle
-                  name="recurring"
-                  label={t('recurring')}
-                  checked={recurring}
-                  onChange={(e) => {
-                    setRecurring(e.target.checked);
-                    setRecurringTouched(true);
-                  }}
-                />
-              </ToggleRow>
-              <ToggleRow title={t('autoPay')} sub={t('autoPayHint')}>
-                <Toggle name="autoPay" label={t('autoPay')} defaultChecked={initial.autoPay} />
-              </ToggleRow>
-              {canBePersonal && (
-                <ToggleRow title={t('personal')} sub={t('personalHint')}>
-                  <Toggle
-                    name="personal"
-                    label={t('personal')}
-                    checked={personal}
-                    disabled={!canChangePersonal}
-                    onChange={(e) => {
-                      setPersonal(e.target.checked);
-                      setPersonalTouched(true);
-                    }}
-                  />
-                  {!canChangePersonal && personal && (
-                    <input type="hidden" name="personal" value="on" />
+                  {sub ? (
+                    <>
+                      {/* A sub-service is named after its provider: Netflix, Red Cross. */}
+                      <input type="hidden" name="name" value={provider} />
+                      <Field
+                        label={t('subProvider')}
+                        hint={t('subProviderHint')}
+                        error={errors.provider ?? errors.name}
+                      >
+                        <Input
+                          name="provider"
+                          value={provider}
+                          onChange={(e) => setProvider(e.target.value)}
+                          placeholder={t('subProviderPlaceholder')}
+                          required
+                        />
+                      </Field>
+                    </>
+                  ) : (
+                    <div className="fld-row">
+                      <Field label={unsure ? t('whatIsIt') : t('name')} error={errors.name}>
+                        <Input
+                          name="name"
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          placeholder={unsure ? t(`namePlaceholder.${unsure}`) : undefined}
+                          required
+                        />
+                      </Field>
+                      <Field
+                        label={t('sendsBills')}
+                        hint={t('providerHint')}
+                        error={errors.provider}
+                      >
+                        <Input
+                          name="provider"
+                          value={provider}
+                          onChange={(e) => setProvider(e.target.value)}
+                          placeholder={t('providerPlaceholder')}
+                          required
+                        />
+                      </Field>
+                    </div>
                   )}
-                </ToggleRow>
+                  {already && (
+                    <Notice
+                      tone="warn"
+                      icon="alert"
+                      compact
+                      href={`/services/${already.id}`}
+                      title={t('alreadyHave', { name: already.name, provider: already.provider })}
+                      body={t('alreadyHaveBody')}
+                    />
+                  )}
+                  <div className="fld-row">
+                    <Field label={t('cadence')} error={errors.cadence}>
+                      <Select name="cadence" defaultValue={initial.cadence}>
+                        {cadences.map((c) => (
+                          <option key={c} value={c}>
+                            {t(`cadences.${c}`)}
+                          </option>
+                        ))}
+                      </Select>
+                    </Field>
+                    <Field
+                      label={t('accountRef')}
+                      hint={t('accountRefHint')}
+                      error={errors.accountRef}
+                      optional
+                    >
+                      <Input name="accountRef" defaultValue={initial.accountRef} className="mono" />
+                    </Field>
+                  </div>
+                  {canBePersonal && (
+                    <ToggleRow title={t('personal')} sub={t('personalHint')}>
+                      <Toggle
+                        name="personal"
+                        label={t('personal')}
+                        checked={personal}
+                        disabled={!canChangePersonal}
+                        onChange={(e) => {
+                          setPersonal(e.target.checked);
+                          setPersonalTouched(true);
+                        }}
+                      />
+                      {!canChangePersonal && personal && (
+                        <input type="hidden" name="personal" value="on" />
+                      )}
+                    </ToggleRow>
+                  )}
+                  <ToggleRow title={t('recurring')} sub={t('recurringHint')}>
+                    <Toggle
+                      name="recurring"
+                      label={t('recurring')}
+                      checked={recurring}
+                      onChange={(e) => {
+                        setRecurring(e.target.checked);
+                        setRecurringTouched(true);
+                      }}
+                    />
+                  </ToggleRow>
+                  <ToggleRow title={t('autoPay')} sub={t('autoPayHint')}>
+                    <Toggle name="autoPay" label={t('autoPay')} defaultChecked={initial.autoPay} />
+                  </ToggleRow>
+                  {/* The rarely changed: usage, the seasons, who may send its bills, notes. */}
+                  <details
+                    className="svc-more"
+                    open={!!(errors.usageUnit || errors.usageLimit || errors.trustedSenders)}
+                  >
+                    <summary>
+                      <Icon name="chevron-down" width={15} height={15} />
+                      {t('more')}
+                      <span className="muted small">{t('moreHint')}</span>
+                    </summary>
+                    <div className="fld-row">
+                      <Field label={t('usageUnit')} error={errors.usageUnit} optional>
+                        <Select
+                          name="usageUnit"
+                          value={usageUnit}
+                          onChange={(e) => setUsageUnit(e.target.value)}
+                        >
+                          <option value="">{t('noUsage')}</option>
+                          {units.map((u) => (
+                            <option key={u.key} value={u.key}>
+                              {u.label}
+                            </option>
+                          ))}
+                        </Select>
+                      </Field>
+                      {usageUnit ? (
+                        <Field
+                          label={t('usageLimit', { unit: unitLabel })}
+                          hint={t('usageLimitHint')}
+                          error={errors.usageLimit}
+                          optional
+                        >
+                          <Input
+                            name="usageLimit"
+                            type="number"
+                            inputMode="decimal"
+                            min="0"
+                            step="any"
+                            defaultValue={initial.usageLimit}
+                          />
+                        </Field>
+                      ) : (
+                        <input type="hidden" name="usageLimit" value="" />
+                      )}
+                    </div>
+                    <ToggleRow title={t('seasonal')} sub={t('seasonalHint')}>
+                      <Toggle
+                        name="seasonal"
+                        label={t('seasonal')}
+                        checked={seasonal}
+                        onChange={(e) => setSeasonal(e.target.checked)}
+                      />
+                    </ToggleRow>
+                    <Field
+                      label={t('trustedSenders')}
+                      hint={t('trustedSendersHint')}
+                      error={errors.trustedSenders}
+                      optional
+                    >
+                      <Input
+                        name="trustedSenders"
+                        defaultValue={initial.trustedSenders}
+                        placeholder={t('trustedSendersPlaceholder')}
+                        autoComplete="off"
+                      />
+                    </Field>
+                    <Field label={t('notes')} optional>
+                      <Textarea name="notes" defaultValue={initial.notes} rows={2} />
+                    </Field>
+                  </details>
+                </>
               )}
               {!initial.id && <input type="hidden" name="isActive" value="on" />}
             </Card>
 
-            <div className="form-side">
+            <div className="form-side" hidden={!shown}>
               {sharedHousehold && !personal ? (
                 <Card id="split">
                   <SectionHead
@@ -344,7 +401,7 @@ export function ServiceForm({
             </div>
           </div>
           <div className="form-acts">
-            <Button type="submit" icon="check" disabled={pending}>
+            <Button type="submit" icon="check" disabled={pending || !typeSlug}>
               {pending ? '…' : submitLabel}
             </Button>
             <LinkButton href={cancelHref} variant="ghost">

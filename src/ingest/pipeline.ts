@@ -2,8 +2,13 @@ import { and, eq } from 'drizzle-orm';
 import { getDb, type Db } from '@/db/client';
 import { bill, service, sourceDocument, type SourceDocument } from '@/db/schema';
 import { actingMember } from '@/lib/acting-member';
-import { promoteServiceType, serviceForNewProvider, typeFits } from '@/lib/auto-service';
-import { autoFileBill, refKeys } from '@/lib/assets';
+import {
+  categoryLookup,
+  promoteServiceType,
+  serviceForNewProvider,
+  typeFits,
+} from '@/lib/auto-service';
+import { autoFileBill, identifierKey, refKeys } from '@/lib/assets';
 import { createBill, getBill, type BillDetail } from '@/lib/bills';
 import { getEnv, isLlmConfigured } from '@/lib/env';
 import { refileDocuments } from '@/lib/filing';
@@ -15,7 +20,13 @@ import { notifyBillCreated, notifyInBackground, notifyServiceCreated } from '@/l
 import { sameProvider } from '@/lib/provider-match';
 import type { Scope } from '@/lib/scope';
 import { addressOf, isTrustedSender, trustTarget } from '@/lib/sender-auth';
-import { getService, listServices, listServiceTypes, updateService } from '@/lib/services';
+import {
+  getService,
+  listServices,
+  listServiceTypes,
+  updateService,
+  type ServiceWithType,
+} from '@/lib/services';
 import { aiAllowance, AI_READ, recordUsage } from '@/lib/usage';
 import { getDocument, readDocument, setDocumentStatus } from './archive';
 import { fallbackExtractors, templateExtractors } from './extractors';
@@ -488,8 +499,9 @@ async function readAndRoute(
 }
 
 /**
- * Match by provider name (case-insensitive, either containing the other) then
- * by service type when unique, among the services in scope (see documentScope).
+ * Match by provider name (case-insensitive, either containing the other), or
+ * by the account number printed on the bill, then by service type when
+ * unique, among the services in scope (see documentScope).
  */
 export function matchService(
   householdId: string,
@@ -499,17 +511,30 @@ export function matchService(
 ): string | null {
   const services = listServices(householdId, scope, db);
   const p = result.bill.provider;
+  const categoryOf = categoryLookup(db);
+  const fits = (s: ServiceWithType) => typeFits(s.typeSlug, result.bill.serviceType, categoryOf);
+  // The account number on the bill, against the one saved on a service.
+  const account = identifierKey(result.bill.accountRef);
+  const byAccount = (xs: ServiceWithType[]) =>
+    account && account.length >= 4 ? xs.filter((s) => identifierKey(s.accountRef) === account) : [];
   // The same rule that decides whether a new provider needs a service of its own.
   const byProvider = services.filter((s) => sameProvider(s.provider, p));
   if (byProvider.length) {
     // One provider can supply several things (AGL power and gas): the service
     // must also be of the bill's type. A gas bill from the household's only AGL
     // service, which is electricity, is a new service, not that one.
-    const typed = byProvider.filter((s) => typeFits(s.typeSlug, result.bill.serviceType));
+    const typed = byProvider.filter(fits);
     if (typed.length === 1) return typed[0]!.id;
+    // Two accounts with one provider (two phones): the account number decides.
+    const acct = byAccount(typed);
+    if (acct.length === 1) return acct[0]!.id;
     const exact = typed.filter((s) => s.typeSlug === result.bill.serviceType);
     return exact.length === 1 ? exact[0]!.id : null;
   }
+  // Someone added the service by hand under another name than the bill's
+  // ("Dr Lee" for "Harbour Dental Pty Ltd"), with its account number.
+  const acct = byAccount(services.filter(fits));
+  if (acct.length === 1) return acct[0]!.id;
   // A named provider with no service is a new provider (set up automatically),
   // not the household's other service of the same type: after switching
   // retailers, the new one's bills must not land on the old service.

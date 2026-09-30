@@ -219,3 +219,80 @@ describe('services set up from a first bill', () => {
     expect(listServices(hh.id, {}, db)).toHaveLength(2);
   });
 });
+
+describe('services added by hand before their first bill', () => {
+  const typed = (provider: string, serviceType: string, account = '4410 2231'): Output => {
+    const b = bill(provider);
+    return { ...b, service_type: serviceType, bill: { ...b.bill!, account_number: account } };
+  };
+
+  it('take a bill of any kind of their main service when filed as "Something else"', async () => {
+    const { hh, jo } = setup();
+    const unsure = createService(
+      hh.id,
+      {
+        typeSlug: 'health_other',
+        name: 'Extras',
+        provider: 'Harbour Health',
+        payerMemberId: jo.id,
+      },
+      db,
+    );
+    scriptAi(typed('Harbour Health Pty Ltd', 'health_insurance'));
+    const outcome = await processDocument(hh.id, upload(hh.id).id, db);
+    expect(getBill(hh.id, outcome.billId!, db)?.serviceId).toBe(unsure.id);
+    expect(listServices(hh.id, {}, db)).toHaveLength(1);
+  });
+
+  it('but a specific kind still keeps another kind from the same business apart', async () => {
+    const { hh, jo } = setup();
+    const cover = createService(
+      hh.id,
+      {
+        typeSlug: 'health_insurance',
+        name: 'Cover',
+        provider: 'Harbour Health',
+        payerMemberId: jo.id,
+      },
+      db,
+    );
+    scriptAi(typed('Harbour Health', 'health_other'));
+    const outcome = await processDocument(hh.id, upload(hh.id).id, db);
+    expect(getBill(hh.id, outcome.billId!, db)?.serviceId).not.toBe(cover.id);
+    expect(listServices(hh.id, {}, db)).toHaveLength(2);
+  });
+
+  it('are found by the account number when the bill names the business differently', async () => {
+    const { hh, jo } = setup();
+    const dentist = createService(
+      hh.id,
+      {
+        typeSlug: 'health_other',
+        name: 'Dentist',
+        provider: 'Dr Lee',
+        accountRef: 'PT-00912',
+        payerMemberId: jo.id,
+      },
+      db,
+    );
+    scriptAi(typed('Riverside Family Dental', 'health_other', 'PT 00912'));
+    const outcome = await processDocument(hh.id, upload(hh.id).id, db);
+    expect(getBill(hh.id, outcome.billId!, db)?.serviceId).toBe(dentist.id);
+    expect(listServices(hh.id, {}, db)).toHaveLength(1);
+  });
+
+  it('tell two accounts with one business apart by account number', async () => {
+    const { hh, jo } = setup();
+    const phone = (name: string, accountRef: string) =>
+      createService(
+        hh.id,
+        { typeSlug: 'phone', name, provider: 'Telco', accountRef, payerMemberId: jo.id },
+        db,
+      );
+    phone('Jo’s phone', '1111 2222');
+    const sams = phone('Sam’s phone', '3333 4444');
+    scriptAi(typed('Telco', 'phone', '3333-4444'));
+    const outcome = await processDocument(hh.id, upload(hh.id).id, db);
+    expect(getBill(hh.id, outcome.billId!, db)?.serviceId).toBe(sams.id);
+  });
+});

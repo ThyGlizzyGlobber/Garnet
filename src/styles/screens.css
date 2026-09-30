@@ -549,6 +549,8 @@ a.paper:hover .paper-stamp {
   display: grid;
   gap: 6px;
   min-width: 0;
+  /* Beside a taller field (one with a hint), keep the label and input at the top. */
+  align-content: start;
 }
 .fld-l {
   font-size: 12.5px;
@@ -998,22 +1000,96 @@ input.inp-plain[type='color'] {
 }
 
 /* type, payer, split */
-.type-pick {
+/* the kind of service: tiles first, then its kinds (type-picker.tsx) */
+.tpk {
   display: grid;
   gap: 10px;
 }
-.tp-g {
-  display: grid;
-  grid-template-columns: 76px 1fr;
-  gap: 10px;
-  align-items: baseline;
-}
-.tp-h {
+.tpk-sec {
   font-size: 11.5px;
   font-weight: 700;
   color: var(--p-fg2);
   text-transform: uppercase;
   letter-spacing: 0.06em;
+}
+.tpk-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+}
+.tpk-opt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: var(--r-inner);
+  background: var(--ctl-bg);
+  box-shadow:
+    inset 0 0 0 1px var(--ctl-rim),
+    inset 0 1px 0 var(--g-hi);
+  color: var(--p-fg);
+  font: inherit;
+  font-weight: 650;
+  font-size: 13.5px;
+  text-align: left;
+  cursor: pointer;
+}
+.tpk-opt span:last-child {
+  min-width: 0;
+  line-height: 1.2;
+}
+.tpk-opt:hover {
+  background: var(--inset-2);
+}
+.tpk-opt.on {
+  box-shadow: inset 0 0 0 2px var(--p-accent);
+}
+.tpk-opt:focus-visible {
+  outline: 2px solid var(--p-accent);
+  outline-offset: 2px;
+}
+.tpk-sum {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.tpk-sum b {
+  font-size: 15px;
+}
+.tpk-sum .btn {
+  margin-left: auto;
+}
+.tpk-kinds {
+  display: grid;
+  gap: 8px;
+}
+/* the rarely changed fields of a service */
+.svc-more {
+  display: grid;
+  gap: 14px;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+.svc-more summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-weight: 650;
+  cursor: pointer;
+  list-style: none;
+}
+.svc-more summary::-webkit-details-marker {
+  display: none;
+}
+.svc-more summary .ic {
+  transform: rotate(-90deg);
+  transition: transform 0.15s;
+}
+.svc-more[open] summary .ic {
+  transform: none;
 }
 .tp-list {
   display: flex;
@@ -1942,9 +2018,8 @@ input.inp-plain[type='color'] {
   .radio-cards {
     grid-template-columns: minmax(0, 1fr);
   }
-  .tp-g {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 6px;
+  .tpk-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .se-row {
     grid-template-columns: auto minmax(0, 1fr) auto;

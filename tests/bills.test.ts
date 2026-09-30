@@ -74,18 +74,22 @@ describe('service type catalog', () => {
       'contents_insurance',
       'building_insurance',
       'ambulance_cover',
+      'health_other',
       'vehicle_registration',
       'car_insurance',
       'roadside_assistance',
       'vehicle_maintenance',
+      'vehicle_other',
       'subscriptions',
       'gym',
       'donations',
+      'lifestyle_other',
       'gardening',
       'cleaning',
       'pest_control',
       'pool',
       'repairs',
+      'home_other',
       'other',
     ]);
   });
@@ -101,6 +105,7 @@ describe('service type groups', () => {
       ['car_insurance', true],
       ['roadside_assistance', true],
       ['vehicle_maintenance', true],
+      ['vehicle_other', true],
     ]);
   });
 });

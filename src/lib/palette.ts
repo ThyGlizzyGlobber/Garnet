@@ -39,6 +39,8 @@ const SERVICE_COLOURS: { name: string; light: string; dark: string }[] = [
   { name: 'brown-6', light: '#bb9b7b', dark: '#d7b594' },
   { name: 'brown-7', light: '#c9b097', dark: '#dfc5aa' },
   { name: 'brown-8', light: '#d7c3b0', dark: '#e7d3bf' },
+  // A ninth for Home & property, which has more parts than eight: greyed, for "Something else".
+  { name: 'brown-9', light: '#8f8276', dark: '#b3a699' },
   { name: 'lime-1', light: '#4f670c', dark: '#677f26' },
   { name: 'lime-2', light: '#627f0e', dark: '#7f9d2e' },
   { name: 'lime-3', light: '#709211', dark: '#92b435' },
@@ -65,7 +67,10 @@ const SERVICE_COLOURS: { name: string; light: string; dark: string }[] = [
   { name: 'red-8', light: '#f4b6b6', dark: '#f5c2c2' },
 ];
 
-/** The eight shades of a colour's family, darkest first, the base fourth ("red" is the palette's). */
+/**
+ * The shades of a colour's family, darkest first, the base fourth ("red" is
+ * the palette's): eight, and a greyed ninth where a main service needs one.
+ */
 export function shadesOf(base: string): string[] {
   // A shade's family is its name without the step ("lime-6" → "lime").
   const name = [...PALETTE, ...SERVICE_COLOURS]
@@ -73,7 +78,7 @@ export function shadesOf(base: string): string[] {
     ?.name.replace(/-\d$/, '');
   if (!name) return [];
   const all = [...PALETTE, ...SERVICE_COLOURS];
-  return [1, 2, 3, 4, 5, 6, 7, 8]
+  return [1, 2, 3, 4, 5, 6, 7, 8, 9]
     .map((k) => all.find((p) => p.name === (k === 4 ? name : `${name}-${k}`))?.light)
     .filter((c): c is string => !!c);
 }

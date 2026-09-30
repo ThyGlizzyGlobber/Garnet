@@ -122,21 +122,21 @@ for what the thing is; nothing at the top level shares one. The parts inside
 a main service wear shades of its colour (`src/lib/palette.ts`:
 `SERVICE_COLOURS`, eight steps a family, "-1" darkest … "-8" lightest).
 
-| Entry           | Colour  | Parts inside, in shades                                                                                |
-| --------------- | ------- | ------------------------------------------------------------------------------------------------------ |
-| Water           | Blue    |                                                                                                        |
-| Electricity     | Yellow  |                                                                                                        |
-| Gas             | Orange  |                                                                                                        |
-| Internet        | Violet  |                                                                                                        |
-| Phone           | Aqua    |                                                                                                        |
-| Rent            | Magenta |                                                                                                        |
-| Council rates   | Green   |                                                                                                        |
-| Vehicles        | Slate   | Rego (base), Car insurance, Roadside, Servicing                                                        |
-| Health          | Red     | Health insurance (base), Ambulance cover                                                               |
-| Lifestyle       | Lime    | Gym (base), Donations                                                                                  |
-| Home & property | Brown   | Strata, Building and Contents insurance, Gardening (base), Cleaning, Pest control, Pool & spa, Repairs |
-| Subscriptions   | Plum    | each subscription a shade in charts                                                                    |
-| Other           | Grey    |                                                                                                        |
+| Entry           | Colour  | Parts inside, in shades                                                                                                                        |
+| --------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Water           | Blue    |                                                                                                                                                |
+| Electricity     | Yellow  |                                                                                                                                                |
+| Gas             | Orange  |                                                                                                                                                |
+| Internet        | Violet  |                                                                                                                                                |
+| Phone           | Aqua    |                                                                                                                                                |
+| Rent            | Magenta |                                                                                                                                                |
+| Council rates   | Green   |                                                                                                                                                |
+| Vehicles        | Slate   | Rego (base), Car insurance, Roadside, Servicing, Something else                                                                                |
+| Health          | Red     | Health insurance (base), Ambulance cover, Something else                                                                                       |
+| Lifestyle       | Lime    | Gym (base), Donations, Something else                                                                                                          |
+| Home & property | Brown   | Strata, Building and Contents insurance, Gardening (base), Cleaning, Pest control, Pool & spa, Repairs, Something else (a ninth, greyed shade) |
+| Subscriptions   | Plum    | each subscription a shade in charts                                                                                                            |
+| Other           | Grey    |                                                                                                                                                |
 
 Members keep the eight-colour palette. Series that share a colour in a chart
 (Netflix and Spotify) get shades of it.
