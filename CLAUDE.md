@@ -211,6 +211,10 @@ brand-identity/     design references (not app code; outside lint and knip)
 - Real bill PDFs live in `sample-bills/` (gitignored); `pdftotext` is available locally.
 - Local test servers: use port 3462 with an absolute `DATA_DIR`; the standalone
   server chdirs into `.next/standalone`.
+- `npm run knip` on the Mac prints "Refine project pattern (no matches)" for every project
+  pattern. Those hints are false alarms: knip 6.38 builds the hint's matcher from the unescaped
+  absolute path, and the parentheses in this folder's name read as pattern syntax. The check
+  itself works (an unused export is reported); GitHub Actions, whose path is plain, shows no hints.
 
 ## Phases
 
@@ -368,3 +372,4 @@ Append entries as `- YYYY-MM-DD — decision — why`. Do not rewrite old entrie
 - 2026-09-29 — Bills-address deliveries are signed per household (owner): the Worker's HMAC now covers "v2.<timestamp>.<recipient>." plus the message (`X-Signature: v2=…`), so a captured delivery can't be replayed to another household's address. Workers pasted earlier send the older `sha256=` signature, which the app accepts only until the first v2 delivery arrives (recorded in `config/inbound-signature.json`), then refuses for good — installing the app first and pasting the new Worker after loses nothing. Status → Bills addresses (operators) shows which signature is in use. Supersedes the 2026-09-27 signature format.
 - 2026-09-29 — Personal uploads stay out of the household's Inbox (owner): a document a member brought in (an upload, or a signed forward from their own address) that isn't a bill yet is listed only for that member, unless the reader took it for one of the household's bills (matched a household service, or a type that isn't personal by default) — then admins can help with it as before. Unreadable ones stay the member's (they can't be told apart). Mail straight from a provider is the household's. The Inbox badge, the Home "waiting" banner, the Inbox and Status counts, the document page and the file route all follow the same rule (`listDocuments` in `src/lib/review.ts`; `documentCounts` now takes the viewer).
 - 2026-09-29 — Settlement constraint reworded to match the code (owner), settling the open `SettlementAdapter` question: shares are calculated in `src/lib/splits.ts`, stored with their payment references by `src/lib/bills.ts`, marked paid in the app, and totalled in `src/lib/stats.ts`; paid-to-provider is inferred from receipts, notices and auto-pay. No `SettlementAdapter` interface or `src/settlement/` exists and none is planned now: an interface with one implementation would be guesswork about a provider nobody has chosen. A licensed pooling or direct-debit service would be designed as its own module when one is chosen. The rule that matters is unchanged: the app never holds or moves money.
+- 2026-09-30 — knip's "no matches" hints on the Mac are a knip quirk, not a broken check: they come from the parentheses in the folder name (see Dev environment notes); an unused export is still reported. The stale `ignore` for `deploy/email-worker/worker.d.ts` is gone from `knip.json` (the tests import it now, so knip never flagged it).
