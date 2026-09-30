@@ -14,19 +14,17 @@ export const PALETTE: { name: string; light: string; dark: string }[] = [
   { name: 'red', light: '#e34948', dark: '#e66767' },
 ];
 
-const darkByLight = new Map(PALETTE.map((p) => [p.light.toLowerCase(), p.dark]));
-
-/** Dark-mode step for a stored colour; unknown (user-picked) colours pass through. */
-export function darkVariant(light: string): string {
-  return darkByLight.get(light.toLowerCase()) ?? light;
-}
+const byLight = new Map(PALETTE.map((p) => [p.light.toLowerCase(), p]));
 
 /**
- * A stored colour as a CSS value that follows the light/dark scheme. Use this
- * for every service or member colour drawn on screen.
+ * A stored colour as a CSS value that follows the light/dark theme: a palette
+ * colour becomes its token (--sc-blue …, both steps in globals.css); a colour
+ * someone picked themselves stays as it is. Use this for every service or
+ * member colour drawn on screen.
  */
 export function colourCss(light: string): string {
-  return `light-dark(${light}, ${darkVariant(light)})`;
+  const p = byLight.get(light.toLowerCase());
+  return p ? `var(--sc-${p.name})` : light;
 }
 
 /**

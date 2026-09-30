@@ -1426,7 +1426,8 @@
   },
   "common": {
     "copy": "Copy",
-    "copied": "Copied"
+    "copied": "Copied",
+    "close": "Close"
   },
   "appearance": {
     "title": "Appearance",
@@ -1461,5 +1462,18 @@
         "blurb": "Soft purples, calm and cool."
       }
     }
+  },
+  "ui": {
+    "doc": {
+      "analysed": "Analysed",
+      "waiting": "Waiting to be analysed",
+      "failed": "Couldn’t be analysed"
+    },
+    "instalments": "Instalments",
+    "verified": "Verified {domain}"
+  },
+  "design": {
+    "title": "Components",
+    "lede": "The pack, drawn with the same pieces the screens use. Fictional figures."
   }
 }

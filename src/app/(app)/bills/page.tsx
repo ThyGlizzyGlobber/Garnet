@@ -6,7 +6,7 @@ import { SearchBar } from '@/components/app/search-bar';
 import { Icon } from '@/components/app/icons';
 import {
   Badge,
-  Chip,
+  FilterChip,
   DownloadButton,
   EmptyState,
   Figure,
@@ -135,26 +135,26 @@ export default async function BillsPage({
           {hasPersonal && (
             <div className="flex flex-wrap items-center gap-2">
               {(['all', 'household', 'mine'] as const).map((o) => (
-                <Chip key={o} href={href({ o })} active={whose === o}>
+                <FilterChip key={o} href={href({ o })} active={whose === o}>
                   {t(`whoseFilter.${o}`)}
-                </Chip>
+                </FilterChip>
               ))}
             </div>
           )}
           <div className="flex flex-wrap items-center gap-2">
             {FILTERS.map((nf) => (
-              <Chip key={nf} href={href({ f: nf })} active={filter === nf}>
+              <FilterChip key={nf} href={href({ f: nf })} active={filter === nf}>
                 {t(`filters.${nf}`)}
-              </Chip>
+              </FilterChip>
             ))}
           </div>
           {services.length > 1 && (
             <div className="flex flex-wrap items-center gap-2">
-              <Chip href={href({ s: null })} active={!serviceId}>
+              <FilterChip href={href({ s: null })} active={!serviceId}>
                 {t('search.allServices')}
-              </Chip>
+              </FilterChip>
               {services.map((svc) => (
-                <Chip
+                <FilterChip
                   key={svc.id}
                   href={href({ s: svc.id })}
                   active={serviceId === svc.id}
@@ -162,19 +162,19 @@ export default async function BillsPage({
                 >
                   <Swatch colour={svc.colour} />
                   {svc.name}
-                </Chip>
+                </FilterChip>
               ))}
             </div>
           )}
           {years.length > 1 && (
             <div className="flex flex-wrap items-center gap-2">
-              <Chip href={href({ y: null })} active={!year}>
+              <FilterChip href={href({ y: null })} active={!year}>
                 {t('search.allYears')}
-              </Chip>
+              </FilterChip>
               {years.map((y) => (
-                <Chip key={y} href={href({ y })} active={year === y}>
+                <FilterChip key={y} href={href({ y })} active={year === y}>
                   {y}
-                </Chip>
+                </FilterChip>
               ))}
             </div>
           )}

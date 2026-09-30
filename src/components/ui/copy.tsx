@@ -1,32 +1,35 @@
 'use client';
 
-import { useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { Icon } from '@/components/app/icons';
 import { Input } from '@/components/ui';
+import { cx } from './cx';
+import { useToast } from './toast';
 
-function cx(...parts: (string | false | null | undefined)[]) {
-  return parts.filter(Boolean).join(' ');
-}
-
-/** "Copy" that says "Copied" for a moment once the value is on the clipboard. */
-export function CopyButton({ value, className }: { value: string; className?: string }) {
+/** "Copy": puts the value on the clipboard and says so in a toast. */
+export function CopyButton({
+  value,
+  label,
+  className,
+}: {
+  value: string;
+  /** The button's text; "Copy" by default. */
+  label?: string;
+  /** Replaces the default small glass button look. */
+  className?: string;
+}) {
   const t = useTranslations('common');
-  const [copied, setCopied] = useState(false);
+  const toast = useToast();
   return (
     <button
       type="button"
-      className={cx(
-        'shrink-0 rounded-full bg-surface-2 font-semibold hover:text-accent',
-        className ?? 'px-4 text-sm',
-      )}
+      className={cx('shrink-0', className ?? 'btn btn-glass btn-sm')}
       onClick={() => {
-        void navigator.clipboard?.writeText(value).then(() => {
-          setCopied(true);
-          setTimeout(() => setCopied(false), 1500);
-        });
+        void navigator.clipboard?.writeText(value).then(() => toast(t('copied')));
       }}
     >
-      {copied ? t('copied') : t('copy')}
+      <Icon name="copy" width={15} height={15} />
+      <span>{label ?? t('copy')}</span>
     </button>
   );
 }
@@ -51,7 +54,7 @@ export function CopyField({
           className={mono ? 'font-mono tracking-widest' : 'text-sm'}
           onFocus={(e) => e.currentTarget.select()}
         />
-        <CopyButton value={value} />
+        <CopyButton value={value} className="btn btn-glass" />
       </div>
     </div>
   );

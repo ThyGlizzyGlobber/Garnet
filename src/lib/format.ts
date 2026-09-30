@@ -54,6 +54,30 @@ export function formatMoney(
   }).format(toMajor(minor, currency));
 }
 
+/**
+ * A money figure in pieces, so the cents can be set smaller: the part before
+ * the decimal mark, the mark with the minor units, and anything after (a
+ * currency sign that follows the number in some locales).
+ */
+export function formatMoneyParts(
+  minor: number,
+  currency: string,
+  locale: string,
+): { main: string; minor: string; tail: string } {
+  const parts = new Intl.NumberFormat(locale, { style: 'currency', currency }).formatToParts(
+    toMajor(minor, currency),
+  );
+  const at = parts.findIndex((p) => p.type === 'decimal');
+  if (at < 0) return { main: parts.map((p) => p.value).join(''), minor: '', tail: '' };
+  const end = at + 2;
+  const join = (list: Intl.NumberFormatPart[]) => list.map((p) => p.value).join('');
+  return {
+    main: join(parts.slice(0, at)),
+    minor: join(parts.slice(at, end)),
+    tail: join(parts.slice(end)),
+  };
+}
+
 /** Parse a user-typed major-unit amount ("129.00", "1,234.50", "€12,50") into minor units. */
 export function parseMoneyToMinor(input: string, currency: string): number | null {
   const digits = minorUnitDigits(currency);

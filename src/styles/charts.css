@@ -1,0 +1,420 @@
+/*
+  Instruments and charts (BRAND.md §8), from the studio's app.css. One series
+  per chart, 2 px lines, text in text colours, a hover layer on every plotted
+  chart (src/components/charts/hover.tsx). The studio's .ring is .gauge here,
+  because Tailwind has a `ring` utility.
+*/
+.gauge {
+  position: relative;
+  width: var(--size);
+  height: var(--size);
+  flex: none;
+  max-width: 100%;
+  max-height: 100%;
+  aspect-ratio: 1;
+}
+.gauge svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.gauge-track {
+  stroke: var(--track);
+}
+.gauge-arc {
+  filter: drop-shadow(
+    0 0 calc(var(--glow-k) * 7px) color-mix(in srgb, var(--glowc) 70%, transparent)
+  );
+  transition: stroke-dasharray 0.6s;
+}
+.gauge-ticks line {
+  stroke: var(--p-fg2);
+  stroke-width: 0.7;
+  opacity: var(--ticks);
+}
+.gauge-in {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  text-align: center;
+}
+.gauge-in b {
+  font-family: var(--f-num);
+  font-weight: 650;
+  font-size: calc(var(--size) * 0.24);
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+.gauge-in small {
+  font-size: 0.55em;
+  opacity: 0.6;
+}
+.arc {
+  position: relative;
+  width: 100%;
+  max-width: 190px;
+  margin-inline: auto;
+}
+.arc svg {
+  width: 100%;
+  display: block;
+  overflow: visible;
+}
+.arc-track {
+  stroke: var(--track);
+  stroke-width: 8;
+}
+.arc-val {
+  stroke-width: 8;
+  filter: drop-shadow(
+    0 0 calc(var(--glow-k) * 6px) color-mix(in srgb, var(--glowc) 70%, transparent)
+  );
+}
+.arc-mark {
+  stroke: var(--p-fg);
+  stroke-width: 1.6;
+  opacity: 0.55;
+}
+.arc-cap {
+  stroke: var(--g-solid);
+  stroke-width: 2;
+}
+.arc-in {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 2px;
+  display: grid;
+  justify-items: center;
+  line-height: 1.05;
+}
+.arc-in b {
+  font-family: var(--f-num);
+  font-size: 22px;
+  font-weight: 650;
+}
+.arc-in span {
+  font-size: 11px;
+  color: var(--p-fg2);
+}
+.spark {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 26px;
+}
+.spark svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.spark-dot {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--c);
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 2px var(--g-solid);
+}
+.chart {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: minmax(0, 1fr) auto;
+  min-height: 110px;
+  height: 100%;
+  position: relative;
+}
+.chart.has-axis {
+  grid-template-columns: 40px 1fr;
+}
+.chart-y {
+  position: relative;
+}
+.chart-y span {
+  position: absolute;
+  right: 8px;
+  transform: translateY(-50%);
+  font-size: 10.5px;
+  color: var(--p-fg2);
+  white-space: nowrap;
+}
+.chart-plot {
+  position: relative;
+  min-height: 60px;
+}
+.chart.has-axis .chart-x {
+  grid-column: 2;
+}
+.chart-plot svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.chart-grid {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--line);
+}
+.chart-x {
+  position: relative;
+  height: 20px;
+}
+.chart-x span {
+  position: absolute;
+  top: 5px;
+  transform: translateX(-50%);
+  font-size: 10.5px;
+  color: var(--p-fg2);
+  white-space: nowrap;
+}
+.chart-x span:first-child {
+  transform: none;
+}
+.chart-x span:last-child {
+  transform: translateX(-100%);
+}
+.chart-bars .chart-x span:first-child,
+.chart-bars .chart-x span:last-child {
+  transform: translateX(-50%);
+}
+.chart-pt,
+.chart-hover-pt {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--c);
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 2px var(--g-solid);
+  pointer-events: none;
+}
+.chart-callout {
+  position: absolute;
+  transform: translate(-100%, -170%);
+  padding: 3px 8px;
+  border-radius: 8px;
+  background: var(--tip-bg);
+  color: var(--p-fg);
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  pointer-events: none;
+}
+.chart.hovering .chart-callout {
+  opacity: 0;
+}
+.chart-cross {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--line-2);
+  pointer-events: none;
+}
+.chart-tip {
+  position: absolute;
+  z-index: 5;
+  transform: translate(-50%, calc(-100% - 12px));
+  padding: 6px 10px;
+  border-radius: 9px;
+  background: var(--tip-bg);
+  color: var(--p-fg);
+  font-size: 12px;
+  font-weight: 650;
+  white-space: nowrap;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  pointer-events: none;
+}
+.chart-bars .chart-plot {
+  min-height: 130px;
+}
+.pbar {
+  position: absolute;
+  bottom: 0;
+  border: 0;
+  padding: 0;
+  border-radius: 4px 4px 1px 1px;
+  background: linear-gradient(to top, color-mix(in srgb, var(--c) 70%, transparent), var(--c));
+  cursor: pointer;
+  opacity: 0.9;
+  transition: opacity 0.15s;
+}
+.pbar:hover {
+  opacity: 1;
+}
+.pbar.est {
+  background: repeating-linear-gradient(135deg, var(--c) 0 2px, transparent 2px 5px);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 45%, transparent);
+}
+.pbar.flag {
+  box-shadow:
+    0 0 0 2px var(--g-solid),
+    0 0 0 3.5px var(--warn);
+}
+.chart-ref {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  border-top: 1.5px solid color-mix(in srgb, var(--p-fg) 45%, transparent);
+  pointer-events: none;
+}
+.chart-ref span {
+  position: absolute;
+  right: 0;
+  bottom: 3px;
+  font-size: 10.5px;
+  font-weight: 650;
+  color: var(--p-fg2);
+  background: var(--tip-bg);
+  padding: 1px 6px;
+  border-radius: 6px;
+}
+.chart-year {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--line);
+}
+.chart-year span {
+  position: absolute;
+  top: -1px;
+  left: 5px;
+  font-size: 10px;
+  font-weight: 650;
+  color: var(--p-fg2);
+}
+.stackbar {
+  display: flex;
+  gap: 2px;
+  height: 10px;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.stackbar.thin {
+  height: 7px;
+}
+.stackbar i {
+  min-width: 3px;
+  border-radius: 4px;
+  background: var(--c);
+}
+.stackbar i.hatch {
+  background: repeating-linear-gradient(135deg, var(--c) 0 2px, transparent 2px 5px);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 45%, transparent);
+}
+.pills {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+  height: 100%;
+  min-height: 90px;
+}
+.pill-col {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  justify-items: center;
+  gap: 4px;
+  height: 100%;
+  min-height: 0;
+}
+.pill-v {
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  min-height: 14px;
+}
+.pill {
+  align-self: end;
+  width: 100%;
+  max-width: 30px;
+  border-radius: 999px;
+  background: repeating-linear-gradient(135deg, var(--hatch) 0 2px, transparent 2px 6px);
+  box-shadow: inset 0 0 0 1px var(--line-2);
+}
+.pill.solid {
+  background: linear-gradient(to top, var(--p-accent), var(--p-accent2));
+  box-shadow: 0 6px 18px -6px var(--p-accent);
+}
+.pill-l {
+  font-size: 11px;
+  color: var(--p-fg2);
+}
+
+/* the due-dates calendar grid */
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+  flex: 1;
+  min-height: 0;
+  align-content: stretch;
+}
+.cal-h {
+  text-align: center;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--p-fg2);
+  padding-bottom: 2px;
+}
+.cal-d {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 2px;
+  min-height: 0;
+  padding: 2px 0;
+  border: 0;
+  border-radius: 9px;
+  background: none;
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--p-fg);
+  text-decoration: none;
+}
+.cal-d.past {
+  color: var(--p-fg3);
+  opacity: 0.55;
+}
+.cal-d.has {
+  cursor: pointer;
+  background: var(--inset);
+}
+.cal-d.has:hover {
+  background: var(--inset-2);
+}
+.cal-d.done {
+  opacity: 0.55;
+}
+.cal-d.today {
+  background: var(--p-accent);
+  color: var(--p-on-accent);
+  opacity: 1;
+}
+.cal-dots {
+  display: flex;
+  gap: 2px;
+  height: 5px;
+}
+.cal-dots i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--c);
+}
+.cal-d.today .cal-dots i {
+  box-shadow: 0 0 0 1px var(--p-on-accent);
+}

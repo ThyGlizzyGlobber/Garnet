@@ -1,4 +1,6 @@
 @import 'tailwindcss';
+@import '../styles/components.css' layer(components);
+@import '../styles/charts.css' layer(components);
 
 /*
   Design tokens: "Almanac 2" with the Frost Glass material (BRAND.md). The
@@ -103,7 +105,9 @@
   --g-blur: 30px;
   --g-sat: 150%;
   --ring-w: 7;
-  --glow: 0.35;
+  /* instruments: glow strength and tick marks (Frost Glass: a soft glow, no ticks) */
+  --glow-k: 0.35;
+  --ticks: 0;
   --btn-h: 42px;
   --btn-h-sm: 34px;
   --nav-h: 58px;
@@ -148,6 +152,22 @@
   --pp-bg: rgba(255, 255, 255, 0.5);
   --pp-rim: rgba(255, 255, 255, 0.7);
   --pp-shadow: rgba(0, 0, 0, 0.3);
+
+  /* service discs: the service colour mixed into a pale base */
+  --disc-base: rgba(255, 255, 255, 0.55);
+  --disc-mix: 22%;
+  --disc-rim: 30%;
+  --disc-hi: rgba(255, 255, 255, 0.7);
+
+  /* the eight service and member colours (src/lib/palette.ts), light steps */
+  --sc-blue: #2a78d6;
+  --sc-orange: #eb6834;
+  --sc-aqua: #1baf7a;
+  --sc-yellow: #eda100;
+  --sc-magenta: #e87ba4;
+  --sc-green: #008300;
+  --sc-violet: #4a3aa7;
+  --sc-red: #e34948;
 }
 
 /* ---- Mode tokens: dark (forced in Settings, or the device's choice) ---- */
@@ -185,6 +205,20 @@
   --pp-bg: rgba(255, 255, 255, 0.08);
   --pp-rim: rgba(255, 255, 255, 0.14);
   --pp-shadow: rgba(0, 0, 0, 0.5);
+
+  --disc-base: rgba(255, 255, 255, 0.05);
+  --disc-mix: 26%;
+  --disc-rim: 34%;
+  --disc-hi: rgba(255, 255, 255, 0.12);
+
+  --sc-blue: #3987e5;
+  --sc-orange: #d95926;
+  --sc-aqua: #199e70;
+  --sc-yellow: #c98500;
+  --sc-magenta: #d55181;
+  --sc-green: #008300;
+  --sc-violet: #9085e9;
+  --sc-red: #e66767;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
@@ -221,6 +255,20 @@
     --pp-bg: rgba(255, 255, 255, 0.08);
     --pp-rim: rgba(255, 255, 255, 0.14);
     --pp-shadow: rgba(0, 0, 0, 0.5);
+
+    --disc-base: rgba(255, 255, 255, 0.05);
+    --disc-mix: 26%;
+    --disc-rim: 34%;
+    --disc-hi: rgba(255, 255, 255, 0.12);
+
+    --sc-blue: #3987e5;
+    --sc-orange: #d95926;
+    --sc-aqua: #199e70;
+    --sc-yellow: #c98500;
+    --sc-magenta: #d55181;
+    --sc-green: #008300;
+    --sc-violet: #9085e9;
+    --sc-red: #e66767;
   }
 }
 
@@ -635,30 +683,6 @@
   .hatch {
     background: repeating-linear-gradient(135deg, var(--hatch) 0 4px, transparent 4px 9px);
   }
-  .glow-disc {
-    position: relative;
-    display: grid;
-    place-items: center;
-    border-radius: 999px;
-    background: radial-gradient(
-      circle at 35% 30%,
-      rgba(255, 255, 255, 0.35),
-      rgba(255, 255, 255, 0.04) 60%
-    );
-    box-shadow:
-      0 0 0 1px var(--ctl-rim) inset,
-      0 18px 40px -12px var(--glow, transparent);
-  }
-  .glow-disc::before {
-    content: '';
-    position: absolute;
-    inset: -14px;
-    border-radius: inherit;
-    background: radial-gradient(circle, var(--glow, transparent) 0%, transparent 70%);
-    opacity: 0.55;
-    z-index: -1;
-  }
-
   /*
     ---- Colour preset cards (Settings → Appearance, the setup wizard, joining) ----
     Each preview carries its own data-palette, so the mini scene inside is

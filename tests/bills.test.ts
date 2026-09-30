@@ -8,6 +8,7 @@ import { createBill, getBill, listBills, setSharePaid, updateBill } from '@/lib/
 import { createHousehold, updateHousehold } from '@/lib/households';
 import { createMember } from '@/lib/members';
 import { createService, listServiceTypes } from '@/lib/services';
+import { hasIcon } from '@/components/app/icons';
 
 let dir: string;
 let db: Db;
@@ -105,8 +106,7 @@ describe('service type groups', () => {
 
 describe('service type icons', () => {
   it('exist for every type in the catalog (an unknown name draws a blank square)', () => {
-    const icons = fs.readFileSync(path.join(process.cwd(), 'src/components/app/icons.tsx'), 'utf8');
-    const missing = listServiceTypes(db).filter((t) => !icons.includes(`case '${t.icon}':`));
+    const missing = listServiceTypes(db).filter((t) => !hasIcon(t.icon));
     expect(missing.map((t) => `${t.slug}: ${t.icon}`)).toEqual([]);
   });
 });

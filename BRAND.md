@@ -197,7 +197,7 @@ stops blurring. Chart tooltips use `--tip-bg`, never glass.
 
 ## 7. Components
 
-Carried over from the studio into `src/components/ui` (R2):
+In `src/components/ui`, drawn with the studio's CSS (`src/styles/components.css`); `/design` shows every piece:
 
 - **Buttons.** Primary wears the accent (`--p-accent`, inset highlight, a soft
   accent shadow); secondary is a glass capsule; plain is a text button.
@@ -217,7 +217,9 @@ Carried over from the studio into `src/components/ui` (R2):
 ## 8. Instruments
 
 Every widget and card carries at least one visual besides text. All drawn in
-plain SVG (`src/components/charts`), no chart library (D1):
+plain SVG on the server (`src/components/charts`, CSS in `src/styles/charts.css`),
+no chart library; one hover layer (`hover.tsx`) gives every chart its tooltip.
+The studio's `.ring` is `.gauge` here (Tailwind owns `ring`):
 
 - **Ring**: 7-unit stroke, accent → accent 2 gradient, track `--track`; the
   figure sits in the centre.

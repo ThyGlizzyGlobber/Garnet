@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 import { getTranslations } from 'next-intl/server';
 import { SeasonAhead } from '@/components/app/season-ahead';
 import { WeatherCard } from '@/components/app/weather-card';
-import { Banner, Card, Chip, EmptyState, LinkButton, PageHeader } from '@/components/ui';
+import { Banner, Card, FilterChip, EmptyState, LinkButton, PageHeader } from '@/components/ui';
 import { InlineAction } from '@/components/ui/form';
 import { pageContext } from '@/lib/context';
 import { homeView } from '@/lib/home';
@@ -94,11 +94,15 @@ export default async function HomePage({
         }
       >
         {toggle}
-        <Chip active>{thisMonth}</Chip>
-        <Chip href="/bills">{v.summary.fiscalYear.label}</Chip>
-        <Chip href="/services">{t('chips.services', { count: v.summary.services.length })}</Chip>
+        <FilterChip active>{thisMonth}</FilterChip>
+        <FilterChip href="/bills">{v.summary.fiscalYear.label}</FilterChip>
+        <FilterChip href="/services">
+          {t('chips.services', { count: v.summary.services.length })}
+        </FilterChip>
         {v.shared && (
-          <Chip href="/members">{t('chips.members', { count: v.summary.activeMemberCount })}</Chip>
+          <FilterChip href="/members">
+            {t('chips.members', { count: v.summary.activeMemberCount })}
+          </FilterChip>
         )}
       </Greeting>
 

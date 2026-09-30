@@ -4,6 +4,8 @@ import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getMessages, getTranslations } from 'next-intl/server';
 import { RegisterServiceWorker } from '@/components/app/pwa';
 import { Scene } from '@/components/app/scene';
+import { ChartHover } from '@/components/charts/hover';
+import { ToastProvider } from '@/components/ui/toast';
 import { themeColor } from '@/lib/appearance';
 import { getAppearance } from '@/lib/auth/appearance';
 import './globals.css';
@@ -58,7 +60,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     >
       <body>
         <Scene />
-        <NextIntlClientProvider messages={messages}>{children}</NextIntlClientProvider>
+        <NextIntlClientProvider messages={messages}>
+          <ToastProvider>{children}</ToastProvider>
+        </NextIntlClientProvider>
+        <ChartHover />
         <RegisterServiceWorker />
       </body>
     </html>

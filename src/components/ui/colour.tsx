@@ -1,15 +1,13 @@
 import type { CSSProperties } from 'react';
 import { Icon } from '@/components/app/icons';
 import { colourCss } from '@/lib/palette';
+import { cx } from './cx';
 
 /**
- * Things drawn in a service's or member's own colour. Colours are stored as the
- * light-scheme hex; these follow the light/dark scheme (see colourCss).
+ * Things drawn in a service's or member's own colour. Colours are stored as
+ * the light hex; `colourCss` turns a palette colour into its token, which
+ * carries both the light and the dark step.
  */
-
-function cx(...parts: (string | false | null | undefined)[]) {
-  return parts.filter(Boolean).join(' ');
-}
 
 /**
  * A small colour key beside a name (lists, rankings, legends); `dot` for a
@@ -36,7 +34,7 @@ export function Swatch({
 /** A bar filled to `pct` (0–100) in a colour, e.g. a service's share of the year. */
 export function ColourBar({ colour, pct }: { colour: string; pct: number }) {
   return (
-    <div className="mt-1 h-2 rounded-full bg-surface-2">
+    <div className="mt-1 h-2 rounded-full bg-track">
       <div
         className="h-2 rounded-full"
         style={{ width: `${Math.min(100, Math.max(0, pct))}%`, background: colourCss(colour) }}
@@ -45,77 +43,108 @@ export function ColourBar({ colour, pct }: { colour: string; pct: number }) {
   );
 }
 
-/** A member's initial on their colour fading into the accent. */
+export type IdentitySize = 'sm' | 'md' | 'lg';
+
+/** A member's initial on their colour, fading towards the accent. */
 export function Avatar({
   name,
   colour,
-  className = 'size-10 text-sm',
+  size = 'md',
+  className,
 }: {
   name: string;
   colour: string;
+  size?: IdentitySize;
   className?: string;
 }) {
   return (
     <span
       aria-hidden="true"
-      className={cx(
-        'grid shrink-0 place-items-center rounded-full font-bold text-on-colour shadow-inner',
-        className,
-      )}
-      style={{ background: `linear-gradient(135deg, ${colourCss(colour)}, var(--color-accent))` }}
+      title={name}
+      className={cx('av', size !== 'md' && `av-${size}`, className)}
+      style={{ ['--m' as string]: colourCss(colour) }}
     >
       {name.slice(0, 1).toUpperCase()}
     </span>
   );
 }
 
+/** Several members' avatars, overlapping. */
+export function Avatars({
+  members,
+  size = 'sm',
+  className,
+}: {
+  members: { name: string; colour: string }[];
+  size?: IdentitySize;
+  className?: string;
+}) {
+  return (
+    <span className={cx('avs', className)}>
+      {members.map((m) => (
+        <Avatar key={m.name} name={m.name} colour={m.colour} size={size} />
+      ))}
+    </span>
+  );
+}
+
+const discIcon: Record<IdentitySize, number> = { sm: 17, md: 21, lg: 28 };
+
 /**
- * A service's icon in its colour: `filled` (a solid rounded square, for rows
- * in lists), `soft` (the icon in colour on a quiet disc, for tinted tiles) or
- * `glow` (a frosted disc with a halo, for headers and tiles).
+ * A service's icon on a disc in its colour: the colour mixed into pale glass
+ * with a thin tinted rim (BRAND.md §7). `size` is sm 30, md 38 or lg 54 px,
+ * or any width in px or CSS units for the wall.
+ */
+export function Disc({
+  icon,
+  colour,
+  size = 'md',
+  iconSize,
+  className,
+}: {
+  icon: string;
+  colour: string;
+  size?: IdentitySize | number | string;
+  /** Icon size in px; about half the disc by default. */
+  iconSize?: number;
+  className?: string;
+}) {
+  const named = typeof size === 'string' && size in discIcon ? (size as IdentitySize) : null;
+  const style: CSSProperties = { ['--svc' as string]: colourCss(colour) };
+  if (!named) {
+    style.width = size;
+    style.height = size;
+  }
+  const px =
+    iconSize ?? (named ? discIcon[named] : typeof size === 'number' ? Math.round(size * 0.52) : 24);
+  return (
+    <span
+      aria-hidden="true"
+      className={cx('disc', named && named !== 'md' && `disc-${named}`, className)}
+      style={style}
+    >
+      <Icon name={icon} width={px} height={px} />
+    </span>
+  );
+}
+
+/**
+ * The pre-redesign name for the disc. Every variant now draws the one Frost
+ * Glass disc; the screens still passing `variant` are replaced in R5–R6.
  */
 export function IconDisc({
   icon,
   colour,
-  variant = 'filled',
   size = 36,
-  iconSize: iconPx,
+  iconSize,
   className,
 }: {
   icon: string;
   colour: string;
   variant?: 'filled' | 'soft' | 'glow';
-  /** Width and height: px, or any CSS length (the wall sizes by viewport). */
   size?: number | string;
-  /** Icon size in px; about half the disc by default. */
   iconSize?: number;
   className?: string;
 }) {
-  const c = colourCss(colour);
-  const iconSize =
-    iconPx ??
-    (typeof size === 'number' ? Math.round(size * (variant === 'filled' ? 0.45 : 0.44)) : 24);
-  const style: CSSProperties =
-    variant === 'glow'
-      ? { width: size, height: size, color: c, ['--glow' as string]: c }
-      : variant === 'soft'
-        ? { width: size, height: size, color: c }
-        : { width: size, height: size, background: c };
-  return (
-    <span
-      aria-hidden="true"
-      className={cx(
-        'shrink-0',
-        variant === 'glow'
-          ? 'glow-disc'
-          : variant === 'soft'
-            ? 'grid place-items-center rounded-full bg-surface-2'
-            : 'grid place-items-center rounded-xl text-on-colour',
-        className,
-      )}
-      style={style}
-    >
-      <Icon name={icon} width={iconSize} height={iconSize} />
-    </span>
-  );
+  return <Disc icon={icon} colour={colour} size={size} iconSize={iconSize} className={className} />;
 }

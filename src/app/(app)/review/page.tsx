@@ -5,7 +5,7 @@ import { SearchBar } from '@/components/app/search-bar';
 import {
   Badge,
   Card,
-  Chip,
+  FilterChip,
   EmptyState,
   LinkButton,
   List,
@@ -104,9 +104,9 @@ export default async function ReviewPage({
       )}
       <div className="mb-4 flex flex-wrap items-center gap-2 text-sm">
         {FILTERS.map((key) => (
-          <Chip key={key} href={link(key)} active={filter === key}>
+          <FilterChip key={key} href={link(key)} active={filter === key}>
             {t(`filter.${key}`)}
-          </Chip>
+          </FilterChip>
         ))}
         <span className="flex-1" />
         <InlineAction

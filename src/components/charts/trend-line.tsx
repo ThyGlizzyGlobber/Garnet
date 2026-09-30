@@ -1,163 +1,155 @@
-'use client';
-
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  ReferenceDot,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
-import { chartInk, seriesColour, useDarkMode } from './theme';
+import { useId } from 'react';
+import { colourCss } from '@/lib/palette';
+import { niceTicks, smoothPath, spread } from './math';
 
 export interface TrendPoint {
   key: string;
   label: string;
   value: number;
-  /** Preformatted value for the tooltip and callout. */
+  /** The value formatted, for the callout and tooltip. */
   text: string;
   /** Optional second line for the tooltip (e.g. the service breakdown). */
   detail?: string;
 }
 
 /**
- * One smooth line with a soft gradient area, faint gridlines, small point
- * dots and a callout on the last value — the chart style from the references.
+ * Trend: one smooth line with a gradient area, a fitted axis, a callout on
+ * the latest value and (with hover.tsx) a crosshair tooltip. Plain SVG drawn
+ * on the server; never a dual axis.
  */
 export function TrendLine({
   points,
-  /** A stored service colour, or any CSS colour; the accent by default. */
-  colour = 'var(--color-accent)',
-  height = 240,
-  id = 'trend',
+  colour = 'var(--p-accent)',
+  height,
   label,
+  axisFormat,
+  ticks: tickCount = 3,
+  axis = true,
+  xLabels = true,
+  every = 1,
+  dots = false,
+  callout = true,
+  className,
 }: {
   points: TrendPoint[];
+  /** A stored service colour, or any CSS colour; the accent by default. */
   colour?: string;
+  /** Fixed height in px; otherwise it fills its parent. */
   height?: number;
-  id?: string;
-  /** Accessible name for the chart (callers pass it from messages). */
+  /** Accessible name for the chart. */
   label: string;
+  /** Formats an axis tick ("$1.2k"); the raw number by default. */
+  axisFormat?: (v: number) => string;
+  ticks?: number;
+  axis?: boolean;
+  xLabels?: boolean;
+  /** Show every nth x label. */
+  every?: number;
+  /** A dot on every point, not only the last. */
+  dots?: boolean;
+  callout?: boolean;
+  className?: string;
+  id?: string;
 }) {
-  const dark = useDarkMode();
-  const c = seriesColour(colour, dark);
-  const last = points[points.length - 1];
+  const gid = useId();
+  const c = colourCss(colour);
+  if (points.length < 2)
+    return (
+      <figure
+        className={className ? `chart ${className}` : 'chart'}
+        style={{ height }}
+        aria-label={label}
+      />
+    );
+  const vals = points.map((p) => p.value);
+  let min = Math.min(...vals);
+  let max = Math.max(...vals);
+  const pad = (max - min) * 0.35 || Math.abs(max) * 0.1 || 1;
+  const tickVals = niceTicks(min - pad, max + pad * 0.6, tickCount);
+  min = tickVals[0]!;
+  max = tickVals[tickVals.length - 1]!;
+  const y = (v: number) => 100 - ((v - min) / (max - min || 1)) * 100;
+  const pts = spread(vals, y);
+  const line = smoothPath(pts);
+  const last = pts[pts.length - 1]!;
+  const lastP = points[points.length - 1]!;
+  const fmt = axisFormat ?? ((v: number) => String(v));
+  const series = JSON.stringify(
+    points.map((p, i) => ({
+      x: pts[i]![0],
+      y: pts[i]![1],
+      t: p.detail ? `${p.label} · ${p.text} · ${p.detail}` : `${p.label} · ${p.text}`,
+    })),
+  );
+  const cls = ['chart', 'chart-trend', axis && 'has-axis', xLabels && 'has-x', className]
+    .filter(Boolean)
+    .join(' ');
   return (
-    <div style={{ width: '100%', height }} role="img" aria-label={label}>
-      <ResponsiveContainer>
-        <AreaChart data={points} margin={{ top: 30, right: 56, left: 0, bottom: 0 }}>
+    <figure
+      className={cls}
+      style={{ ['--c' as string]: c, height }}
+      data-series={series}
+      aria-label={label}
+    >
+      {axis && (
+        <div className="chart-y" aria-hidden="true">
+          {tickVals.map((t) => (
+            <span key={t} style={{ top: `${y(t)}%` }}>
+              {fmt(t)}
+            </span>
+          ))}
+        </div>
+      )}
+      <div className="chart-plot">
+        {axis &&
+          tickVals.map((t) => <i key={t} className="chart-grid" style={{ top: `${y(t)}%` }} />)}
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
           <defs>
-            <linearGradient id={`${id}-fill`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={c} stopOpacity={0.35} />
-              <stop offset="100%" stopColor={c} stopOpacity={0} />
+            <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stopColor={c} stopOpacity={0.34} />
+              <stop offset="1" stopColor={c} stopOpacity={0} />
             </linearGradient>
-            <filter id={`${id}-glow`} x="-10%" y="-40%" width="120%" height="180%">
-              <feGaussianBlur stdDeviation="4" result="b" />
-              <feMerge>
-                <feMergeNode in="b" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
           </defs>
-          <CartesianGrid vertical={false} stroke={chartInk.grid} strokeDasharray="4 6" />
-          <XAxis
-            dataKey="label"
-            tick={{ fill: chartInk.axis, fontSize: 11 }}
-            axisLine={false}
-            tickLine={false}
-            interval="preserveStartEnd"
-          />
-          <YAxis
-            tick={{ fill: chartInk.axis, fontSize: 11 }}
-            axisLine={false}
-            tickLine={false}
-            width={40}
-            tickCount={4}
-            domain={[
-              (min: number) => Math.floor(min * 0.94),
-              (max: number) => Math.ceil(max * 1.06),
-            ]}
-            tickFormatter={(v: number) =>
-              v >= 1000 ? `${(v / 1000).toFixed(v % 1000 ? 1 : 0)}k` : String(v)
-            }
-          />
-          <Tooltip
-            cursor={{ stroke: c, strokeOpacity: 0.35, strokeWidth: 1 }}
-            contentStyle={{
-              background: chartInk.tooltipBg,
-              border: `1px solid ${chartInk.tooltipBorder}`,
-              borderRadius: 14,
-              fontSize: 12,
-              color: 'var(--color-fg)',
-              boxShadow: '0 12px 32px rgba(0,0,0,0.25)',
-            }}
-            labelStyle={{ color: 'var(--color-fg-muted)', marginBottom: 2 }}
-            itemStyle={{ color: 'var(--color-fg)', fontWeight: 600 }}
-            formatter={(_v, _n, item) => {
-              const p = item.payload as TrendPoint;
-              return [p.detail ? `${p.text} · ${p.detail}` : p.text, ''];
-            }}
-            separator=""
-          />
-          <Area
-            type="monotone"
-            dataKey="value"
+          <path d={`${line} L100,100 L0,100 Z`} fill={`url(#${gid})`} />
+          <path
+            className="chart-line"
+            d={line}
+            fill="none"
             stroke={c}
-            strokeWidth={2.5}
-            fill={`url(#${id}-fill)`}
-            dot={{ r: 3, fill: c, strokeWidth: 0 }}
-            activeDot={{ r: 6, fill: c, stroke: 'var(--color-surface-solid)', strokeWidth: 2 }}
-            isAnimationActive={false}
-            filter={`url(#${id}-glow)`}
+            strokeWidth={2}
+            vectorEffect="non-scaling-stroke"
+            strokeLinecap="round"
           />
-          {last && (
-            <ReferenceDot
-              x={last.label}
-              y={last.value}
-              r={0}
-              ifOverflow="visible"
-              shape={(props: { cx?: number; cy?: number }) => {
-                const cx = props.cx ?? 0;
-                const cy = props.cy ?? 0;
-                const w = last.text.length * 7.2 + 20;
-                return (
-                  <g>
-                    <circle
-                      cx={cx}
-                      cy={cy}
-                      r={6}
-                      fill={c}
-                      stroke="var(--color-surface-solid)"
-                      strokeWidth={2.5}
-                    />
-                    <rect
-                      x={cx - w / 2}
-                      y={cy - 40}
-                      width={w}
-                      height={26}
-                      rx={13}
-                      fill="var(--color-surface-solid)"
-                      stroke={chartInk.tooltipBorder}
-                    />
-                    <text
-                      x={cx}
-                      y={cy - 23}
-                      textAnchor="middle"
-                      fontSize={12}
-                      fontWeight={700}
-                      fill="var(--color-fg)"
-                    >
-                      {last.text}
-                    </text>
-                  </g>
-                );
-              }}
-            />
-          )}
-        </AreaChart>
-      </ResponsiveContainer>
-    </div>
+        </svg>
+        {dots &&
+          pts
+            .slice(0, -1)
+            .map((p, i) => (
+              <i
+                key={points[i]!.key}
+                className="chart-pt"
+                style={{ left: `${p[0]}%`, top: `${p[1]}%` }}
+              />
+            ))}
+        <i className="chart-pt last" style={{ left: `${last[0]}%`, top: `${last[1]}%` }} />
+        {callout && (
+          <span className="chart-callout" style={{ left: `${last[0]}%`, top: `${last[1]}%` }}>
+            {lastP.text}
+          </span>
+        )}
+        <i className="chart-cross" hidden />
+        <i className="chart-hover-pt" hidden />
+        <span className="chart-tip" hidden />
+      </div>
+      {xLabels && (
+        <div className="chart-x" aria-hidden="true">
+          {points.map((p, i) => (
+            <span key={p.key} style={{ left: `${pts[i]![0]}%` }}>
+              {i % every === 0 || i === points.length - 1 ? p.label : ''}
+            </span>
+          ))}
+        </div>
+      )}
+    </figure>
   );
 }

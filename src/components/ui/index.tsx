@@ -1,9 +1,14 @@
 import Link from 'next/link';
 import type { ComponentProps, ReactNode } from 'react';
+import { Icon } from '@/components/app/icons';
+import { Chip, type Tone } from './chip';
+import { cx } from './cx';
 
-function cx(...parts: (string | false | null | undefined)[]) {
-  return parts.filter(Boolean).join(' ');
-}
+/**
+ * The primitives the screens share (BRAND.md §5–§7). Cards and buttons are
+ * the Frost Glass classes from src/styles/components.css; the rest lays out
+ * with utilities on the tokens.
+ */
 
 export function Card({ className, ...props }: ComponentProps<'section'>) {
   return <section className={cx('glass rounded-card p-5', className)} {...props} />;
@@ -21,44 +26,67 @@ export function PageHeader({
   return (
     <header className="mb-5 flex items-end justify-between gap-4">
       <div>
-        <h1 className="font-display text-[28px] leading-tight font-semibold tracking-tight sm:text-[36px]">
-          {title}
-        </h1>
-        {subtitle && <p className="mt-1 text-sm text-fg-muted">{subtitle}</p>}
+        <h1 className="text-[32px] leading-none sm:text-[40px]">{title}</h1>
+        {subtitle && <p className="mt-1.5 text-fg-2">{subtitle}</p>}
       </div>
       {action}
     </header>
   );
 }
 
-const buttonBase =
-  'inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition active:scale-[0.98] disabled:opacity-50';
 const buttonVariants = {
-  primary: 'bg-accent text-accent-fg hover:opacity-90',
-  secondary: 'glass text-fg hover:bg-surface-2',
-  danger: 'bg-danger-soft text-danger hover:opacity-90',
-  ghost: 'text-accent hover:bg-surface-2',
+  primary: 'btn-primary',
+  secondary: 'btn-glass',
+  danger: 'btn-danger',
+  ghost: 'btn-plain',
 };
 export type ButtonVariant = keyof typeof buttonVariants;
 
+/** A button: primary wears the accent, secondary is a glass capsule, ghost is plain text. */
 export function Button({
   variant = 'primary',
+  size,
+  icon,
   className,
+  children,
   ...props
-}: ComponentProps<'button'> & { variant?: ButtonVariant }) {
-  return <button className={cx(buttonBase, buttonVariants[variant], className)} {...props} />;
+}: ComponentProps<'button'> & { variant?: ButtonVariant; size?: 'sm'; icon?: string }) {
+  return (
+    <button
+      className={cx('btn', buttonVariants[variant], size === 'sm' && 'btn-sm', className)}
+      {...props}
+    >
+      {icon && (
+        <Icon name={icon} width={size === 'sm' ? 15 : 18} height={size === 'sm' ? 15 : 18} />
+      )}
+      {children != null && <span>{children}</span>}
+    </button>
+  );
 }
 
 export function LinkButton({
   variant = 'primary',
+  size,
+  icon,
   className,
+  children,
   ...props
-}: ComponentProps<typeof Link> & { variant?: ButtonVariant }) {
-  return <Link className={cx(buttonBase, buttonVariants[variant], className)} {...props} />;
+}: ComponentProps<typeof Link> & { variant?: ButtonVariant; size?: 'sm'; icon?: string }) {
+  return (
+    <Link
+      className={cx('btn', buttonVariants[variant], size === 'sm' && 'btn-sm', className)}
+      {...props}
+    >
+      {icon && (
+        <Icon name={icon} width={size === 'sm' ? 15 : 18} height={size === 'sm' ? 15 : 18} />
+      )}
+      {children != null && <span>{children}</span>}
+    </Link>
+  );
 }
 
 const inputClass =
-  'w-full rounded-2xl border border-border-strong bg-surface-2 px-3.5 py-2.5 text-base text-fg outline-none placeholder:text-fg-muted focus:border-accent focus:ring-2 focus:ring-accent/30';
+  'w-full rounded-inner border border-line-2 bg-inset px-3 py-2.5 text-base text-fg outline-none placeholder:text-fg-2 focus-visible:outline-2 focus-visible:outline-accent';
 
 export function Input({ className, ...props }: ComponentProps<'input'>) {
   return <input className={cx(inputClass, className)} {...props} />;
@@ -85,38 +113,34 @@ export function Field({
 }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-sm font-medium">{label}</span>
+      <span className="mb-1.5 block text-sm font-semibold text-fg-2">{label}</span>
       {children}
       {error ? (
-        <span className="mt-1 block text-xs text-danger">{error}</span>
+        <span className="mt-1 block text-xs text-bad">{error}</span>
       ) : hint ? (
-        <span className="mt-1 block text-xs text-fg-muted">{hint}</span>
+        <span className="mt-1 block text-xs text-fg-2">{hint}</span>
       ) : null}
     </label>
   );
 }
 
+const badgeTone: Record<'neutral' | 'success' | 'warning' | 'danger' | 'accent', Tone> = {
+  neutral: 'neutral',
+  success: 'ok',
+  warning: 'warn',
+  danger: 'bad',
+  accent: 'info',
+};
+
+/** The pre-redesign name for a chip; the tones map onto the chip's. */
 export function Badge({
   tone = 'neutral',
   children,
 }: {
-  tone?: 'neutral' | 'success' | 'warning' | 'danger' | 'accent';
+  tone?: keyof typeof badgeTone;
   children: ReactNode;
 }) {
-  const tones = {
-    neutral: 'bg-surface-2 text-fg-muted',
-    success: 'bg-success-soft text-success',
-    warning: 'bg-warning-soft text-warning',
-    danger: 'bg-danger-soft text-danger',
-    accent: 'bg-accent-soft text-accent',
-  };
-  return (
-    <span
-      className={cx('inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-bold', tones[tone])}
-    >
-      {children}
-    </span>
-  );
+  return <Chip tone={badgeTone[tone]}>{children}</Chip>;
 }
 
 export function EmptyState({
@@ -131,7 +155,7 @@ export function EmptyState({
   return (
     <Card className="flex flex-col items-center gap-3 py-12 text-center">
       <p className="font-display text-lg font-semibold">{title}</p>
-      {body && <p className="max-w-sm text-sm text-fg-muted">{body}</p>}
+      {body && <p className="max-w-sm text-sm text-fg-2">{body}</p>}
       {action}
     </Card>
   );
@@ -139,7 +163,7 @@ export function EmptyState({
 
 export function ListRow({ href, children }: { href?: string; children: ReactNode }) {
   const cls =
-    'flex items-center justify-between gap-4 px-5 py-3.5 transition hover:bg-surface-2 first:rounded-t-card last:rounded-b-card';
+    'flex items-center justify-between gap-4 px-5 py-3.5 transition hover:bg-inset first:rounded-t-card last:rounded-b-card';
   return href ? (
     <Link href={href} className={cls}>
       {children}
@@ -150,7 +174,7 @@ export function ListRow({ href, children }: { href?: string; children: ReactNode
 }
 
 export function List({ children }: { children: ReactNode }) {
-  return <div className="glass divide-y divide-border rounded-card">{children}</div>;
+  return <div className="glass divide-y divide-line rounded-card">{children}</div>;
 }
 
 const tileTones = {
@@ -203,9 +227,9 @@ export function TileHeader({
         {small ? (
           <p className="text-sm font-semibold">{title}</p>
         ) : (
-          <h2 className="font-display text-lg font-semibold">{title}</h2>
+          <h2 className="text-lg">{title}</h2>
         )}
-        {hint && <p className="text-xs text-fg-muted">{hint}</p>}
+        {hint && <p className="text-xs text-fg-2">{hint}</p>}
       </div>
       {action && <div className="shrink-0">{action}</div>}
     </div>
@@ -213,18 +237,18 @@ export function TileHeader({
 }
 
 const figureSizes = {
-  hero: 'text-[44px] tracking-tight',
-  xl: 'text-[38px] tracking-tight sm:text-[44px]',
-  lg: 'text-[40px] tracking-tight',
-  md: 'text-[34px] tracking-tight',
+  hero: 'text-[52px]',
+  xl: 'text-[44px] sm:text-[52px]',
+  lg: 'text-[40px]',
+  md: 'text-[34px]',
   sm: 'text-[32px]',
   xs: 'text-[26px]',
 };
 const figureTones = {
   plain: '',
-  warning: 'text-warning',
-  success: 'text-success',
-  danger: 'text-danger',
+  warning: 'text-warn',
+  success: 'text-ok',
+  danger: 'text-bad',
   accent: 'text-accent',
 };
 
@@ -241,23 +265,16 @@ export function Figure({
   children: ReactNode;
 }) {
   return (
-    <span
-      className={cx(
-        'block font-display leading-none font-semibold tabular-nums',
-        figureSizes[size],
-        figureTones[tone],
-        className,
-      )}
-    >
+    <span className={cx('fig block', figureSizes[size], figureTones[tone], className)}>
       {children}
     </span>
   );
 }
 
-const bannerTones = {
-  danger: 'bg-danger-soft text-danger',
-  warning: 'bg-warning-soft text-warning',
-  accent: 'bg-accent-soft text-accent',
+const bannerTones: Record<'danger' | 'warning' | 'accent', Tone> = {
+  danger: 'bad',
+  warning: 'warn',
+  accent: 'info',
 };
 
 /** A full-width link asking for attention (a bill problem, a question, the Inbox). */
@@ -274,30 +291,22 @@ export function Banner({
   children: ReactNode;
 }) {
   return (
-    <Link
-      href={href}
-      className={cx(
-        'mb-4 flex items-center justify-between gap-3 rounded-card px-5 py-3 text-sm font-semibold',
-        bannerTones[tone],
-      )}
-    >
-      <span>{children}</span>
-      <span className="shrink-0">
-        {open} <span aria-hidden="true">→</span>
+    <Link href={href} className={cx('notice mb-4', `t-${bannerTones[tone]}`)}>
+      <span className="notice-t">
+        <b>{children}</b>
+      </span>
+      <span className="text-sm font-semibold">
+        {open} <Icon name="chevron-right" width={14} height={14} className="inline" />
       </span>
     </Link>
   );
 }
 
-/** The pill look, for a chip that has to be another element (a submit button). */
-export const chipClass = (active = false) =>
-  cx(
-    'rounded-full px-4 py-2 text-sm font-semibold transition',
-    active ? 'bg-accent text-accent-fg' : 'bg-surface-2 text-fg-muted hover:text-fg',
-  );
+/** The filter capsule, for a chip that has to be another element (a submit button). */
+export const filterChipClass = (active = false) => cx('chip-btn', active && 'on');
 
-/** A pill: a filter, a period, a count that links somewhere. `active` fills it. */
-export function Chip({
+/** A filter capsule: a period, a status, a count that links somewhere. `active` fills it. */
+export function FilterChip({
   href,
   active = false,
   className,
@@ -308,7 +317,7 @@ export function Chip({
   className?: string;
   children: ReactNode;
 }) {
-  const cls = cx(chipClass(active), className);
+  const cls = cx('chip-btn', active && 'on', className);
   return href ? (
     <Link href={href} className={cls} aria-current={active ? 'page' : undefined}>
       {children}
@@ -320,8 +329,8 @@ export function Chip({
 
 /**
  * A file download (an export, a statement): a plain link, not client-side
- * navigation, styled as a secondary button. `label` is hidden on phones when
- * an icon is given.
+ * navigation, styled as a glass button. `label` is hidden on phones when an
+ * icon is given.
  */
 export function DownloadButton({
   href,
@@ -335,13 +344,7 @@ export function DownloadButton({
   icon?: ReactNode;
 }) {
   return (
-    <a
-      href={href}
-      download
-      title={title}
-      aria-label={label}
-      className={cx(buttonBase, buttonVariants.secondary)}
-    >
+    <a href={href} download title={title} aria-label={label} className="btn btn-glass">
       {icon}
       <span className={icon ? 'hidden sm:inline' : undefined}>{label}</span>
     </a>

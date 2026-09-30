@@ -66,8 +66,9 @@ log below; this section is the quick orientation.
   (`brand-identity/inspiration/redesign-studio/`); scope, decisions and stages R0–R8 in `SCOPE-redesign.md`.
   It is built on the branch `redesign/almanac-2`, checked out as a git worktree at
   `/Users/bejaysmith/Desktop/Home Utilities Software (Redesign)`, so `main` stays releasable while
-  another session works here; it merges into `main` at R8. R0 (every screen in the studio) and R1
-  (tokens, presets, fonts, glass, per-person appearance, BRAND.md) are done.
+  another session works here; it merges into `main` at R8. R0 (every screen in the studio), R1
+  (tokens, presets, fonts, glass, per-person appearance, BRAND.md) and R2 (the component pack,
+  icons and SVG charts; `/design` shows every piece) are done.
 - **Likely next steps.** The UI/UX redesign: every screen reads its numbers from a view function in `src/lib`
   (`home.ts`, `service-overview.ts`, `status.ts`, `personal.ts`) and draws with the primitives in
   `src/components/ui` (Tile, Figure, Banner, Chip, Swatch, Avatar, IconDisc…), so a redesign swaps markup and
@@ -99,7 +100,8 @@ log below; this section is the quick orientation.
   unlocks an already-signed-in device. Admins never set or see members' PINs.
 - Never commit secrets. `.env` is gitignored; `.env.example` documents every var.
 - `sample-bills/` contains real personal data: gitignored and dockerignored.
-- UI: Tailwind + Recharts, clean Apple-like design, fully responsive (phone + iPad).
+- UI: Tailwind + plain SVG charts (no chart library), the Almanac 2 / Frost Glass design in
+  BRAND.md, fully responsive (phone + iPad).
   `/wall` is a full-screen auto-refreshing kiosk route.
 - Manual bill entry is a permanent first-class feature, not a stopgap.
 
@@ -131,7 +133,7 @@ log below; this section is the quick orientation.
 ## Tech stack
 
 Next.js 16.3.6 (App Router, Turbopack; pinned, see the decisions log) · TypeScript 5 strict · Tailwind v4 ·
-Recharts · Drizzle ORM + better-sqlite3 · next-intl · Vitest · ESLint 9 + Prettier · knip ·
+Drizzle ORM + better-sqlite3 · next-intl · Vitest · ESLint 9 + Prettier · knip ·
 iron-session + bcryptjs · mailparser + mailauth (DKIM) + pdf-parse + pdf-lib (turning pages) + sharp (photos) ·
 @anthropic-ai/sdk · Resend (email out, HTTP API) · Open-Meteo (weather) ·
 Docker multi-stage on node:22-bookworm-slim with Next standalone output, built by GitHub Actions and published to GHCR (`deploy/`).
@@ -155,10 +157,13 @@ src/app/            App Router routes: (app)/ (the signed-in app: Home in page.t
                     its tiles in _home/, bills, services, members, ledger, review = Inbox,
                     settings, status), login/unlock/set-pin/welcome/setup/invite,
                     wall, privacy, api/*. Pages only lay out; numbers come from src/lib.
-src/components/     ui/ (design primitives: Card, Tile, Figure, Banner, Chip, Badge,
-                    form fields, Ring/Arc, colour.tsx: Swatch/Avatar/IconDisc, copy),
-                    charts/ (TrendLine on Recharts, Sparkline in plain SVG),
+src/components/     ui/ (the component pack: index.tsx primitives, chip, controls,
+                    colour.tsx: Swatch/Avatar/Disc, rows, blocks, ring, sheet, toast, copy),
+                    charts/ (plain SVG: trend, sparkline, period bars, stack bar, pills,
+                    calendar grid; hover.tsx is the one tooltip layer),
                     app/ (shell, nav, icons, search bar, weather card, …)
+src/styles/         components.css and charts.css: the pack's CSS from the studio,
+                    imported into Tailwind's components layer by globals.css
 src/db/             schema.ts, client.ts, migrate.ts, demo-seed.ts
 src/lib/            env.ts (the only process.env reader), format.ts (all formatting),
                     roles.ts, palette.ts, view functions per screen (home.ts,
@@ -381,3 +386,4 @@ Append entries as `- YYYY-MM-DD — decision — why`. Do not rewrite old entrie
 - 2026-09-30 — The redesign scope is approved (`SCOPE-redesign.md`): the owner accepted every recommendation D1–D14 — Recharts gives way to the studio's plain-SVG charts (the hard constraint changes when R2 removes Recharts); a bill paid by instalments is listed once in Bills; Ledger becomes Money (`/money`), Members moves into Settings and the Inbox joins the nav (`/inbox`), with `/ledger` and `/review` redirecting; Home drops its Household · Mine switch; colours are saved on the member with a cookie for first paint, Harbour by default; the presets are named Ink & Mist, Harbour, Ruby, Cobalt and Violet; Home layouts live in a `home_layout` table per member and device type; the bill page shows the real first page of its PDF; Money gains "Remind everyone" (at most once a day each) and "Record a payment"; the three email types stay; no AI wording for households (Status keeps technical terms); the wall is the Home grid in kiosk mode; iOS/iPadOS 16.4+; the studio's other directions are not shipped. The owner added to D5: everyone picks their colours while getting set up (a colour step in the setup wizard and in joining by invite). R0 signed off with its choices (§6a), including the privacy page naming Anthropic. Built on its own branch and worktree because another session commits in the main folder.
 - 2026-09-30 — Redesign R1, foundations. Every token is in `globals.css`: five colour presets × light/dark as `--p-*` on `[data-palette]` (generated from the studio's `js/palettes.js`; any element can carry its own `data-palette`, which the preset previews use), status and neutral tokens, and the Frost Glass tokens; Tailwind reads them through `@theme inline`, and the pre-redesign names (`fg-muted`, `surface*`, `border*`, `success`/`warning`/`danger`, `accent-soft`…) map onto the new tokens until R2–R6 replace the screens that use them. Component CSS never branches on light/dark: all differences are tokens. `.glass` / `.glass-strong` / `.glass-ctl` are the Frost Glass recipe (lens glow, top highlight, masked specular rim), `.window` and `.glass-nav` wear strong glass until R3 removes them, and reduced transparency makes the glass nearly opaque. The scene is the studio's: the preset's ground, four radial blobs, grain and vignette. Fonts: Bricolage Grotesque (optical-size axis) + Figtree, JetBrains Mono kept; Outfit and Manrope retired. Migration 0031 adds `member.appearance_preset` (default harbour) and `member.theme` (auto|light|dark, default auto). The root layout sets `data-palette`/`data-theme` from `getAppearance()` (`src/lib/auth/appearance.ts`: the signed-in or locked member's choice, else the `hud_appearance` cookie, else Harbour), and `generateViewport` sets `theme-color` from the preset's page colour (`PRESET_BG`, kept in step with the CSS by `tests/appearance.test.ts`). The cookie is written when someone saves their colours and when they sign out, so the sign-in page keeps them on that device; it replaces the per-browser `hud_theme` cookie (supersedes the 2026-09-24 theme-override entry), and the theme now follows the person, not the browser. Settings → Appearance (top of the page) has the five preset cards and Light / Dark / Automatic (`saveAppearanceAction`). BRAND.md rewritten for the new system. The manifest's splash colour is Harbour dark. Ink & Mist's blurb reads "The original colours" rather than the studio's "Today's colours", which would be wrong once Harbour is the default.
 - 2026-09-30 — knip's "no matches" hints on the Mac are a knip quirk, not a broken check: they come from the parentheses in the folder name (see Dev environment notes); an unused export is still reported. The stale `ignore` for `deploy/email-worker/worker.d.ts` is gone from `knip.json` (the tests import it now, so knip never flagged it).
+- 2026-09-30 — Redesign R2, the component pack. The studio's components.js, charts.js and icons.js are carried into `src/components` with their CSS (`src/styles/components.css`, `charts.css`, imported into Tailwind's components layer; two names differ so they never meet a utility: `.ring` is `.gauge`, `.inset` is `.well`). Icons are one table of the studio's paths plus the service-type icons (`hasIcon()`; a test checks every studio icon is there and the old names still resolve; `sparkle` is gone). New pieces: Chip (a word with a coloured dot; `DocChip` has the only three document words), IconButton, Segmented, Toggle (a checkbox, so forms need no script), SearchField, BackLink, Disc/Avatar/Avatars, Rows with BillRow/DocRow/FileRow/ShareRow (small view models of formatted strings, so pages keep their numbers in src/lib), Kv, SectionHead, Notice, Timeline, FigureRows, Delta, AddressCard, Progress, Stats, Money (cents set small via `formatMoneyParts`), Sheet and a ToastProvider (`useToast`). The older primitives keep their names and wear the new classes (Button variants → btn-primary/glass/danger/plain; Badge → Chip; Banner → notice; the filter pill is now `FilterChip`). **Recharts is gone (D1):** TrendLine, Sparkline, PeriodBars, StackBar, ForecastPills and CalendarGrid are server-rendered SVG with one client hover layer (`ChartHover` in the root layout, reading each chart's `data-series`/`data-tip`). Ring/Arc redrawn to the studio's. Service and member colours are tokens (`--sc-blue`… in both theme blocks; `colourCss()` maps a palette hex to its token) instead of `light-dark()`, which iOS 16.4 lacks. `/design` (signed-in members) draws every piece with fictional figures for checking against the studio's Components view; checked in the browser, light and dark.
