@@ -1,9 +1,9 @@
 import { and, eq, isNull } from 'drizzle-orm';
 import { getDb, type Db } from '@/db/client';
-import { bill, member, service, serviceType, share, type Member } from '@/db/schema';
+import { bill, service, serviceType, share, type Member } from '@/db/schema';
 import { fiscalYearBounds } from '@/lib/periods';
 import { shareDueDate } from '@/lib/instalments';
-import { isActiveOn } from '@/lib/members';
+import { isActiveOn, listMembers } from '@/lib/members';
 
 /**
  * Money between housemates, for the Money page: every unpaid share is owed
@@ -61,7 +61,8 @@ export function moneyView(
   fiscalYearStartMonth: number,
   db: Db = getDb(),
 ): MoneyView {
-  const members = db.select().from(member).where(eq(member.householdId, householdId)).all();
+  // By move-in, then name, as everywhere else (unordered, housemates came back in id order).
+  const members = listMembers(householdId, db);
   const byId = new Map(members.map((m) => [m.id, m]));
   const fy = fiscalYearBounds(today, fiscalYearStartMonth);
   const rows = db
