@@ -4,6 +4,7 @@ import { listBills } from '@/lib/bills';
 import { listActiveMembers } from '@/lib/members';
 import { monthBounds } from '@/lib/periods';
 import { documentCounts } from '@/lib/review';
+import { billsAddress } from '@/lib/bills-address';
 import { isAdmin } from '@/lib/roles';
 import { listServices } from '@/lib/services';
 import { totalsForRange } from '@/lib/stats';
@@ -28,6 +29,8 @@ export interface ShellView {
   services: ShellService[];
   mine: ShellService[];
   inboxCount: number;
+  /** The household's bills address, for the Add bill sheet. */
+  address: string | null;
   me: { name: string; colour: string; admin: boolean };
 }
 
@@ -53,6 +56,7 @@ export function shellView(hh: Household, me: Member, today: string, db: Db = get
     services,
     mine,
     inboxCount: documentCounts(hh.id, { viewer: me.id }, db).needs_review,
+    address: billsAddress(hh, db),
     me: { name: me.name, colour: me.colour, admin: isAdmin(me) },
   };
 }

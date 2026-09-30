@@ -99,7 +99,7 @@ export function BillRow({ bill: b }: { bill: BillRowModel }) {
 }
 
 /** What kind of file a document is; email and photo get their own marks. */
-type DocType = 'pdf' | 'email' | 'photo' | 'scan';
+export type DocType = 'pdf' | 'email' | 'photo' | 'scan';
 const docIcon: Record<DocType, string> = {
   pdf: 'file',
   scan: 'photo',
@@ -109,7 +109,7 @@ const docIcon: Record<DocType, string> = {
 const docMark: Record<DocType, string> = { pdf: 'PDF', scan: 'PDF', email: 'EML', photo: 'JPG' };
 
 /** The little document icon with its file type underneath. */
-function DocIcon({ type, small = false }: { type: DocType; small?: boolean }) {
+export function DocIcon({ type, small = false }: { type: DocType; small?: boolean }) {
   return (
     <span className={cx('doc-ic', small && 'sm')} aria-hidden="true">
       <Icon name={docIcon[type]} width={19} height={19} />

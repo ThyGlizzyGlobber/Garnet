@@ -2,6 +2,10 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { Icon } from '@/components/app/icons';
+import { PayerPick } from '@/components/app/pieces-client';
+import { Avatar } from '@/components/ui/colour';
+import { cx } from '@/components/ui/cx';
 import { formatMoney, parseMoneyToMinor } from '@/lib/format';
 import { computeShares, splitProblem } from '@/lib/splits';
 
@@ -10,6 +14,8 @@ export interface SplitMemberOption {
   name: string;
   colour: string;
   splitWeight: number;
+  /** "Moved in 1 Aug", when they arrived this year. */
+  note?: string;
 }
 
 export interface SplitEditorProps {
@@ -39,14 +45,17 @@ function evenPercents(ids: string[]): Record<string, string> {
 }
 
 /**
- * How a household service is split, for admins: evenly, by percentage (they
- * must add up to 100%), or set amounts per bill (anyone left blank shares
- * what's left evenly). Shows what each person would pay of the latest bill.
+ * Who pays the provider and how a household service is split, for admins:
+ * evenly, by percentage (they must add up to 100%), or set amounts per bill
+ * (anyone left blank shares what's left evenly). One row per person, with
+ * what each would pay of the latest bill.
  */
 export function SplitEditor(p: SplitEditorProps) {
   const t = useTranslations('services.split');
+  const tf = useTranslations('services.form');
   const ids = p.members.map((m) => m.id);
   const [mode, setMode] = useState(p.initialMode);
+  const [payer, setPayer] = useState(p.payerMemberId);
   const stored = Object.values(p.percents).reduce((s, v) => s + v, 0);
   const [percents, setPercents] = useState<Record<string, string>>(() =>
     stored > 0
@@ -100,140 +109,116 @@ export function SplitEditor(p: SplitEditorProps) {
           })),
           customWeights: Object.fromEntries(ids.map((id) => [id, Number(percents[id]) || 0])),
           fixedAmounts: fixed,
-          payerMemberId: p.payerMemberId || null,
+          payerMemberId: payer || null,
         })
       : [];
+  const part = (id: string) => preview.find((s) => s.memberId === id)?.amountMinor;
 
   return (
-    <div className="flex flex-col gap-4">
-      <div
-        role="radiogroup"
-        aria-label={t('how')}
-        className="grid gap-1 rounded-2xl bg-surface-2 p-1"
-        style={{ gridTemplateColumns: `repeat(${modes.length}, minmax(0, 1fr))` }}
-      >
-        {modes.map((m) => (
-          <label
-            key={m}
-            className={`cursor-pointer rounded-xl px-2 py-2 text-center text-sm font-medium transition ${mode === m ? 'bg-surface-solid text-fg shadow-sm' : 'text-fg-muted hover:text-fg'}`}
-          >
-            <input
-              type="radio"
-              name="splitMode"
-              value={m}
-              checked={mode === m}
-              onChange={() => setMode(m)}
-              className="sr-only"
-            />
-            {t(`modes.${m}`)}
-          </label>
-        ))}
+    <div className="split-ed">
+      <div className="fld">
+        <span className="fld-l">{tf('payer')}</span>
+        <PayerPick
+          name="payerMemberId"
+          people={p.members}
+          value={payer}
+          onChange={setPayer}
+          none={tf('noPayer')}
+        />
+        <span className="fld-h">{tf('payerHint')}</span>
       </div>
-      <p className="-mt-1 text-xs text-fg-muted">{t(`hints.${mode}`)}</p>
-
-      {(mode === 'percent' || mode === 'fixed') && (
-        <ul className="flex flex-col gap-2">
-          {p.members.map((m) => (
-            <li key={m.id} className="flex items-center gap-3">
-              <span
-                className="size-2.5 shrink-0 rounded-full"
-                style={{ background: m.colour }}
-                aria-hidden
+      <div className="fld">
+        <span className="fld-l">{tf('splitMode')}</span>
+        <div className="seg seg-sm" role="radiogroup" aria-label={t('how')}>
+          {modes.map((m) => (
+            <label key={m} className="seg-b" aria-pressed={mode === m}>
+              <input
+                type="radio"
+                name="splitMode"
+                value={m}
+                checked={mode === m}
+                onChange={() => setMode(m)}
               />
-              <label
-                htmlFor={`split_${m.id}`}
-                className="min-w-0 flex-1 truncate text-sm font-medium"
-              >
-                {m.name}
-              </label>
-              <div className="flex w-40 items-center gap-1.5 rounded-xl border border-border-strong bg-surface-2 px-3 focus-within:border-accent">
-                {mode === 'fixed' && <span className="text-sm text-fg-muted">{sign}</span>}
+              <span>{t(`modes.${m}`)}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+      <div className="se-list">
+        {p.members.map((m) => (
+          <div key={m.id} className="se-row">
+            <Avatar name={m.name} colour={m.colour} />
+            <span className="se-n">
+              <b>{m.name}</b>
+              {m.note && <span className="muted small">{m.note}</span>}
+            </span>
+            {mode === 'percent' || mode === 'fixed' ? (
+              <span className="inp narrow">
+                {mode === 'fixed' && <i className="inp-a">{sign}</i>}
                 <input
-                  id={`split_${m.id}`}
                   name={mode === 'percent' ? `pct_${m.id}` : `amt_${m.id}`}
                   inputMode="decimal"
                   autoComplete="off"
                   value={mode === 'percent' ? (percents[m.id] ?? '') : (amounts[m.id] ?? '')}
                   placeholder={mode === 'percent' ? '0' : t('restPlaceholder')}
+                  aria-label={m.name}
                   onChange={(e) =>
                     mode === 'percent'
                       ? setPercents({ ...percents, [m.id]: e.target.value })
                       : setAmounts({ ...amounts, [m.id]: e.target.value })
                   }
-                  className="h-10 min-w-0 flex-1 bg-transparent text-right text-sm tabular-nums outline-none"
                 />
-                {mode === 'percent' && <span className="text-sm text-fg-muted">%</span>}
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-
+                {mode === 'percent' && <i className="inp-a">%</i>}
+              </span>
+            ) : (
+              <span className="muted small">
+                {mode === 'weighted'
+                  ? t('parts.weight', { value: m.splitWeight })
+                  : t('parts.even')}
+              </span>
+            )}
+            <span className="se-part">{part(m.id) !== undefined ? money(part(m.id)!) : ''}</span>
+          </div>
+        ))}
+      </div>
       {mode === 'percent' && (
-        <div className="flex items-center justify-between gap-3 text-sm">
-          <span className={pctOk ? 'text-fg-muted' : 'font-medium text-warning'}>
-            {pctOk ? t('pctTotal', { total: pctTotal }) : t('pctOff', { total: pctTotal })}
-            <span className="block text-xs font-normal text-fg-muted">{t('newMembers')}</span>
-          </span>
+        <div className={cx('se-total', pctOk ? 'ok' : 'warn')}>
+          <Icon name={pctOk ? 'check' : 'alert'} width={14} height={14} />
+          {pctOk ? t('pctTotal', { total: pctTotal }) : t('pctOff', { total: pctTotal })}
+          {' · '}
           <button
             type="button"
-            className="text-xs font-medium text-accent hover:underline"
+            className="link small"
             onClick={() => setPercents(evenPercents(ids))}
           >
             {t('evenly')}
           </button>
         </div>
       )}
-
-      {mode === 'fixed' && (
-        <p className="text-xs text-fg-muted">
-          {blanks.length
+      <p className="muted small">
+        {mode === 'fixed'
+          ? blanks.length
             ? t('fixedRest', {
                 total: money(setTotal),
                 names: blanks.map((m) => m.name).join(', '),
                 count: blanks.length,
               })
-            : t('fixedAll', { total: money(setTotal) })}
-        </p>
-      )}
-
-      {preview.length > 0 && (
-        <div className="rounded-xl bg-surface-2 px-4 py-3">
-          <p className="text-xs text-fg-muted">{t('preview', { amount: money(example) })}</p>
-          <div className="mt-2 flex h-2 overflow-hidden rounded-full bg-surface">
-            {preview.map((s) => (
-              <span
-                key={s.memberId}
-                style={{
-                  width: `${(s.amountMinor * 100) / example}%`,
-                  background: p.members.find((m) => m.id === s.memberId)?.colour,
-                }}
-              />
-            ))}
-          </div>
-          <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm">
-            {preview.map((s) => (
-              <li key={s.memberId}>
-                {p.members.find((m) => m.id === s.memberId)?.name}{' '}
-                <span className="font-semibold tabular-nums">{money(s.amountMinor)}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
+            : t('fixedAll', { total: money(setTotal) })
+          : t(`hints.${mode}`)}
+        {mode === 'percent' && ` ${t('newMembers')}`}
+        {example > 0 && ` ${t('preview', { amount: money(example) })}.`}
+      </p>
       {p.resplitCount > 0 && (
-        <label className="flex items-start gap-3 text-sm font-medium">
+        <label className="check">
           <input
             type="checkbox"
             name="resplit"
             checked={resplit}
             onChange={(e) => setResplit(e.target.checked)}
-            className="mt-0.5 size-5 accent-accent"
           />
           <span>
-            {t('resplit', { count: p.resplitCount })}
-            <span className="block text-xs font-normal text-fg-muted">{t('resplitHint')}</span>
+            {t('resplit', { count: p.resplitCount })}.
+            <span className="muted small"> {t('resplitHint')}</span>
           </span>
         </label>
       )}

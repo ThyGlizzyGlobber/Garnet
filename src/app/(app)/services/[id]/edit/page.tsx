@@ -3,7 +3,8 @@ import { hasHousemates } from '@/lib/members';
 import { mayChangeOwner } from '@/lib/ownership';
 import { visibleTo } from '@/lib/scope';
 import { getTranslations } from 'next-intl/server';
-import { LinkButton, PageHeader } from '@/components/ui';
+import { PageTitle } from '@/components/ui/blocks';
+import { BackLink } from '@/components/ui/controls';
 import { CADENCES, SPLIT_MODES } from '@/db/schema';
 import { pageContext } from '@/lib/context';
 import { formatMoney } from '@/lib/format';
@@ -25,15 +26,11 @@ export default async function EditServicePage({ params }: { params: Promise<{ id
   const view = splitView(hh.id, s);
   const money = (minor: number) => formatMoney(minor, hh.currency, hh.locale);
   return (
-    <div className="mx-auto max-w-xl">
-      <PageHeader
+    <div className="scr">
+      <BackLink href={`/services/${s.id}`}>{s.name}</BackLink>
+      <PageTitle
         title={s.name}
-        subtitle={s.provider}
-        action={
-          <LinkButton href={`/bills/new?service=${s.id}`} variant="secondary">
-            {t('addBill')}
-          </LinkButton>
-        }
+        lede={`${s.provider} · ${t(`form.cadences.${s.cadence}`).toLowerCase()}`}
       />
       <ServiceForm
         action={updateServiceAction}
@@ -65,7 +62,7 @@ export default async function EditServicePage({ params }: { params: Promise<{ id
         canBePersonal={hasHousemates(hh.id)}
         canChangePersonal={mayChangeOwner(hh.id, me, s)}
         submitLabel={t('form.save')}
-        cancelHref="/services"
+        cancelHref={`/services/${s.id}`}
         initial={{
           id: s.id,
           typeSlug: s.typeSlug,

@@ -5,19 +5,21 @@ import { setHouseholdLocation } from '@/lib/location';
 import { createMember } from '@/lib/members';
 import { setRegionalSharing } from '@/lib/regional';
 import { ADMIN_ROLE } from '@/lib/roles';
+import type { Appearance } from '@/lib/appearance';
 
 /**
  * Create a household from the setup wizard, all or nothing: the household, its
  * postcode (optional), the account's own member as its first admin, and the
  * area-comparisons choice (on unless unticked, recorded with the notice
- * version). The alpha allows one household per account; that is re-checked
+ * version). The owner's own colour and their colours for the app (§4a) go on
+ * their member row. The alpha allows one household per account; that is re-checked
  * inside the transaction so two tabs can't create two.
  */
 export function setUpHousehold(
   account: { id: string; email: string },
   input: {
     household: HouseholdInput;
-    owner: { name: string; activeFrom: string };
+    owner: { name: string; activeFrom: string; colour?: string; appearance?: Appearance };
     location: { country: string; postalCode: string; locality: string | null } | null;
     shareRegional: boolean;
   },
@@ -35,6 +37,9 @@ export function setUpHousehold(
         activeFrom: input.owner.activeFrom,
         accountId: account.id,
         email: account.email,
+        colour: input.owner.colour,
+        appearancePreset: input.owner.appearance?.preset,
+        theme: input.owner.appearance?.theme,
       },
       tx,
     );

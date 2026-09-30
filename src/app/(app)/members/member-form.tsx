@@ -1,7 +1,10 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { Card, Field, Input } from '@/components/ui';
+import type { ReactNode } from 'react';
+import { SwatchPick } from '@/components/app/pieces-client';
+import { Button, Card, Field, Input, LinkButton } from '@/components/ui';
+import { SectionHead } from '@/components/ui/blocks';
 import { ActionForm, type FormAction } from '@/components/ui/form';
 
 export interface MemberFormValues {
@@ -17,6 +20,11 @@ export interface MemberFormValues {
   joined: boolean;
 }
 
+/**
+ * A member's details: name, colour, when they moved in and out, and how to
+ * pay them back. `side` holds the cards beside it (role, access, remove),
+ * which carry their own actions.
+ */
 export function MemberForm({
   action,
   initial,
@@ -24,6 +32,7 @@ export function MemberForm({
   canEditResidency = true,
   submitLabel,
   cancelHref,
+  side,
 }: {
   action: FormAction;
   initial: MemberFormValues;
@@ -32,67 +41,70 @@ export function MemberForm({
   canEditResidency?: boolean;
   submitLabel: string;
   cancelHref: string;
+  side?: ReactNode;
 }) {
   const t = useTranslations('members.form');
+  const tc = useTranslations('common');
   const rows = [...initial.paymentDetails, { label: '', value: '' }].slice(0, 6);
   return (
-    <ActionForm
-      action={action}
-      submitLabel={submitLabel}
-      footer={
-        <a href={cancelHref} className="text-sm font-medium text-fg-muted hover:text-fg">
-          {t('cancel')}
-        </a>
-      }
-    >
-      {(errors) => (
-        <>
-          {initial.id && <input type="hidden" name="id" value={initial.id} />}
-          <Card className="flex flex-col gap-4">
-            <div className="grid grid-cols-[1fr_auto] gap-3">
-              <Field label={t('name')} error={errors.name}>
-                <Input name="name" defaultValue={initial.name} autoComplete="off" required />
-              </Field>
-              <Field label={t('colour')}>
-                <Input
-                  name="colour"
-                  type="color"
-                  defaultValue={initial.colour}
-                  className="h-11 w-16 p-1"
-                />
-              </Field>
-            </div>
-            {!initial.joined && (
-              <Field label={t('email')} error={errors.email} hint={t('emailHint')}>
-                <Input
-                  name="email"
-                  type="email"
-                  inputMode="email"
-                  autoComplete="off"
-                  defaultValue={initial.email}
-                />
-              </Field>
-            )}
-          </Card>
-          {!canEditResidency && (
-            <>
-              <input type="hidden" name="activeFrom" value={initial.activeFrom} />
-              <input type="hidden" name="activeTo" value={initial.activeTo} />
-              <input type="hidden" name="splitWeight" value={initial.splitWeight} />
-            </>
-          )}
-          {canEditResidency && (
-            <Card className="flex flex-col gap-4">
-              <h2 className="font-semibold">{t('residency')}</h2>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label={t('activeFrom')} error={errors.activeFrom} hint={t('activeFromHint')}>
-                  <Input name="activeFrom" type="date" defaultValue={initial.activeFrom} required />
+    <div className="form-grid">
+      <ActionForm action={action} submitLabel={submitLabel} hideSubmit className="form-main-wrap">
+        {(errors, pending) => (
+          <>
+            {initial.id && <input type="hidden" name="id" value={initial.id} />}
+            <Card className="form-main">
+              <SectionHead title={t('details')} />
+              <div className="fld-row">
+                <Field label={t('name')} error={errors.name}>
+                  <Input name="name" defaultValue={initial.name} autoComplete="off" required />
                 </Field>
-                <Field label={t('activeTo')} error={errors.activeTo} hint={t('activeToHint')}>
-                  <Input name="activeTo" type="date" defaultValue={initial.activeTo} />
-                </Field>
+                <div className="fld">
+                  <span className="fld-l">{t('colour')}</span>
+                  <SwatchPick name="colour" value={initial.colour} label={t('colour')} />
+                  <span className="fld-h">{t('colourHint')}</span>
+                </div>
               </div>
-              {sharedHousehold && (
+              {!initial.joined && (
+                <Field label={t('email')} error={errors.email} hint={t('emailHint')} optional>
+                  <Input
+                    name="email"
+                    type="email"
+                    inputMode="email"
+                    autoComplete="off"
+                    defaultValue={initial.email}
+                  />
+                </Field>
+              )}
+              {canEditResidency ? (
+                <div className="fld-row">
+                  <Field
+                    label={t('activeFrom')}
+                    error={errors.activeFrom}
+                    hint={t('activeFromHint')}
+                  >
+                    <Input
+                      name="activeFrom"
+                      type="date"
+                      defaultValue={initial.activeFrom}
+                      required
+                    />
+                  </Field>
+                  <Field
+                    label={t('activeTo')}
+                    error={errors.activeTo}
+                    hint={t('activeToHint')}
+                    optional
+                  >
+                    <Input name="activeTo" type="date" defaultValue={initial.activeTo} />
+                  </Field>
+                </div>
+              ) : (
+                <>
+                  <input type="hidden" name="activeFrom" value={initial.activeFrom} />
+                  <input type="hidden" name="activeTo" value={initial.activeTo} />
+                </>
+              )}
+              {canEditResidency && sharedHousehold && initial.splitWeight !== '1' ? (
                 <Field
                   label={t('splitWeight')}
                   error={errors.splitWeight}
@@ -102,28 +114,50 @@ export function MemberForm({
                     name="splitWeight"
                     inputMode="decimal"
                     defaultValue={initial.splitWeight}
+                    className="narrow"
                   />
                 </Field>
-              )}
-              {!sharedHousehold && (
+              ) : (
                 <input type="hidden" name="splitWeight" value={initial.splitWeight} />
               )}
+              {sharedHousehold && (
+                <>
+                  <SectionHead title={t('paymentDetails')} />
+                  <p className="muted small">{t('paymentDetailsHint')}</p>
+                  <div className="pay-rows-edit">
+                    {rows.map((r, i) => (
+                      <div key={i} className="fld-row">
+                        <Input
+                          name={`pd_label_${i}`}
+                          defaultValue={r.label}
+                          placeholder={t('pdLabel')}
+                          aria-label={t('pdLabel')}
+                        />
+                        <Input
+                          name={`pd_value_${i}`}
+                          defaultValue={r.value}
+                          placeholder={t('pdValue')}
+                          aria-label={t('pdValue')}
+                          className="mono"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+              <div className="form-acts">
+                <Button type="submit" icon="check" disabled={pending}>
+                  {pending ? '…' : submitLabel}
+                </Button>
+                <LinkButton href={cancelHref} variant="ghost">
+                  {tc('cancel')}
+                </LinkButton>
+              </div>
             </Card>
-          )}
-          {sharedHousehold && (
-            <Card className="flex flex-col gap-3">
-              <h2 className="font-semibold">{t('paymentDetails')}</h2>
-              <p className="text-xs text-fg-muted">{t('paymentDetailsHint')}</p>
-              {rows.map((r, i) => (
-                <div key={i} className="grid grid-cols-[1fr_2fr] gap-2">
-                  <Input name={`pd_label_${i}`} defaultValue={r.label} placeholder={t('pdLabel')} />
-                  <Input name={`pd_value_${i}`} defaultValue={r.value} placeholder={t('pdValue')} />
-                </div>
-              ))}
-            </Card>
-          )}
-        </>
-      )}
-    </ActionForm>
+          </>
+        )}
+      </ActionForm>
+      {side && <div className="form-side">{side}</div>}
+    </div>
   );
 }

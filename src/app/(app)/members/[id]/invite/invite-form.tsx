@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { Field, Input } from '@/components/ui';
+import { Button, Field, Input } from '@/components/ui';
 import { ActionForm, type FormAction } from '@/components/ui/form';
 
 export function InviteForm({
@@ -17,13 +17,18 @@ export function InviteForm({
 }) {
   const t = useTranslations('members.invite');
   return (
-    <ActionForm action={action} submitLabel={submitLabel}>
-      {(errors) => (
+    <ActionForm action={action} submitLabel={submitLabel} hideSubmit className="auth-form">
+      {(errors, pending) => (
         <>
           <input type="hidden" name="id" value={memberId} />
           <Field label={t('email')} hint={t('emailHint')} error={errors.email}>
             <Input name="email" type="email" inputMode="email" defaultValue={email} />
           </Field>
+          <div className="form-acts">
+            <Button type="submit" icon="mail" disabled={pending}>
+              {pending ? '…' : submitLabel}
+            </Button>
+          </div>
         </>
       )}
     </ActionForm>

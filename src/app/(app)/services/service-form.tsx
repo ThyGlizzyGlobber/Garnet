@@ -2,7 +2,12 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Card, Field, Input, Select, Textarea } from '@/components/ui';
+import { ToggleRow } from '@/components/app/pieces';
+import { SwatchPick, TypePicker } from '@/components/app/pieces-client';
+import { Button, Card, Field, Input, LinkButton, Select, Textarea } from '@/components/ui';
+import { SectionHead } from '@/components/ui/blocks';
+import { Avatar } from '@/components/ui/colour';
+import { Toggle } from '@/components/ui/controls';
 import { ActionForm, type FormAction } from '@/components/ui/form';
 import { groupTypes } from '@/lib/service-categories';
 import { SplitEditor, type SplitMemberOption } from './split-editor';
@@ -42,6 +47,11 @@ export interface ServiceFormValues {
   personal: boolean;
 }
 
+/**
+ * Adding or editing a service: what it is on the left (type, name, provider,
+ * how often, usage, colour, the switches), and beside it who pays and how it's
+ * split (admins), and, when editing, stop tracking.
+ */
 export function ServiceForm({
   action,
   initial,
@@ -81,255 +91,225 @@ export function ServiceForm({
 }) {
   const t = useTranslations('services.form');
   const tc = useTranslations('services.categories');
-  const groups = groupTypes(types);
+  const tco = useTranslations('common');
+  const groups = groupTypes(types).map((g) => ({
+    category: g.category,
+    label: tc(g.category),
+    types: g.types.map((ty) => ({ slug: ty.slug, label: ty.label })),
+  }));
   const [typeSlug, setTypeSlug] = useState(initial.typeSlug);
   const [usageUnit, setUsageUnit] = useState(initial.usageUnit);
   const [name, setName] = useState(initial.name);
   const [personal, setPersonal] = useState(initial.personal);
   const [personalTouched, setPersonalTouched] = useState(false);
+  const unitLabel = units.find((u) => u.key === usageUnit)?.label ?? usageUnit;
 
   return (
-    <ActionForm
-      action={action}
-      submitLabel={submitLabel}
-      footer={
-        <a href={cancelHref} className="text-sm font-medium text-fg-muted hover:text-fg">
-          {t('cancel')}
-        </a>
-      }
-    >
-      {(errors) => (
+    <ActionForm action={action} submitLabel={submitLabel} hideSubmit className="form-scr">
+      {(errors, pending) => (
         <>
           {initial.id && <input type="hidden" name="id" value={initial.id} />}
-          <Card className="flex flex-col gap-4">
-            <Field label={t('type')} error={errors.typeSlug}>
-              <Select
-                name="typeSlug"
-                value={typeSlug}
-                onChange={(e) => {
-                  setTypeSlug(e.target.value);
-                  const ty = types.find((x) => x.slug === e.target.value);
-                  if (ty) {
-                    setUsageUnit(ty.defaultUnit ?? '');
-                    if (!name) setName(ty.label);
-                    // A new car rego or car insurance is usually one person's own.
-                    if (!initial.id && !personalTouched && canBePersonal)
-                      setPersonal(!!ty.personalByDefault);
-                  }
-                }}
-              >
-                {groups.map((g) => (
-                  <optgroup key={g.category} label={tc(g.category)}>
-                    {g.types.map((ty) => (
-                      <option key={ty.slug} value={ty.slug}>
-                        {ty.label}
-                      </option>
-                    ))}
-                  </optgroup>
-                ))}
-              </Select>
-            </Field>
-            <div className="grid grid-cols-2 gap-3">
-              <Field label={t('name')} error={errors.name}>
-                <Input
-                  name="name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
+          <div className="form-grid">
+            <Card className="form-main">
+              <SectionHead title={t('whatItIs')} />
+              <div className="fld">
+                <span className="fld-l">{t('type')}</span>
+                <TypePicker
+                  name="typeSlug"
+                  groups={groups}
+                  value={typeSlug}
+                  onChange={(slug) => {
+                    setTypeSlug(slug);
+                    const ty = types.find((x) => x.slug === slug);
+                    if (ty) {
+                      setUsageUnit(ty.defaultUnit ?? '');
+                      if (!name || types.some((x) => x.label === name)) setName(ty.label);
+                      // A new car rego or car insurance is usually one person's own.
+                      if (!initial.id && !personalTouched && canBePersonal)
+                        setPersonal(!!ty.personalByDefault);
+                    }
+                  }}
                 />
-              </Field>
-              <Field label={t('provider')} error={errors.provider}>
-                <Input
-                  name="provider"
-                  defaultValue={initial.provider}
-                  placeholder={t('providerPlaceholder')}
-                  required
-                />
-              </Field>
-              <Field label={t('accountRef')} error={errors.accountRef}>
-                <Input name="accountRef" defaultValue={initial.accountRef} />
-              </Field>
-              <Field label={t('cadence')} error={errors.cadence}>
-                <Select name="cadence" defaultValue={initial.cadence}>
-                  {cadences.map((c) => (
-                    <option key={c} value={c}>
-                      {t(`cadences.${c}`)}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-              <Field label={t('usageUnit')} error={errors.usageUnit}>
-                <Select
-                  name="usageUnit"
-                  value={usageUnit}
-                  onChange={(e) => setUsageUnit(e.target.value)}
-                >
-                  <option value="">{t('noUsage')}</option>
-                  {units.map((u) => (
-                    <option key={u.key} value={u.key}>
-                      {u.label}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-              {usageUnit && (
-                <Field
-                  label={t('usageLimit', {
-                    unit: units.find((u) => u.key === usageUnit)?.label ?? usageUnit,
-                  })}
-                  hint={t('usageLimitHint')}
-                  error={errors.usageLimit}
-                >
+                {errors.typeSlug && <span className="fld-h bad-text">{errors.typeSlug}</span>}
+              </div>
+              <div className="fld-row">
+                <Field label={t('name')} error={errors.name}>
                   <Input
-                    name="usageLimit"
-                    type="number"
-                    inputMode="decimal"
-                    min="0"
-                    step="any"
-                    defaultValue={initial.usageLimit}
+                    name="name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
                   />
                 </Field>
-              )}
-              <Field label={t('colour')} error={errors.colour}>
+                <Field label={t('provider')} error={errors.provider}>
+                  <Input
+                    name="provider"
+                    defaultValue={initial.provider}
+                    placeholder={t('providerPlaceholder')}
+                    required
+                  />
+                </Field>
+              </div>
+              <div className="fld-row">
+                <Field label={t('cadence')} error={errors.cadence}>
+                  <Select name="cadence" defaultValue={initial.cadence}>
+                    {cadences.map((c) => (
+                      <option key={c} value={c}>
+                        {t(`cadences.${c}`)}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+                <Field label={t('usageUnit')} error={errors.usageUnit} optional>
+                  <Select
+                    name="usageUnit"
+                    value={usageUnit}
+                    onChange={(e) => setUsageUnit(e.target.value)}
+                  >
+                    <option value="">{t('noUsage')}</option>
+                    {units.map((u) => (
+                      <option key={u.key} value={u.key}>
+                        {u.label}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+              </div>
+              <div className="fld-row">
+                {usageUnit ? (
+                  <Field
+                    label={t('usageLimit', { unit: unitLabel })}
+                    hint={t('usageLimitHint')}
+                    error={errors.usageLimit}
+                    optional
+                  >
+                    <Input
+                      name="usageLimit"
+                      type="number"
+                      inputMode="decimal"
+                      min="0"
+                      step="any"
+                      defaultValue={initial.usageLimit}
+                    />
+                  </Field>
+                ) : (
+                  <input type="hidden" name="usageLimit" value="" />
+                )}
+                <Field label={t('accountRef')} error={errors.accountRef} optional>
+                  <Input name="accountRef" defaultValue={initial.accountRef} className="mono" />
+                </Field>
+              </div>
+              <div className="fld">
+                <span className="fld-l">{t('colour')}</span>
+                <SwatchPick name="colour" value={initial.colour} label={t('colour')} />
+                <span className="fld-h">{t('colourHint')}</span>
+              </div>
+              <Field label={t('notes')} optional>
+                <Textarea name="notes" defaultValue={initial.notes} rows={2} />
+              </Field>
+              <Field label={t('trustedSenders')} hint={t('trustedSendersHint')} optional>
                 <Input
-                  name="colour"
-                  type="color"
-                  defaultValue={initial.colour}
-                  className="h-11 p-1"
+                  name="trustedSenders"
+                  defaultValue={initial.trustedSenders}
+                  placeholder={t('trustedSendersPlaceholder')}
+                  autoComplete="off"
                 />
               </Field>
-            </div>
-            <Field label={t('notes')}>
-              <Textarea name="notes" defaultValue={initial.notes} />
-            </Field>
-            <label className="flex items-start gap-3 text-sm font-medium">
-              <input
-                type="checkbox"
-                name="autoPay"
-                defaultChecked={initial.autoPay}
-                className="mt-0.5 size-5 accent-accent"
-              />
-              <span>
-                {t('autoPay')}
-                <span className="block text-xs font-normal text-fg-muted">{t('autoPayHint')}</span>
-              </span>
-            </label>
-            <label className="flex items-start gap-3 text-sm font-medium">
-              <input
-                type="checkbox"
-                name="seasonal"
-                defaultChecked={initial.seasonal}
-                className="mt-0.5 size-5 accent-accent"
-              />
-              <span>
-                {t('seasonal')}
-                <span className="block text-xs font-normal text-fg-muted">{t('seasonalHint')}</span>
-              </span>
-            </label>
-            <Field label={t('trustedSenders')} hint={t('trustedSendersHint')}>
-              <Input
-                name="trustedSenders"
-                defaultValue={initial.trustedSenders}
-                placeholder={t('trustedSendersPlaceholder')}
-                autoComplete="off"
-              />
-            </Field>
-            {initial.id && (
-              <label className="flex items-center gap-3 text-sm font-medium">
-                <input
-                  type="checkbox"
-                  name="isActive"
-                  defaultChecked={initial.isActive}
-                  className="size-5 accent-accent"
-                />
-                {t('isActive')}
-              </label>
-            )}
-            {!initial.id && <input type="hidden" name="isActive" value="on" />}
-          </Card>
-
-          {canBePersonal && (
-            <Card className="flex flex-col gap-3">
-              <label
-                className={`flex items-start gap-3 text-sm font-medium ${canChangePersonal ? '' : 'opacity-60'}`}
-              >
-                <input
-                  type="checkbox"
-                  name="personal"
-                  checked={personal}
-                  disabled={!canChangePersonal}
-                  onChange={(e) => {
-                    setPersonal(e.target.checked);
-                    setPersonalTouched(true);
-                  }}
-                  className="mt-0.5 size-5 accent-accent"
-                />
-                <span>
-                  {t('personal')}
-                  <span className="block text-xs font-normal text-fg-muted">
-                    {t('personalHint')}
-                  </span>
-                </span>
-              </label>
-              {!canChangePersonal && personal && <input type="hidden" name="personal" value="on" />}
-            </Card>
-          )}
-
-          {sharedHousehold && !personal && (
-            <Card className="flex scroll-mt-24 flex-col gap-4" id="split">
-              <h2 className="font-semibold">{t('splitting')}</h2>
-              {split.canEdit ? (
-                <>
-                  <Field label={t('payer')} hint={t('payerHint')}>
-                    <Select name="payerMemberId" defaultValue={initial.payerMemberId}>
-                      <option value="">{t('noPayer')}</option>
-                      {members.map((m) => (
-                        <option key={m.id} value={m.id}>
-                          {m.name}
-                        </option>
-                      ))}
-                    </Select>
-                  </Field>
-                  <SplitEditor
-                    members={members}
-                    modes={splitModes}
-                    initialMode={initial.splitMode}
-                    percents={split.percents}
-                    amounts={split.amounts}
-                    currency={split.currency}
-                    locale={split.locale}
-                    latestMinor={split.latestMinor}
-                    resplitCount={split.resplitCount}
-                    payerMemberId={initial.payerMemberId}
+              <ToggleRow title={t('seasonal')} sub={t('seasonalHint')}>
+                <Toggle name="seasonal" label={t('seasonal')} defaultChecked={initial.seasonal} />
+              </ToggleRow>
+              <ToggleRow title={t('autoPay')} sub={t('autoPayHint')}>
+                <Toggle name="autoPay" label={t('autoPay')} defaultChecked={initial.autoPay} />
+              </ToggleRow>
+              {canBePersonal && (
+                <ToggleRow title={t('personal')} sub={t('personalHint')}>
+                  <Toggle
+                    name="personal"
+                    label={t('personal')}
+                    checked={personal}
+                    disabled={!canChangePersonal}
+                    onChange={(e) => {
+                      setPersonal(e.target.checked);
+                      setPersonalTouched(true);
+                    }}
                   />
-                </>
+                  {!canChangePersonal && personal && (
+                    <input type="hidden" name="personal" value="on" />
+                  )}
+                </ToggleRow>
+              )}
+              {!initial.id && <input type="hidden" name="isActive" value="on" />}
+            </Card>
+
+            <div className="form-side">
+              {sharedHousehold && !personal ? (
+                <Card id="split">
+                  <SectionHead
+                    title={t('splitting')}
+                    right={<span className="muted small">{t('admins')}</span>}
+                  />
+                  {split.canEdit ? (
+                    <SplitEditor
+                      members={members}
+                      modes={splitModes}
+                      initialMode={initial.splitMode}
+                      percents={split.percents}
+                      amounts={split.amounts}
+                      currency={split.currency}
+                      locale={split.locale}
+                      latestMinor={split.latestMinor}
+                      resplitCount={split.resplitCount}
+                      payerMemberId={initial.payerMemberId}
+                    />
+                  ) : (
+                    <>
+                      <div className="se-list">
+                        {split.summary.map((r) => (
+                          <div key={r.name} className="se-row">
+                            <Avatar name={r.name} colour={r.colour} />
+                            <span className="se-n">
+                              <b>{r.name}</b>
+                            </span>
+                            <span className="muted small">{r.part}</span>
+                            <span />
+                          </div>
+                        ))}
+                      </div>
+                      <p className="muted small">{t('splitAdminsOnly')}</p>
+                      <input type="hidden" name="payerMemberId" value={initial.payerMemberId} />
+                      <input type="hidden" name="splitMode" value={initial.splitMode} />
+                    </>
+                  )}
+                </Card>
               ) : (
                 <>
-                  <ul className="flex flex-col gap-1.5 text-sm">
-                    {split.summary.map((r) => (
-                      <li key={r.name} className="flex items-center gap-3">
-                        <span
-                          className="size-2.5 shrink-0 rounded-full"
-                          style={{ background: r.colour }}
-                          aria-hidden
-                        />
-                        <span className="flex-1">{r.name}</span>
-                        <span className="font-medium tabular-nums">{r.part}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <p className="text-xs text-fg-muted">{t('splitAdminsOnly')}</p>
-                  <input type="hidden" name="payerMemberId" value={initial.payerMemberId} />
+                  <input type="hidden" name="splitMode" value="equal" />
+                  <input type="hidden" name="payerMemberId" value="" />
                 </>
               )}
-            </Card>
-          )}
-          {(!sharedHousehold || personal) && (
-            <>
-              <input type="hidden" name="splitMode" value="equal" />
-              <input type="hidden" name="payerMemberId" value="" />
-            </>
-          )}
+              {initial.id && (
+                <Card className="danger">
+                  <SectionHead title={t('stop.title')} />
+                  <p className="muted small">{t('stop.body')}</p>
+                  <ToggleRow title={t('isActive')}>
+                    <Toggle
+                      name="isActive"
+                      label={t('isActive')}
+                      defaultChecked={initial.isActive}
+                    />
+                  </ToggleRow>
+                </Card>
+              )}
+            </div>
+          </div>
+          <div className="form-acts">
+            <Button type="submit" icon="check" disabled={pending}>
+              {pending ? '…' : submitLabel}
+            </Button>
+            <LinkButton href={cancelHref} variant="ghost">
+              {tco('cancel')}
+            </LinkButton>
+          </div>
         </>
       )}
     </ActionForm>

@@ -145,7 +145,12 @@ export default async function SettingsPage() {
               ]}
             />
             <div className="set-acts">
-              <LinkButton href={`/members/${me.id}/edit`} variant="secondary" size="sm" icon="lock">
+              <LinkButton
+                href={`/members/${me.id}/edit#pin`}
+                variant="secondary"
+                size="sm"
+                icon="lock"
+              >
                 {t('account.changePin')}
               </LinkButton>
               <LinkButton href="/wall" variant="secondary" size="sm" icon="desktop">

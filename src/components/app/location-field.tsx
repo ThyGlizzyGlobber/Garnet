@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { Field, Input, Select } from '@/components/ui';
+import { Icon } from '@/components/app/icons';
 
 interface Place {
   postcode: string;
@@ -99,7 +100,7 @@ export function LocationField({
   }, [country, query, searchable]);
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="loc-field">
       <Field label={t('country')} error={errors.country}>
         <Select
           name="country"
@@ -123,21 +124,20 @@ export function LocationField({
           hint={t('placeHint')}
           error={errors.postalCode}
         >
-          <div className="flex flex-col gap-2">
+          <div className="place-pick">
             {picked && (
-              <div className="flex items-center justify-between gap-3 rounded-2xl bg-surface-2 px-4 py-2 text-sm">
+              <span className="place on">
+                <Icon name="pin" width={16} height={16} />
                 <span>
-                  {picked.locality}
-                  {picked.stateCode && ` ${picked.stateCode}`} {picked.postcode}
+                  <b>
+                    {picked.locality}
+                    {picked.stateCode && ` ${picked.stateCode}`} {picked.postcode}
+                  </b>
                 </span>
-                <button
-                  type="button"
-                  className="text-xs font-semibold text-accent"
-                  onClick={() => setPicked(null)}
-                >
+                <button type="button" className="link small" onClick={() => setPicked(null)}>
                   {t('change')}
                 </button>
-              </div>
+              </span>
             )}
             {!picked && (
               <>
@@ -148,24 +148,24 @@ export function LocationField({
                   autoComplete="off"
                   aria-label={t('place')}
                 />
-                {shown.length > 0 && (
-                  <ul className="max-h-60 overflow-auto rounded-2xl border border-border-strong bg-surface-solid text-sm">
-                    {shown.map((p) => (
-                      <li key={`${p.postcode}-${p.locality}`}>
-                        <button
-                          type="button"
-                          className="w-full px-4 py-2 text-left hover:bg-surface-2"
-                          onClick={() => {
-                            setPicked(p);
-                            setPlaces([]);
-                          }}
-                        >
-                          {p.locality} {p.stateCode} {p.postcode}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
+                {shown.map((p) => (
+                  <button
+                    key={`${p.postcode}-${p.locality}`}
+                    type="button"
+                    className="place"
+                    onClick={() => {
+                      setPicked(p);
+                      setPlaces([]);
+                    }}
+                  >
+                    <Icon name="pin" width={16} height={16} />
+                    <span>
+                      <b>
+                        {p.locality} {p.stateCode} {p.postcode}
+                      </b>
+                    </span>
+                  </button>
+                ))}
               </>
             )}
             <input type="hidden" name="postalCode" value={picked?.postcode ?? query.trim()} />

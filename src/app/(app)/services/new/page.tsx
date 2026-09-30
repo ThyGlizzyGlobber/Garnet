@@ -1,6 +1,7 @@
 import { getTranslations } from 'next-intl/server';
 import { hasHousemates } from '@/lib/members';
-import { PageHeader } from '@/components/ui';
+import { PageTitle } from '@/components/ui/blocks';
+import { BackLink } from '@/components/ui/controls';
 import { CADENCES, SPLIT_MODES } from '@/db/schema';
 import { pageContext } from '@/lib/context';
 import { listMembers } from '@/lib/members';
@@ -35,8 +36,9 @@ export default async function NewServicePage({
       ? TYPE_COLOUR[first.slug]!
       : nextPaletteColour(used);
   return (
-    <div className="mx-auto max-w-xl">
-      <PageHeader title={t('new')} />
+    <div className="scr">
+      <BackLink href="/services">{t('title')}</BackLink>
+      <PageTitle title={t('form.newTitle')} lede={t('form.newLede')} />
       <ServiceForm
         action={createServiceAction}
         types={types}
@@ -62,7 +64,7 @@ export default async function NewServicePage({
         sharedHousehold={hh.splitMode === 'shared'}
         canBePersonal={housemates}
         submitLabel={t('form.create')}
-        cancelHref={personal ? '/?view=mine' : '/services'}
+        cancelHref="/services"
         initial={{
           typeSlug: first.slug,
           name: first.label,

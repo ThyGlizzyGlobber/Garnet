@@ -11,7 +11,7 @@ import { acceptInvite, findInviteByCode, findInviteByToken } from '@/lib/invites
 import { ipAllowed, rateLimit } from '@/lib/rate-limit';
 import { clientIp } from '@/lib/request';
 
-/** Join with the short code from an invitation. */
+/** Join with the short code from an invitation; then their colours and PIN (§6a). */
 export async function joinWithCodeAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
   const account = await requireAccount();
   const t = await getTranslations('welcome.join');
@@ -26,7 +26,7 @@ export async function joinWithCodeAction(_prev: ActionState, fd: FormData): Prom
     return { error: (e as Error).message };
   }
   await setActiveMember(memberId);
-  redirect('/set-pin');
+  redirect('/colours');
 }
 
 /** Accept an invitation link while signed in. */
@@ -37,7 +37,7 @@ export async function acceptInviteAction(fd: FormData): Promise<void> {
   if (!found) redirect(`/invite/${encodeURIComponent(token)}`);
   const m = acceptInvite(found.invite.id, account.id, account.email);
   await setActiveMember(m.id);
-  redirect('/set-pin');
+  redirect('/colours');
 }
 
 /** Not signed in yet: remember the invite, then sign in. */

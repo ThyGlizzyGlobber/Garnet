@@ -33,7 +33,6 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           inbox: t('inbox'),
         },
         settings: t('settings'),
-        addBill: t('addBill'),
         search: t('search'),
         justYou: t('justYou'),
         admin: t('admin'),

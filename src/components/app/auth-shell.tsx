@@ -1,30 +1,90 @@
+import Link from 'next/link';
+import { getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
+import { Icon } from './icons';
 import { ForgetOfflinePages } from './pwa';
 
-/** Centred frosted window for sign-in, onboarding and invite pages. */
-export function AuthShell({
-  eyebrow,
-  title,
-  subtitle,
+/**
+ * The frame for everything outside the app (sign-in, codes, PINs, setting up,
+ * joining): the product's name and a line or two on the left, a strong-glass
+ * card on the right, and a footer with Privacy and the demo. On a phone the
+ * side shrinks to the name. `wide` gives the card room for a wizard.
+ */
+export async function AuthShell({
+  side,
+  wide = false,
+  foot = true,
   children,
 }: {
-  eyebrow?: string;
-  title: string;
-  subtitle?: string;
+  /** The left-hand copy; the product's pitch when left out. */
+  side?: ReactNode;
+  wide?: boolean;
+  /** The Privacy · demo footer. */
+  foot?: boolean;
   children: ReactNode;
 }) {
+  const t = await getTranslations('outside');
+  const ta = await getTranslations('app');
   return (
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-4 py-10">
+    <main className="outside">
       <ForgetOfflinePages />
-      <div className="window flex flex-col gap-5 p-6 sm:p-8">
-        <div>
-          {eyebrow && <p className="text-sm font-medium text-fg-muted">{eyebrow}</p>}
-          <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight">{title}</h1>
-          {subtitle && <p className="mt-2 text-sm text-fg-muted">{subtitle}</p>}
+      <div className={wide ? 'auth wide' : 'auth'}>
+        <div className="auth-side">
+          <Link href="/" className="auth-brand">
+            <span className="mark">
+              <Icon name="home" width={18} height={18} />
+            </span>
+            <b>{ta('name')}</b>
+          </Link>
+          {side ?? (
+            <>
+              <h1 className="auth-big">{t('pitch')}</h1>
+              <ul className="auth-points">
+                <li>
+                  <Icon name="mail" width={16} height={16} /> {t('point1')}
+                </li>
+                <li>
+                  <Icon name="split" width={16} height={16} /> {t('point2')}
+                </li>
+                <li>
+                  <Icon name="calendar" width={16} height={16} /> {t('point3')}
+                </li>
+              </ul>
+            </>
+          )}
         </div>
-        {children}
+        <div className="auth-main">
+          <section className="glass-strong auth-card rounded-card">{children}</section>
+          {foot && (
+            <p className="auth-foot muted small">
+              <Link href="/privacy">{t('privacy')}</Link>
+              {' · '}
+              <Link href="/login#demo">{t('demo')}</Link>
+            </p>
+          )}
+        </div>
       </div>
     </main>
+  );
+}
+
+/** A big line and a sentence for the left side. */
+export function AuthSide({ title, children }: { title: ReactNode; children?: ReactNode }) {
+  return (
+    <>
+      <h1 className="auth-big">{title}</h1>
+      {children && <p className="muted">{children}</p>}
+    </>
+  );
+}
+
+/** A card's heading and its line. */
+export function AuthHead({ title, children }: { title: ReactNode; children?: ReactNode }) {
+  return (
+    <>
+      <h2>{title}</h2>
+      {children && <p className="muted">{children}</p>}
+    </>
   );
 }
 
@@ -38,7 +98,7 @@ export function Notice({
   return (
     <p
       role={tone === 'danger' ? 'alert' : 'status'}
-      className={`rounded-xl px-4 py-3 text-sm font-medium ${tone === 'danger' ? 'bg-danger-soft text-danger' : 'bg-surface-2 text-fg-muted'}`}
+      className={`rounded-inner px-4 py-3 text-sm font-medium ${tone === 'danger' ? 'bg-danger-soft text-danger' : 'well text-fg-2'}`}
     >
       {children}
     </p>

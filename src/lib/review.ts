@@ -267,12 +267,3 @@ export function searchDocuments(
     tokens,
   };
 }
-
-/** The badge colour for a document's status, the same wherever it's shown. */
-export const STATUS_TONE = {
-  needs_review: 'warning',
-  extracted: 'success',
-  ignored: 'neutral',
-  unprocessed: 'accent',
-  notice: 'neutral',
-} as const satisfies Record<SourceDocument['status'], string>;

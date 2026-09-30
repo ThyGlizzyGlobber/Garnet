@@ -12,8 +12,10 @@ import {
   PRESET_BG,
   themeColor,
 } from '@/lib/appearance';
+import { signInAccount } from '@/lib/accounts';
 import { createHousehold } from '@/lib/households';
 import { createMember, getMember, updateMember } from '@/lib/members';
+import { setUpHousehold } from '@/lib/setup';
 
 const root = path.resolve(import.meta.dirname, '..');
 const css = fs.readFileSync(path.join(root, 'src/app/globals.css'), 'utf8');
@@ -159,6 +161,37 @@ describe('a member’s appearance', () => {
     expect(getMember(hh.id, sam.id, db)).toMatchObject({
       appearancePreset: 'ruby',
       theme: 'light',
+    });
+  });
+  it('the setup wizard keeps the first admin’s own colour and their colours for the app (§4a)', () => {
+    const account = signInAccount({ email: 'casey@example.com', name: 'Casey' }, db);
+    const { householdId, ownerId } = setUpHousehold(
+      account,
+      {
+        household: {
+          name: 'Test House',
+          currency: 'AUD',
+          locale: 'en-AU',
+          timezone: 'Australia/Melbourne',
+          fiscalYearStartMonth: 7,
+          splitMode: 'shared',
+        },
+        owner: {
+          name: 'Casey',
+          activeFrom: '2026-01-01',
+          colour: '#1baf7a',
+          appearance: { preset: 'ruby', theme: 'dark' },
+        },
+        location: null,
+        shareRegional: true,
+      },
+      db,
+    );
+    expect(getMember(householdId, ownerId, db)).toMatchObject({
+      colour: '#1baf7a',
+      appearancePreset: 'ruby',
+      theme: 'dark',
+      accountId: account.id,
     });
   });
 });

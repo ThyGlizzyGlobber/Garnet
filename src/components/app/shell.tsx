@@ -2,10 +2,11 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { Avatar } from '@/components/ui/colour';
 import { IconButton, SearchField } from '@/components/ui/controls';
-import { LinkButton } from '@/components/ui';
 import { colourCss } from '@/lib/palette';
 import type { ShellView } from '@/lib/shell';
+import { AddBillButton } from './add-bill';
 import { Icon } from './icons';
+import { OfflineBar } from './offline-bar';
 import { NavItems, SectionName, type NavItem } from './nav-items';
 
 /**
@@ -17,7 +18,6 @@ import { NavItems, SectionName, type NavItem } from './nav-items';
 export interface ShellLabels {
   nav: { home: string; services: string; bills: string; money: string; inbox: string };
   settings: string;
-  addBill: string;
   search: string;
   /** "Just you", for a household of one. */
   justYou: string;
@@ -145,9 +145,7 @@ export function AppShell({
             href="/inbox"
             badge={view.inboxCount || undefined}
           />
-          <LinkButton href="/bills/new" size="sm" icon="plus" className="tb-add">
-            {labels.addBill}
-          </LinkButton>
+          <AddBillButton address={view.address} className="tb-add" />
           <Link href="/settings" className="me tb-me" aria-label={labels.settings}>
             <Avatar name={view.me.name} colour={view.me.colour} />
           </Link>
@@ -156,7 +154,10 @@ export function AppShell({
 
       <main className="main">
         <div className="main-in">
-          <div className="page">{children}</div>
+          <div className="page">
+            <OfflineBar />
+            {children}
+          </div>
         </div>
       </main>
 

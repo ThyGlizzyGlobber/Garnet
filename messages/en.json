@@ -27,23 +27,18 @@
     "account": "Your account"
   },
   "setup": {
-    "eyebrow": "Welcome",
-    "title": "Set up your household",
+    "title": "Set up your household.",
     "submit": "Finish setup",
-    "sections": {
-      "household": "Household",
-      "region": "Region",
-      "owner": "Your account"
-    },
     "fields": {
       "householdName": "Household name",
-      "splitMode": "How are bills handled?",
+      "splitMode": "Do you split bills?",
       "currency": "Currency",
       "locale": "Locale",
       "timezone": "Timezone",
       "fiscalYearStartMonth": "Financial year starts in",
       "ownerName": "Your name",
-      "activeFrom": "Living here since"
+      "activeFrom": "Living here since",
+      "colour": "Your colour"
     },
     "placeholders": {
       "householdName": "Smith Household"
@@ -53,25 +48,49 @@
       "splitMode": "You can change this later in Settings.",
       "fiscalYearStartMonth": "Annual totals run from this month. July for an Australian financial year, January for a calendar year.",
       "activeFrom": "Bills before this date won’t include you. A rough date is fine.",
-      "location": "Your postcode tells the app your seasons (and later your weather). Just the postcode, never your address; you can add it later in Settings."
+      "colour": "For your avatar and your part of split bars."
     },
     "splitModes": {
       "shared": {
-        "label": "Shared house",
-        "body": "Split each bill between housemates and track who has paid."
+        "label": "Yes, we split them",
+        "body": "Each bill is shared by the people living here. Set how per service."
       },
       "single": {
-        "label": "Single household",
-        "body": "Just track totals and trends. No splitting."
+        "label": "No, just keep track",
+        "body": "One household total. Nobody owes anybody."
       }
     },
-    "next": "Next",
+    "next": "Continue",
     "back": "Back",
-    "progress": "Setup steps"
+    "side": "Four short steps. Then forward your first bill and invite your housemates.",
+    "steps": {
+      "household": "Household",
+      "where": "Where",
+      "you": "You",
+      "colours": "Colours"
+    },
+    "household": {
+      "title": "Your household",
+      "body": "You can change all of this later."
+    },
+    "where": {
+      "title": "Where is it?",
+      "body": "For the weather, the seasons and your currency. A postcode, never an address.",
+      "summary": "Financial year from {month} · {currency} · {timezone}.",
+      "change": "Change"
+    },
+    "you": {
+      "title": "About you",
+      "body": "You’ll be the household’s first admin."
+    },
+    "colours": {
+      "title": "Pick your colours",
+      "body": "Only you see your choice. Everyone in the house picks their own, and you can change it any time in Settings."
+    }
   },
   "login": {
     "title": "Sign in",
-    "subtitle": "Use Google or get a one-time code by email. No password to remember.",
+    "subtitle": "Use the account your invite was sent to, or any email to start a household.",
     "google": "Continue with Google",
     "or": "or",
     "email": "Email address",
@@ -93,7 +112,10 @@
       "pin": "PIN",
       "submit": "Open demo",
       "wrong": "Wrong PIN. Try again."
-    }
+    },
+    "subtitleInvite": "Use the account your invite was sent to.",
+    "inviteSide": "Join {household}.",
+    "newHere": "New here? Your household’s admin sends you an invite. Or sign in with your email to start a household."
   },
   "bills": {
     "title": "Bills",
@@ -197,15 +219,13 @@
       "service": "Service",
       "amount": "Amount ({currency})",
       "externalRef": "Invoice number",
-      "externalRefHint": "Optional. Stops the same bill being added twice.",
+      "externalRefHint": "Stops the same bill being added twice.",
       "tax": "Tax included",
       "taxLabel": "Tax label",
-      "dates": "Dates",
-      "periodStart": "Period start",
-      "periodEnd": "Period end",
-      "issueDate": "Issue date",
+      "periodStart": "Covers from",
+      "periodEnd": "To",
+      "issueDate": "Issued",
       "dueDate": "Due date",
-      "usage": "Usage and notes",
       "usageQuantity": "Usage",
       "usageUnit": "Unit",
       "notes": "Notes",
@@ -220,7 +240,26 @@
         "mine": "{split, select, yes {Only you see it, not split} other {Only you see it}}"
       },
       "whoseNote": "This applies to the whole service and all its bills.",
-      "taxLabelPlaceholder": "GST / VAT"
+      "taxLabelPlaceholder": "GST / VAT",
+      "newTitle": "Add a bill",
+      "newLede": "For bills that don’t come by email, like rent. Anything with a document can be forwarded or uploaded instead.",
+      "backToBill": "Bill",
+      "theBill": "The bill",
+      "externalRefPlaceholder": "As printed",
+      "usageHint": "Used for comparisons and your monthly limit.",
+      "notesPlaceholder": "Anything the household should know",
+      "paidToProviderSub": "Already paid to the provider, so nothing is due.",
+      "split": {
+        "title": "How it’s split",
+        "setOn": "Set on the service",
+        "live": "Parts update as you type."
+      },
+      "delete": {
+        "title": "Delete this bill",
+        "body": "Deletes the bill and its file. Shares already paid back are removed with it.",
+        "cta": "Delete bill",
+        "confirm": "Delete this bill completely? Its shares, its figures and the PDF or email it came from are removed too. This cannot be undone."
+      }
     },
     "anomaly": "Unusual",
     "download": "Download everything",
@@ -394,14 +433,14 @@
       "name": "Name",
       "provider": "Provider",
       "accountRef": "Account number",
-      "cadence": "Billing frequency",
+      "cadence": "How often",
       "usageUnit": "Usage unit",
       "noUsage": "No usage tracking",
       "colour": "Colour",
       "notes": "Notes",
-      "isActive": "Active (uncheck when you cancel this service)",
-      "splitting": "How it’s split",
-      "payer": "Who pays the provider?",
+      "isActive": "Tracking",
+      "splitting": "Who pays and how it’s split",
+      "payer": "Pays the provider",
       "payerHint": "Their own share is marked paid automatically and the others pay them back.",
       "noPayer": "Nobody in particular",
       "splitMode": "Split",
@@ -423,16 +462,25 @@
       "trustedSenders": "Trusted bill senders",
       "trustedSendersHint": "Email domains (provider.com.au) or exact addresses whose signed bills are added automatically. Personal mailbox domains like gmail.com can only be added as a full address. Bills forwarded by household members are always accepted.",
       "autoPay": "Paid automatically (card on file or direct debit)",
-      "autoPayHint": "Bills count as paid to the provider once their due date passes, unless the provider says a payment failed. Turned on by itself when an invoice shows automatic payment.",
+      "autoPayHint": "Card on file or direct debit: bills count as paid once their due date passes, unless the provider says a payment failed.",
       "usageLimit": "Usage limit per month ({unit})",
       "usageLimitHint": "Optional. Bills are compared against it per day, so quarterly bills compare fairly. Leave empty for no limit.",
       "seasonal": "Changes with the seasons",
-      "seasonalHint": "Heating, cooling or solar make some months cost more than others. Bills are then compared with the same time last year, and you're told before a costly season starts.",
+      "seasonalHint": "Compared with the same time last year, not just the last bill.",
       "personal": "Just for me",
-      "personalHint": "A personal service, like your own car rego: only you see it and its bills, it isn't split, and it stays out of the household's figures.",
+      "personalHint": "Only you see it, and it isn’t split. Like your own car rego.",
       "splitAdminsOnly": "Only an admin can change how it’s split or who pays it.",
       "providerPlaceholder": "Aussie Broadband",
-      "trustedSendersPlaceholder": "provider.com.au"
+      "trustedSendersPlaceholder": "provider.com.au",
+      "newTitle": "Add a service",
+      "newLede": "Most services set themselves up from their first bill. Add one here to track something that doesn’t send one.",
+      "whatItIs": "What it is",
+      "colourHint": "Its disc, its bars and its line on charts.",
+      "admins": "Admins",
+      "stop": {
+        "title": "Stop tracking",
+        "body": "Switch it off to stop tracking. Its bills and history stay; new bills from this provider start a new service."
+      }
     },
     "nextBill": "Next bill about {amount} · due {date}",
     "noHistory": "No bills yet",
@@ -581,9 +629,9 @@
       "colour": "Colour",
       "residency": "Residency",
       "activeFrom": "Moved in",
-      "activeFromHint": "Shares are pro-rated from this date.",
+      "activeFromHint": "Shares count from this day.",
       "activeTo": "Moved out",
-      "activeToHint": "Leave blank if they still live here.",
+      "activeToHint": "Still living here when blank.",
       "splitWeight": "Split weight",
       "splitWeightHint": "Used when a service splits by weight. 1 = a normal share, 2 = double.",
       "paymentDetails": "How to pay this member back",
@@ -591,7 +639,9 @@
       "pdLabel": "Label (e.g. PayID)",
       "pdValue": "Value",
       "email": "Email",
-      "emailHint": "Optional. An invitation is sent here so they can sign in and choose their own PIN."
+      "emailHint": "We email them a link to join.",
+      "details": "Details",
+      "colourHint": "Their avatar and their part of each split bar."
     },
     "status": {
       "joined": "Joined",
@@ -603,7 +653,7 @@
       "title": "Invite {name}",
       "body": "{name} signs in with Google or an emailed code, then sets their own PIN. The link and code work once, for 7 days.",
       "email": "Email",
-      "emailHint": "We'll email the invitation. You can also copy the link or code below and send it any way you like.",
+      "emailHint": "We’ll email them a link to join. Or copy the code or link below and send it any way you like.",
       "send": "Send invitation",
       "sendNew": "Send a new invitation",
       "link": "Invitation link",
@@ -614,7 +664,12 @@
       "joined": "{name} has joined.",
       "cta": "Invite",
       "notInDemo": "demo households don't send email",
-      "tooMany": "too many invitations sent in the last hour"
+      "tooMany": "too many invitations sent in the last hour",
+      "lede": "They choose their own colours and PIN when they join.",
+      "orShare": "or share a code",
+      "copyCode": "Copy code",
+      "copyLink": "Copy link",
+      "codeNote": "The code and link work once and last 7 days. Sending a new invite cancels them."
     },
     "removeAccess": {
       "cta": "Remove access",
@@ -632,7 +687,8 @@
       "owes": "{count, plural, one {# share to pay} other {# shares to pay}}",
       "nothingOwed": "Nothing to pay right now",
       "paidOf": "{paid} of {total} paid this year",
-      "owedToThem": "Owed {amount} by others"
+      "owedToThem": "Owed {amount} by others",
+      "owesNow": "Owes {amount} · {count, plural, one {# share to pay} other {# shares to pay}}"
     },
     "role": {
       "title": "Admin",
@@ -646,6 +702,27 @@
       "demoteConfirm": "Make {name} a member again? They keep their bills and shares.",
       "stepDown": "Step down as admin",
       "stepDownConfirm": "Stop being an admin? Another admin can make you one again."
+    },
+    "lede": "Who lives at {household} and what they can do.",
+    "ledeSolo": "Just you so far. Invite housemates to share bills with them.",
+    "inviteSomeone": "Invite someone",
+    "newLede": "They choose their own colours and PIN when they join.",
+    "memberRole": "Member",
+    "resendInvite": "Resend invite",
+    "footAdmins": "Admins add people, set splits and change household settings. Everyone chooses their own colours and PIN.",
+    "signsIn": {
+      "google": "Signs in with Google",
+      "code": "Signs in with an email code",
+      "invited": "Invited · hasn’t joined yet",
+      "notJoined": "Not joined yet"
+    },
+    "access": {
+      "title": "Access"
+    },
+    "remove": {
+      "title": "Remove from household",
+      "body": "Their paid shares stay in the history. Unpaid shares need settling first.",
+      "cta": "Remove {name}"
     }
   },
   "settings": {
@@ -916,20 +993,8 @@
     "download": "Download statement (CSV)"
   },
   "wall": {
-    "empty": "No bills yet",
-    "nextDue": "Next due",
-    "overdueBy": "{days, plural, one {# day overdue} other {# days overdue}}",
-    "dueToday": "Due today",
-    "dueIn": "{days, plural, one {Due tomorrow} other {Due in # days}}",
-    "nothingDue": "Nothing due",
-    "whoOwes": "Who owes what",
-    "settled": "settled",
-    "footer": "Financial year {label}: {total}",
-    "back": "Back to dashboard",
-    "chart": "Last 12 months",
-    "settledLabel": "Settled",
-    "setAsideLabel": "Set aside for {month}",
-    "each": "each"
+    "updates": "Updates every minute · last at {time}",
+    "back": "Back to Home"
   },
   "review": {
     "title": "Inbox",
@@ -991,9 +1056,9 @@
       "externalRef": "Invoice number",
       "tax": "Tax included",
       "taxLabel": "Tax label",
-      "periodStart": "Period start",
-      "periodEnd": "Period end",
-      "issueDate": "Issue date",
+      "periodStart": "Covers from",
+      "periodEnd": "To",
+      "issueDate": "Issued",
       "dueDate": "Due date",
       "usageQuantity": "Usage",
       "usageUnit": "Unit",
@@ -1016,32 +1081,50 @@
       "check": "Some details need checking"
     },
     "lede": "Forward a bill from your own email and it’s analysed and filed within a minute.",
-    "forwardTo": "Forward bills to"
+    "forwardTo": "Forward bills to",
+    "confirm": {
+      "title": "{count, plural, one {Confirm one detail} other {Confirm # details}}",
+      "titleAll": "Confirm this bill",
+      "lede": "Everything else was read from the document; check the marked details, then create the bill.",
+      "ledeAll": "Everything was read from the document. Check it over, then create the bill.",
+      "failedLede": "Nothing could be read from it. Type the details in, or try again.",
+      "says": "What the document says",
+      "matched": "Matched to {service}",
+      "missing": "Not on the document, or couldn’t be read. Check the file.",
+      "notABill": "Not a bill",
+      "notABillConfirm": "Move this to Other emails? It's kept, and you can move it back with “It's a bill”.",
+      "viewFile": "View file",
+      "noText": "No text could be read from this file."
+    }
   },
   "upload": {
     "title": "Upload a bill",
-    "subtitleLlm": "A PDF, a scan, or a photo of a paper bill (also HTML or text). The AI reader works out what it is.",
-    "subtitleNoLlm": "A PDF, a scan, or a photo of a paper bill (also HTML or text). AI reading isn't set up, so it waits in the Inbox to be entered by hand.",
     "submit": "Upload and read",
-    "file": "Bill file",
-    "fileHint": "Up to 25 MB. The file is archived permanently."
+    "lede": "PDFs, scans and photos of paper bills. Each one is analysed and filed under its service, usually in under a minute.",
+    "ledeNoLlm": "PDFs, scans and photos of paper bills. Analysing isn’t set up on this server, so each one waits in the Inbox to be entered by hand.",
+    "drop": "Drop PDFs or photos here",
+    "dropSub": "Several at once is fine.",
+    "choose": "Choose files",
+    "takePhoto": "Take a photo",
+    "uploading": "Uploading and analysing…",
+    "justNow": "Just now",
+    "uploaded": "Uploaded {when}",
+    "today": "just now",
+    "analysing": "Analysing…",
+    "failed": "Nothing could be read from it.",
+    "confirm": "Confirm",
+    "openBill": "Open bill",
+    "forwardTo": "Or forward bills to"
   },
   "status": {
-    "title": "Ingestion status",
-    "tiles": {
-      "autoRate": "Auto-read rate",
-      "autoRateHint": "Bills read without typing, of all documents that needed a decision",
-      "queue": "Awaiting review",
-      "queueHint": "{extracted} bills created · {ignored} ignored",
-      "archived": "Documents archived",
-      "archivedHint": "Emails, attachments and uploads kept forever"
-    },
+    "title": "Status",
     "extractors": {
       "ready": "Ready",
       "needsKey": "Needs ANTHROPIC_API_KEY",
       "threshold": "Results below {pct}% confidence go to the review queue.",
       "aiUsage": "AI reads this month: {used} of {limit}. After that, new documents wait in the review queue until next month.",
-      "aiUsageUncapped": "AI reads this month: {used} (no monthly cap for the operator's household)."
+      "aiUsageUncapped": "AI reads this month: {used} (no monthly cap for the operator's household).",
+      "thresholdLabel": "Confidence needed"
     },
     "weather": {
       "title": "Weather",
@@ -1051,7 +1134,11 @@
       "cells": "Areas kept up to date",
       "calls": "Weather requests since start",
       "billsWithWeather": "Your bills with their weather",
-      "hint": "Updated every 30 minutes for households with a postcode. The first update fetches ten years of history for normal weather."
+      "hint": "Updated every 30 minutes for households with a postcode. The first update fetches ten years of history for normal weather.",
+      "working": "Working",
+      "error": "Last update failed",
+      "source": "Source",
+      "lastError": "Last error"
     },
     "regional": {
       "title": "Area comparisons",
@@ -1059,10 +1146,9 @@
       "off": "Off",
       "sharing": "Households sharing (with a postcode)",
       "figures": "Area figures kept",
-      "hint": "Recomputed every six hours. A figure is only kept when at least {k} households stand behind it, so small installs show none."
-    },
-    "reading": {
-      "title": "Reading bills"
+      "hint": "Recomputed every six hours. A figure is only kept when at least {k} households stand behind it, so small installs show none.",
+      "figuresLine": "{sharing} sharing · {figures} area figures kept",
+      "notEnough": "{sharing} sharing · not enough households yet (needs {k})"
     },
     "billsAddresses": {
       "title": "Bills addresses",
@@ -1071,12 +1157,46 @@
       "bound": "Signed per household",
       "boundHint": "The email Worker signs each household's address with every message (since {date}), so a message can't be redirected to another household. Deliveries with the older signature are refused.",
       "olderWorker": "Older Worker",
-      "olderWorkerHint": "The email Worker still signs messages without the household's address. Paste deploy/email-worker/worker.js into the Worker in Cloudflare; from its first message on, the older signature is refused."
+      "olderWorkerHint": "The email Worker still signs messages without the household's address. Paste deploy/email-worker/worker.js into the Worker in Cloudflare; from its first message on, the older signature is refused.",
+      "worker": "Email Worker"
+    },
+    "lede": "For the operator only. Nobody in a household sees this page.",
+    "software": {
+      "title": "Software",
+      "installed": "Installed",
+      "dev": "Development build",
+      "installedLabel": "Installed",
+      "built": "built {date}",
+      "updates": "Updates",
+      "updatesHint": "Checked and installed from Settings → Software update."
+    },
+    "documents": {
+      "title": "Documents",
+      "toLookAt": "{count, plural, one {# to look at} other {# to look at}}",
+      "clear": "Nothing waiting",
+      "analysed": "Bills created",
+      "waiting": "Waiting",
+      "other": "Filed as other",
+      "autoRate": "Read without typing",
+      "reader": "Reader",
+      "readerLine": "Anthropic API · {model} · {used} of {limit} reads this month"
+    },
+    "emailOut": {
+      "title": "Email out",
+      "working": "Working",
+      "off": "Not set up",
+      "service": "Service",
+      "logOnly": "Logged only (EMAIL_LOG_ONLY)",
+      "from": "From"
+    },
+    "households": {
+      "title": "Households",
+      "line": "{demo, select, yes {Demo · } other {}}{people, plural, one {# person} other {# people}}"
     }
   },
   "code": {
     "title": "Check your email",
-    "body": "We sent a 6-digit code to {email}. It works for 10 minutes.",
+    "body": "We sent a 6-digit code to <b>{email}</b>. It works for 10 minutes.",
     "code": "Code",
     "submit": "Sign in",
     "resend": "Send a new code",
@@ -1086,20 +1206,21 @@
       "expired": "That code has expired. Send a new one.",
       "too-many-attempts": "Too many wrong tries. Send a new code.",
       "noEmail": "Start again with your email address."
-    }
+    },
+    "notGot": "Didn’t get it?"
   },
   "welcome": {
-    "title": "Welcome, {name}",
-    "subtitle": "Are you starting a household, or joining one?",
+    "title": "Hey, {name}.",
+    "subtitle": "You’re signed in as <b>{email}</b>. What next?",
     "create": {
-      "title": "Create a household",
-      "body": "You'll be its admin: add the bills, invite everyone else.",
+      "title": "Start a household",
+      "body": "Name it, pick your colours, then invite the people you live with.",
       "cta": "Create a household"
     },
     "join": {
       "title": "Join a household",
-      "body": "Enter the code from your invitation, or open the link in the invitation email.",
-      "code": "Invitation code",
+      "body": "Enter the code from your invite, or open the link in the invite email.",
+      "code": "Invite code",
       "placeholder": "ABCD-1234",
       "cta": "Join",
       "invalid": "That code doesn't match an open invitation. Check it, or ask for a new one.",
@@ -1107,7 +1228,7 @@
     },
     "claim": {
       "title": "Link your existing household",
-      "body": "This server has a household from before accounts existed. Confirm with its old PIN to link it to {email}.",
+      "body": "{household} · {member}. This server has a household from before accounts existed. Confirm with its old PIN to link it to {email}.",
       "pin": "Old PIN",
       "cta": "Link",
       "wrong": "Wrong PIN."
@@ -1115,37 +1236,50 @@
     "signOut": "Sign out"
   },
   "pin": {
-    "setTitle": "Choose your PIN",
-    "setBody": "Your PIN unlocks the app on devices where you've already signed in. Only you know it; nobody in the household can see or change it.",
+    "setTitle": "Choose a PIN",
+    "setBody": "Four to eight digits to unlock this device. Nobody else ever sees it, admins included.",
     "pin": "PIN",
     "pinConfirm": "Confirm PIN",
     "pinHint": "4–8 digits.",
     "mismatch": "PINs do not match",
     "invalid": "PIN must be 4–8 digits",
     "save": "Save PIN",
-    "unlockTitle": "Welcome back, {name}",
+    "unlockTitle": "Hey, {name}.",
     "unlockBody": "Enter your PIN to unlock.",
     "unlock": "Unlock",
     "wrong": "Wrong PIN. {left, plural, one {# try} other {# tries}} left on this device.",
-    "notYou": "Not you? Sign in as someone else",
+    "notYou": "Not {name}?",
     "changeTitle": "Change your PIN",
     "current": "Current PIN",
     "newPin": "New PIN",
     "change": "Change PIN",
-    "wrongCurrent": "Current PIN is wrong."
+    "wrongCurrent": "Current PIN is wrong.",
+    "unlockSide": "Welcome back to {household}.",
+    "unlockSideBody": "This device stays signed in. Your PIN keeps it private.",
+    "forgot": "Forgot it?",
+    "signInAgain": "Sign in again",
+    "setSide": "Nearly there, {name}.",
+    "setSideBody": "Your PIN unlocks the app on devices where you’ve already signed in. Only you know it."
   },
   "invite": {
-    "title": "Join {household}",
+    "title": "{inviter} invited you to {household}",
     "body": "{inviter} invited you to {household} as {member}.",
     "bodyNoInviter": "You've been invited to {household} as {member}.",
-    "accept": "Accept and join",
+    "accept": "Accept invite",
     "signInToAccept": "Sign in to accept",
     "invalid": {
       "title": "This invitation can't be used",
       "body": "It has expired, was replaced by a newer one, or has already been accepted. Ask the household admin to send a new one."
     },
     "already": "You're already in a household on this server. Joining a second one isn't supported yet.",
-    "signedInAs": "Signed in as {email}"
+    "signedInAs": "Signed in as {email}",
+    "side": "You’re invited.",
+    "sideBody": "{inviter} added you to {household}. It takes a minute to join.",
+    "sideBodyNoInviter": "You’ve been added to {household}. It takes a minute to join.",
+    "titleNoInviter": "You’re invited to {household}",
+    "with": "You’ll share bills with {names}.",
+    "since": "Your share counts from the day you moved in, <b>{date}</b>.",
+    "signInWhy": "So this invite belongs to you. Use any email."
   },
   "email": {
     "code": {
@@ -1221,7 +1355,11 @@
       "body": "{member} will stop getting {category} from {household}. You can turn them back on from your member page.",
       "cta": "Stop them",
       "done": "Done. You won't get these emails any more.",
-      "invalid": "This link isn't valid any more."
+      "invalid": "This link isn't valid any more.",
+      "side": "Emails, your way.",
+      "sideBody": "Choose exactly which emails you get in Settings → Emails.",
+      "doneTitle": "Done",
+      "change": "Change what you get"
     },
     "prefs": {
       "title": "Email me about",
@@ -1518,7 +1656,8 @@
       "title": "Contact",
       "points": ["Questions about this notice go to the operator of this installation."]
     },
-    "back": "Back to the app"
+    "back": "Back to the app",
+    "eyebrow": "Privacy · version {version}"
   },
   "personal": {
     "toggle": {
@@ -1617,7 +1756,8 @@
   "common": {
     "copy": "Copy",
     "copied": "Copied",
-    "close": "Close"
+    "close": "Close",
+    "cancel": "Cancel"
   },
   "appearance": {
     "title": "Appearance",
@@ -2207,6 +2347,62 @@
     "empty": {
       "title": "Nothing to settle yet",
       "body": "Once bills arrive, each person’s share is worked out and shows here, with who owes whom."
+    }
+  },
+  "outside": {
+    "pitch": "Bills in, totals out, everyone knows their share.",
+    "point1": "Forward bills; they’re filed for you",
+    "point2": "Everyone’s share, worked out",
+    "point3": "What’s due, before it’s due",
+    "privacy": "Privacy",
+    "demo": "Try the demo household"
+  },
+  "pinPad": {
+    "delete": "Delete a digit"
+  },
+  "join": {
+    "side": "You’re invited.",
+    "sideBody": "You’re nearly part of {household}.",
+    "steps": {
+      "invite": "Invite",
+      "signIn": "Sign in",
+      "colours": "Colours",
+      "pin": "PIN"
+    },
+    "colours": {
+      "title": "Pick your colours",
+      "body": "Just for you. {names} keep theirs, and you can change yours any time in Settings.",
+      "bodyAlone": "Just for you. You can change them any time in Settings.",
+      "continue": "Continue"
+    }
+  },
+  "addBill": {
+    "cta": "Add bill",
+    "eyebrow": "Add a bill",
+    "title": "How is it arriving?",
+    "forward": "Forward its email",
+    "forwardSub": "From your own inbox to the household’s bills address. Nothing else to do.",
+    "upload": "Upload a PDF or photo",
+    "uploadSub": "A download, a scan or a photo of a paper bill.",
+    "hand": "Enter it by hand",
+    "handSub": "For bills without a document, like rent."
+  },
+  "states": {
+    "notFound": {
+      "title": "This page isn’t here",
+      "body": "It may have moved when the app was updated, or the link was cut short.",
+      "home": "Go to Home"
+    },
+    "error": {
+      "title": "Something went wrong",
+      "body": "That didn’t work, and it’s been noted. Try again; if it keeps happening, tell your household’s admin and quote the reference below.",
+      "ref": "Ref {ref}",
+      "tryAgain": "Try again",
+      "home": "Go to Home"
+    },
+    "offline": {
+      "title": "You’re offline.",
+      "body": "Showing pages as they were. Changes wait until you’re back."
     }
   }
 }

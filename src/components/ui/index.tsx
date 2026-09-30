@@ -85,40 +85,53 @@ export function LinkButton({
   );
 }
 
-const inputClass =
-  'w-full rounded-inner border border-line-2 bg-inset px-3 py-2.5 text-base text-fg outline-none placeholder:text-fg-2 focus-visible:outline-2 focus-visible:outline-accent';
-
+/** A field's control: the Frost input (src/styles/screens.css, .inp-plain). */
 export function Input({ className, ...props }: ComponentProps<'input'>) {
-  return <input className={cx(inputClass, className)} {...props} />;
+  return <input className={cx('inp-plain', className)} {...props} />;
 }
 
 export function Select({ className, ...props }: ComponentProps<'select'>) {
-  return <select className={cx(inputClass, 'appearance-none', className)} {...props} />;
+  return <select className={cx('inp-plain', className)} {...props} />;
 }
 
 export function Textarea({ className, ...props }: ComponentProps<'textarea'>) {
-  return <textarea className={cx(inputClass, 'min-h-24', className)} {...props} />;
+  return <textarea className={cx('inp-plain', className)} {...props} />;
 }
 
+/**
+ * A labelled field: the label above, the control, then a hint or the error
+ * under it. `state` colours the hint (a check for a matched detail, a warning
+ * for one to look at); an error always reads as bad.
+ */
 export function Field({
   label,
   hint,
   error,
+  state,
+  optional = false,
+  className,
   children,
 }: {
   label: string;
-  hint?: string;
+  hint?: ReactNode;
   error?: string;
+  state?: 'ok' | 'warn';
+  /** Says "optional" after the label. */
+  optional?: boolean;
+  className?: string;
   children: ReactNode;
 }) {
   return (
-    <label className="block">
-      <span className="mb-1.5 block text-sm font-semibold text-fg-2">{label}</span>
+    <label className={cx('fld', error ? 'bad' : state, className)}>
+      <span className="fld-l">
+        {label}
+        {optional && <span className="muted"> · optional</span>}
+      </span>
       {children}
       {error ? (
-        <span className="mt-1 block text-xs text-bad">{error}</span>
+        <span className="fld-h">{error}</span>
       ) : hint ? (
-        <span className="mt-1 block text-xs text-fg-2">{hint}</span>
+        <span className="fld-h">{hint}</span>
       ) : null}
     </label>
   );

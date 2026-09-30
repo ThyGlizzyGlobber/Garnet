@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import { AuthShell } from '@/components/app/auth-shell';
+import { AuthHead, AuthShell } from '@/components/app/auth-shell';
 import { CodeForm } from '@/components/app/auth-forms';
 import { authState, getSession, pathFor } from '@/lib/auth/session';
 import { resendCodeAction, verifyCodeAction } from '../actions';
@@ -15,15 +15,18 @@ export default async function CodePage() {
   if (!session.pendingEmail) redirect('/login');
   const t = await getTranslations('code');
   return (
-    <AuthShell title={t('title')} subtitle={t('body', { email: session.pendingEmail })}>
+    <AuthShell>
+      <AuthHead title={t('title')}>
+        {t.rich('body', { email: session.pendingEmail, b: (c) => <b>{c}</b> })}
+      </AuthHead>
       <CodeForm action={verifyCodeAction} />
-      <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-        <form action={resendCodeAction}>
-          <button className="font-semibold text-accent">{t('resend')}</button>
+      <div className="muted small">
+        {t('notGot')}{' '}
+        <form action={resendCodeAction} className="inline-form">
+          <button className="link">{t('resend')}</button>
         </form>
-        <Link href="/login" className="text-fg-muted hover:text-fg">
-          {t('otherEmail')}
-        </Link>
+        {' · '}
+        <Link href="/login">{t('otherEmail')}</Link>
       </div>
     </AuthShell>
   );

@@ -115,24 +115,3 @@ export function Disc({
     </span>
   );
 }
-
-/**
- * The pre-redesign name for the disc. Every variant now draws the one Frost
- * Glass disc; the screens still passing `variant` are replaced in R5–R6.
- */
-export function IconDisc({
-  icon,
-  colour,
-  size = 36,
-  iconSize,
-  className,
-}: {
-  icon: string;
-  colour: string;
-  variant?: 'filled' | 'soft' | 'glow';
-  size?: number | string;
-  iconSize?: number;
-  className?: string;
-}) {
-  return <Disc icon={icon} colour={colour} size={size} iconSize={iconSize} className={className} />;
-}

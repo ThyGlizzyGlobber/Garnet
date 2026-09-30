@@ -1,8 +1,8 @@
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import { AuthShell } from '@/components/app/auth-shell';
+import { AuthHead, AuthShell } from '@/components/app/auth-shell';
 import { JoinCodeForm, PinForm } from '@/components/app/auth-forms';
-import { Card, LinkButton } from '@/components/ui';
+import { Choice } from '@/components/app/pieces';
 import { isOperator, unclaimedOwners } from '@/lib/accounts';
 import { authState, pathFor } from '@/lib/auth/session';
 import { logout } from '../login/actions';
@@ -16,37 +16,39 @@ export default async function WelcomePage() {
   const t = await getTranslations('welcome');
   const claimable = isOperator(state.account) ? unclaimedOwners() : [];
   return (
-    <AuthShell title={t('title', { name: state.account.name })} subtitle={t('subtitle')}>
+    <AuthShell>
+      <AuthHead title={t('title', { name: state.account.name })}>
+        {t.rich('subtitle', { email: state.account.email, b: (c) => <b>{c}</b> })}
+      </AuthHead>
       {claimable.map((m) => (
-        <Card key={m.id} className="flex flex-col gap-3">
-          <h2 className="font-display font-semibold">{t('claim.title')}</h2>
-          <p className="text-sm">
-            <strong>{m.householdName}</strong> · {m.name}
-          </p>
-          <p className="text-xs text-fg-muted">{t('claim.body', { email: state.account.email })}</p>
+        <Choice
+          key={m.id}
+          icon="link"
+          title={t('claim.title')}
+          sub={t('claim.body', {
+            household: m.householdName,
+            member: m.name,
+            email: state.account.email,
+          })}
+          col
+        >
           <PinForm
             action={claimOwnerAction}
             label={t('claim.pin')}
             submitLabel={t('claim.cta')}
             hidden={{ memberId: m.id }}
           />
-        </Card>
+        </Choice>
       ))}
-      <Card className="flex flex-col gap-3">
-        <h2 className="font-display font-semibold">{t('create.title')}</h2>
-        <p className="text-sm text-fg-muted">{t('create.body')}</p>
-        <LinkButton href="/setup" className="self-start">
-          {t('create.cta')}
-        </LinkButton>
-      </Card>
-      <Card className="flex flex-col gap-3">
-        <h2 className="font-display font-semibold">{t('join.title')}</h2>
-        <p className="text-sm text-fg-muted">{t('join.body')}</p>
+      <Choice icon="home" title={t('create.title')} sub={t('create.body')} href="/setup" />
+      <Choice icon="users" title={t('join.title')} sub={t('join.body')} col>
         <JoinCodeForm action={joinWithCodeAction} />
-      </Card>
-      <form action={logout}>
-        <button className="text-sm text-fg-muted hover:text-fg">{t('signOut')}</button>
-      </form>
+      </Choice>
+      <div className="muted small t-center">
+        <form action={logout} className="inline-form">
+          <button className="link">{t('signOut')}</button>
+        </form>
+      </div>
     </AuthShell>
   );
 }

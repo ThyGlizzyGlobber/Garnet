@@ -2,23 +2,31 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Button, Card, Field, Input, Select } from '@/components/ui';
+import { Button, Field, Input, Select } from '@/components/ui';
+import { Segmented } from '@/components/ui/controls';
 import { ActionForm } from '@/components/ui/form';
 import { LocationField } from '@/components/app/location-field';
+import { Stepper } from '@/components/app/pieces';
+import { SwatchPick } from '@/components/app/pieces-client';
+import { PresetCards } from '@/components/app/preset-cards';
+import { DEFAULT_APPEARANCE, type Theme } from '@/lib/appearance';
+import { PALETTE } from '@/lib/palette';
 import { completeSetup } from './actions';
 
-const STEPS = ['household', 'region', 'owner'] as const;
+const STEPS = ['household', 'where', 'you', 'colours'] as const;
 type Step = (typeof STEPS)[number];
 const FIELDS: Record<Step, string[]> = {
   household: ['householdName', 'splitMode'],
-  region: ['currency', 'locale', 'timezone', 'fiscalYearStartMonth', 'country', 'postalCode'],
-  owner: ['ownerName', 'activeFrom'],
+  where: ['currency', 'locale', 'timezone', 'fiscalYearStartMonth', 'country', 'postalCode'],
+  you: ['ownerName', 'activeFrom', 'colour'],
+  colours: ['preset', 'theme'],
 };
 
 /**
- * Three-page wizard in one form: only the active page is visible, Next runs the
- * browser's own validation for that page, and the server's field errors jump
- * back to the page that owns them.
+ * The setup wizard (§6a): Household → Where → You → Colours, one form with
+ * only the current step visible. Continue runs the browser's own validation
+ * for that step, and the server's field errors jump back to the step that
+ * owns them. The PIN comes after, on its own screen.
  */
 export function SetupWizard({
   defaults,
@@ -41,14 +49,17 @@ export function SetupWizard({
   country: string;
 }) {
   const t = useTranslations('setup');
+  const ta = useTranslations('appearance');
   const tShare = useTranslations('sharing');
   const [step, setStep] = useState<Step>('household');
   const [splitMode, setSplitMode] = useState<'shared' | 'single'>('shared');
-  const pages = useRef<Record<Step, HTMLDivElement | null>>({
-    household: null,
-    region: null,
-    owner: null,
+  const [region, setRegion] = useState({
+    currency: defaults.currency,
+    timezone: defaults.timezone,
+    fy: defaults.fiscalYearStartMonth,
   });
+  const [theme, setTheme] = useState<Theme>(DEFAULT_APPEARANCE.theme);
+  const pages = useRef<Partial<Record<Step, HTMLDivElement | null>>>({});
   const index = STEPS.indexOf(step);
   const months = Array.from({ length: 12 }, (_, i) =>
     new Intl.DateTimeFormat(defaults.locale, { month: 'long' }).format(new Date(2026, i, 1)),
@@ -64,91 +75,79 @@ export function SetupWizard({
     }
     setStep(STEPS[Math.min(index + 1, STEPS.length - 1)]!);
   }
+  const page = (s: Step) => ({
+    ref: (el: HTMLDivElement | null) => {
+      pages.current[s] = el;
+    },
+    className: step === s ? 'wiz-body' : 'wiz-body hidden',
+  });
 
   return (
-    <ActionForm action={completeSetup} submitLabel={t('submit')} hideSubmit>
+    <ActionForm action={completeSetup} submitLabel={t('submit')} hideSubmit className="wiz">
       {(errors, pending) => (
         <>
           <JumpToError errors={errors} setStep={setStep} />
-          <ol className="mb-5 flex items-center gap-2" aria-label={t('progress')}>
-            {STEPS.map((s, i) => (
-              <li key={s} className="flex flex-1 items-center gap-2">
-                <span
-                  className={`grid size-7 place-items-center rounded-full text-xs font-bold ${i <= index ? 'bg-accent text-accent-fg' : 'bg-surface-2 text-fg-muted'}`}
-                >
-                  {i + 1}
-                </span>
-                <span
-                  className={`text-xs font-semibold ${i === index ? 'text-fg' : 'text-fg-muted'}`}
-                >
-                  {t(`sections.${s}`)}
-                </span>
-                {i < STEPS.length - 1 && (
-                  <span className={`h-px flex-1 ${i < index ? 'bg-accent' : 'bg-border-strong'}`} />
-                )}
-              </li>
-            ))}
-          </ol>
+          <Stepper
+            steps={STEPS.map((s) => t(`steps.${s}`))}
+            current={index + 1}
+            onPick={(n) => setStep(STEPS[n - 1]!)}
+          />
 
-          <div
-            ref={(el) => {
-              pages.current.household = el;
-            }}
-            className={step === 'household' ? '' : 'hidden'}
-          >
-            <Card className="flex flex-col gap-4">
-              <h2 className="font-display text-lg font-semibold">{t('sections.household')}</h2>
-              <Field
-                label={t('fields.householdName')}
-                error={errors.householdName}
-                hint={t('hints.householdName')}
-              >
-                <Input
-                  name="householdName"
-                  placeholder={t('placeholders.householdName')}
-                  autoFocus
-                  required
-                />
-              </Field>
-              <fieldset>
-                <legend className="mb-1.5 block text-sm font-medium">
-                  {t('fields.splitMode')}
-                </legend>
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  {(['shared', 'single'] as const).map((mode) => (
-                    <label
-                      key={mode}
-                      className={`cursor-pointer rounded-2xl border p-3.5 transition ${splitMode === mode ? 'border-accent bg-accent-soft' : 'border-border-strong bg-surface-2'}`}
-                    >
-                      <input
-                        type="radio"
-                        name="splitMode"
-                        value={mode}
-                        checked={splitMode === mode}
-                        onChange={() => setSplitMode(mode)}
-                        className="sr-only"
-                      />
-                      <span className="block font-semibold">{t(`splitModes.${mode}.label`)}</span>
-                      <span className="mt-0.5 block text-xs text-fg-muted">
-                        {t(`splitModes.${mode}.body`)}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-                <p className="mt-1.5 text-xs text-fg-muted">{t('hints.splitMode')}</p>
-              </fieldset>
-            </Card>
+          <div {...page('household')}>
+            <h2>{t('household.title')}</h2>
+            <p className="muted">{t('household.body')}</p>
+            <Field
+              label={t('fields.householdName')}
+              error={errors.householdName}
+              hint={t('hints.householdName')}
+            >
+              <Input
+                name="householdName"
+                placeholder={t('placeholders.householdName')}
+                autoFocus
+                required
+              />
+            </Field>
+            <fieldset className="fld">
+              <legend className="fld-l">{t('fields.splitMode')}</legend>
+              <div className="radio-cards">
+                {(['shared', 'single'] as const).map((mode) => (
+                  <label key={mode} className={splitMode === mode ? 'rcard on' : 'rcard'}>
+                    <input
+                      type="radio"
+                      name="splitMode"
+                      value={mode}
+                      checked={splitMode === mode}
+                      onChange={() => setSplitMode(mode)}
+                    />
+                    <b>{t(`splitModes.${mode}.label`)}</b>
+                    <span className="muted small">{t(`splitModes.${mode}.body`)}</span>
+                  </label>
+                ))}
+              </div>
+              <span className="fld-h">{t('hints.splitMode')}</span>
+            </fieldset>
           </div>
 
-          <div
-            ref={(el) => {
-              pages.current.region = el;
-            }}
-            className={step === 'region' ? '' : 'hidden'}
-          >
-            <Card className="flex flex-col gap-4">
-              <h2 className="font-display text-lg font-semibold">{t('sections.region')}</h2>
-              <div className="grid grid-cols-2 gap-3">
+          <div {...page('where')}>
+            <h2>{t('where.title')}</h2>
+            <p className="muted">{t('where.body')}</p>
+            <LocationField
+              withData={withData}
+              initial={{ country, postalCode: '', locality: '' }}
+              errors={errors}
+              optional
+            />
+            <details className="wiz-more">
+              <summary className="muted small">
+                {t('where.summary', {
+                  month: months[region.fy - 1] ?? '',
+                  currency: region.currency,
+                  timezone: region.timezone.replace(/_/g, ' '),
+                })}{' '}
+                <span className="link">{t('where.change')}</span>
+              </summary>
+              <div className="fld-row">
                 <Field label={t('fields.currency')} error={errors.currency}>
                   <Input
                     name="currency"
@@ -157,6 +156,9 @@ export function SetupWizard({
                     minLength={3}
                     pattern="[A-Za-z]{3}"
                     className="uppercase"
+                    onChange={(e) =>
+                      setRegion((r) => ({ ...r, currency: e.target.value.toUpperCase() }))
+                    }
                     required
                   />
                 </Field>
@@ -165,7 +167,11 @@ export function SetupWizard({
                 </Field>
               </div>
               <Field label={t('fields.timezone')} error={errors.timezone}>
-                <Select name="timezone" defaultValue={defaults.timezone}>
+                <Select
+                  name="timezone"
+                  defaultValue={defaults.timezone}
+                  onChange={(e) => setRegion((r) => ({ ...r, timezone: e.target.value }))}
+                >
                   {timezones.map((tz) => (
                     <option key={tz} value={tz}>
                       {tz}
@@ -180,6 +186,7 @@ export function SetupWizard({
                 <Select
                   name="fiscalYearStartMonth"
                   defaultValue={String(defaults.fiscalYearStartMonth)}
+                  onChange={(e) => setRegion((r) => ({ ...r, fy: Number(e.target.value) }))}
                 >
                   {months.map((m, i) => (
                     <option key={m} value={i + 1}>
@@ -188,77 +195,93 @@ export function SetupWizard({
                   ))}
                 </Select>
               </Field>
-              <p className="text-xs text-fg-muted">{t('hints.location')}</p>
-              <LocationField
-                withData={withData}
-                initial={{ country, postalCode: '', locality: '' }}
-                errors={errors}
-                optional
+            </details>
+            <label className="check">
+              <input type="checkbox" name="shareRegional" defaultChecked />
+              <span>
+                {tShare('setup')}{' '}
+                <a href="/privacy" target="_blank">
+                  {tShare('privacy')}
+                </a>
+              </span>
+            </label>
+          </div>
+
+          <div {...page('you')}>
+            <h2>{t('you.title')}</h2>
+            <p className="muted">{t('you.body')}</p>
+            <Field label={t('fields.ownerName')} error={errors.ownerName}>
+              <Input
+                name="ownerName"
+                autoComplete="name"
+                defaultValue={defaults.ownerName}
+                required
               />
-              <label className="flex items-start gap-3 text-sm">
-                <input
-                  type="checkbox"
-                  name="shareRegional"
-                  defaultChecked
-                  className="mt-0.5 size-5 accent-accent"
-                />
-                <span>
-                  {tShare('setup')}{' '}
-                  <a href="/privacy" target="_blank" className="font-semibold text-accent">
-                    {tShare('privacy')}
-                  </a>
-                </span>
-              </label>
-            </Card>
+            </Field>
+            <div className="fld">
+              <span className="fld-l">{t('fields.colour')}</span>
+              <SwatchPick name="colour" value={PALETTE[0]!.light} label={t('fields.colour')} />
+              <span className="fld-h">{t('hints.colour')}</span>
+            </div>
+            <Field
+              label={t('fields.activeFrom')}
+              error={errors.activeFrom}
+              hint={t('hints.activeFrom')}
+            >
+              <Input
+                name="activeFrom"
+                type="date"
+                defaultValue={defaults.activeFrom}
+                className="narrow"
+                required
+              />
+            </Field>
           </div>
 
-          <div
-            ref={(el) => {
-              pages.current.owner = el;
-            }}
-            className={step === 'owner' ? '' : 'hidden'}
-          >
-            <Card className="flex flex-col gap-4">
-              <h2 className="font-display text-lg font-semibold">{t('sections.owner')}</h2>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label={t('fields.ownerName')} error={errors.ownerName}>
-                  <Input
-                    name="ownerName"
-                    autoComplete="name"
-                    defaultValue={defaults.ownerName}
-                    required
-                  />
-                </Field>
-                <Field
-                  label={t('fields.activeFrom')}
-                  error={errors.activeFrom}
-                  hint={t('hints.activeFrom')}
-                >
-                  <Input
-                    name="activeFrom"
-                    type="date"
-                    defaultValue={defaults.activeFrom}
-                    required
-                  />
-                </Field>
-              </div>
-            </Card>
+          <div {...page('colours')}>
+            <h2>{t('colours.title')}</h2>
+            <p className="muted">{t('colours.body')}</p>
+            <PresetCards current={DEFAULT_APPEARANCE.preset} radio />
+            <div className="set-row">
+              <span>
+                <b>{ta('lightOrDark')}</b>
+                <span className="muted small">{ta('lightOrDarkBody')}</span>
+              </span>
+              <input type="hidden" name="theme" value={theme} />
+              <Segmented
+                small
+                value={theme}
+                label={ta('lightOrDark')}
+                onChange={(v) => setTheme(v as Theme)}
+                items={[
+                  { value: 'light', label: ta('themes.light'), icon: 'sun' },
+                  { value: 'dark', label: ta('themes.dark'), icon: 'moon' },
+                  { value: 'auto', label: ta('themes.auto'), icon: 'devices' },
+                ]}
+              />
+            </div>
           </div>
 
-          <div className="mt-2 flex items-center justify-between gap-3">
+          <div className="form-acts spread">
             {index > 0 ? (
-              <Button type="button" variant="secondary" onClick={() => setStep(STEPS[index - 1]!)}>
+              <Button
+                type="button"
+                variant="ghost"
+                icon="chevron-left"
+                onClick={() => setStep(STEPS[index - 1]!)}
+              >
                 {t('back')}
               </Button>
             ) : (
               <span />
             )}
+            {/* Different keys: reusing one <button> would flip its type to submit while the click still lands. */}
             {index < STEPS.length - 1 ? (
-              <Button type="button" onClick={next}>
+              <Button key="next" type="button" onClick={next}>
                 {t('next')}
               </Button>
             ) : (
-              <Button type="submit" disabled={pending}>
+              <Button key="finish" type="submit" icon="check" disabled={pending}>
                 {pending ? '…' : t('submit')}
               </Button>
             )}
@@ -269,7 +292,7 @@ export function SetupWizard({
   );
 }
 
-/** When the server rejects a field, show the page that owns it. */
+/** When the server rejects a field, show the step that owns it. */
 function JumpToError({
   errors,
   setStep,

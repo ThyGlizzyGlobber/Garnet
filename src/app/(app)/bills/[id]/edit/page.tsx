@@ -1,16 +1,18 @@
 import { notFound } from 'next/navigation';
-import { hasHousemates } from '@/lib/members';
-import { mayChangeOwner } from '@/lib/ownership';
-import { visibleTo } from '@/lib/scope';
 import { getTranslations } from 'next-intl/server';
-import { PageHeader } from '@/components/ui';
+import { PageTitle } from '@/components/ui/blocks';
+import { BackLink } from '@/components/ui/controls';
 import { getBill, housematesPaid } from '@/lib/bills';
 import { pageContext } from '@/lib/context';
 import { formatMinorPlain } from '@/lib/format';
+import { hasHousemates } from '@/lib/members';
+import { mayChangeOwner } from '@/lib/ownership';
+import { visibleTo } from '@/lib/scope';
 import { listServices } from '@/lib/services';
 import { listUnits } from '@/lib/units';
-import { updateBillAction } from '../../actions';
+import { deleteBillAction, updateBillAction } from '../../actions';
 import { BillForm } from '../../bill-form';
+import { splitPreviews } from '../../split-previews';
 
 export default async function EditBillPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -27,12 +29,15 @@ export default async function EditBillPage({ params }: { params: Promise<{ id: s
     hasHousemates(hh.id) &&
     (!!b.ownerMemberId || !housematesPaid(hh.id, b.serviceId)) &&
     mayChangeOwner(hh.id, me, b.service);
+  const services = listServices(hh.id, { includeInactive: true, viewer: me.id });
   return (
-    <div className="mx-auto max-w-xl">
-      <PageHeader title={t('editTitle')} />
+    <div className="scr">
+      <BackLink href={`/bills/${b.id}`}>{t('form.backToBill')}</BackLink>
+      <PageTitle title={t('editTitle')} lede={`${b.service.name} · ${b.service.provider}`} />
       <BillForm
         action={updateBillAction}
-        services={listServices(hh.id, { includeInactive: true, viewer: me.id }).map((s) => ({
+        deleteAction={deleteBillAction}
+        services={services.map((s) => ({
           id: s.id,
           name: s.ownerMemberId ? `${s.name} · ${t('tile.onlyYou')}` : s.name,
           provider: s.provider,
@@ -41,6 +46,7 @@ export default async function EditBillPage({ params }: { params: Promise<{ id: s
         }))}
         units={listUnits().map((u) => ({ key: u.key, label: u.label }))}
         currency={hh.currency}
+        locale={hh.locale}
         submitLabel={t('form.save')}
         cancelHref={`/bills/${b.id}`}
         locked={locked}
@@ -49,6 +55,7 @@ export default async function EditBillPage({ params }: { params: Promise<{ id: s
             ? { value: b.ownerMemberId ? 'mine' : 'household', split: hh.splitMode === 'shared' }
             : undefined
         }
+        splits={await splitPreviews(hh, services)}
         initial={{
           id: b.id,
           serviceId: b.serviceId,

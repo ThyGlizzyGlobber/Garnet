@@ -154,31 +154,38 @@ export async function reprocessAllAction(): Promise<void> {
 
 export async function uploadBillAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
   const me = await requireMember();
-  const file = fd.get('file');
+  const files = fd.getAll('file').filter((f): f is File => f instanceof File && f.size > 0);
   const te = await errorText();
-  if (!(file instanceof File) || file.size === 0) return { error: te('uploadType') };
-  if (file.size > 25 * 1024 * 1024) return { error: te('uploadSize') };
-  if (!rateLimit(`upload:${me.householdId}`, UPLOADS_PER_HOUR, 3_600_000))
-    return { error: te('uploadRate') };
-  const buffer = Buffer.from(await file.arrayBuffer());
-  const { doc, duplicate } = archiveDocument(me.householdId, {
-    kind: 'upload',
-    buffer,
-    originalFilename: file.name,
-    mimeType: file.type || null,
-    memberId: me.id,
-  });
-  if (duplicate) {
-    const existing = listDocuments(me.householdId, { viewer: me.id }).find((d) => d.id === doc.id);
-    if (existing?.billId) redirect(`/bills/${existing.billId}`);
-    redirect(`/inbox/${doc.id}`);
+  if (files.length === 0) return { error: te('uploadType') };
+  if (files.some((f) => f.size > 25 * 1024 * 1024)) return { error: te('uploadSize') };
+  for (let i = 0; i < files.length; i++)
+    if (!rateLimit(`upload:${me.householdId}`, UPLOADS_PER_HOUR, 3_600_000))
+      return { error: te('uploadRate') };
+  // Several at once: each is archived and read in turn, then the upload page lists them.
+  let last: string | null = null;
+  for (const file of files) {
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const { doc, duplicate } = archiveDocument(me.householdId, {
+      kind: 'upload',
+      buffer,
+      originalFilename: file.name,
+      mimeType: file.type || null,
+      memberId: me.id,
+    });
+    if (duplicate) {
+      const existing = listDocuments(me.householdId, { viewer: me.id }).find(
+        (d) => d.id === doc.id,
+      );
+      last = existing?.billId ? `/bills/${existing.billId}` : `/inbox/${doc.id}`;
+      continue;
+    }
+    const outcome = await processDocument(me.householdId, doc.id);
+    last =
+      outcome.status === 'extracted' && outcome.billId
+        ? `/bills/${outcome.billId}`
+        : `/inbox/${doc.id}`;
   }
-  const outcome = await processDocument(me.householdId, doc.id);
   revalidatePath('/inbox');
   revalidatePath('/bills');
-  redirect(
-    outcome.status === 'extracted' && outcome.billId
-      ? `/bills/${outcome.billId}`
-      : `/inbox/${doc.id}`,
-  );
+  redirect(files.length === 1 && last ? last : '/bills/upload');
 }

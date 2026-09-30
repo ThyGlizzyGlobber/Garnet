@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
+import { Icon } from '@/components/app/icons';
 import { getEnv } from '@/lib/env';
 import { PRIVACY_NOTICE_VERSION } from '@/lib/regional';
 
@@ -15,30 +16,36 @@ const SECTIONS = ['stored', 'who', 'area', 'services', 'where', 'choices', 'cont
  */
 export default async function PrivacyPage() {
   const t = await getTranslations('privacy');
+  const ta = await getTranslations('app');
   const k = getEnv().REGIONAL_MIN_HOUSEHOLDS;
   return (
-    <main className="mx-auto max-w-2xl px-4 py-10 text-fg">
-      <div className="window flex flex-col gap-6 p-6 sm:p-8">
-        <header>
-          <h1 className="font-display text-3xl font-semibold tracking-tight">{t('title')}</h1>
-          <p className="mt-1 text-sm text-fg-muted">
-            {t('version', { version: PRIVACY_NOTICE_VERSION })}
-          </p>
-          <p className="mt-3 text-sm">{t('intro')}</p>
-        </header>
-        {SECTIONS.map((s) => (
-          <section key={s} className="flex flex-col gap-2">
-            <h2 className="font-display text-lg font-semibold">{t(`${s}.title`)}</h2>
-            {(t.raw(`${s}.points`) as string[]).map((p, i) => (
-              <p key={i} className="text-sm text-fg-muted">
-                {p.replace('{k}', String(k))}
-              </p>
-            ))}
-          </section>
-        ))}
-        <Link href="/" className="text-sm font-semibold text-accent">
-          {t('back')}
+    <main className="outside">
+      <div className="public">
+        <Link href="/" className="auth-brand">
+          <span className="mark">
+            <Icon name="home" width={18} height={18} />
+          </span>
+          <b>{ta('name')}</b>
         </Link>
+        <header className="d3-title">
+          <div className="eyebrow">{t('eyebrow', { version: PRIVACY_NOTICE_VERSION })}</div>
+          <h1>{t('title')}</h1>
+          <p className="lede">{t('intro')}</p>
+        </header>
+        <div className="prose glass rounded-card">
+          <p>{t('version', { version: PRIVACY_NOTICE_VERSION })}</p>
+          {SECTIONS.map((s) => (
+            <section key={s}>
+              <h2>{t(`${s}.title`)}</h2>
+              {(t.raw(`${s}.points`) as string[]).map((p, i) => (
+                <p key={i}>{p.replace('{k}', String(k))}</p>
+              ))}
+            </section>
+          ))}
+          <p>
+            <Link href="/">{t('back')}</Link>
+          </p>
+        </div>
       </div>
     </main>
   );

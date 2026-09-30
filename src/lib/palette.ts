@@ -26,20 +26,6 @@ export function colourCss(light: string): string {
   const p = byLight.get(light.toLowerCase());
   return p ? `var(--sc-${p.name})` : light;
 }
-
-/**
- * A tile tinted with a service or member colour: the colour mixed into the
- * solid surface (a stronger top fading down) with a matching rim.
- */
-export function tintStyle(light: string, strength: 'strong' | 'soft' = 'strong') {
-  const c = colourCss(light);
-  const [top, bottom, rim] = strength === 'strong' ? [30, 10, 45] : [22, 6, 40];
-  return {
-    background: `linear-gradient(160deg, color-mix(in srgb, ${c} ${top}%, var(--color-surface-solid)), color-mix(in srgb, ${c} ${bottom}%, var(--color-surface-solid)))`,
-    borderColor: `color-mix(in srgb, ${c} ${rim}%, transparent)`,
-  };
-}
-
 /** The first palette colour: the default for anything new before a colour is picked. */
 export const DEFAULT_COLOUR = PALETTE[0]!.light;
 

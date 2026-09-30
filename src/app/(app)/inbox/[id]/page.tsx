@@ -1,22 +1,33 @@
 import { notFound, redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import { Badge, Card, PageHeader } from '@/components/ui';
+import { DocPaper } from '@/components/app/doc-paper';
+import { Card, LinkButton } from '@/components/ui';
+import { PageTitle, SectionHead } from '@/components/ui/blocks';
+import { DocChip } from '@/components/ui/chip';
+import { BackLink } from '@/components/ui/controls';
 import { InlineAction } from '@/components/ui/form';
+import { arrivalOf, fileView, memberNames } from '@/lib/bill-files';
 import { pageContext } from '@/lib/context';
-import { fileView } from '@/lib/bill-files';
 import { formatMinorPlain } from '@/lib/format';
-import { getReviewItem, plainReason, STATUS_TONE } from '@/lib/review';
+import { getReviewItem, plainReason } from '@/lib/review';
+import { addressOf, trustTarget } from '@/lib/sender-auth';
 import { listServices } from '@/lib/services';
 import { listUnits } from '@/lib/units';
 import { matchService } from '@/ingest/pipeline';
-import { ignoreDocumentAction, readAsBillAction, reprocessDocumentAction } from '../actions';
+import { readAsBillAction, reprocessDocumentAction } from '../actions';
 import { ReviewForm } from './review-form';
-import { addressOf, trustTarget } from '@/lib/sender-auth';
 
+/**
+ * Confirming a document (§5): the document beside what was read from it,
+ * the details that couldn't be read marked to check, then Create bill. A
+ * receipt or notice says what it was instead, with "It's a bill" to insist.
+ */
 export default async function ReviewItemPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { hh, me, date } = await pageContext();
+  const ctx = await pageContext();
+  const { hh, me, date } = ctx;
   const t = await getTranslations('review');
+  const tu = await getTranslations('ui');
   const d = getReviewItem(hh.id, id, undefined, { viewer: me.id });
   if (!d) notFound();
   // One page per bill: its file, receipts and notices all open the bill.
@@ -32,9 +43,47 @@ export default async function ReviewItemPage({ params }: { params: Promise<{ id:
     ? (r.bill.serviceId ?? matchService(hh.id, r, undefined, { viewer: me.id }))
     : null;
   const view = fileView(d);
-  const canReview = d.status !== 'extracted';
+  const waiting = d.status === 'needs_review' || d.status === 'unprocessed';
   // A receipt or provider notice: nothing to fill in, so say what happened instead.
   const isNotice = d.status === 'notice' || d.status === 'ignored';
+  const missing = r
+    ? [r.bill.amountMinor, r.bill.dueDate, r.bill.periodStart, r.bill.periodEnd].filter(
+        (v) => v === null || v === undefined || v === '',
+      ).length + (suggested ? 0 : 1)
+    : 0;
+  const failed = d.status === 'needs_review' && !r;
+  const arrival = arrivalOf(hh.id, d, memberNames(hh.id));
+  const how =
+    arrival.kind === 'upload'
+      ? arrival.name
+        ? tu('how.uploadedBy', { name: arrival.name })
+        : tu('how.upload')
+      : arrival.kind === 'forward'
+        ? tu('how.forward', { name: arrival.name ?? '' })
+        : tu('how.email');
+  const what = d.originalFilename ?? d.emailSubject ?? tu('doc.kind.document');
+  const title = isNotice
+    ? t('detail.noticeTitle')
+    : failed
+      ? tu('doc.failed')
+      : d.status === 'unprocessed'
+        ? tu('doc.waiting')
+        : missing > 0
+          ? t('confirm.title', { count: missing })
+          : t('confirm.titleAll');
+  const lede = `${what} · ${how} · ${date(d.receivedAt)}. ${
+    isNotice
+      ? d.status === 'ignored'
+        ? t('detail.ignoredBody')
+        : why.kind === 'text'
+          ? why.text
+          : t('detail.noticeBody')
+      : failed
+        ? t('confirm.failedLede')
+        : missing > 0
+          ? t('confirm.lede')
+          : t('confirm.ledeAll')
+  }`;
 
   const form = (
     <ReviewForm
@@ -61,112 +110,73 @@ export default async function ReviewItemPage({ params }: { params: Promise<{ id:
         externalRef: r?.bill.externalRef ?? '',
         notes: '',
       }}
+      read={!!r}
       noServiceMatch={!!r && !suggested}
       providerHint={r?.bill.provider ?? null}
       trustSender={d.senderVerified ? trustTarget(d.senderDomain, addressOf(d.emailFrom)) : null}
+      canIgnore={waiting}
     />
   );
 
   return (
-    <>
-      <PageHeader
-        title={
-          r
-            ? `${r.bill.provider} · ${r.bill.serviceType}`
-            : (d.originalFilename ?? t('detail.untitled'))
+    <div className="scr form-scr">
+      <BackLink href="/inbox">{t('title')}</BackLink>
+      <PageTitle
+        title={title}
+        lede={lede}
+        right={
+          <InlineAction
+            action={reprocessDocumentAction}
+            hidden={{ documentId: d.id }}
+            label={failed ? tu('doc.tryAgain') : t('detail.reprocess')}
+            variant="secondary"
+          />
         }
-        subtitle={`${t(`kind.${d.kind}`)} · ${date(d.receivedAt)}${d.emailFrom ? ` · ${d.emailFrom}` : ''}`}
       />
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <Badge tone={STATUS_TONE[d.status]}>{t(`status.${d.status}`)}</Badge>
-        {why.kind !== 'none' && !isNotice && (
-          <span className="text-sm text-fg-muted">
-            {why.kind === 'check' ? t('why.check') : why.text}
-          </span>
+      <div className="form-grid doc-grid">
+        <div className="confirm-doc">
+          <DocPaper doc={d} view={view} text={d.extraction?.textPreview ?? ''} />
+        </div>
+        {isNotice ? (
+          <Card className="form-main">
+            <SectionHead
+              title={t('detail.noticeTitle')}
+              right={<DocChip state={d.status === 'ignored' ? 'analysed' : 'analysed'} />}
+            />
+            <p className="muted">
+              {d.status === 'ignored' ? t('detail.ignoredBody') : t('detail.noticeBody')}
+            </p>
+            <div className="form-acts">
+              <InlineAction
+                action={readAsBillAction}
+                hidden={{ documentId: d.id }}
+                label={t('detail.readAsBill')}
+                variant="primary"
+              />
+              <LinkButton
+                href={`/api/documents/${d.id}/file`}
+                target="_blank"
+                rel="noreferrer"
+                variant="ghost"
+                icon="eye"
+              >
+                {t('confirm.viewFile')}
+              </LinkButton>
+            </div>
+            <p className="muted small">{t('detail.readAsBillHint')}</p>
+            <details className="wiz-more">
+              <summary className="link small">{t('detail.addAnyway')}</summary>
+              {form}
+            </details>
+          </Card>
+        ) : waiting ? (
+          <Card>{form}</Card>
+        ) : (
+          <Card className="form-main">
+            <p className="muted">{t('detail.alreadyBill')}</p>
+          </Card>
         )}
       </div>
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card
-          className={`min-h-[60vh] overflow-hidden p-0 ${isNotice ? 'order-2 lg:order-none' : ''}`}
-        >
-          {view === 'pdf' ? (
-            <iframe
-              src={`/api/documents/${d.id}/file`}
-              title={d.originalFilename ?? t('detail.untitledDocument')}
-              className="h-[75vh] w-full"
-            />
-          ) : view === 'photo' ? (
-            // eslint-disable-next-line @next/next/no-img-element -- archived file, served as-is
-            <img
-              src={`/api/documents/${d.id}/file`}
-              alt={d.originalFilename ?? t('detail.untitledPhoto')}
-              className="max-h-[75vh] w-full object-contain"
-            />
-          ) : (
-            <pre className="max-h-[75vh] overflow-auto p-4 text-xs whitespace-pre-wrap">
-              {d.extraction?.textPreview || t('detail.noPreview')}
-            </pre>
-          )}
-        </Card>
-        <div className={`flex flex-col gap-4 ${isNotice ? 'order-1 lg:order-none' : ''}`}>
-          {isNotice ? (
-            <>
-              <Card className="flex flex-col gap-3">
-                <p className="font-display text-lg font-semibold">{t('detail.noticeTitle')}</p>
-                {d.status === 'notice' && why.kind === 'text' && (
-                  <p className="text-sm">{why.text}.</p>
-                )}
-                <p className="text-sm text-fg-muted">
-                  {d.status === 'ignored' ? t('detail.ignoredBody') : t('detail.noticeBody')}
-                </p>
-                <div className="flex flex-wrap items-center gap-2">
-                  <InlineAction
-                    action={readAsBillAction}
-                    hidden={{ documentId: d.id }}
-                    label={t('detail.readAsBill')}
-                  />
-                </div>
-                <p className="text-xs text-fg-muted">{t('detail.readAsBillHint')}</p>
-              </Card>
-              <details className="group">
-                <summary className="cursor-pointer text-sm font-semibold text-accent">
-                  {t('detail.addAnyway')}
-                </summary>
-                <div className="mt-3">{form}</div>
-              </details>
-            </>
-          ) : canReview ? (
-            form
-          ) : (
-            <Card className="text-sm text-fg-muted">{t('detail.alreadyBill')}</Card>
-          )}
-          <div className="flex flex-wrap gap-2">
-            <InlineAction
-              action={reprocessDocumentAction}
-              hidden={{ documentId: d.id }}
-              label={t('detail.reprocess')}
-              variant="secondary"
-            />
-            {(d.status === 'needs_review' || d.status === 'unprocessed') && (
-              <InlineAction
-                action={ignoreDocumentAction}
-                hidden={{ documentId: d.id }}
-                label={t('detail.ignore')}
-                variant="danger"
-                confirm={t('detail.ignoreConfirm')}
-              />
-            )}
-            <a
-              href={`/api/documents/${d.id}/file`}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold text-accent hover:bg-surface-2"
-            >
-              {t('detail.openFile')}
-            </a>
-          </div>
-        </div>
-      </div>
-    </>
+    </div>
   );
 }

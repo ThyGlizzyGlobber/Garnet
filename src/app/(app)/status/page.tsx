@@ -1,154 +1,205 @@
+import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import { Badge, Card, PageHeader } from '@/components/ui';
+import { Card } from '@/components/ui';
+import { Kv, PageTitle } from '@/components/ui/blocks';
+import { Chip } from '@/components/ui/chip';
+import { Disc } from '@/components/ui/colour';
 import { viewerIsOperator } from '@/lib/auth/session';
 import { pageContext } from '@/lib/context';
+import { getEnv, isEmailConfigured, isLlmConfigured } from '@/lib/env';
+import { listHouseholds } from '@/lib/households';
+import { listMembers } from '@/lib/members';
 import { statusView } from '@/lib/status';
+import { currentBuild, shortSha } from '@/lib/updates';
+import type { ReactNode } from 'react';
 
+const DISC = '#5b6f82';
+
+/**
+ * Status, for the operator only (D11): the install as cards, each with its
+ * facts and a chip saying whether it's working. Households never see this
+ * page or its technical terms.
+ */
 export default async function StatusPage() {
   const { hh, me, dateTime, pct } = await pageContext();
+  if (!(await viewerIsOperator())) redirect('/settings');
   const t = await getTranslations('status');
-  const { household: h, install } = statusView(hh.id, me.id, await viewerIsOperator());
-  const when = (iso: string | null | undefined) => dateTime(iso) || '—';
+  const { household: h, install } = statusView(hh.id, me.id, true);
+  if (!install) redirect('/settings');
+  const env = getEnv();
+  const build = currentBuild(env);
+  const when = (iso: string | null | undefined) => (iso ? dateTime(iso) : '—');
+  const ok = (label: string) => (
+    <Chip tone="ok" icon="check">
+      {label}
+    </Chip>
+  );
+  const households = listHouseholds();
+  const card = (icon: string, title: string, chip: ReactNode, rows: [string, ReactNode][]) => (
+    <Card className="st-card">
+      <div className="st-h">
+        <Disc icon={icon} colour={DISC} size="sm" />
+        <b>{title}</b>
+        {chip}
+      </div>
+      <Kv rows={rows} />
+    </Card>
+  );
+  const reader = install.extractors.find((ex) => ex.model);
 
   return (
-    <div className="mx-auto max-w-2xl">
-      <PageHeader title={t('title')} />
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Card>
-          <p className="text-sm text-fg-muted">{t('tiles.autoRate')}</p>
-          <p className="mt-1 text-3xl font-semibold tabular-nums">
-            {h.autoRate === null ? '—' : pct(h.autoRate)}
-          </p>
-          <p className="mt-1 text-xs text-fg-muted">{t('tiles.autoRateHint')}</p>
-        </Card>
-        <Card>
-          <p className="text-sm text-fg-muted">{t('tiles.queue')}</p>
-          <p
-            className={`mt-1 text-3xl font-semibold tabular-nums ${h.waiting > 0 ? 'text-warning' : ''}`}
-          >
-            {h.waiting}
-          </p>
-          <p className="mt-1 text-xs text-fg-muted">
-            {t('tiles.queueHint', { extracted: h.extracted, ignored: h.ignored })}
-          </p>
-        </Card>
-        <Card>
-          <p className="text-sm text-fg-muted">{t('tiles.archived')}</p>
-          <p className="mt-1 text-3xl font-semibold tabular-nums">{h.archived}</p>
-          <p className="mt-1 text-xs text-fg-muted">{t('tiles.archivedHint')}</p>
-        </Card>
-      </div>
-
-      <Card className="mt-4">
-        <h2 className="font-semibold">{t('reading.title')}</h2>
-        {install && (
-          <ul className="mt-2 divide-y divide-border text-sm">
-            {install.extractors.map((ex) => (
-              <li key={ex.name} className="flex items-center justify-between py-2">
-                <span>
-                  <span className="font-medium">{ex.name}</span>
-                  {ex.model && <span className="ml-2 text-xs text-fg-muted">{ex.model}</span>}
-                </span>
-                <Badge tone={ex.ready ? 'success' : 'neutral'}>
-                  {ex.ready ? t('extractors.ready') : t('extractors.needsKey')}
-                </Badge>
-              </li>
-            ))}
-          </ul>
+    <div className="scr">
+      <PageTitle title={t('title')} lede={t('lede')} />
+      <div className="st-grid">
+        {card(
+          'download',
+          t('software.title'),
+          build.commit === 'dev' ? (
+            <Chip tone="neutral">{t('software.dev')}</Chip>
+          ) : (
+            <Chip tone="ok" icon="check">
+              {t('software.installed')}
+            </Chip>
+          ),
+          [
+            [
+              t('software.installedLabel'),
+              <>
+                <span className="mono">{shortSha(build.commit)}</span>
+                {build.builtAt && ` · ${t('software.built', { date: when(build.builtAt) })}`}
+              </>,
+            ],
+            [t('software.updates'), t('software.updatesHint')],
+          ],
         )}
-        <p className="mt-3 text-xs text-fg-muted">
-          {t('extractors.threshold', { pct: Math.round(h.threshold * 100) })}{' '}
-          {h.ai.limit === null
-            ? t('extractors.aiUsageUncapped', { used: h.ai.used })
-            : t('extractors.aiUsage', { used: h.ai.used, limit: h.ai.limit })}
-        </p>
-        <p className="mt-1 text-xs text-fg-muted">
-          {t('weather.billsWithWeather')}: {h.billsWithWeather}
-        </p>
-      </Card>
-
-      {install && (
-        <>
-          <Card className="mt-4">
-            <div className="flex items-start justify-between gap-3">
-              <h2 className="font-semibold">{t('billsAddresses.title')}</h2>
-              <Badge
-                tone={
-                  !install.billsAddresses.configured
-                    ? 'neutral'
-                    : install.billsAddresses.householdBoundSince
-                      ? 'success'
-                      : 'warning'
-                }
-              >
-                {!install.billsAddresses.configured
-                  ? t('billsAddresses.off')
-                  : install.billsAddresses.householdBoundSince
-                    ? t('billsAddresses.bound')
-                    : t('billsAddresses.olderWorker')}
-              </Badge>
-            </div>
-            <p className="mt-2 text-xs text-fg-muted">
-              {!install.billsAddresses.configured
+        {card(
+          'mail',
+          t('billsAddresses.title'),
+          !install.billsAddresses.configured ? (
+            <Chip tone="neutral">{t('billsAddresses.off')}</Chip>
+          ) : install.billsAddresses.householdBoundSince ? (
+            ok(t('billsAddresses.bound'))
+          ) : (
+            <Chip tone="warn" icon="alert">
+              {t('billsAddresses.olderWorker')}
+            </Chip>
+          ),
+          [
+            [
+              t('billsAddresses.worker'),
+              !install.billsAddresses.configured
                 ? t('billsAddresses.offHint')
                 : install.billsAddresses.householdBoundSince
                   ? t('billsAddresses.boundHint', {
                       date: when(install.billsAddresses.householdBoundSince),
                     })
-                  : t('billsAddresses.olderWorkerHint')}
-            </p>
-          </Card>
-
-          <Card className="mt-4">
-            <div className="flex items-start justify-between gap-3">
-              <h2 className="font-semibold">{t('weather.title')}</h2>
-              <Badge
-                tone={
-                  install.weather.provider === 'off'
-                    ? 'neutral'
-                    : install.weather.lastError
-                      ? 'danger'
-                      : 'success'
-                }
-              >
-                {install.weather.provider === 'off'
-                  ? t('weather.off')
-                  : `${install.weather.provider}${install.weather.commercial ? ` · ${t('weather.commercial')}` : ''}`}
-              </Badge>
-            </div>
-            <dl className="mt-2 grid grid-cols-2 gap-2 text-sm">
-              <dt className="text-fg-muted">{t('weather.lastRun')}</dt>
-              <dd>{when(install.weather.lastRun)}</dd>
-              <dt className="text-fg-muted">{t('weather.cells')}</dt>
-              <dd>{install.weather.cells}</dd>
-              <dt className="text-fg-muted">{t('weather.calls')}</dt>
-              <dd>{install.weather.calls}</dd>
-            </dl>
-            {install.weather.lastError && (
-              <p className="mt-2 text-xs text-danger">{install.weather.lastError}</p>
-            )}
-            <p className="mt-2 text-xs text-fg-muted">{t('weather.hint')}</p>
-          </Card>
-
-          <Card className="mt-4">
-            <div className="flex items-start justify-between gap-3">
-              <h2 className="font-semibold">{t('regional.title')}</h2>
-              <Badge tone={install.regional.enabled ? 'success' : 'neutral'}>
-                {install.regional.enabled ? t('regional.on') : t('regional.off')}
-              </Badge>
-            </div>
-            <dl className="mt-2 grid grid-cols-2 gap-2 text-sm">
-              <dt className="text-fg-muted">{t('regional.sharing')}</dt>
-              <dd>{install.regional.sharing}</dd>
-              <dt className="text-fg-muted">{t('regional.figures')}</dt>
-              <dd>{install.regional.figures}</dd>
-            </dl>
-            <p className="mt-2 text-xs text-fg-muted">
-              {t('regional.hint', { k: install.regional.minHouseholds })}
-            </p>
-          </Card>
-        </>
-      )}
+                  : t('billsAddresses.olderWorkerHint'),
+            ],
+          ],
+        )}
+        {card(
+          'file',
+          t('documents.title'),
+          h.waiting > 0 ? (
+            <Chip tone="warn" icon="alert">
+              {t('documents.toLookAt', { count: h.waiting })}
+            </Chip>
+          ) : (
+            ok(t('documents.clear'))
+          ),
+          [
+            [t('documents.analysed'), String(h.extracted)],
+            [t('documents.waiting'), String(h.waiting)],
+            [t('documents.other'), String(h.ignored)],
+            [t('documents.autoRate'), h.autoRate === null ? '—' : pct(h.autoRate)],
+            [
+              t('documents.reader'),
+              isLlmConfigured(env)
+                ? t('documents.readerLine', {
+                    model: reader?.model ?? env.ANTHROPIC_MODEL,
+                    used: h.ai.used,
+                    limit: h.ai.limit === null ? '∞' : String(h.ai.limit),
+                  })
+                : t('extractors.needsKey'),
+            ],
+            [t('extractors.thresholdLabel'), pct(h.threshold)],
+          ],
+        )}
+        {card(
+          'bell',
+          t('emailOut.title'),
+          isEmailConfigured(env) ? (
+            ok(t('emailOut.working'))
+          ) : (
+            <Chip tone="neutral">{t('emailOut.off')}</Chip>
+          ),
+          [
+            [t('emailOut.service'), env.EMAIL_LOG_ONLY ? t('emailOut.logOnly') : 'Resend'],
+            [t('emailOut.from'), env.EMAIL_FROM ?? '—'],
+          ],
+        )}
+        {card(
+          'cloud-sun',
+          t('weather.title'),
+          install.weather.provider === 'off' ? (
+            <Chip tone="neutral">{t('weather.off')}</Chip>
+          ) : install.weather.lastError ? (
+            <Chip tone="bad" icon="alert">
+              {t('weather.error')}
+            </Chip>
+          ) : (
+            ok(t('weather.working'))
+          ),
+          [
+            [
+              t('weather.source'),
+              install.weather.provider === 'off'
+                ? t('weather.off')
+                : `${install.weather.provider}${install.weather.commercial ? ` · ${t('weather.commercial')}` : ''}`,
+            ],
+            [t('weather.lastRun'), when(install.weather.lastRun)],
+            [t('weather.cells'), String(install.weather.cells)],
+            [t('weather.calls'), String(install.weather.calls)],
+            [t('weather.billsWithWeather'), String(h.billsWithWeather)],
+            ...(install.weather.lastError
+              ? [[t('weather.lastError'), install.weather.lastError] as [string, ReactNode]]
+              : []),
+          ],
+        )}
+        {card(
+          'users',
+          t('households.title'),
+          install.regional.enabled ? (
+            ok(t('regional.on'))
+          ) : (
+            <Chip tone="neutral">{t('regional.off')}</Chip>
+          ),
+          [
+            ...households.map(
+              (x) =>
+                [
+                  x.name,
+                  t('households.line', {
+                    demo: x.isDemo ? 'yes' : 'no',
+                    people: listMembers(x.id).length,
+                  }),
+                ] as [string, ReactNode],
+            ),
+            [
+              t('regional.title'),
+              install.regional.figures > 0
+                ? t('regional.figuresLine', {
+                    sharing: install.regional.sharing,
+                    figures: install.regional.figures,
+                  })
+                : t('regional.notEnough', {
+                    sharing: install.regional.sharing,
+                    k: install.regional.minHouseholds,
+                  }),
+            ],
+          ],
+        )}
+      </div>
     </div>
   );
 }

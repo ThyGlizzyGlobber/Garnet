@@ -165,14 +165,6 @@ export function formatDayRange(from: string, to: string, locale: string): string
     }).format(new Date(`${d.slice(0, 10)}T00:00:00Z`));
   return `${f(from)} – ${f(to)}`;
 }
-
-/** "2026-09-29" → "Tue" (short) or "Tuesday" (long). */
-export function formatWeekday(day: string, locale: string, style: 'short' | 'long' = 'short') {
-  return new Intl.DateTimeFormat(locale, { weekday: style, timeZone: 'UTC' }).format(
-    new Date(`${day.slice(0, 10)}T00:00:00Z`),
-  );
-}
-
 /**
  * A fraction as a percentage: 0.12 → "12%". `signed` shows the direction
  * ("+12%", "-8%") and reads anything under half a percent as "±0%".
