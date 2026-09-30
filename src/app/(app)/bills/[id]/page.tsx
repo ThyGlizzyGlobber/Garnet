@@ -12,7 +12,7 @@ import { billDue } from '@/lib/bill-status';
 import { getBill, housematesPaid } from '@/lib/bills';
 import { pageContext } from '@/lib/context';
 import { daysInclusive } from '@/lib/dates';
-import { formatMonthRange } from '@/lib/format';
+import { formatMonthRange, formatPeriod } from '@/lib/format';
 import { canChoosePlan, paysByInstalments } from '@/lib/instalments';
 import { getMember, hasHousemates } from '@/lib/members';
 import { asksMember, mayChangeOwner } from '@/lib/ownership';
@@ -279,17 +279,17 @@ export default async function BillPage({ params }: { params: Promise<{ id: strin
                 [
                   t('detail.period'),
                   <span key="p">
-                    {date(b.periodStart)} – {date(b.periodEnd)}{' '}
+                    {formatPeriod(b.periodStart, b.periodEnd, hh.locale)}{' '}
                     <span className="muted">· {t('page.days', { days })}</span>
                   </span>,
                 ],
-                [t('detail.issueDate'), b.issueDate ? date(b.issueDate, 'long') : '—'],
+                [t('detail.issueDate'), b.issueDate ? date(b.issueDate) : '—'],
                 [
                   byInstalments && due.status.key !== 'paid'
                     ? t('plan.nextDue')
                     : t('detail.dueDate'),
                   <span key="d">
-                    {date(due.status.dueDate, 'long')}
+                    {date(due.status.dueDate)}
                     {due.status.key !== 'paid' && (
                       <span className="muted"> · {statusLabel(rc, due.status)}</span>
                     )}

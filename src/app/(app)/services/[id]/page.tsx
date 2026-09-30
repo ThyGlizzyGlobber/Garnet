@@ -122,7 +122,7 @@ export default async function ServicePage({ params }: { params: Promise<{ id: st
         : t(`vs.${r.against}`);
   const againstSub = (r: (typeof o.comparisons)[number]) =>
     r.period
-      ? `${formatMonthRange(r.period.periodStart, r.period.periodEnd, hh.locale)}${r.period.perDay !== null ? ` · ${t('perDay', { qty: qty(r.period.perDay), unit })}` : ''}`
+      ? `${formatMonthRange(r.period.periodStart, r.period.periodEnd, hh.locale)}${r.period.periodEnd.slice(0, 4) !== today.slice(0, 4) && r.period.periodStart.slice(0, 4) === r.period.periodEnd.slice(0, 4) ? ` ${r.period.periodEnd.slice(0, 4)}` : ''}${r.period.perDay !== null ? ` · ${t('perDay', { qty: qty(r.period.perDay), unit })}` : ''}`
       : r.against === 'limit'
         ? t('vs.limitSub', { qty: qty(r.limit ?? 0), unit })
         : r.against === 'similar'

@@ -5,9 +5,15 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { openDb, type Db } from '@/db/client';
 import { runMigrations } from '@/db/migrate';
 import { linkMember, signInAccount } from '@/lib/accounts';
-import { createBill, recordPayment, setInstalmentPaid, setPaymentPlan } from '@/lib/bills';
+import {
+  createBill,
+  recordPayment,
+  setInstalmentPaid,
+  setPaymentPlan,
+  setSharePaid,
+} from '@/lib/bills';
 import { devOutbox } from '@/lib/email';
-import { formatMonthRange } from '@/lib/format';
+import { formatMonthRange, formatPeriod } from '@/lib/format';
 import { createHousehold } from '@/lib/households';
 import { createMember } from '@/lib/members';
 import { moneyView } from '@/lib/money';
@@ -273,7 +279,7 @@ describe('moneyView', () => {
     expect(jordan.id).toBeTruthy();
   });
 
-  it('lists a bill by instalments as one debt per instalment share', () => {
+  it('lists a bill by instalments as one debt, the next unpaid instalment', () => {
     const { hh, alex, jordan, power } = setup();
     const rates = createService(
       hh.id,
@@ -304,8 +310,15 @@ describe('moneyView', () => {
     const ratesDebts = v.owedToYou.filter(
       (d) => d.serviceName === 'Rates' && d.fromId === jordan.id,
     );
-    expect(ratesDebts.map((d) => d.instalment)).toEqual([1, 2, 3, 4]);
-    expect(ratesDebts[1]!.dueDate).toBe('2026-11-30');
+    // Only the next unpaid instalment is owed now, whatever the provider has been paid.
+    expect(ratesDebts.map((d) => d.instalment)).toEqual([1]);
+    expect(ratesDebts[0]!.dueDate).toBe('2026-09-30');
+    setSharePaid(hh.id, ratesDebts[0]!.shareId, true, {}, db);
+    const after = moneyView(hh.id, alex.id, TODAY, 7, db).owedToYou.filter(
+      (d) => d.serviceName === 'Rates' && d.fromId === jordan.id,
+    );
+    expect(after.map((d) => d.instalment)).toEqual([2]);
+    expect(after[0]!.dueDate).toBe('2026-11-30');
     expect(power.id).toBeTruthy();
   });
 });
@@ -313,7 +326,9 @@ describe('moneyView', () => {
 describe('formatMonthRange', () => {
   it('reads as months, with years only when they differ', () => {
     expect(formatMonthRange('2026-06-01', '2026-08-31', 'en-AU')).toBe('Jun – Aug');
-    expect(formatMonthRange('2026-08-01', '2026-08-31', 'en-AU')).toBe('Aug');
+    expect(formatMonthRange('2026-08-01', '2026-08-31', 'en-AU')).toBe('August');
+    expect(formatPeriod('2026-10-18', '2027-10-17', 'en-AU')).toBe('18 Oct 2026 – 17 Oct 2027');
+    expect(formatPeriod('2026-06-01', '2026-08-31', 'en-AU')).toBe('Jun – Aug');
     expect(formatMonthRange('2025-12-01', '2026-02-28', 'en-AU')).toBe('Dec 2025 – Feb 2026');
   });
 });

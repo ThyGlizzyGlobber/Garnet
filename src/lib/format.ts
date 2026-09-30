@@ -142,15 +142,29 @@ export function formatMonth(
  * years when they differ ("Dec 2025 – Feb 2026").
  */
 export function formatMonthRange(from: string, to: string, locale: string): string {
-  const mon = (d: string, year = false) =>
+  const mon = (d: string, year = false, style: 'short' | 'long' = 'short') =>
     new Intl.DateTimeFormat(locale, {
-      month: 'short',
+      month: style,
       ...(year ? { year: 'numeric' } : {}),
       timeZone: 'UTC',
     }).format(new Date(`${d.slice(0, 10)}T00:00:00Z`));
   if (from.slice(0, 4) !== to.slice(0, 4)) return `${mon(from, true)} – ${mon(to, true)}`;
-  if (from.slice(0, 7) === to.slice(0, 7)) return mon(from);
+  // One month gets its full name ("October"); a span keeps the short ones ("Jun – Aug").
+  if (from.slice(0, 7) === to.slice(0, 7)) return mon(from, false, 'long');
   return `${mon(from)} – ${mon(to)}`;
+}
+
+/** Whether a period runs from the first of a month to the last day of a month. */
+function isWholeMonths(from: string, to: string): boolean {
+  const end = new Date(Date.UTC(Number(to.slice(0, 4)), Number(to.slice(5, 7)), 0));
+  return from.slice(8, 10) === '01' && to.slice(0, 10) === end.toISOString().slice(0, 10);
+}
+
+/** A bill's period as people say it: whole months by name, anything else by its days. */
+export function formatPeriod(from: string, to: string, locale: string): string {
+  return isWholeMonths(from, to)
+    ? formatMonthRange(from, to, locale)
+    : formatDayRange(from, to, locale);
 }
 
 /** A period as days: "1 Jul – 30 Sept", or "1 Jul 2026 – 30 Jun 2027" across years. */

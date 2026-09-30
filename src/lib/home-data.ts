@@ -301,7 +301,8 @@ export function homeData(hh: Household, me: Member, today: string, db: Db = getD
   }
   upcoming.sort((a, b) => a.days - b.days);
 
-  // Money between housemates: every unpaid share is owed to the bill's payer.
+  // Money between housemates: every unpaid share is owed to the bill's payer
+  // (of an instalment plan, the next instalment's).
   let money: HomeData['money'] = null;
   let settled: HomeData['settled'] = null;
   if (split) {
@@ -310,8 +311,14 @@ export function homeData(hh: Household, me: Member, today: string, db: Db = getD
       if (b.ownerMemberId) continue;
       const payer = b.service.payerMemberId;
       if (!payer) continue;
-      for (const s of shares.filter((x) => x.billId === b.id)) {
-        if (s.paidAt || s.memberId === payer) continue;
+      const open = shares.filter((x) => x.billId === b.id && !x.paidAt && x.memberId !== payer);
+      // A bill paid by instalments: only a person's next unpaid instalment is owed now.
+      const nextSeq = new Map<string, number>();
+      for (const s of open)
+        if (s.instalment)
+          nextSeq.set(s.memberId, Math.min(nextSeq.get(s.memberId) ?? Infinity, s.instalment));
+      for (const s of open) {
+        if (s.instalment && s.instalment > (nextSeq.get(s.memberId) ?? 0)) continue;
         const inst = s.instalment ? b.instalments.find((i) => i.seq === s.instalment) : null;
         debts.push({
           fromId: s.memberId,

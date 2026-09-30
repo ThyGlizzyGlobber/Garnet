@@ -71,19 +71,19 @@ export function serviceOverview(
     /** The period compared with, when it is one bill. */
     period?: { periodStart: string; periodEnd: string; perDay: number | null };
   }[] = [];
-  if (c?.previous)
-    comparisons.push({
-      against: 'previous',
-      usage: c.previous.usage,
-      cost: c.previous.cost,
-      period: c.previous.period,
-    });
   if (c?.lastYear)
     comparisons.push({
       against: 'lastYear',
       usage: c.lastYear.usage,
       cost: c.lastYear.cost,
       period: c.lastYear.period,
+    });
+  if (c?.previous)
+    comparisons.push({
+      against: 'previous',
+      usage: c.previous.usage,
+      cost: c.previous.cost,
+      period: c.previous.period,
     });
   if (c?.average)
     comparisons.push({

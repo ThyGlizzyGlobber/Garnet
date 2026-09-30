@@ -5,7 +5,7 @@ import type { BillRowModel, DocRowModel, FileRowModel } from '@/components/ui/ro
 import type { ReviewItem } from '@/lib/review';
 import { paysByInstalments } from '@/lib/instalments';
 import { unitLabel } from '@/lib/units';
-import { formatDayRange, formatMonthRange } from '@/lib/format';
+import { formatDayRange, formatPeriod } from '@/lib/format';
 
 /**
  * The one bill row and the one document row, worded: these turn a bill (or a
@@ -49,8 +49,7 @@ export function relativeDay(
   return c.dateYear(ymd);
 }
 
-const range = (b: BillListItem, locale: string) =>
-  formatMonthRange(b.periodStart, b.periodEnd, locale);
+const range = (b: BillListItem, locale: string) => formatPeriod(b.periodStart, b.periodEnd, locale);
 
 const usageText = (b: BillListItem, c: RowCtx) =>
   b.usageQuantity !== null && b.usageQuantity > 0
@@ -115,7 +114,7 @@ export function billRowFor(
     amount: c.money(due.amountMinor, b.currency),
     status: { label: statusLabel(c, due.status), tone: due.status.tone },
     share:
-      o.share && mine && !personal && mine.paidMethod !== 'payer'
+      o.share && mine && !personal
         ? c.t('row.you', { amount: c.money(mine.amountMinor, b.currency) })
         : undefined,
     tags: tags.length ? tags : undefined,
@@ -171,10 +170,10 @@ export function docRowFor(
           : d.kind === 'upload'
             ? c.t('doc.kind.document')
             : c.t('doc.kind.email');
-  const title =
-    r?.bill.provider && r.bill.serviceType
-      ? `${r.bill.provider} · ${r.bill.serviceType}`
-      : (d.emailSubject ?? d.originalFilename ?? kindWord);
+  // "Northwind Energy bill", "Hearthline Gas receipt": the provider and what it is.
+  const title = r?.bill.provider
+    ? `${r.bill.provider} ${(d.status === 'needs_review' ? c.t('doc.kind.bill') : kindWord).toLowerCase()}`
+    : (d.emailSubject ?? d.originalFilename ?? kindWord);
   const needs = detailsToConfirm(d);
   const state = docState(d);
   return {

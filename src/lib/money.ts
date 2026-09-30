@@ -101,6 +101,20 @@ export function moneyView(
       periodEnd: b.periodEnd,
     });
   }
+  // A bill paid by instalments: only a person's next unpaid instalment is owed now.
+  const dueNow = debts.filter(
+    (d) =>
+      !d.instalment ||
+      !debts.some(
+        (o) =>
+          o.billId === d.billId &&
+          o.fromId === d.fromId &&
+          o.instalment !== null &&
+          o.instalment < d.instalment!,
+      ),
+  );
+  debts.length = 0;
+  debts.push(...dueNow);
   debts.sort((a, b) => a.dueDate.localeCompare(b.dueDate));
   const youOwe = debts.filter((d) => d.fromId === viewerId);
   const owedToYou = debts.filter((d) => d.toId === viewerId);
