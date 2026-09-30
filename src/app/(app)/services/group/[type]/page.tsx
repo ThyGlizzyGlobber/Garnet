@@ -1,52 +1,37 @@
 import { notFound, redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { pageContext } from '@/lib/context';
-import { serviceCardsView } from '@/lib/main-view';
+import { subscriptionsView } from '@/lib/main-view';
 import { inMainCategory } from '@/lib/service-categories';
 import { listServiceTypes } from '@/lib/services';
-import { ServiceCardsPage } from '../../service-cards';
+import { SubscriptionsPage } from '../../service-cards';
 
 /**
- * A main service with sub-services (Subscriptions → Netflix, Spotify;
- * Donations → Red Cross): a card each, opening to its bills, the cancelled
- * ones after. A type under Vehicles, Health or Lifestyle has no page of its
- * own: it opens its main service's (Vehicles showing that kind).
+ * Subscriptions: a row per subscription and all of them together. Any other
+ * type opens its main service's page (Vehicles, Health, Lifestyle, where
+ * Donations and its charities sit).
  */
-export default async function ServiceGroupPage({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ type: string }>;
-  searchParams: Promise<{ open?: string }>;
-}) {
+export default async function ServiceGroupPage({ params }: { params: Promise<{ type: string }> }) {
   const { type: slug } = await params;
   const type = listServiceTypes().find((ty) => ty.slug === slug);
   if (!type) notFound();
-  if (inMainCategory(type))
-    redirect(
-      type.category === 'vehicle'
-        ? '/services/category/vehicle'
-        : `/services/category/${type.category}`,
-    );
-  if (!type.hasSubServices) notFound();
-  const { open } = await searchParams;
+  if (inMainCategory(type)) redirect(`/services/category/${type.category}`);
+  if (type.slug !== 'subscriptions') notFound();
   const ctx = await pageContext();
   const t = await getTranslations('services');
-  const tm = await getTranslations('main');
+  const tm = await getTranslations('main.subs');
   return (
-    <ServiceCardsPage
+    <SubscriptionsPage
       ctx={ctx}
-      view={serviceCardsView(ctx.hh, ctx.me, { typeSlug: type.slug }, ctx.today)}
+      view={subscriptionsView(ctx.hh, ctx.me, ctx.today)}
       title={type.label}
-      eyebrow={tm('services')}
       addHref={`/services/new?type=${encodeURIComponent(type.slug)}`}
-      addLabel={t('group.add')}
+      addLabel={tm('add')}
       empty={{
         icon: type.icon,
         title: t('group.emptyTitle', { type: type.label }),
         body: t('group.emptyBody'),
       }}
-      open={open ?? null}
     />
   );
 }

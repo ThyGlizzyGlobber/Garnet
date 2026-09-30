@@ -23,7 +23,7 @@ import {
   getFixedAmounts,
   getService,
   resumeService,
-  serviceHome,
+  mainServiceOf,
   updateService,
   type ServiceInput,
 } from '@/lib/services';
@@ -185,9 +185,8 @@ export async function createServiceAction(_prev: ActionState, fd: FormData): Pro
     return { error: (e as Error).message };
   }
   revalidatePath('/services');
-  // A new sub-service (Netflix, Bupa) lands with its main service's others.
-  const home = serviceHome(created);
-  redirect(home !== `/services/${created.id}` ? home : personal ? home : '/services');
+  // A new sub-service (Netflix, Bupa) or someone's own opens its page.
+  redirect(mainServiceOf(created) || personal ? `/services/${created.id}` : '/services');
 }
 
 export async function updateServiceAction(_prev: ActionState, fd: FormData): Promise<ActionState> {

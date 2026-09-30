@@ -209,6 +209,64 @@ export async function seedDemo(db: Db = getDb()) {
     },
     db,
   );
+  // Two more subscriptions: music for the household, and Alex's own storage.
+  const tunebox = createService(
+    hh.id,
+    {
+      typeSlug: 'subscriptions',
+      name: 'Tunebox',
+      provider: 'Tunebox',
+      cadence: 'monthly',
+      payerMemberId: alex.id,
+    },
+    db,
+  );
+  const cloudVault = createService(
+    hh.id,
+    {
+      typeSlug: 'subscriptions',
+      name: 'CloudVault',
+      provider: 'CloudVault',
+      cadence: 'monthly',
+      ownerMemberId: alex.id,
+    },
+    db,
+  );
+  // Lifestyle: Alex's gym. Health: the household's ambulance cover and
+  // Alex's own health insurance.
+  const gym = createService(
+    hh.id,
+    {
+      typeSlug: 'gym',
+      name: 'Peak Fitness',
+      provider: 'Peak Fitness',
+      cadence: 'monthly',
+      ownerMemberId: alex.id,
+    },
+    db,
+  );
+  const ambulance = createService(
+    hh.id,
+    {
+      typeSlug: 'ambulance_cover',
+      name: 'Ambulance cover',
+      provider: 'StateCare Ambulance',
+      cadence: 'annual',
+      payerMemberId: jordan.id,
+    },
+    db,
+  );
+  const health = createService(
+    hh.id,
+    {
+      typeSlug: 'health_insurance',
+      name: 'Health insurance',
+      provider: 'Harbourside Health',
+      cadence: 'monthly',
+      ownerMemberId: alex.id,
+    },
+    db,
+  );
   // Alex's own donation to a food bank (Donations → Riverside Food Bank).
   const foodBank = createService(
     hh.id,
@@ -583,6 +641,43 @@ export async function seedDemo(db: Db = getDb()) {
         externalRef: `FBX-3310-${mm(m)}`,
         paid: from,
       });
+    add(`tunebox-${m}`, tunebox.id, {
+      amountMinor: m >= 7 ? 1499 : 1299,
+      periodStart: from,
+      periodEnd: to,
+      issueDate: from,
+      dueDate: from,
+      externalRef: `TBX-5521-${mm(m)}`,
+      paid: from,
+    });
+    add(`cloudvault-${m}`, cloudVault.id, {
+      amountMinor: 449,
+      periodStart: from,
+      periodEnd: to,
+      issueDate: from,
+      dueDate: from,
+      externalRef: `CV-90133-${mm(m)}`,
+      paid: from,
+    });
+    const first = `2026-${mm(m)}-01`;
+    add(`gym-${m}`, gym.id, {
+      amountMinor: 5900,
+      periodStart: first,
+      periodEnd: monthEnd(2026, m),
+      issueDate: first,
+      dueDate: first,
+      externalRef: `PF-2231-${mm(m)}`,
+      paid: first,
+    });
+    add(`health-${m}`, health.id, {
+      amountMinor: m >= 4 ? 18640 : 17920,
+      periodStart: first,
+      periodEnd: monthEnd(2026, m),
+      issueDate: addDays(first, -10),
+      dueDate: first,
+      externalRef: `HH-448120-${mm(m)}`,
+      paid: first,
+    });
     add(`foodbank-${m}`, foodBank.id, {
       amountMinor: 2500,
       periodStart: from,
@@ -593,6 +688,20 @@ export async function seedDemo(db: Db = getDb()) {
       paid: from,
     });
   }
+  // The household's ambulance cover: yearly, renewed each July.
+  for (const [y, amount, paid] of [
+    [2025, 10580, '2025-06-28'],
+    [2026, 11045, '2026-06-26'],
+  ] as const)
+    add(`ambulance-${y}`, ambulance.id, {
+      amountMinor: amount,
+      periodStart: `${y}-07-01`,
+      periodEnd: `${y + 1}-06-30`,
+      issueDate: `${y}-06-02`,
+      dueDate: `${y}-07-01`,
+      externalRef: `SCA-FAM-88120-${y}`,
+      paid,
+    });
   // Sam cancelled Flickbox on 20 Aug; the 5 Sep charge came anyway.
   cancelService(hh.id, flickbox.id, sam.id, db);
   db.update(service)

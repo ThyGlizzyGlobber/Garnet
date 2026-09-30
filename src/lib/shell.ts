@@ -8,13 +8,7 @@ import { monthBounds } from '@/lib/periods';
 import { documentCounts } from '@/lib/review';
 import { billsAddress } from '@/lib/bills-address';
 import { isAdmin } from '@/lib/roles';
-import {
-  byType,
-  groupServices,
-  listServices,
-  serviceHome,
-  type ServiceWithType,
-} from '@/lib/services';
+import { byType, groupServices, listServices, type ServiceWithType } from '@/lib/services';
 import type { GroupedCategory } from '@/lib/service-categories';
 import { totalsForRange } from '@/lib/stats';
 
@@ -108,13 +102,13 @@ function entries(
   /** Vehicles' lines: the vehicles themselves, when there are any. */
   vehicles: ShellService[],
 ): ShellEntry[] {
-  // A sub-service opens its card on its main service's page.
+  // A sub-service opens its own page.
   const line = (s: ServiceWithType): ShellService => ({
     id: s.id,
     name: s.name,
     colour: s.colour,
     minor: minor(s),
-    href: serviceHome(s),
+    href: `/services/${s.id}`,
   });
   return groupServices(services).map((g): ShellEntry => {
     if (!g.category && !g.typeSlug) return { kind: 'service', ...line(g.services[0]!) };

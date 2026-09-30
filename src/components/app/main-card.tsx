@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { Chip, StatusChip, type Tone } from '@/components/ui/chip';
 import { Disc } from '@/components/ui/colour';
@@ -75,14 +74,5 @@ export function MainCard({
         {footer && <div className="mcard-foot">{footer}</div>}
       </div>
     </details>
-  );
-}
-
-/** A plain link at the foot of a card ("Service details", "Edit vehicle"). */
-export function CardLink({ href, children }: { href: string; children: ReactNode }) {
-  return (
-    <Link href={href} className="btn btn-plain btn-sm">
-      {children}
-    </Link>
   );
 }

@@ -2719,18 +2719,6 @@ input.inp-plain[type='color'] {
   padding-top: 12px;
   border-top: 1px solid var(--line);
 }
-.vx-add {
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-height: 180px;
-  color: var(--p-accent);
-  font-weight: 650;
-  border: 1.5px dashed color-mix(in srgb, var(--p-accent) 40%, transparent);
-}
-.vx-add:hover {
-  background: color-mix(in srgb, var(--p-accent) 7%, transparent);
-}
 @media (prefers-reduced-motion: reduce) {
   .vx-tile {
     transition: none;
@@ -2752,4 +2740,17 @@ input.inp-plain[type='color'] {
 /* The same on a main service's page itself (Vehicles' year ahead sits on it). */
 .d3-main-svc > * {
   min-width: 0;
+}
+
+/* ---------- Subscriptions: a list, and all of them together ---------- */
+.subs-total {
+  display: grid;
+  gap: 4px;
+  margin: 2px 0 16px;
+}
+.subs-cancelled .bill-row {
+  opacity: 0.72;
+}
+.vx-tile.is-muted {
+  opacity: 0.72;
 }

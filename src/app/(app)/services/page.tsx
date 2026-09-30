@@ -14,7 +14,7 @@ import { pageContext } from '@/lib/context';
 import { colourCss } from '@/lib/palette';
 import { addMonths } from '@/lib/periods';
 import { groupTypes } from '@/lib/service-categories';
-import { listServiceTypes, listServices, serviceHome } from '@/lib/services';
+import { listServiceTypes, listServices } from '@/lib/services';
 import {
   servicesMonth,
   type MonthEntry,
@@ -102,12 +102,12 @@ export default async function ServicesPage({
         ? tm('bills', { count: i.bills.length })
         : '';
 
-  const row = (i: MonthItem, sub = false) => {
+  const row = (i: MonthItem) => {
     const s = i.service;
     return (
       <Link
         key={s.id}
-        href={sub ? serviceHome(s) : `/services/${s.id}`}
+        href={`/services/${s.id}`}
         className={`sm-row${i.bills.length ? '' : ' is-quiet'}`}
         style={{ ['--svc' as string]: colourCss(s.colour) }}
       >
@@ -174,7 +174,7 @@ export default async function ServicesPage({
           </span>
         </summary>
         <div className="sm-sub">
-          {e.items.map((i) => row(i, true))}
+          {e.items.map((i) => row(i))}
           <Link href={page} className="sm-open small">
             {tm('open', { name })}
             <Icon name="chevron-right" width={14} height={14} />

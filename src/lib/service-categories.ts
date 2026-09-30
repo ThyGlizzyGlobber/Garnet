@@ -26,9 +26,8 @@ export function groupTypes<T extends { category?: string | null }>(types: T[]) {
 /**
  * Categories that are a main service of their own, holding their types as
  * sub-services: Vehicles (Registration, Car insurance…), Health (Health
- * insurance, Ambulance cover) and Lifestyle (Gym…). A type that holds
- * sub-services of its own (Subscriptions, Donations) stays its own main
- * service whatever its category. Vehicles' bills are also filed under the
+ * insurance, Ambulance cover) and Lifestyle (Gym, Donations…). Subscriptions
+ * stays its own main service (see OWN_MAIN_SERVICES). Vehicles' bills are also filed under the
  * household's vehicles (src/lib/assets.ts).
  */
 const MAIN_CATEGORIES = ['vehicle', 'health', 'lifestyle'] as const;
@@ -47,11 +46,16 @@ export function isGroupedCategory(
   return (MAIN_CATEGORIES as readonly string[]).includes(category ?? '');
 }
 
-/** Is this type one of a main service's sub-services (Registration under Vehicles)? */
-export const inMainCategory = (ty: {
-  category?: string | null;
-  hasSubServices?: boolean;
-}): boolean => isGroupedCategory(ty.category) && !ty.hasSubServices;
+/**
+ * Types that are a main service of their own even though their category is
+ * one: Subscriptions has its own page, a list of every subscription.
+ * (Donations, with a service per charity, sits under Lifestyle.)
+ */
+const OWN_MAIN_SERVICES = new Set(['subscriptions']);
+
+/** Is this type one of a main service's sub-services (Registration under Vehicles, Gym under Lifestyle)? */
+export const inMainCategory = (ty: { slug: string; category?: string | null }): boolean =>
+  isGroupedCategory(ty.category) && !OWN_MAIN_SERVICES.has(ty.slug);
 
 /** Bills of this category are filed under vehicles; null for every other category. */
 export function assetKindOf(category: string | null | undefined): 'vehicle' | null {

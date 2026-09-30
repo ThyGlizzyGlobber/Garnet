@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react';
 import { getTranslations } from 'next-intl/server';
 import { lowerFirst, rowCtx, statusLabel } from '@/components/app/bill-rows';
 import { MonthBars } from '@/components/charts/month-bars';
@@ -7,6 +6,7 @@ import { YearAhead } from '@/components/charts/year-ahead';
 import { Card } from '@/components/ui';
 import { SectionHead } from '@/components/ui/blocks';
 import { Swatch } from '@/components/ui/colour';
+import { Chip, StatusChip } from '@/components/ui/chip';
 import type { PageContext } from '@/lib/context';
 import type { MainOverview } from '@/lib/main-overview';
 
@@ -238,51 +238,32 @@ export async function BreakdownCard({
   );
 }
 
-/**
- * A main service's page laid out like a service's own (Health, Lifestyle,
- * Subscriptions): the year ahead and each month on the left with the cards
- * under them; beside them the four figures and where the money goes.
- */
-export async function OverviewLayout({
+/** The foot of a tile: what's next (its kind or service, amount and when), or that nothing is. */
+export async function NextLine({
   ctx,
-  overview: o,
-  count,
-  countSub,
-  seriesName,
-  asideTop,
-  children,
+  next,
+  name,
 }: {
   ctx: PageContext;
-  overview: MainOverview;
-  /** The fourth figure: how many services, and a line under it. */
-  count: number;
-  countSub: string;
-  seriesName: SeriesName;
-  asideTop?: ReactNode;
-  children: ReactNode;
+  next: MainOverview['next'];
+  /** Its series' name ("Rego"), or null to leave it out (a service's own tile). */
+  name: SeriesName | null;
 }) {
   const t = await getTranslations('main.overview');
+  const rc = rowCtx(ctx, await getTranslations('ui'));
+  if (!next) return <span className="muted small">{t('nothingNext')}</span>;
   return (
-    <div className="d3-cols">
-      <div className="d3-main">
-        <YearAheadCard ctx={ctx} overview={o} seriesName={seriesName} />
-        <MonthsCard ctx={ctx} overview={o} seriesName={seriesName} />
-        {children}
-      </div>
-      <aside className="d3-aside">
-        {asideTop}
-        <NumsCard
-          ctx={ctx}
-          overview={o}
-          seriesName={seriesName}
-          fourth={{ label: t('services'), value: String(count), sub: countSub }}
-        />
-        <BreakdownCard
-          ctx={ctx}
-          title={t('byService')}
-          parts={o.bySeries.map((s) => ({ ...s, label: seriesName(s.key, s.label) }))}
-        />
-      </aside>
-    </div>
+    <>
+      <span className="small">
+        <span className="muted">{t('next')} · </span>
+        {name ? `${name(next.seriesKey, next.seriesKey)} ` : ''}
+        {next.amountMinor === null ? '' : ctx.money(next.amountMinor)}
+      </span>
+      {next.status ? (
+        <StatusChip status={{ label: statusLabel(rc, next.status), tone: next.status.tone }} />
+      ) : (
+        <Chip tone="info">{lowerFirst(t('expectedOn', { date: rc.dateYear(next.dueDate) }))}</Chip>
+      )}
+    </>
   );
 }

@@ -4,13 +4,14 @@ import { getTranslations } from 'next-intl/server';
 import { billRowFor, rowCtx, statusLabel, upcomingRowFor } from '@/components/app/bill-rows';
 import { PeriodBars } from '@/components/charts/period-bars';
 import { PriceSteps } from '@/components/charts/price-steps';
+import { MONTHS_PER_BILL } from '@/lib/projections';
 import { StackBar } from '@/components/charts/stack-bar';
 import { Card, LinkButton } from '@/components/ui';
 import { Delta, Kv, Notice, PageTitle, SectionHead } from '@/components/ui/blocks';
 import { Chip } from '@/components/ui/chip';
 import { Avatar, Disc } from '@/components/ui/colour';
 import { BackLink } from '@/components/ui/controls';
-import { isGroupedCategory } from '@/lib/service-categories';
+import { inMainCategory } from '@/lib/service-categories';
 import { BillRow, Rows } from '@/components/ui/rows';
 import { Pager } from '@/components/ui/pager';
 import { pageParam, paginate } from '@/lib/paging';
@@ -23,7 +24,7 @@ import { visibleTo } from '@/lib/scope';
 import { seasonNoticeText } from '@/lib/season-text';
 import { serviceOverview } from '@/lib/service-overview';
 import { getMember } from '@/lib/members';
-import { chargedAfterCancel, getService, serviceHome } from '@/lib/services';
+import { chargedAfterCancel, getService, mainServiceOf } from '@/lib/services';
 import { listBills } from '@/lib/bills';
 import { InlineAction } from '@/components/ui/form';
 import { cancelServiceAction, resumeServiceAction, setRecurringAction } from '../actions';
@@ -224,6 +225,13 @@ export default async function ServicePage({
     page: (n: number) => tp('page', { n }),
   };
   const tsp = await getTranslations('services.split');
+  // The price chart's months: "Jul", or "Jul 25" when a month would repeat (yearly bills).
+  const priceMonths = o.price ? o.price.bills.map(({ bill: b }) => b.periodStart.slice(0, 7)) : [];
+  const repeats = new Set(priceMonths.map((m) => m.slice(5))).size < priceMonths.length;
+  const priceLabel = (d: string) =>
+    repeats || MONTHS_PER_BILL[svc.cadence] === 12
+      ? `${month(d.slice(0, 7), 'short')} ${d.slice(2, 4)}`
+      : month(d.slice(0, 7), 'short');
   const chartTitle = o.barsAreUsage
     ? t('chartUsage')
     : o.barsPerBill
@@ -232,10 +240,10 @@ export default async function ServicePage({
 
   return (
     <div className="scr d3-service">
-      {sub || isGroupedCategory(svc.type.category) ? (
-        // A sub-service: back to its card on its main service's page.
-        <BackLink href={serviceHome(svc)}>
-          {sub ? svc.type.label : tm(`main.${svc.type.category}`)}
+      {mainServiceOf(svc) ? (
+        // A sub-service: back to its main service (Subscriptions, Health…).
+        <BackLink href={mainServiceOf(svc)!}>
+          {inMainCategory(svc.type) ? tm(`main.${svc.type.category}`) : svc.type.label}
         </BackLink>
       ) : (
         <BackLink href="/services">{ts('title')}</BackLink>
@@ -277,7 +285,7 @@ export default async function ServicePage({
                 label={t('price.title')}
                 points={[
                   ...o.price.bills.map(({ bill: b, status }, i, all) => ({
-                    label: month(b.periodStart.slice(0, 7), 'short'),
+                    label: priceLabel(b.periodStart),
                     value: b.amountMinor,
                     price:
                       i === 0 || all[i - 1]!.bill.amountMinor !== b.amountMinor
@@ -294,7 +302,7 @@ export default async function ServicePage({
                   ...(o.price.upcoming
                     ? [
                         {
-                          label: month(o.price.upcoming.dueDate.slice(0, 7), 'short'),
+                          label: priceLabel(o.price.upcoming.dueDate),
                           value: o.price.upcoming.amountMinor,
                           price:
                             o.price.upcoming.amountMinor !== o.price.currentMinor

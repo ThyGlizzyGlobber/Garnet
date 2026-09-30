@@ -19,15 +19,9 @@ import { formatMonthRange, formatPeriod } from '@/lib/format';
 import { canChoosePlan, paysByInstalments } from '@/lib/instalments';
 import { getMember, hasHousemates } from '@/lib/members';
 import { asksMember, mayChangeOwner, mayMoveBill } from '@/lib/ownership';
-import {
-  chargedAfterCancel,
-  groupServices,
-  listServices,
-  listServiceTypes,
-  serviceHome,
-} from '@/lib/services';
+import { chargedAfterCancel, groupServices, listServices, listServiceTypes } from '@/lib/services';
 import { listAssets } from '@/lib/assets';
-import { assetKindOf, inMainCategory } from '@/lib/service-categories';
+import { assetKindOf } from '@/lib/service-categories';
 import { visibleTo } from '@/lib/scope';
 import { unusualOf } from '@/lib/service-overview';
 import { unitLabel } from '@/lib/units';
@@ -184,15 +178,9 @@ export default async function BillPage({ params }: { params: Promise<{ id: strin
 
   return (
     <div className="scr d3-bill">
-      {/* Back to where its service is shown: its card on Health, Vehicles, Subscriptions… */}
-      <BackLink href={b.asset ? `/services/vehicles/${b.asset.id}` : serviceHome(b.service)}>
-        {b.asset
-          ? b.asset.name
-          : inMainCategory(b.service.type)
-            ? ta(`main.${b.service.type.category}`)
-            : b.service.type.hasSubServices
-              ? b.service.type.label
-              : b.service.name}
+      {/* Back to its vehicle's page, or its service's. */}
+      <BackLink href={b.asset ? `/services/vehicles/${b.asset.id}` : `/services/${b.service.id}`}>
+        {b.asset ? b.asset.name : b.service.name}
       </BackLink>
       <div className="d3-bill-grid">
         <div className="d3-doc">

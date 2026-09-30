@@ -8,7 +8,7 @@ import { runMigrations } from '@/db/migrate';
 import { sourceDocument, type Household, type Member } from '@/db/schema';
 import { archiveDocument } from '@/ingest/archive';
 import { processDocument } from '@/ingest/pipeline';
-import { serviceCardsView, vehicleView, vehiclesView } from '@/lib/main-view';
+import { serviceCardsView, subscriptionsView, vehicleView, vehiclesView } from '@/lib/main-view';
 import { assetKindOf } from '@/lib/service-categories';
 import {
   autoFileBill,
@@ -493,6 +493,59 @@ describe('the pages', () => {
       ['Ambulance Victoria', 0],
     ]);
     expect(assetKindOf('health')).toBeNull();
+  });
+
+  it('Donations sit under Lifestyle; Subscriptions keep a page of their own, priced a month', () => {
+    const { hh, mum, svc } = setup();
+    svc('gym', 'Peak Fitness');
+    const charity = createService(
+      hh.id,
+      { typeSlug: 'donations', name: 'Red Cross', provider: 'Red Cross', cadence: 'monthly' },
+      db,
+    );
+    const netflix = createService(
+      hh.id,
+      { typeSlug: 'subscriptions', name: 'Netflix', provider: 'Netflix', cadence: 'monthly' },
+      db,
+    );
+    const yearly = createService(
+      hh.id,
+      { typeSlug: 'subscriptions', name: 'Cloud', provider: 'Cloud', cadence: 'annual' },
+      db,
+    );
+    bill(hh, netflix.id, {
+      amountMinor: 2299,
+      periodStart: '2026-08-05',
+      periodEnd: '2026-09-04',
+      dueDate: '2026-08-05',
+    });
+    bill(hh, netflix.id, {
+      amountMinor: 2299,
+      periodStart: '2026-09-05',
+      periodEnd: '2026-10-04',
+      dueDate: '2026-09-05',
+    });
+    bill(hh, yearly.id, {
+      amountMinor: 12000,
+      periodStart: '2026-01-10',
+      periodEnd: '2027-01-09',
+      dueDate: '2026-01-10',
+    });
+    bill(hh, charity.id, { amountMinor: 2500 });
+    const groups = groupServices(listServices(hh.id, {}, db));
+    expect(groups.find((g) => g.category === 'lifestyle')?.services.map((s) => s.typeSlug)).toEqual(
+      ['gym', 'donations'],
+    );
+    expect(groups.find((g) => g.typeSlug === 'subscriptions')?.services).toHaveLength(2);
+    const lifestyle = serviceCardsView(hh, mum, { category: 'lifestyle' }, TODAY, db);
+    expect(lifestyle.cards.map((c) => c.service.name)).toContain('Red Cross');
+    const subs = subscriptionsView(hh, mum, TODAY, db);
+    // Largest a month first; a yearly plan counts a twelfth.
+    expect(subs.going.map((l) => [l.service.name, l.monthlyMinor])).toEqual([
+      ['Netflix', 2299],
+      ['Cloud', 1000],
+    ]);
+    expect(subs.monthlyMinor).toBe(3299);
   });
 
   it('bills can be found by their vehicle, and filtered to Vehicles', () => {

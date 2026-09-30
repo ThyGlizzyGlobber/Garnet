@@ -1,13 +1,10 @@
-import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
-import { billRowFor, lowerFirst, rowCtx, statusLabel } from '@/components/app/bill-rows';
-import { Icon } from '@/components/app/icons';
+import { billRowFor, rowCtx } from '@/components/app/bill-rows';
 import { MainCard } from '@/components/app/main-card';
 import { StackBar } from '@/components/charts/stack-bar';
 import { LinkButton } from '@/components/ui';
 import { EmptyCard, Notice, PageTitle, SectionHead } from '@/components/ui/blocks';
-import { Chip, StatusChip } from '@/components/ui/chip';
-import { Disc, Swatch } from '@/components/ui/colour';
+import { Swatch } from '@/components/ui/colour';
 import { BackLink } from '@/components/ui/controls';
 import { BillRow, Rows } from '@/components/ui/rows';
 import type { BillListItem } from '@/lib/bills';
@@ -15,7 +12,8 @@ import type { PageContext } from '@/lib/context';
 import type { VehiclesView } from '@/lib/main-view';
 import { fileBillAction } from './asset-actions';
 import { FileBillForm } from './asset-form';
-import { BreakdownCard, NumsCard, YearAheadCard } from './overview';
+import { BreakdownCard, NextLine, NumsCard, YearAheadCard } from './overview';
+import { SummaryTile } from '@/components/app/summary-tile';
 
 /** "Rego" for Vehicle registration: the short names vehicle bills go by. */
 export async function kindNamer() {
@@ -76,7 +74,71 @@ export async function VehiclesPage({ ctx, view }: { ctx: PageContext; view: Vehi
         </EmptyCard>
       ) : (
         <>
-          {/* All the vehicles together. */}
+          {/* Your vehicles first, each opening its own page. */}
+          <SectionHead title={tv('each')} />
+          <div className="vx-grid">
+            {view.cards.map((c) => {
+              const v = c.overview;
+              return (
+                <SummaryTile
+                  key={c.asset.id}
+                  href={`/services/vehicles/${c.asset.id}`}
+                  icon="car"
+                  colour={o.series[0]?.colour ?? '#e87ba4'}
+                  title={c.asset.name}
+                  meta={
+                    <>
+                      {c.asset.identifier && <span className="mono">{c.asset.identifier}</span>}
+                      {c.asset.identifier ? ' · ' : ''}
+                      {c.asset.ownerMemberId === me.id ? t('yours') : tv('household')}
+                    </>
+                  }
+                  figure={whole(v.yearMinor)}
+                  figureSub={tv('tileYear', { amount: whole(v.perMonthMinor) })}
+                  mix={
+                    v.bySeries.length > 0 ? (
+                      <span className="vx-mix">
+                        <StackBar
+                          thin
+                          parts={v.bySeries.map((s) => ({
+                            value: s.minor,
+                            colour: s.colour,
+                            label: kindName(s.key, s.label),
+                            text: money(s.minor),
+                            tip: `${kindName(s.key, s.label)} · ${money(s.minor)}`,
+                          }))}
+                        />
+                        <span className="vx-kinds">
+                          {v.bySeries.map((s) => (
+                            <span key={s.key}>
+                              <Swatch colour={s.colour} />
+                              {kindName(s.key, s.label)} {whole(s.minor)}
+                            </span>
+                          ))}
+                        </span>
+                      </span>
+                    ) : (
+                      <span className="muted small">{t('noBills')}</span>
+                    )
+                  }
+                  next={<NextLine ctx={ctx} next={v.next} name={kindName} />}
+                />
+              );
+            })}
+          </div>
+
+          {view.waiting.length > 0 && (
+            <Notice
+              tone="warn"
+              icon="alert"
+              title={tv('waitingCount', { count: view.waiting.length })}
+              body={view.cards.length ? tv('waitingBody') : tv('waitingBodyEmpty')}
+              href="#waiting"
+            />
+          )}
+
+          {/* Then all of them together. */}
+          <SectionHead title={tv('together')} className="mt-2" />
           <div className="vx-top">
             <NumsCard
               ctx={ctx}
@@ -96,101 +158,6 @@ export async function VehiclesPage({ ctx, view }: { ctx: PageContext; view: Vehi
               title={to('byKind')}
               parts={o.bySeries.map((s) => ({ ...s, label: kindName(s.key, s.label) }))}
             />
-          </div>
-
-          {view.waiting.length > 0 && (
-            <Notice
-              tone="warn"
-              icon="alert"
-              title={tv('waitingCount', { count: view.waiting.length })}
-              body={view.cards.length ? tv('waitingBody') : tv('waitingBodyEmpty')}
-              href="#waiting"
-            />
-          )}
-
-          {/* A tile per vehicle, each opening its own page. */}
-          <SectionHead title={tv('each')} className="mt-2" />
-          <div className="vx-grid">
-            {view.cards.map((c) => {
-              const v = c.overview;
-              const next = v.next;
-              return (
-                <Link
-                  key={c.asset.id}
-                  href={`/services/vehicles/${c.asset.id}`}
-                  className="glass vx-tile rounded-card"
-                >
-                  <span className="vx-h">
-                    <Disc icon="car" colour={o.series[0]?.colour ?? '#e87ba4'} />
-                    <span className="vx-t">
-                      <b>{c.asset.name}</b>
-                      <span className="muted small">
-                        {c.asset.identifier && <span className="mono">{c.asset.identifier}</span>}
-                        {c.asset.identifier ? ' · ' : ''}
-                        {c.asset.ownerMemberId === me.id ? t('yours') : tv('household')}
-                      </span>
-                    </span>
-                    <Icon name="chevron-right" width={18} height={18} className="vx-chev" />
-                  </span>
-                  <span className="vx-fig">
-                    <span className="fig fig-md">{whole(v.yearMinor)}</span>
-                    <span className="muted small">
-                      {tv('tileYear', { amount: whole(v.perMonthMinor) })}
-                    </span>
-                  </span>
-                  {v.bySeries.length > 0 ? (
-                    <span className="vx-mix">
-                      <StackBar
-                        thin
-                        parts={v.bySeries.map((s) => ({
-                          value: s.minor,
-                          colour: s.colour,
-                          label: kindName(s.key, s.label),
-                          text: money(s.minor),
-                          tip: `${kindName(s.key, s.label)} · ${money(s.minor)}`,
-                        }))}
-                      />
-                      <span className="vx-kinds">
-                        {v.bySeries.map((s) => (
-                          <span key={s.key}>
-                            <Swatch colour={s.colour} />
-                            {kindName(s.key, s.label)} {whole(s.minor)}
-                          </span>
-                        ))}
-                      </span>
-                    </span>
-                  ) : (
-                    <span className="muted small">{t('noBills')}</span>
-                  )}
-                  <span className="vx-next">
-                    {next ? (
-                      <>
-                        <span className="small">
-                          <span className="muted">{to('next')} · </span>
-                          {kindName(next.seriesKey, next.seriesKey)}
-                          {next.amountMinor === null ? '' : ` ${money(next.amountMinor)}`}
-                        </span>
-                        {next.status ? (
-                          <StatusChip
-                            status={{ label: statusLabel(rc, next.status), tone: next.status.tone }}
-                          />
-                        ) : (
-                          <Chip tone="info">
-                            {lowerFirst(to('expectedOn', { date: rc.dateYear(next.dueDate) }))}
-                          </Chip>
-                        )}
-                      </>
-                    ) : (
-                      <span className="muted small">{to('nothingNext')}</span>
-                    )}
-                  </span>
-                </Link>
-              );
-            })}
-            <Link href="/services/vehicles/new" className="vx-tile vx-add rounded-card">
-              <Icon name="plus" width={22} height={22} />
-              <span>{tv('add')}</span>
-            </Link>
           </div>
 
           {view.cards.length > 0 && <YearAheadCard ctx={ctx} overview={o} seriesName={kindName} />}

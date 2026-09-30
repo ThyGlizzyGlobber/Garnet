@@ -13,12 +13,7 @@ import { ulid } from '@/lib/ids';
 import { DEFAULT_COLOUR, PALETTE } from '@/lib/palette';
 import { getMember } from '@/lib/members';
 import { ownerCondition, type Scope } from '@/lib/scope';
-import {
-  CATEGORY_ICONS,
-  inMainCategory,
-  isGroupedCategory,
-  type GroupedCategory,
-} from '@/lib/service-categories';
+import { CATEGORY_ICONS, inMainCategory, type GroupedCategory } from '@/lib/service-categories';
 
 export type ServiceWithType = Service & { type: ServiceType };
 
@@ -389,7 +384,7 @@ export function groupServices<S extends { type: ServiceType }>(services: S[]): S
   const out: ServiceGroup<S>[] = [];
   const byKey = new Map<string, ServiceGroup<S>>();
   for (const s of services) {
-    // Subscriptions keeps its own providers even though it's a lifestyle type.
+    // Subscriptions keeps its own page even though it's a lifestyle type.
     const category = inMainCategory(s.type) ? (s.type.category as GroupedCategory) : null;
     if (!category && !s.type.hasSubServices) {
       out.push({
@@ -444,18 +439,15 @@ export function byType<S extends { type: ServiceType }>(
 }
 
 /**
- * Where a service is shown among the others: its card on its main service's
- * page (Netflix on Subscriptions, Bupa on Health, opened), Vehicles showing
- * its kind of bill, or its own page for a service on its own.
+ * The main service a service belongs to, as a page: Subscriptions for a
+ * subscription, Vehicles, Health or Lifestyle for theirs; null for a service
+ * on its own. Back links and the nav lead there.
  */
-export function serviceHome(svc: {
-  id: string;
+export function mainServiceOf(svc: {
   typeSlug: string;
-  type: { category: string; hasSubServices: boolean };
-}): string {
-  if (svc.type.hasSubServices) return `/services/group/${svc.typeSlug}?open=${svc.id}#s-${svc.id}`;
-  if (svc.type.category === 'vehicle') return '/services/category/vehicle';
-  if (isGroupedCategory(svc.type.category))
-    return `/services/category/${svc.type.category}?open=${svc.id}#s-${svc.id}`;
-  return `/services/${svc.id}`;
+  type: { slug: string; category: string; hasSubServices: boolean };
+}): string | null {
+  if (inMainCategory(svc.type)) return `/services/category/${svc.type.category}`;
+  if (svc.type.hasSubServices) return `/services/group/${svc.typeSlug}`;
+  return null;
 }

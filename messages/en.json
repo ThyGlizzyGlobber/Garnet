@@ -2575,7 +2575,7 @@
     "emptyTitle": "Nothing under {name} yet",
     "emptyBody": {
       "health": "Add your health insurance and ambulance cover, or forward a bill and it’s set up for you.",
-      "lifestyle": "Add your gym and other memberships, or forward a bill and it’s set up for you."
+      "lifestyle": "Add your gym, memberships and donations, or forward a bill and it’s set up for you."
     },
     "whoseFollows": "Whose it is follows {name}, the vehicle it’s filed under.",
     "kinds": {
@@ -2630,7 +2630,8 @@
       "addedBy": "Added by",
       "you": "You",
       "detailsNote": "Who pays and how each kind is split is set on its service.",
-      "whoseLabel": "Whose"
+      "whoseLabel": "Whose",
+      "together": "All vehicles together"
     },
     "overview": {
       "ahead": "The year ahead",
@@ -2654,6 +2655,24 @@
       "byVehicle": "By vehicle"
     },
     "stoppedCount": "{count} stopped or cancelled",
-    "allGoing": "All still going"
+    "allGoing": "All still going",
+    "tileYear": "last 12 months · about {amount} a month",
+    "yourServices": "Your services",
+    "together": "All together",
+    "subs": {
+      "add": "Add a subscription",
+      "lede": "{count, plural, =0 {No subscriptions going} one {# subscription} other {# subscriptions}} · {amount} a month",
+      "together": "All subscriptions",
+      "aMonth": "a month",
+      "aMonthFor": "a month for {count, plural, one {# subscription} other {# subscriptions}}",
+      "aYear": "{amount} a year",
+      "yearSpent": "{amount} charged in the last 12 months.",
+      "nextOn": "next {date}",
+      "cancelledOn": "Cancelled {date}",
+      "cancelledHead": "Cancelled",
+      "cancelled": "Cancelled",
+      "stillCharging": "Charged after cancelling",
+      "noCharges": "No charges yet"
+    }
   }
 }
