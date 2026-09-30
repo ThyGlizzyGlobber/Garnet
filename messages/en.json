@@ -28,7 +28,9 @@
     "showSubs": "Show sub-services",
     "hideSubs": "Hide sub-services",
     "essentials": "Essentials",
-    "everythingElse": "Everything else"
+    "everythingElse": "Everything else",
+    "showSection": "Show",
+    "hideSection": "Hide"
   },
   "setup": {
     "title": "Set up your household.",

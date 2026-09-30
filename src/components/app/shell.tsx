@@ -7,6 +7,7 @@ import type { ShellEntry, ShellView } from '@/lib/shell';
 import { AddBillButton } from './add-bill';
 import { Icon } from './icons';
 import { NavGroup } from './nav-group';
+import { NavSection } from './nav-section';
 import { OfflineBar } from './offline-bar';
 import { NavItems, SectionName, type NavItem } from './nav-items';
 
@@ -29,6 +30,9 @@ export interface ShellLabels {
   /** The nav's two service sections: the everyday bills, and the rest. */
   essentials: string;
   everythingElse: string;
+  /** A section heading's fold: "Show" / "Hide". */
+  showSection: string;
+  hideSection: string;
   thisMonth: string;
   justYours: string;
   noServices: string;
@@ -125,28 +129,39 @@ export function AppShell({
         <div className="nc-svcs">
           {view.services.length + view.mine.length > 0 ? (
             <>
-              {/* The everyday bills first, then the main services and the rest. */}
+              {/* The everyday bills first, then the main services and the rest;
+                  each section folds away from its heading. */}
               {essentials.length > 0 && (
-                <>
-                  <div className="nav-sec">
-                    {labels.essentials}
-                    <span>{labels.thisMonth}</span>
-                  </div>
+                <NavSection
+                  id="essentials"
+                  title={labels.essentials}
+                  aside={labels.thisMonth}
+                  showLabel={labels.showSection}
+                  hideLabel={labels.hideSection}
+                >
                   {essentials.map(row)}
-                </>
+                </NavSection>
               )}
               {others.length > 0 && (
-                <div className="nav-sec">
-                  {labels.everythingElse}
-                  {essentials.length === 0 && <span>{labels.thisMonth}</span>}
-                </div>
+                <NavSection
+                  id="everything-else"
+                  title={labels.everythingElse}
+                  aside={essentials.length === 0 ? labels.thisMonth : undefined}
+                  showLabel={labels.showSection}
+                  hideLabel={labels.hideSection}
+                >
+                  {others.map(row)}
+                </NavSection>
               )}
-              {others.map(row)}
               {view.mine.length > 0 && (
-                <>
-                  <div className="nav-sec">{labels.justYours}</div>
+                <NavSection
+                  id="just-yours"
+                  title={labels.justYours}
+                  showLabel={labels.showSection}
+                  hideLabel={labels.hideSection}
+                >
                   {view.mine.map(row)}
-                </>
+                </NavSection>
               )}
             </>
           ) : (
