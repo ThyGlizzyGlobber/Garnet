@@ -98,7 +98,7 @@ export function upcomingRowFor(
 export function billRowFor(
   b: BillListItem,
   c: RowCtx,
-  o: { inService?: boolean; share?: boolean; noDisc?: boolean } = {},
+  o: { inService?: boolean; share?: boolean; noDisc?: boolean; noAsset?: boolean } = {},
 ): BillRowModel {
   const due = billDue(b, c.today);
   const byInstalments = paysByInstalments(b);
@@ -128,6 +128,8 @@ export function billRowFor(
       : range(b, c.locale);
     sub = usage ? `${first} · ${usage}` : first;
   }
+  // The vehicle or policy it's for, unless it's listed under it already.
+  if (b.asset && !o.noAsset) sub = `${b.asset.name} · ${sub}`;
   const mine = b.shares.find(
     (s) => s.memberId === c.viewerId && s.instalment === (due.instalment?.n ?? 0),
   );

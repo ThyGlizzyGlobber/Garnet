@@ -30,6 +30,8 @@ export interface ShellLabels {
   noServices: string;
   /** The arrow on a main service with sub-services. */
   showSubs: string;
+  /** Categories that are main services: "Vehicles", "Health". */
+  main: Record<string, string>;
   hideSubs: string;
   /** The product's name, under the household's on a phone's Home. */
   product: string;
@@ -71,19 +73,19 @@ export function AppShell({
   const row = (s: ShellEntry) =>
     s.kind === 'group' ? (
       <NavGroup
-        key={`g-${s.typeSlug}`}
-        href={`/services/group/${s.typeSlug}`}
-        childHrefs={s.children.map((c) => `/services/${c.id}`)}
-        label={s.name}
+        key={s.key}
+        href={s.href}
+        childHrefs={s.children.map((c) => c.href)}
+        label={s.category ? (labels.main[s.category] ?? s.name) : s.name}
         showLabel={labels.showSubs}
         hideLabel={labels.hideSubs}
         colour={colourCss(s.colour)}
-        row={line(s)}
+        row={line(s.category ? { ...s, name: labels.main[s.category] ?? s.name } : s)}
       >
         {s.children.map((c) => (
           <Link
             key={c.id}
-            href={`/services/${c.id}`}
+            href={c.href}
             className="nc-s nc-sub"
             style={{ ['--svc' as string]: colourCss(c.colour) }}
           >
@@ -94,7 +96,7 @@ export function AppShell({
     ) : (
       <Link
         key={s.id}
-        href={`/services/${s.id}`}
+        href={s.href}
         className="nc-s"
         style={{ ['--svc' as string]: colourCss(s.colour) }}
       >

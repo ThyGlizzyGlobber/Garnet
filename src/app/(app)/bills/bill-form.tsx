@@ -19,6 +19,8 @@ export interface BillFormService {
   cadence: string;
   /** Recurring now: the same charge every cadence. */
   recurring?: boolean;
+  /** Its bills are filed under a vehicle or policy (Vehicles, Health). */
+  kind?: 'vehicle' | 'policy' | null;
 }
 
 export interface BillFormValues {
@@ -36,6 +38,8 @@ export interface BillFormValues {
   externalRef: string;
   notes: string;
   paidToProvider: boolean;
+  /** The vehicle or policy it's for ('' = none yet). */
+  assetId?: string;
 }
 
 /** How a service splits a bill, for the preview beside the form: each person's fraction. */
@@ -63,6 +67,7 @@ export function BillForm({
   cancelHref,
   whose,
   splits = {},
+  assets = [],
 }: {
   action: FormAction;
   /** Editing: deletes the bill (a second action on the same form). */
@@ -80,8 +85,11 @@ export function BillForm({
   whose?: { value: 'mine' | 'household'; split: boolean };
   /** Per service, how a bill of it is split (household services that split). */
   splits?: Record<string, SplitPreview>;
+  /** Vehicles and policies this member sees ("Yours" already in the name). */
+  assets?: { id: string; name: string; kind: 'vehicle' | 'policy' }[];
 }) {
   const t = useTranslations('bills.form');
+  const ta = useTranslations('assets');
   const tc = useTranslations('common');
   const [serviceId, setServiceId] = useState(initial.serviceId);
   const svc = services.find((s) => s.id === serviceId);
@@ -89,6 +97,11 @@ export function BillForm({
   const [amount, setAmount] = useState(initial.amount);
   const [whoseValue, setWhoseValue] = useState(whose?.value ?? 'household');
   const [recurring, setRecurring] = useState(!!svc?.recurring);
+  const [assetId, setAssetId] = useState(initial.assetId ?? '');
+  const kind = svc?.kind ?? null;
+  const choices = kind ? assets.filter((a) => a.kind === kind) : [];
+  // A vehicle or policy decides whose the bill is.
+  const byAsset = choices.some((a) => a.id === assetId);
   const split = splits[serviceId];
   const minor = parseMoneyToMinor(amount, currency) ?? 0;
   const money = (m: number) => formatMoney(m, currency, locale);
@@ -126,6 +139,22 @@ export function BillForm({
                 </Select>
                 {locked && <input type="hidden" name="serviceId" value={serviceId} />}
               </Field>
+              {kind && choices.length > 0 && (
+                <Field label={ta(`${kind}.label`)} hint={ta(`${kind}.formHint`)}>
+                  <Select
+                    name="assetId"
+                    value={byAsset ? assetId : ''}
+                    onChange={(e) => setAssetId(e.target.value)}
+                  >
+                    <option value="">{ta(`${kind}.none`)}</option>
+                    {choices.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.name}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+              )}
               <div className="fld-row">
                 <Field label={t('amount', { currency })} error={errors.amount}>
                   <Input
@@ -284,7 +313,7 @@ export function BillForm({
                   </ToggleRow>
                 </Card>
               )}
-              {whose && (
+              {whose && !byAsset && (
                 <Card>
                   <SectionHead title={t('whose')} />
                   <input type="hidden" name="whose" value={whoseValue} />

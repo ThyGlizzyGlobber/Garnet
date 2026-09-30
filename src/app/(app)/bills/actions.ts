@@ -6,7 +6,9 @@ import { getReviewItem } from '@/lib/review';
 import { refileDocuments } from '@/lib/filing';
 import type { Member } from '@/db/schema';
 import { visibleTo } from '@/lib/scope';
-import { getService } from '@/lib/services';
+import { getService, listServiceTypes } from '@/lib/services';
+import { fileBillUnder } from '@/lib/assets';
+import { assetKindOf } from '@/lib/service-categories';
 import { setRecurring } from '@/lib/recurring';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
@@ -130,6 +132,15 @@ export async function createBillAction(_prev: ActionState, fd: FormData): Promis
   let id: string;
   try {
     id = createBill(hh.id, { ...input, source: 'manual', createdByMemberId: me.id }).id;
+    // For its vehicle or policy (moving to its side). The bill stands either
+    // way; if it can't be filed there it waits under "No vehicle yet".
+    const assetId = str(fd, 'assetId');
+    if (assetId)
+      try {
+        fileBillUnder(hh.id, id, { assetId }, { me });
+      } catch {
+        // Its page offers the choice again.
+      }
     applyRecurring(me, input.serviceId, fd);
     notifyInBackground(notifyBillCreated(hh.id, id, { except: me.id }));
   } catch (e) {
@@ -166,8 +177,13 @@ export async function updateBillAction(_prev: ActionState, fd: FormData): Promis
       ? (existing.paidToProviderAt ?? input.paidToProviderAt)
       : null;
     updateBill(hh.id, id, { ...input, paidToProviderAt });
+    // Its vehicle or policy, when the form asked (a Vehicles or Health service).
+    const assetId = fd.has('assetId') ? str(fd, 'assetId') || null : undefined;
+    if (assetId !== undefined && assetId !== getBill(hh.id, id)?.assetId)
+      fileBillUnder(hh.id, id, { assetId }, { me });
     // "Whose is it?": switches the whole service (and its bills) when changed.
-    const whose = str(fd, 'whose');
+    // Not asked when a vehicle or policy decides it.
+    const whose = assetId ? '' : str(fd, 'whose');
     const svc = getService(hh.id, input.serviceId);
     if (
       svc &&
@@ -311,20 +327,43 @@ export async function moveBillAction(_prev: ActionState, fd: FormData): Promise<
   const te = await errorText();
   const b = visibleBill(me, id);
   if (!b) return { error: te('billNotFound') };
-  const target = visibleService(me, str(fd, 'serviceId'));
-  if (!target) return { error: te('serviceNotFound') };
-  if (!mayMoveBill(me.householdId, me, b, target)) return { error: te('moveNotAllowed') };
+  // svc:<id> (older forms send serviceId), or type:<slug> for a Vehicles or
+  // Health sub-service not set up yet; with the vehicle or policy picked.
+  const raw = str(fd, 'target') || `svc:${str(fd, 'serviceId')}`;
+  const assetId = str(fd, 'assetId') || null;
+  let to: string | null = null;
   try {
-    moveBill(me.householdId, id, target.id);
+    if (raw.startsWith('type:')) {
+      const type = listServiceTypes().find((ty) => ty.slug === raw.slice(5));
+      if (!type || !assetKindOf(type.category)) return { error: te('serviceNotFound') };
+      to = fileBillUnder(me.householdId, id, { assetId, typeSlug: type.slug }, { me }).serviceId;
+    } else {
+      const target = visibleService(me, raw.slice(4));
+      if (!target) return { error: te('serviceNotFound') };
+      if (assetId && assetKindOf(target.type.category)) {
+        // The vehicle decides the side: the picked service when it's on it.
+        to = fileBillUnder(
+          me.householdId,
+          id,
+          { assetId, typeSlug: target.typeSlug, serviceId: target.id },
+          { me },
+        ).serviceId;
+      } else {
+        if (!mayMoveBill(me.householdId, me, b, target)) return { error: te('moveNotAllowed') };
+        moveBill(me.householdId, id, target.id);
+        if (b.assetId) fileBillUnder(me.householdId, id, { assetId: null });
+        to = target.id;
+      }
+    }
     // Its files move to the new service's folder.
     refileDocuments(me.householdId);
   } catch (e) {
     return { error: (e as Error).message };
   }
   revalidatePath('/bills');
-  revalidatePath('/services');
+  revalidatePath('/services', 'layout');
   revalidatePath(`/services/${b.serviceId}`);
-  revalidatePath(`/services/${target.id}`);
+  if (to) revalidatePath(`/services/${to}`);
   revalidatePath('/');
   redirect(`/bills/${id}`);
 }

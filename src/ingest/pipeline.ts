@@ -1,14 +1,16 @@
 import { and, eq } from 'drizzle-orm';
 import { getDb, type Db } from '@/db/client';
-import { bill, sourceDocument, type SourceDocument } from '@/db/schema';
+import { bill, service, sourceDocument, type SourceDocument } from '@/db/schema';
 import { actingMember } from '@/lib/acting-member';
 import { promoteServiceType, serviceForNewProvider, typeFits } from '@/lib/auto-service';
-import { createBill, type BillDetail } from '@/lib/bills';
+import { autoFileBill, refKeys } from '@/lib/assets';
+import { createBill, getBill, type BillDetail } from '@/lib/bills';
 import { getEnv, isLlmConfigured } from '@/lib/env';
 import { refileDocuments } from '@/lib/filing';
 import { getHousehold } from '@/lib/households';
 import { saveBillMetrics } from '@/lib/metrics';
 import { classifyNotice, classifySubject, looksLikeBill } from '@/lib/notices';
+import { confirmOwnership } from '@/lib/ownership';
 import { notifyBillCreated, notifyInBackground, notifyServiceCreated } from '@/lib/notifications';
 import { sameProvider } from '@/lib/provider-match';
 import type { Scope } from '@/lib/scope';
@@ -453,6 +455,21 @@ async function readAndRoute(
     store('needs_review', `This bill couldn't be saved (${(e as Error).message})`, best, attempts);
     return { documentId: doc.id, status: 'needs_review', reason: 'not-saved', result: best };
   }
+  // A plate or policy number one of the vehicles or policies has: filed under
+  // it, on its side (a household car's rego on the household's Registration).
+  // A service set up for this bill and left empty by that goes again.
+  if (autoFileBill(householdId, created.id, documentScope(householdId, doc, db), db)) {
+    const filed = getBill(householdId, created.id, db)!;
+    if (newService && filed.serviceId !== newService) {
+      db.delete(service).where(eq(service.id, newService)).run();
+      newService = null;
+    } else if (newService) {
+      // Whose it is follows the vehicle or policy: nobody needs asking.
+      confirmOwnership(householdId, newService, db);
+    }
+    serviceId = filed.serviceId;
+    created = filed;
+  }
   store('extracted', `Created bill via ${best.extractor}`, best, attempts);
   applyPaymentHints(householdId, serviceId, best.bill, db);
   if (newService) notifyInBackground(notifyServiceCreated(householdId, newService, { db }));
@@ -531,6 +548,7 @@ function createBillFromExtraction(
       // The reader's own remarks stay in the document's record, not on the bill.
       notes: null,
       instalments: b.instalments ?? null,
+      assetRefs: refKeys([...(b.assetRefs ?? []), b.accountRef]),
     },
     db,
   );

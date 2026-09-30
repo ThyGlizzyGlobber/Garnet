@@ -70,14 +70,14 @@ export async function ribbonRenderer(ctx: PageContext, window: ServicesView['win
     return parts.join(' ');
   };
 
-  return function ribbon(s: ServiceRibbon, opts: { sub?: boolean } = {}) {
+  return function ribbon(s: ServiceRibbon, opts: { sub?: boolean; href?: string } = {}) {
     return (
       <Card
         key={s.id}
         className={`d3-svc${opts.sub ? ' d3-svc-sub' : ''}${s.cancelled ? ' is-cancelled' : ''}`}
         style={{ ['--svc' as string]: colourCss(s.colour) }}
       >
-        <Link href={`/services/${s.id}`} className="d3-svc-l">
+        <Link href={opts.href ?? `/services/${s.id}`} className="d3-svc-l">
           <Disc icon={s.icon} colour={s.colour} />
           <span>
             <b>{s.name}</b>

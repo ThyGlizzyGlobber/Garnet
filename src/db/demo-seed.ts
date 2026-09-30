@@ -13,6 +13,7 @@ import { createHousehold, isSetUp } from '@/lib/households';
 import { setHouseholdLocation } from '@/lib/location';
 import { createMember } from '@/lib/members';
 import { cancelService, createService } from '@/lib/services';
+import { createAsset } from '@/lib/assets';
 import { demoExited } from '@/lib/demo';
 import { eq } from 'drizzle-orm';
 import { sourceDocument, type Member, type Service } from '@/db/schema';
@@ -418,6 +419,40 @@ export async function seedDemo(db: Db = getDb()) {
     [null, null, null, null],
   );
 
+  // Alex's own car (Vehicles): its rego and insurance are filed under it.
+  const car = createAsset(
+    hh.id,
+    {
+      kind: 'vehicle',
+      name: 'Mazda 3 hatch',
+      identifier: '1KX-4PL',
+      ownerMemberId: alex.id,
+      createdByMemberId: alex.id,
+    },
+    db,
+  );
+  const carInsurance = createService(
+    hh.id,
+    {
+      typeSlug: 'car_insurance',
+      name: 'Car insurance',
+      provider: 'Harbourside Insurance',
+      cadence: 'annual',
+      ownerMemberId: alex.id,
+    },
+    db,
+  );
+  add('car-insurance-2026', carInsurance.id, {
+    amountMinor: 74820,
+    periodStart: '2026-03-01',
+    periodEnd: '2027-02-28',
+    issueDate: '2026-02-02',
+    dueDate: '2026-03-01',
+    externalRef: 'HSI-MV-440187',
+    assetId: car.id,
+    paid: '2026-02-26',
+  });
+
   // Alex's own car rego (personal: no shares).
   add('rego-2025', rego.id, {
     amountMinor: 88410,
@@ -426,6 +461,7 @@ export async function seedDemo(db: Db = getDb()) {
     issueDate: '2025-09-20',
     dueDate: '2025-10-18',
     externalRef: 'REG 1KX-4PL · 2025',
+    assetId: car.id,
     paid: '2025-10-10',
   });
   add('rego-2026', rego.id, {
@@ -435,6 +471,7 @@ export async function seedDemo(db: Db = getDb()) {
     issueDate: '2026-09-19',
     dueDate: '2026-10-18',
     externalRef: 'REG 1KX-4PL · 2026',
+    assetId: car.id,
     paid: null,
   });
 

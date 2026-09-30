@@ -13,6 +13,7 @@ import { ulid } from '@/lib/ids';
 import { DEFAULT_COLOUR, PALETTE } from '@/lib/palette';
 import { getMember } from '@/lib/members';
 import { ownerCondition, type Scope } from '@/lib/scope';
+import { CATEGORY_ICONS, isGroupedCategory, type GroupedCategory } from '@/lib/service-categories';
 
 export type ServiceWithType = Service & { type: ServiceType };
 
@@ -359,8 +360,13 @@ export function chargedAfterCancel(
 }
 
 export interface ServiceGroup<S> {
-  /** The type slug for a main service with sub-services; null for a service on its own. */
+  /** The type slug for a main service with sub-services; null otherwise. */
   typeSlug: string | null;
+  /**
+   * A category that is a main service of its own (Vehicles, Health), its
+   * types the sub-services; null otherwise. Its label is the page's to word.
+   */
+  category: GroupedCategory | null;
   label: string;
   icon: string;
   colour: string;
@@ -369,16 +375,20 @@ export interface ServiceGroup<S> {
 
 /**
  * Services in list order, with each main service's sub-services gathered
- * under it where the first of them would have been (Subscriptions → Netflix,
- * Spotify). Every other service stands on its own.
+ * under it where the first of them would have been: Subscriptions → Netflix,
+ * Spotify (one service per provider), and Vehicles → Registration, Car
+ * insurance (every service of the category's types). Every other service
+ * stands on its own.
  */
 export function groupServices<S extends { type: ServiceType }>(services: S[]): ServiceGroup<S>[] {
   const out: ServiceGroup<S>[] = [];
-  const byType = new Map<string, ServiceGroup<S>>();
+  const byKey = new Map<string, ServiceGroup<S>>();
   for (const s of services) {
-    if (!s.type.hasSubServices) {
+    const category = isGroupedCategory(s.type.category) ? s.type.category : null;
+    if (!category && !s.type.hasSubServices) {
       out.push({
         typeSlug: null,
+        category: null,
         label: '',
         icon: s.type.icon,
         colour: s.type.colour,
@@ -386,19 +396,43 @@ export function groupServices<S extends { type: ServiceType }>(services: S[]): S
       });
       continue;
     }
-    let g = byType.get(s.type.slug);
+    const key = category ? `c:${category}` : `t:${s.type.slug}`;
+    let g = byKey.get(key);
     if (!g) {
-      g = {
-        typeSlug: s.type.slug,
-        label: s.type.label,
-        icon: s.type.icon,
-        colour: s.type.colour,
-        services: [],
-      };
-      byType.set(s.type.slug, g);
+      g = category
+        ? {
+            typeSlug: null,
+            category,
+            label: '',
+            icon: CATEGORY_ICONS[category],
+            colour: s.type.colour,
+            services: [],
+          }
+        : {
+            typeSlug: s.type.slug,
+            category: null,
+            label: s.type.label,
+            icon: s.type.icon,
+            colour: s.type.colour,
+            services: [],
+          };
+      byKey.set(key, g);
       out.push(g);
     }
     g.services.push(s);
+  }
+  return out;
+}
+
+/** A grouped category's services by type, in list order: its sub-services. */
+export function byType<S extends { type: ServiceType }>(
+  services: S[],
+): { type: ServiceType; services: S[] }[] {
+  const out: { type: ServiceType; services: S[] }[] = [];
+  for (const s of services) {
+    const g = out.find((x) => x.type.slug === s.type.slug);
+    if (g) g.services.push(s);
+    else out.push({ type: s.type, services: [s] });
   }
   return out;
 }

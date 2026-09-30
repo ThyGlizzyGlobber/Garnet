@@ -18,6 +18,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   if (!hh) redirect('/login');
   const t = await getTranslations('nav');
   const ta = await getTranslations('app');
+  const tm = await getTranslations('assets');
   const view = shellView(hh, me, todayIn(hh.timezone));
   return (
     <AppShell
@@ -43,6 +44,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         noServices: t('noServices'),
         showSubs: t('showSubs'),
         hideSubs: t('hideSubs'),
+        main: { vehicle: tm('main.vehicle'), health: tm('main.health') },
         product: ta('name'),
         householdHome: t('householdHome', { household: hh.name }),
       }}

@@ -1,5 +1,6 @@
 import { getDb, type Db } from '@/db/client';
 import type { Member } from '@/db/schema';
+import { autoFileBill, refKeys } from '@/lib/assets';
 import { promoteServiceType } from '@/lib/auto-service';
 import { createBill, type BillInput } from '@/lib/bills';
 import { refileDocuments } from '@/lib/filing';
@@ -39,6 +40,7 @@ export function approveDocument(
       extractor: 'review',
       createdByMemberId: by.id,
       instalments: read?.bill.instalments ?? null,
+      assetRefs: refKeys([...(read?.bill.assetRefs ?? []), read?.bill.accountRef]),
     },
     db,
   ).id;
@@ -46,6 +48,8 @@ export function approveDocument(
   // A service still filed as "Other" takes the type the AI read (e.g. Council rates).
   const svc = getService(householdId, fields.serviceId, db);
   if (svc) promoteServiceType(householdId, svc, read?.bill.serviceType, db);
+  // A plate or policy number one of the vehicles or policies has: filed under it.
+  autoFileBill(householdId, billId, { viewer: by.id }, db);
   const address = addressOf(doc.emailFrom);
   const target = doc.senderVerified ? trustTarget(doc.senderDomain, address) : null;
   if (

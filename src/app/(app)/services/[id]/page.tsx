@@ -9,6 +9,7 @@ import { Delta, Kv, Notice, PageTitle, SectionHead } from '@/components/ui/block
 import { Chip } from '@/components/ui/chip';
 import { Avatar, Disc } from '@/components/ui/colour';
 import { BackLink } from '@/components/ui/controls';
+import { isGroupedCategory } from '@/lib/service-categories';
 import { BillRow, Rows } from '@/components/ui/rows';
 import { Pager } from '@/components/ui/pager';
 import { pageParam, paginate } from '@/lib/paging';
@@ -229,7 +230,8 @@ export default async function ServicePage({
 
   return (
     <div className="scr d3-service">
-      {sub ? (
+      {sub || isGroupedCategory(svc.type.category) ? (
+        // A sub-service: back to its main service's page (Registration: bills by vehicle).
         <BackLink href={`/services/group/${svc.typeSlug}`}>{svc.type.label}</BackLink>
       ) : (
         <BackLink href="/services">{ts('title')}</BackLink>

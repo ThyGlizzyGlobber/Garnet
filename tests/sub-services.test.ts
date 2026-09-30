@@ -165,7 +165,8 @@ describe('sub-services', () => {
     const entry = shell.services.find((e) => e.kind === 'group')!;
     expect(entry).toMatchObject({
       kind: 'group',
-      typeSlug: 'subscriptions',
+      href: '/services/group/subscriptions',
+      category: null,
       name: 'Subscriptions',
     });
     if (entry.kind !== 'group') throw new Error('not a group');

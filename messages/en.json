@@ -417,7 +417,8 @@
       "label": "Service",
       "button": "Move",
       "yours": "Just yours",
-      "cancelled": "cancelled"
+      "cancelled": "cancelled",
+      "newType": "{type} (new)"
     },
     "assumed": {
       "title": "Assumed charge",
@@ -1829,7 +1830,11 @@
     "percentTotal": "The percentages add up to {total}%, not 100%.",
     "amountFor": "Enter an amount for {name}, or leave it blank",
     "amountNeeded": "Enter an amount for at least one person, or split it evenly.",
-    "moveNotAllowed": "It can’t move there. Only whoever brought a bill in can make it their own, and once a housemate has paid a share it stays with the household."
+    "moveNotAllowed": "It can’t move there. Only whoever brought a bill in can make it their own, and once a housemate has paid a share it stays with the household.",
+    "assetNotFound": "That vehicle or policy wasn’t found",
+    "assetNotAllowed": "Only an admin or whoever added it can change it",
+    "chooseAsset": "Choose one",
+    "tooLong": "That’s too long"
   },
   "common": {
     "copy": "Copy",
@@ -2497,5 +2502,74 @@
       "title": "You’re offline.",
       "body": "Showing pages as they were. Changes wait until you’re back."
     }
+  },
+  "assets": {
+    "main": {
+      "vehicle": "Vehicles",
+      "health": "Health"
+    },
+    "yours": "Yours",
+    "yearShort": "{amount} in the last 12 months",
+    "billCount": "{count, plural, one {# bill} other {# bills}}",
+    "edit": "Edit",
+    "save": "Save",
+    "file": "File it",
+    "subServices": "Kinds of bills",
+    "whose": "Whose is it?",
+    "whoseHousehold": "The household’s",
+    "whoseMine": "Just mine",
+    "whoseFollows": "Whose it is follows {name}, the one it’s filed under.",
+    "emptyTitle": "No {type} bills yet",
+    "settings": "Who pays and how it’s split",
+    "settingsBody": "Set on the service behind these bills.",
+    "vehicle": {
+      "label": "Vehicle",
+      "many": "Vehicles",
+      "add": "Add a vehicle",
+      "remove": "Remove this vehicle",
+      "removeConfirm": "Remove {name}? Its bills stay, waiting to be filed under a vehicle again.",
+      "none": "No vehicle yet",
+      "which": "Which vehicle?",
+      "noBills": "No bills for it yet.",
+      "lede": "{count, plural, =0 {No vehicles yet} one {# vehicle} other {# vehicles}}. {amount} in the last 12 months.{waiting, plural, =0 {} one { # bill is waiting for a vehicle.} other { # bills are waiting for a vehicle.}}",
+      "subLede": "{count, plural, =0 {No vehicles with bills here yet} one {# vehicle} other {# vehicles}}. {amount} in the last 12 months.{waiting, plural, =0 {} one { # bill is waiting for a vehicle.} other { # bills are waiting for a vehicle.}}",
+      "subLine": "{count, plural, =0 {No vehicles yet} one {# vehicle} other {# vehicles}} · {amount} in the last 12 months",
+      "waitingChip": "{count} waiting",
+      "filed": "{count, plural, one {# bill that was waiting is} other {# bills that were waiting are}} now filed under it.",
+      "noneBody": "Pick the vehicle each of these bills is for.",
+      "noneBodyEmpty": "Add your vehicles first, then file these bills under them.",
+      "formHint": "Its bills are kept together under the vehicle.",
+      "name": "Name",
+      "namePlaceholder": "Ford Fiesta 2011",
+      "identifier": "Number plate or VIN",
+      "identifierHint": "Bills that show it are filed under this vehicle by themselves.",
+      "firstBody": "Add each vehicle once. Its rego, insurance, roadside and servicing bills are then kept together under it.",
+      "emptyBody": "When a bill of this kind comes in, it’s listed under its vehicle here."
+    },
+    "policy": {
+      "label": "Policy",
+      "many": "Policies",
+      "add": "Add a policy",
+      "remove": "Remove this policy",
+      "removeConfirm": "Remove {name}? Its bills stay, waiting to be filed under a policy again.",
+      "none": "No policy yet",
+      "which": "Which policy?",
+      "noBills": "No bills for it yet.",
+      "lede": "{count, plural, =0 {No policies yet} one {# policy} other {# policies}}. {amount} in the last 12 months.{waiting, plural, =0 {} one { # bill is waiting for a policy.} other { # bills are waiting for a policy.}}",
+      "subLede": "{count, plural, =0 {No policies with bills here yet} one {# policy} other {# policies}}. {amount} in the last 12 months.{waiting, plural, =0 {} one { # bill is waiting for a policy.} other { # bills are waiting for a policy.}}",
+      "subLine": "{count, plural, =0 {No policies yet} one {# policy} other {# policies}} · {amount} in the last 12 months",
+      "waitingChip": "{count} waiting",
+      "filed": "{count, plural, one {# bill that was waiting is} other {# bills that were waiting are}} now filed under it.",
+      "noneBody": "Pick the policy each of these bills is for.",
+      "noneBodyEmpty": "Add your policies first, then file these bills under them.",
+      "formHint": "Its bills are kept together under the policy.",
+      "name": "Name",
+      "namePlaceholder": "Family hospital and extras",
+      "identifier": "Policy or membership number",
+      "identifierHint": "Bills that show it are filed under this policy by themselves.",
+      "firstBody": "Add each policy once, health insurance or ambulance cover. Its bills are then kept together under it.",
+      "emptyBody": "When a bill of this kind comes in, it’s listed under its policy here."
+    },
+    "lastYear": "last 12 months"
   }
 }

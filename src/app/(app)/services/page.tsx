@@ -32,6 +32,7 @@ export default async function ServicesPage({
   const ctx = await pageContext();
   const { hh, me, money } = ctx;
   const t = await getTranslations('services');
+  const ta = await getTranslations('assets');
   const hasMine = listServices(hh.id, { owner: me.id, includeInactive: true }).length > 0;
   const scope: ServiceScope =
     hasMine && (SCOPES as string[]).includes(requested ?? '') ? (requested as ServiceScope) : 'all';
@@ -43,26 +44,35 @@ export default async function ServicesPage({
   const ribbon = await ribbonRenderer(ctx, view.window);
 
   // A main service with sub-services: a heading (its total and a link to its
-  // page), then each sub-service's ribbon under it.
+  // page), then each sub-service's ribbon under it. Vehicles and Health hold
+  // their types; a ribbon there opens its sub-service (bills by vehicle).
   const group = (g: RibbonGroup) =>
-    g.typeSlug === null ? (
+    g.typeSlug === null && g.category === null ? (
       ribbon(g.ribbons[0]!)
     ) : (
       <section
-        key={`g-${g.typeSlug}`}
+        key={`g-${g.typeSlug ?? g.category}`}
         className="d3-group"
         style={{ ['--svc' as string]: colourCss(g.colour) }}
       >
-        <Link href={`/services/group/${g.typeSlug}`} className="d3-group-h">
+        <Link
+          href={g.category ? `/services/category/${g.category}` : `/services/group/${g.typeSlug}`}
+          className="d3-group-h"
+        >
           <Disc icon={g.icon} colour={g.colour} size="sm" />
-          <b>{g.label}</b>
+          <b>{g.category ? ta(`main.${g.category}`) : g.label}</b>
           <span className="muted small">
             {t('group.count', { count: g.ribbons.length })} ·{' '}
             {t('group.year', { amount: money(g.yearMinor, hh.currency, { whole: true }) })}
           </span>
           <Icon name="chevron-right" width={16} height={16} />
         </Link>
-        {g.ribbons.map((r) => ribbon(r, { sub: true }))}
+        {g.ribbons.map((r) =>
+          ribbon(r, {
+            sub: true,
+            href: g.category ? `/services/group/${r.typeSlug}` : undefined,
+          }),
+        )}
       </section>
     );
 

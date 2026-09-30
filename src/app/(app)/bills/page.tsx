@@ -74,6 +74,7 @@ export default async function BillsPage({
   const t = await getTranslations('bills');
   const tu = await getTranslations('ui');
   const tp = await getTranslations('ui.pager');
+  const ta = await getTranslations('assets');
   const rc = rowCtx(ctx, tu);
   // The household's bills and this member's own (nobody else's personal bills).
   const everything = listBills(hh.id, { viewer: me.id });
@@ -89,10 +90,12 @@ export default async function BillsPage({
   const serviceId = services.some((svc) => svc.id === params.s) ? params.s! : null;
   // A main service's sub-services are one chip (Subscriptions); picking it
   // shows a chip for each of them.
+  // Vehicles and Health are one chip each too (t=vehicle), their services under it.
   const serviceGroups = groupServices(services);
-  const typeSlug = serviceGroups.some((g) => g.typeSlug && g.typeSlug === params.t)
-    ? params.t!
-    : null;
+  const groupKey = (g: (typeof serviceGroups)[number]) => g.typeSlug ?? g.category;
+  const picked = serviceGroups.find((g) => groupKey(g) && groupKey(g) === params.t);
+  const typeSlug = picked ? params.t! : null;
+  const category = picked?.category ?? null;
   const when: When = params.w === 'upcoming' || params.w === 'all' ? params.w : 'now';
   const years = [...new Set(all.map(billEntry).map((e) => e.date.slice(0, 4)))].sort().reverse();
   const year = years.includes(params.y ?? '') ? params.y! : null;
@@ -104,7 +107,7 @@ export default async function BillsPage({
     later: laterBills,
   } = filterBills(
     all,
-    { q, status: filter, serviceId, year, when, typeSlug },
+    { q, status: filter, serviceId, year, when, typeSlug: category ? null : typeSlug, category },
     { locale: hh.locale, today: ctx.today },
   );
   // Recurring services' next charges (not bills yet), filed like bills and
@@ -115,7 +118,9 @@ export default async function BillsPage({
       whose === 'mine' ? svc.ownerMemberId : whose === 'household' ? !svc.ownerMemberId : true,
     )
     .filter(
-      (svc) => (!serviceId || svc.id === serviceId) && (!typeSlug || svc.typeSlug === typeSlug),
+      (svc) =>
+        (!serviceId || svc.id === serviceId) &&
+        (!typeSlug || (category ? svc.type.category === category : svc.typeSlug === typeSlug)),
     )
     .flatMap((svc) => {
       const charge = upcomingCharge(
@@ -295,7 +300,8 @@ export default async function BillsPage({
         )}
         {services.length > 1 &&
           serviceGroups.map((g) => {
-            if (!g.typeSlug) {
+            const key = groupKey(g);
+            if (!key) {
               const svc = g.services[0]!;
               return (
                 <FilterChip
@@ -309,16 +315,16 @@ export default async function BillsPage({
                 </FilterChip>
               );
             }
-            const open = typeSlug === g.typeSlug || g.services.some((x) => x.id === serviceId);
+            const open = typeSlug === key || g.services.some((x) => x.id === serviceId);
             return (
-              <Fragment key={`g-${g.typeSlug}`}>
+              <Fragment key={`g-${key}`}>
                 <FilterChip
-                  href={href({ t: typeSlug === g.typeSlug ? null : g.typeSlug, s: null })}
-                  active={typeSlug === g.typeSlug}
+                  href={href({ t: typeSlug === key ? null : key, s: null })}
+                  active={typeSlug === key}
                   className="flex items-center gap-2"
                 >
                   <Swatch colour={g.colour} />
-                  {g.label}
+                  {g.category ? ta(`main.${g.category}`) : g.label}
                   <Icon name={open ? 'chevron-down' : 'chevron-right'} width={13} height={13} />
                 </FilterChip>
                 {open &&
@@ -327,7 +333,7 @@ export default async function BillsPage({
                       key={svc.id}
                       href={href({
                         s: serviceId === svc.id ? null : svc.id,
-                        t: serviceId === svc.id ? g.typeSlug : null,
+                        t: serviceId === svc.id ? key : null,
                       })}
                       active={serviceId === svc.id}
                       className="flex items-center gap-2"

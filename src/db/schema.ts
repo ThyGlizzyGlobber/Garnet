@@ -357,6 +357,43 @@ export const sourceDocument = sqliteTable(
   ],
 );
 
+/**
+ * A thing a household pays several kinds of bills for: a vehicle (its rego,
+ * insurance, roadside cover, servicing) or a policy (health insurance,
+ * ambulance cover). Entered once; the bills of its category's services are
+ * filed under it (bill.asset_id). Household or one member's own, like a
+ * service: a personal one is seen only by that member, and its bills are
+ * that member's personal bills.
+ */
+export const ASSET_KINDS = ['vehicle', 'policy'] as const;
+export type AssetKind = (typeof ASSET_KINDS)[number];
+
+export const asset = sqliteTable(
+  'asset',
+  {
+    id: text('id').primaryKey(),
+    householdId: householdId(),
+    kind: text('kind', { enum: ASSET_KINDS }).notNull(),
+    /** What the household calls it: "Ford Fiesta 2011", "Bupa family cover". */
+    name: text('name').notNull(),
+    /** As entered: a number plate or VIN, a policy or membership number. */
+    identifier: text('identifier'),
+    /** The identifier in capitals without spaces or punctuation, for matching bills. */
+    identifierKey: text('identifier_key'),
+    /** Null = the household's; else only this member sees it and its bills. */
+    ownerMemberId: text('owner_member_id').references(() => member.id),
+    createdByMemberId: text('created_by_member_id').references(() => member.id, {
+      onDelete: 'set null',
+    }),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (t) => [
+    index('asset_household_idx').on(t.householdId),
+    index('asset_identifier_idx').on(t.householdId, t.identifierKey),
+  ],
+);
+
 /** recurring: an assumed charge of a recurring service (src/lib/recurring.ts). */
 export const BILL_SOURCES = ['template', 'llm', 'manual', 'recurring'] as const;
 export type BillSource = (typeof BILL_SOURCES)[number];
@@ -429,6 +466,14 @@ export const bill = sqliteTable(
      * its place and clears this.
      */
     assumed: integer('assumed', { mode: 'boolean' }).notNull().default(false),
+    /** The vehicle or policy it's for (bills of the Vehicles and Health services). */
+    assetId: text('asset_id').references(() => asset.id, { onDelete: 'set null' }),
+    /**
+     * Identifiers printed on the bill (number plates, VINs, policy and
+     * membership numbers), matching keys (see identifierKey), for filing it
+     * under a vehicle or policy added later.
+     */
+    assetRefs: text('asset_refs', { mode: 'json' }).$type<string[]>(),
     notes: text('notes'),
     createdByMemberId: text('created_by_member_id').references(() => member.id, {
       onDelete: 'set null',
@@ -445,6 +490,7 @@ export const bill = sqliteTable(
     // The Inbox and document clean-ups look bills up by the file they came from.
     index('bill_source_document_idx').on(t.sourceDocumentId),
     index('bill_alert_document_idx').on(t.alertDocumentId),
+    index('bill_asset_idx').on(t.assetId),
   ],
 );
 
@@ -756,6 +802,7 @@ export type NewService = typeof service.$inferInsert;
 export type ServiceSplit = typeof serviceSplit.$inferSelect;
 export type SourceDocument = typeof sourceDocument.$inferSelect;
 export type Bill = typeof bill.$inferSelect;
+export type Asset = typeof asset.$inferSelect;
 export type BillMetric = typeof billMetric.$inferSelect;
 export type WeatherDay = typeof weatherDay.$inferSelect;
 export type WeatherForecast = typeof weatherForecast.$inferSelect;

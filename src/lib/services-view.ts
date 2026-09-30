@@ -8,6 +8,7 @@ import { addDays, daysInclusive, toUtcMs } from '@/lib/dates';
 import { paysByInstalments } from '@/lib/instalments';
 import { addMonths, monthBounds } from '@/lib/periods';
 import { estimatePerDay, nextBillGuess } from '@/lib/projections';
+import type { GroupedCategory } from '@/lib/service-categories';
 import {
   chargedAfterCancel,
   getCustomSplits,
@@ -38,6 +39,7 @@ interface RibbonBlock {
 
 export interface ServiceRibbon {
   id: string;
+  typeSlug: string;
   name: string;
   provider: string;
   icon: string;
@@ -70,6 +72,8 @@ export interface ServiceRibbon {
  */
 export interface RibbonGroup {
   typeSlug: string | null;
+  /** Vehicles or Health: a category that is a main service (see groupServices). */
+  category: GroupedCategory | null;
   label: string;
   icon: string;
   colour: string;
@@ -155,6 +159,7 @@ export function servicesView(
     const due = latest ? billDue(latest, today) : null;
     return {
       id: svc.id,
+      typeSlug: svc.typeSlug,
       name: svc.name,
       provider: svc.provider,
       icon: svc.type.icon,
@@ -184,6 +189,7 @@ export function servicesView(
     const rs = g.services.map((svc) => byId.get(svc.id)!);
     return {
       typeSlug: g.typeSlug,
+      category: g.category,
       label: g.label,
       icon: g.icon,
       colour: g.colour,

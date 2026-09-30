@@ -113,6 +113,15 @@ Key properties:
 - Any service can be recurring (on by default for subscriptions and donations): the next charge is shown as upcoming at the latest price; once its date passes with no bill in it's recorded as an assumed bill, and the real bill, when it arrives, takes its place. A price change on the real bill carries forward and the household is told.
 - Every service type has one colour, the same in every household; households don't pick service colours.
 
+### Vehicles and Health (owner, 2026-09-30)
+
+- **Vehicles** and **Health** are main services whose sub-services are their types: Vehicles → Registration, Car insurance, Roadside assistance, Repairs & servicing; Health → Health insurance, Ambulance cover. They sit in the nav (behind an arrow), on the Services page, in the Bills filters and in the Move list like Subscriptions.
+- A household enters each **vehicle** (or **policy**, for Health) once, on the Vehicles (Health) page: a name ("Ford Fiesta 2011"), an optional number plate or VIN (policy or membership number), and whether it's the household's or one person's own.
+- A sub-service's page lists each vehicle that has a bill of that kind, as a row that opens to show those bills; a vehicle with no bill of that kind isn't listed there. Bills not filed under a vehicle yet wait in a "No vehicle yet" row, each with "Which vehicle?".
+- A new bill that prints a vehicle's plate or VIN (a policy's number) is filed under it by itself; adding a vehicle, or giving it a plate, files the waiting bills that print it.
+- A bill is on its vehicle's side: a household vehicle's bills are the household's and split as usual; someone's own vehicle's bills are theirs alone. Filing a bill under a vehicle on the other side moves it there (same rules as moving a bill: only whoever brought it in can take it out of the household, and not once a housemate has paid a share). Changing whose a vehicle is moves its bills with it.
+- A bill can be moved to a sub-service and a vehicle in one step from its page (a rego notice filed under insurance → Registration · Ford Fiesta), and the bill form has a Vehicle (Policy) field.
+
 ### Projections
 
 - Next-bill estimate per service from recent cycles, seasonally aware (winter gas ≠ summer gas)

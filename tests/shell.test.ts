@@ -94,7 +94,13 @@ describe('shellView', () => {
     expect(v.household).toEqual({ name: 'Riverside House', members: ['Alex', 'Jordan'] });
     expect(v.split).toBe(true);
     expect(v.services.map((s) => [s.name, s.minor])).toEqual([['Electricity', 30_000]]);
-    expect(v.mine.map((s) => [s.name, s.minor])).toEqual([['Car rego', 91_250]]);
+    // Rego is under Vehicles, one line per kind of vehicle bill.
+    const mine = v.mine[0]!;
+    expect(mine.kind === 'group' && mine.category).toBe('vehicle');
+    expect(mine.kind === 'group' && mine.children.map((c) => [c.name, c.minor])).toEqual([
+      ['Vehicle registration', 91_250],
+    ]);
+    expect(mine.minor).toBe(91_250);
     expect(v.inboxCount).toBe(0);
     expect(v.me).toEqual({ name: 'Jordan', colour: jordan.colour, admin: false });
 

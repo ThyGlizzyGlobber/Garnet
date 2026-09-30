@@ -7,6 +7,7 @@ import { listServices } from '@/lib/services';
 import { listUnits } from '@/lib/units';
 import { createBillAction } from '../actions';
 import { BillForm } from '../bill-form';
+import { formAssets, formServices } from '../form-options';
 import { splitPreviews } from '../split-previews';
 
 export default async function NewBillPage({
@@ -30,15 +31,8 @@ export default async function NewBillPage({
       <PageTitle title={t('form.newTitle')} lede={t('form.newLede')} />
       <BillForm
         action={createBillAction}
-        services={services.map((s) => ({
-          id: s.id,
-          // A sub-service reads "Subscriptions › Netflix".
-          name: `${s.type.hasSubServices ? `${s.type.label} › ` : ''}${s.name}${s.ownerMemberId ? ` · ${t('tile.onlyYou')}` : ''}`,
-          provider: s.provider,
-          usageUnit: s.usageUnit,
-          cadence: s.cadence,
-          recurring: !!s.recurringSince,
-        }))}
+        services={await formServices(services)}
+        assets={await formAssets(hh.id, me.id)}
         units={listUnits().map((u) => ({ key: u.key, label: u.label }))}
         currency={hh.currency}
         locale={hh.locale}

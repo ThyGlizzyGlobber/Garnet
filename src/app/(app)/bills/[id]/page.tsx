@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { rowCtx, statusLabel } from '@/components/app/bill-rows';
@@ -18,7 +19,9 @@ import { formatMonthRange, formatPeriod } from '@/lib/format';
 import { canChoosePlan, paysByInstalments } from '@/lib/instalments';
 import { getMember, hasHousemates } from '@/lib/members';
 import { asksMember, mayChangeOwner, mayMoveBill } from '@/lib/ownership';
-import { chargedAfterCancel, groupServices, listServices } from '@/lib/services';
+import { chargedAfterCancel, groupServices, listServices, listServiceTypes } from '@/lib/services';
+import { listAssets } from '@/lib/assets';
+import { assetKindOf, groupedCategoryTypes, isGroupedCategory } from '@/lib/service-categories';
 import { visibleTo } from '@/lib/scope';
 import { unusualOf } from '@/lib/service-overview';
 import { unitLabel } from '@/lib/units';
@@ -48,6 +51,7 @@ export default async function BillPage({ params }: { params: Promise<{ id: strin
   const ctx = await pageContext();
   const { hh, me, money, date, today } = ctx;
   const t = await getTranslations('bills');
+  const ta = await getTranslations('assets');
   const tu = await getTranslations('ui');
   const rc = rowCtx(ctx, tu);
   const b = getBill(hh.id, id);
@@ -116,15 +120,37 @@ export default async function BillPage({ params }: { params: Promise<{ id: strin
   );
   const optionName = (s: (typeof movable)[number]) =>
     `${s.name}${!s.type.hasSubServices && s.provider && s.provider !== s.name ? ` · ${s.provider}` : ''}${s.cancelledAt ? ` (${t('move.cancelled')})` : ''}`;
+  const kind = assetKindOf(b.service.type.category);
+  const assets = listAssets(hh.id, { viewer: me.id }).map((a) => ({
+    id: a.id,
+    kind: a.kind,
+    name: a.ownerMemberId ? `${a.name} · ${ta('yours')}` : a.name,
+  }));
+  // Vehicles and Health: once the household has a vehicle (or policy), their
+  // sub-services not set up yet can be picked too (set up on the vehicle's
+  // or policy's side when the bill moves there).
+  const missing = listServiceTypes().filter(
+    (ty) =>
+      isGroupedCategory(ty.category) &&
+      assets.some((a) => a.kind === assetKindOf(ty.category)) &&
+      !movable.some((s) => s.typeSlug === ty.slug),
+  );
   const moveTargets: MoveTarget[] = [
     { owner: false, label: '' },
     { owner: true, label: t('move.yours') },
   ]
     .flatMap(({ owner, label }) =>
-      groupServices(movable.filter((s) => !!s.ownerMemberId === owner)).map((g) => ({
-        label: g.typeSlug ? (owner ? `${g.label} · ${label}` : g.label) : label,
-        options: g.services.map((s) => ({ id: s.id, name: optionName(s) })),
-      })),
+      groupServices(movable.filter((s) => !!s.ownerMemberId === owner)).map((g) => {
+        const name = g.category ? ta(`main.${g.category}`) : g.label;
+        return {
+          label: g.typeSlug || g.category ? (owner ? `${name} · ${label}` : name) : label,
+          options: g.services.map((s) => ({
+            value: `svc:${s.id}`,
+            name: optionName(s),
+            kind: assetKindOf(s.type.category),
+          })),
+        };
+      }),
     )
     // Services on their own next to each other share one list.
     .reduce<MoveTarget[]>((out, g) => {
@@ -133,6 +159,18 @@ export default async function BillPage({ params }: { params: Promise<{ id: strin
       else out.push(g);
       return out;
     }, []);
+  // The sub-services not set up yet go in with their main service's.
+  for (const { category, types: of } of groupedCategoryTypes(missing)) {
+    const label = ta(`main.${category}`);
+    const options = of.map((ty) => ({
+      value: `type:${ty.slug}`,
+      name: t('move.newType', { type: ty.label }),
+      kind: assetKindOf(ty.category),
+    }));
+    const same = moveTargets.find((g) => g.label === label);
+    if (same) same.options.push(...options);
+    else moveTargets.push({ label, options });
+  }
   const afterCancel = chargedAfterCancel(b.service, b);
   // Recurring: the service's next charge, and whether this bill changed the price.
   const serviceBills = listBills(hh.id, { serviceId: b.serviceId });
@@ -142,7 +180,12 @@ export default async function BillPage({ params }: { params: Promise<{ id: strin
 
   return (
     <div className="scr d3-bill">
-      <BackLink href={`/services/${b.service.id}`}>{b.service.name}</BackLink>
+      {kind ? (
+        // A Vehicles or Health bill: back to its sub-service, bills by vehicle.
+        <BackLink href={`/services/group/${b.service.typeSlug}`}>{b.service.type.label}</BackLink>
+      ) : (
+        <BackLink href={`/services/${b.service.id}`}>{b.service.name}</BackLink>
+      )}
       <div className="d3-bill-grid">
         <div className="d3-doc">
           <Paper bill={b} file={billFile} ctx={ctx} />
@@ -435,6 +478,27 @@ export default async function BillPage({ params }: { params: Promise<{ id: strin
                           : t('recurring.off'),
                     ]
                   : null,
+                kind
+                  ? [
+                      ta(`${kind}.label`),
+                      b.asset ? (
+                        <Link
+                          key="as"
+                          href={`/services/group/${b.service.typeSlug}#a-${b.asset.id}`}
+                          className="link"
+                        >
+                          {b.asset.name}
+                          {b.asset.identifier && (
+                            <span className="muted mono"> · {b.asset.identifier}</span>
+                          )}
+                        </Link>
+                      ) : (
+                        <span key="as" className="muted">
+                          {ta(`${kind}.none`)}
+                        </span>
+                      ),
+                    ]
+                  : null,
                 housemates
                   ? [
                       t('whose.label'),
@@ -455,7 +519,10 @@ export default async function BillPage({ params }: { params: Promise<{ id: strin
               </div>
             )}
             {housemates &&
-              (!personal && housematesPaid(hh.id, b.serviceId) ? (
+              (b.asset ? (
+                // Whose it is follows its vehicle or policy (changed on the Vehicles page).
+                <p className="muted small mt-3">{ta('whoseFollows', { name: b.asset.name })}</p>
+              ) : !personal && housematesPaid(hh.id, b.serviceId) ? (
                 <p className="muted small mt-3">{t('whose.lockedShares')}</p>
               ) : (
                 mayChangeOwner(hh.id, me, b.service) && (
@@ -490,13 +557,17 @@ export default async function BillPage({ params }: { params: Promise<{ id: strin
 
           <FiguresCard bill={b} ctx={ctx} />
 
-          {movable.length > 1 && (
-            <Card>
+          {(movable.length > 1 ||
+            missing.length > 0 ||
+            (kind && assets.some((a) => a.kind === kind))) && (
+            <Card id="move">
               <MoveBill
                 action={moveBillAction}
                 billId={b.id}
-                currentId={b.serviceId}
+                current={`svc:${b.serviceId}`}
+                currentAssetId={b.assetId}
                 targets={moveTargets}
+                assets={assets}
               />
             </Card>
           )}

@@ -7,17 +7,25 @@ import { pageContext } from '@/lib/context';
 import { listServiceTypes } from '@/lib/services';
 import { servicesView } from '@/lib/services-view';
 import { ribbonRenderer } from '../../ribbon';
+import { AssetBillsPage } from './asset-bills';
+import { subServiceView } from '@/lib/asset-view';
+import { isGroupedCategory } from '@/lib/service-categories';
 
 /**
- * A main service and its sub-services (Subscriptions → Netflix, Spotify):
+ * A sub-service of Vehicles or Health (see AssetBillsPage), or a main service and its sub-services (Subscriptions → Netflix, Spotify):
  * what they add up to, a ribbon for each still going, then the ones someone
  * cancelled, with their bills kept. Numbers from servicesView().
  */
 export default async function ServiceGroupPage({ params }: { params: Promise<{ type: string }> }) {
   const { type: slug } = await params;
-  const type = listServiceTypes().find((ty) => ty.slug === slug && ty.hasSubServices);
+  const type = listServiceTypes().find(
+    (ty) => ty.slug === slug && (ty.hasSubServices || isGroupedCategory(ty.category)),
+  );
   if (!type) notFound();
   const ctx = await pageContext();
+  // A sub-service of Vehicles or Health: its bills under the vehicle or policy each is for.
+  const assets = subServiceView(ctx.hh, ctx.me, type, ctx.today);
+  if (assets) return <AssetBillsPage ctx={ctx} view={assets} />;
   const { hh, me, money } = ctx;
   const t = await getTranslations('services');
   const view = servicesView(hh, me.id, ctx.today, 'all', undefined, type.slug);

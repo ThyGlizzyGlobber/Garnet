@@ -1,6 +1,6 @@
 import { and, asc, count, eq } from 'drizzle-orm';
 import { getDb, type Db } from '@/db/client';
-import { member, service, share, sourceDocument, type Member } from '@/db/schema';
+import { asset, member, service, share, sourceDocument, type Member } from '@/db/schema';
 import { DEFAULT_APPEARANCE, type Preset, type Theme } from '@/lib/appearance';
 import { ulid } from '@/lib/ids';
 import { DEFAULT_COLOUR } from '@/lib/palette';
@@ -163,6 +163,11 @@ export function deleteMember(householdId: string, id: string, db: Db = getDb()):
   const own = db.select({ n: count() }).from(service).where(eq(service.ownerMemberId, id)).get();
   if ((own?.n ?? 0) > 0)
     throw new Error('This member has personal services. Set a move-out date instead of deleting.');
+  const things = db.select({ n: count() }).from(asset).where(eq(asset.ownerMemberId, id)).get();
+  if ((things?.n ?? 0) > 0)
+    throw new Error(
+      'This member has their own vehicles or policies. Set a move-out date instead of deleting.',
+    );
   // Documents they uploaded stay, without their name.
   db.update(sourceDocument).set({ memberId: null }).where(eq(sourceDocument.memberId, id)).run();
   db.delete(member)

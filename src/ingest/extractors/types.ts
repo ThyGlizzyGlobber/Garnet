@@ -45,6 +45,12 @@ export interface ExtractedBill {
   usageUnit?: string | null;
   externalRef?: string | null;
   accountRef?: string | null;
+  /**
+   * What the bill is for, as printed: number plates and VINs on vehicle bills,
+   * policy or membership numbers on health cover. Files it under a vehicle or
+   * policy (src/lib/assets.ts).
+   */
+  assetRefs?: string[];
   /** Service id when the extractor is confident which existing service this is. */
   serviceId?: string | null;
   /**

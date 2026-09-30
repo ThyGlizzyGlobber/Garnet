@@ -1,14 +1,17 @@
 import { and, asc, desc, eq, inArray, isNull } from 'drizzle-orm';
 import { getDb, type Db } from '@/db/client';
 import {
+  asset,
   bill,
   billInstalment,
   member,
   service,
+  serviceType,
   share,
   type Bill,
   type BillInstalment,
   type BillSource,
+  type Asset,
   type Member,
   type Share,
 } from '@/db/schema';
@@ -22,6 +25,7 @@ import { listMembers } from '@/lib/members';
 import { getService, splitSettings, type ServiceWithType } from '@/lib/services';
 import { computeShares, renderPaymentReference } from '@/lib/splits';
 import { anomalyNote, detectAnomaly } from '@/lib/anomaly';
+import { assetKindOf } from '@/lib/service-categories';
 
 export interface BillInput {
   serviceId: string;
@@ -47,6 +51,10 @@ export interface BillInput {
   instalments?: BillInstalmentOption[] | null;
   /** Recorded by the app for a recurring service, no bill in yet (src/lib/recurring.ts). */
   assumed?: boolean;
+  /** The vehicle or policy it's for (src/lib/assets.ts); dropped if it doesn't fit the service. */
+  assetId?: string | null;
+  /** Identifiers printed on it (plates, policy numbers), as matching keys. */
+  assetRefs?: string[] | null;
 }
 
 type ShareWithMember = Share & { member: Member };
@@ -55,9 +63,12 @@ export type BillDetail = Bill & {
   shares: ShareWithMember[];
   /** The instalments the bill offers, in order; empty when it offers none. */
   instalments: BillInstalment[];
+  /** The vehicle or policy it's filed under. */
+  asset: Asset | null;
 };
 export type BillListItem = Bill & {
   service: ServiceWithType;
+  asset: Asset | null;
   shareCount: number;
   paidShareCount: number;
   /** Share counts per instalment (0 = the whole bill). */
@@ -140,6 +151,8 @@ export function createBill(householdId: string, input: BillInput, db: Db = getDb
         fullAmountMinor: options ? input.amountMinor : null,
         fullDueDate: options ? input.dueDate : null,
         assumed: input.assumed ?? false,
+        assetId: input.assetId ?? null,
+        assetRefs: input.assetRefs?.length ? input.assetRefs : null,
         createdAt: now,
         updatedAt: now,
       })
@@ -170,6 +183,7 @@ export function createBill(householdId: string, input: BillInput, db: Db = getDb
       );
   });
 
+  if (input.assetId) unlinkMismatchedAssets(householdId, [id], db);
   refreshAnomalies(householdId, input.serviceId, db);
   return getBill(householdId, id, db)!;
 }
@@ -259,6 +273,7 @@ function takeAssumedPlace(
         paidToProviderAt: input.paidToProviderAt ?? assumed.paidToProviderAt,
         notes: input.notes ?? assumed.notes,
         createdByMemberId: input.createdByMemberId ?? assumed.createdByMemberId,
+        assetRefs: input.assetRefs?.length ? input.assetRefs : assumed.assetRefs,
         assumed: false,
         updatedAt: now,
       })
@@ -442,7 +457,10 @@ export function getBill(householdId: string, id: string, db: Db = getDb()): Bill
     .orderBy(asc(share.instalment))
     .all()
     .map((r) => ({ ...r.share, member: r.member }));
-  return { ...b, service: svc, shares, instalments: listInstalments([id], db) };
+  const a = b.assetId
+    ? (db.select().from(asset).where(eq(asset.id, b.assetId)).get() ?? null)
+    : null;
+  return { ...b, service: svc, shares, instalments: listInstalments([id], db), asset: a };
 }
 
 /** A household's bills, newest first. Household bills only unless the scope says otherwise. */
@@ -455,6 +473,7 @@ export function listBills(
     .select()
     .from(bill)
     .innerJoin(service, eq(bill.serviceId, service.id))
+    .leftJoin(asset, eq(bill.assetId, asset.id))
     .where(
       and(
         eq(bill.householdId, householdId),
@@ -490,6 +509,7 @@ export function listBills(
     return {
       ...r.bill,
       service: svc,
+      asset: r.asset,
       shareCount: mine.length,
       paidShareCount: mine.filter((s) => s.paidAt).length,
       sharesByInstalment,
@@ -587,6 +607,7 @@ export function updateBill(
     if (merged.serviceId !== existing.serviceId)
       refreshAnomalies(householdId, existing.serviceId, db);
   }
+  unlinkMismatchedAssets(householdId, [id], db);
   return getBill(householdId, id, db)!;
 }
 
@@ -647,9 +668,52 @@ export function moveBill(
       existing.paymentPlan === 'instalments' ? existing.instalments : [],
     );
   });
+  // Moved to a service of another kind, or to someone else's side: its
+  // vehicle or policy no longer fits.
+  unlinkMismatchedAssets(householdId, [id], db);
   refreshAnomalies(householdId, existing.serviceId, db);
   refreshAnomalies(householdId, toServiceId, db);
   return getBill(householdId, id, db)!;
+}
+
+/**
+ * A bill filed under a vehicle or policy stays with it only while it fits:
+ * its service is of the vehicle's (or policy's) category, and it's on the
+ * same side, the household's or the same member's own. Bills that no longer
+ * fit (moved, or their service switched between household and personal)
+ * lose it and wait under "No vehicle yet". Returns how many.
+ */
+function unlinkMismatchedAssets(
+  householdId: string,
+  billIds: string[] | null = null,
+  db: Db = getDb(),
+): number {
+  if (billIds && !billIds.length) return 0;
+  const rows = db
+    .select({
+      id: bill.id,
+      owner: bill.ownerMemberId,
+      assetOwner: asset.ownerMemberId,
+      kind: asset.kind,
+      category: serviceType.category,
+    })
+    .from(bill)
+    .innerJoin(asset, eq(bill.assetId, asset.id))
+    .innerJoin(service, eq(bill.serviceId, service.id))
+    .innerJoin(serviceType, eq(service.typeSlug, serviceType.slug))
+    .where(and(eq(bill.householdId, householdId), billIds ? inArray(bill.id, billIds) : undefined))
+    .all();
+  const loose = rows
+    .filter(
+      (r) => (r.owner ?? null) !== (r.assetOwner ?? null) || assetKindOf(r.category) !== r.kind,
+    )
+    .map((r) => r.id);
+  if (loose.length)
+    db.update(bill)
+      .set({ assetId: null, updatedAt: new Date().toISOString() })
+      .where(inArray(bill.id, loose))
+      .run();
+  return loose.length;
 }
 
 export function deleteBill(householdId: string, id: string, db: Db = getDb()): void {
@@ -1056,6 +1120,7 @@ export function setServiceOwner(
         b.paymentPlan === 'instalments' ? instalments.filter((i) => i.billId === b.id) : [],
       );
   });
+  unlinkMismatchedAssets(householdId, ids, db);
   return getService(householdId, serviceId, db)!;
 }
 

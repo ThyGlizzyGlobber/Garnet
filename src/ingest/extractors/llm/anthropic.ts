@@ -69,6 +69,13 @@ export const outputSchema = z.object({
       usage_unit: z.string().nullable().describe('Unit key for the usage, from the allowed list'),
       invoice_number: z.string().nullable(),
       account_number: z.string().nullable(),
+      asset_refs: z
+        .array(z.string())
+        .nullable()
+        .optional()
+        .describe(
+          'What the bill is for, when it names a vehicle or policy: every number plate (registration number), VIN, and insurance policy or membership number printed on it, exactly as printed. Empty if none',
+        ),
       auto_pay: z
         .boolean()
         .nullable()
@@ -172,6 +179,7 @@ Rules for bills:
 - Map usage to the closest unit key from the allowed list (e.g. MJ for gas megajoules, kWh for electricity, kL or m3 for water). Use null if there is no metered usage.
 - Choose service_type from the household's list by what the document is, even when a known service from the same provider is filed differently. Use "other" only if none fit. council_rates is council, shire or municipal rates (property rates notices); strata is strata, body corporate or owners corporation levies; vehicle_registration is car, motorbike or trailer registration; car_insurance is car or motorbike insurance (with roadside cover added or not); roadside_assistance is a roadside assistance or breakdown cover membership on its own; vehicle_maintenance is servicing, repairs, tyres and parts for a car or motorbike (repairs to the home are repairs); gym is a gym, fitness or sports club membership; subscriptions is streaming, software and other memberships; donations is a gift or regular donation to a charity or appeal (a donation receipt or pledge statement); for subscriptions and donations, provider is the particular service or charity (Netflix, Spotify, Red Cross, Peter MacCallum Cancer Foundation), not the payment processor or app store that charged it; phone is mobile or landline phone plans; health_insurance is private health cover (hospital, extras); contents_insurance is contents or renters insurance; building_insurance is home, building, landlord or property insurance, including a combined home and contents policy. ambulance_cover is an ambulance membership or subscription on its own (ambulance cover inside a health insurance policy is health_insurance). Other kinds of insurance (pet, life, travel) are "other". gardening is gardeners, lawn mowing and landscaping upkeep; cleaning is house, window and carpet cleaners; pest_control is pest and termite treatment; pool is pool and spa servicing; repairs is handymen, plumbers, electricians and other repairs or maintenance.
 - metrics: list EVERY figure printed on the bill besides the amount due, so the household can track them over time. That includes usage split by tariff or time band (peak, off-peak, shoulder, controlled load), solar export, meter readings (start/end, estimated or actual), days in the period, daily averages (usage and cost), comparisons (previous period, same period last year, similar households), each charge and credit line (supply/service/fixed charges, usage charges, discounts, concessions, fees, feed-in credits), each rate or tariff, emissions, data used and allowance, call/SMS counts, water by category, sewage and drainage charges, and anything else numeric. One entry per figure; convert rates printed in cents to major units (29.53 c/kWh → value 0.2953, unit AUD/kWh). Use these keys when they fit, otherwise invent one in the same style: usage_total, usage_peak, usage_off_peak, usage_shoulder, usage_controlled_load, solar_export, meter_read_start, meter_read_end, days_in_period, daily_average_usage, daily_average_cost, previous_period_usage, previous_period_cost, same_period_last_year_usage, similar_households_usage, supply_charge, usage_charge, usage_charge_peak, usage_charge_off_peak, controlled_load_charge, discount, concession, late_fee, feed_in_credit, rate_supply, rate_peak, rate_off_peak, rate_shoulder, rate_controlled_load, rate_feed_in, greenhouse_emissions, data_used, data_allowance, calls, water_usage, sewage_charge, water_service_charge, drainage_charge, subtotal_before_tax.
+- asset_refs: for vehicle bills (registration, car insurance, roadside assistance, servicing) list the vehicle's number plate and VIN; for health insurance and ambulance cover, the policy or membership number. The household files each bill under its vehicle or policy by these.
 - instalments: some bills (council rates, water, vehicle registration, insurance) let the customer choose between paying in full and paying in instalments. List every instalment with its own due date and amount exactly as printed (one is often a few cents different); amount and due_date are then the pay-in-full option. If the bill prints only instalments, amount is their total and due_date the first instalment's date. A separate reminder for one instalment of a notice already issued (e.g. "2nd instalment due 30 November") is not a new bill: use document_type other and say so in notes.
 Rules for everything:
 - Dates are ISO YYYY-MM-DD. If the text prints dates numerically, use the locale hint to decide day/month order.
@@ -456,6 +464,7 @@ export function toResult(
     usageUnit,
     externalRef: b.invoice_number,
     accountRef: b.account_number,
+    assetRefs: (b.asset_refs ?? []).map((r) => r.trim()).filter(Boolean),
     serviceId: null, // matchService() picks it (provider and type)
     autoPay: b.auto_pay ?? undefined,
     previousPayment:

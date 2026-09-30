@@ -6,7 +6,8 @@ import { monthBounds } from '@/lib/periods';
 import { documentCounts } from '@/lib/review';
 import { billsAddress } from '@/lib/bills-address';
 import { isAdmin } from '@/lib/roles';
-import { groupServices, listServices, type ServiceWithType } from '@/lib/services';
+import { byType, groupServices, listServices, type ServiceWithType } from '@/lib/services';
+import type { GroupedCategory } from '@/lib/service-categories';
 import { totalsForRange } from '@/lib/stats';
 
 /**
@@ -21,19 +22,23 @@ interface ShellService {
   colour: string;
   /** Minor units: this month's accrued cost, or a personal service's latest bill. */
   minor: number;
+  href: string;
 }
 
 /**
  * A line in the nav's services: a service on its own, or a main service with
- * its sub-services under an arrow (Subscriptions → Netflix, Spotify), whose
- * figure is theirs added up.
+ * its sub-services under an arrow (Subscriptions → Netflix, Spotify; Vehicles
+ * → Registration, Car insurance), whose figure is theirs added up. A
+ * category's name (Vehicles) is the shell's to word.
  */
 export type ShellEntry =
   | ({ kind: 'service' } & ShellService)
   | {
       kind: 'group';
-      typeSlug: string;
+      key: string;
+      href: string;
       name: string;
+      category: GroupedCategory | null;
       colour: string;
       minor: number;
       children: ShellService[];
@@ -76,14 +81,37 @@ function entries(services: ServiceWithType[], minor: (s: ServiceWithType) => num
     name: s.name,
     colour: s.colour,
     minor: minor(s),
+    href: `/services/${s.id}`,
   });
   return groupServices(services).map((g): ShellEntry => {
+    if (g.category) {
+      // Vehicles → one line per type (Registration), each opening its bills by vehicle.
+      const children = byType(g.services).map(({ type, services: of }): ShellService => ({
+        id: type.slug,
+        name: type.label,
+        colour: type.colour,
+        minor: of.reduce((sum, s) => sum + minor(s), 0),
+        href: `/services/group/${type.slug}`,
+      }));
+      return {
+        kind: 'group',
+        key: `c-${g.category}`,
+        href: `/services/category/${g.category}`,
+        name: '',
+        category: g.category,
+        colour: g.colour,
+        minor: children.reduce((sum, c) => sum + c.minor, 0),
+        children,
+      };
+    }
     if (!g.typeSlug) return { kind: 'service', ...line(g.services[0]!) };
     const children = g.services.map(line);
     return {
       kind: 'group',
-      typeSlug: g.typeSlug,
+      key: `t-${g.typeSlug}`,
+      href: `/services/group/${g.typeSlug}`,
       name: g.label,
+      category: null,
       colour: g.colour,
       minor: children.reduce((sum, c) => sum + c.minor, 0),
       children,

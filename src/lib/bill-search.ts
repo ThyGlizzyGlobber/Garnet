@@ -18,6 +18,8 @@ export interface BillFilters {
   when?: 'now' | 'upcoming' | 'all';
   /** Every sub-service of a main service (Subscriptions), by type slug. */
   typeSlug?: string | null;
+  /** Every service of a category that is a main service (Vehicles, Health). */
+  category?: string | null;
 }
 
 /** Everything a person might type to find a bill, lower case. */
@@ -32,6 +34,8 @@ function billHaystack(b: BillListItem, locale: string, today: string): string {
     b.service.provider,
     b.service.type.label,
     b.service.type.slug,
+    b.asset?.name ?? '',
+    b.asset?.identifier ?? '',
     b.externalRef ?? '',
     b.notes ?? '',
     b.usageUnit ?? '',
@@ -102,6 +106,7 @@ export function filterBills(
     const b = e.bill;
     if (f.serviceId && b.serviceId !== f.serviceId) return false;
     if (f.typeSlug && b.service.typeSlug !== f.typeSlug) return false;
+    if (f.category && b.service.type.category !== f.category) return false;
     if (f.year && e.date.slice(0, 4) !== f.year) return false;
     if (f.status === 'unpaid' && e.paidAt) return false;
     if (f.status === 'paid' && !e.paidAt) return false;

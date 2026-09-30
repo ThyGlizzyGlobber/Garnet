@@ -2348,3 +2348,240 @@ input.inp-plain[type='color'] {
     justify-content: flex-start;
   }
 }
+
+/* ---------- Vehicles and Health: vehicles or policies, and their bills ---------- */
+.asset-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--gap);
+  align-items: start;
+}
+.asset-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.asset-h {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+}
+.asset-h > div {
+  display: grid;
+}
+.asset-name {
+  font-family: var(--f-display);
+  font-weight: var(--fw-display);
+  font-size: 19px;
+  letter-spacing: var(--ls-display);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.asset-fig {
+  display: grid;
+  justify-items: end;
+  gap: 3px;
+}
+.asset-fig .fig {
+  font-size: 22px;
+}
+.asset-lines {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.asset-lines a {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: var(--r-inner);
+  color: inherit;
+  text-decoration: none;
+}
+.asset-lines a:hover {
+  background: var(--inset);
+}
+.asset-lines i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--svc);
+}
+.asset-lines span:nth-child(2) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+.asset-edit summary {
+  cursor: pointer;
+  color: var(--p-accent);
+  font-weight: 600;
+  font-size: var(--fs-small);
+  list-style: none;
+}
+.asset-edit summary::-webkit-details-marker {
+  display: none;
+}
+.asset-edit[open] {
+  display: grid;
+  gap: 12px;
+}
+.asset-form {
+  display: grid;
+  gap: 12px;
+}
+.asset-subs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--gap);
+}
+.asset-sub {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  gap: 12px;
+  align-items: center;
+  padding: 16px 18px;
+  color: inherit;
+  text-decoration: none;
+}
+.asset-sub > span {
+  display: grid;
+  gap: 2px;
+}
+.asset-sub b {
+  font-family: var(--f-display);
+  font-weight: var(--fw-display);
+  font-size: 18px;
+}
+.asset-sub .chev {
+  color: var(--p-fg2);
+}
+
+/* A vehicle's row on a sub-service's page: opens to show its bills. */
+.asset-g {
+  padding: 0;
+  overflow: hidden;
+}
+.asset-g > summary {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto auto;
+  gap: 14px;
+  align-items: center;
+  padding: 16px 20px;
+  cursor: pointer;
+  list-style: none;
+}
+.asset-g > summary::-webkit-details-marker {
+  display: none;
+}
+.asset-g > summary:hover {
+  background: color-mix(in srgb, var(--svc, var(--p-accent)) 6%, transparent);
+}
+.asset-g > summary:focus-visible {
+  outline: 2px solid var(--p-accent);
+  outline-offset: -2px;
+}
+.asset-g-t {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.asset-g-t b {
+  font-family: var(--f-display);
+  font-weight: var(--fw-display);
+  font-size: 20px;
+  letter-spacing: var(--ls-display);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.asset-g-f {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.asset-g-f .fig {
+  font-size: 20px;
+}
+.asset-g-chev {
+  color: var(--p-fg2);
+  transition: transform 0.2s ease;
+}
+.asset-g[open] .asset-g-chev {
+  transform: rotate(180deg);
+}
+.asset-g-ic {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  color: var(--warn);
+  background: color-mix(in srgb, var(--warn) 16%, transparent);
+}
+.asset-g-rows {
+  border-top: 1px solid var(--line);
+  padding: 6px 8px 8px;
+}
+.asset-g-rows.rows {
+  border-radius: 0;
+  background: none;
+}
+.asset-wait {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+.asset-wait + .asset-wait {
+  border-top: 1px solid var(--line);
+}
+.asset-file {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  padding-right: 8px;
+}
+.asset-file select {
+  max-width: 220px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .asset-g-chev {
+    transition: none;
+  }
+}
+@media (max-width: 639px) {
+  .asset-g > summary {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 10px 12px;
+    padding: 14px 16px;
+  }
+  .asset-g-f {
+    grid-column: 2 / 3;
+  }
+  .asset-g-y {
+    display: none;
+  }
+  .asset-g-chev {
+    grid-row: 1;
+    grid-column: 3;
+  }
+  .asset-wait {
+    grid-template-columns: 1fr;
+  }
+  .asset-file {
+    padding: 0 8px 10px;
+  }
+  .asset-grid,
+  .asset-subs {
+    grid-template-columns: 1fr;
+  }
+}
