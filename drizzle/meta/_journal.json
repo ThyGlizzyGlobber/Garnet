@@ -225,6 +225,13 @@
       "when": 1790696861015,
       "tag": "0031_member_appearance",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "6",
+      "when": 1790739612179,
+      "tag": "0032_home_layout",
+      "breakpoints": true
     }
   ]
 }

@@ -271,37 +271,6 @@ export function Figure({
   );
 }
 
-const bannerTones: Record<'danger' | 'warning' | 'accent', Tone> = {
-  danger: 'bad',
-  warning: 'warn',
-  accent: 'info',
-};
-
-/** A full-width link asking for attention (a bill problem, a question, the Inbox). */
-export function Banner({
-  href,
-  tone,
-  open,
-  children,
-}: {
-  href: string;
-  tone: keyof typeof bannerTones;
-  /** The call to action on the right ("Open", "Review"). */
-  open: string;
-  children: ReactNode;
-}) {
-  return (
-    <Link href={href} className={cx('notice mb-4', `t-${bannerTones[tone]}`)}>
-      <span className="notice-t">
-        <b>{children}</b>
-      </span>
-      <span className="text-sm font-semibold">
-        {open} <Icon name="chevron-right" width={14} height={14} className="inline" />
-      </span>
-    </Link>
-  );
-}
-
 /** The filter capsule, for a chip that has to be another element (a submit button). */
 export const filterChipClass = (active = false) => cx('chip-btn', active && 'on');
 

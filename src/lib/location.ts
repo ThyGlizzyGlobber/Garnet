@@ -213,6 +213,3 @@ export function describeLocation(hh: Household): string | null {
   const state = area?.stateCode;
   return [place, [state, hh.postalCode].filter(Boolean).join(' ')].filter(Boolean).join(', ');
 }
-
-/** Browser cookie set by "Not now" on the dashboard's postcode prompt. */
-export const LOCATION_PROMPT_COOKIE = 'hud_location_prompt';

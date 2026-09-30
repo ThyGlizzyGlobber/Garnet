@@ -1484,5 +1484,436 @@
   "design": {
     "title": "Components",
     "lede": "The pack, drawn with the same pieces the screens use. Fictional figures."
+  },
+  "home": {
+    "head": {
+      "hey": "Hey, {name}.",
+      "weather": "{place}, {temp}° and {sky}"
+    },
+    "you": "You",
+    "youLow": "you",
+    "widgets": {
+      "month": {
+        "name": "This month so far",
+        "desc": "What the month has cost so far, and where it’s heading."
+      },
+      "weather": {
+        "name": "Weather",
+        "desc": "This week’s weather and what heating or cooling will cost."
+      },
+      "nextdue": {
+        "name": "Next due",
+        "desc": "What you pay next: your shares and the bills you pay."
+      },
+      "owes": {
+        "name": "Settle up",
+        "desc": "Who owes whom between housemates."
+      },
+      "trend": {
+        "name": "Monthly cost",
+        "desc": "The last 12 months, each bill spread over the months it covers."
+      },
+      "services": {
+        "name": "Services",
+        "desc": "Every service with what it’s costing this month."
+      },
+      "usage": {
+        "name": "Usage",
+        "desc": "Usage per day against the limit you set."
+      },
+      "notices": {
+        "name": "Heads up",
+        "desc": "Unusual bills, the season ahead and anything to confirm."
+      },
+      "inbox": {
+        "name": "Inbox",
+        "desc": "Bills and receipts as they’re analysed."
+      },
+      "settled": {
+        "name": "Shares settled",
+        "desc": "How many of this month’s shares are paid back."
+      },
+      "forecast": {
+        "name": "Next six months",
+        "desc": "Estimated household cost for the months ahead."
+      },
+      "setaside": {
+        "name": "Set aside",
+        "desc": "What each person should put aside for next month."
+      },
+      "mine": {
+        "name": "Just yours",
+        "desc": "Your own bills. Only you see these."
+      },
+      "plan": {
+        "name": "Instalments",
+        "desc": "Where an instalment plan is up to."
+      },
+      "calendar": {
+        "name": "Due dates",
+        "desc": "Five weeks at a glance, with every due date marked."
+      },
+      "activity": {
+        "name": "Recent activity",
+        "desc": "Payments between housemates, bills paid and documents analysed."
+      },
+      "week": {
+        "name": "This week in the house",
+        "desc": "The week ahead in a few plain sentences."
+      },
+      "actions": {
+        "name": "Quick actions",
+        "desc": "Add a bill, upload one, copy the bills address or record a payment."
+      },
+      "season": {
+        "name": "Season ahead",
+        "desc": "What last year’s change of season did to the bills."
+      },
+      "start": {
+        "name": "Get started",
+        "desc": "The first few steps for a new household."
+      },
+      "postcode": {
+        "name": "Add your postcode",
+        "desc": "Turns on weather and season notes."
+      },
+      "service": {
+        "name": "{service}",
+        "desc": "{provider}: this month, its trend and the latest bill."
+      }
+    },
+    "empty": {
+      "month": {
+        "title": "Nothing billed yet",
+        "body": "This month fills in as bills arrive."
+      },
+      "week": {
+        "title": "A quiet week",
+        "body": "Once bills arrive, the week ahead is summed up here."
+      },
+      "nextdue": {
+        "title": "Nothing due",
+        "body": "Bills show up here with their due dates."
+      },
+      "owes": {
+        "title": "All square",
+        "body": "Shares appear once bills are split."
+      },
+      "services": {
+        "title": "No services yet",
+        "body": "Each provider’s first bill sets up its service."
+      },
+      "trend": {
+        "title": "Not enough months yet",
+        "body": "The trend starts after two months of bills."
+      },
+      "calendar": {
+        "title": "No due dates yet",
+        "body": "Due dates appear here as bills arrive."
+      },
+      "activity": {
+        "title": "Nothing yet",
+        "body": "New bills and payments show up here."
+      },
+      "settled": {
+        "title": "Nothing to settle",
+        "body": "Shares due this month appear here."
+      },
+      "forecast": {
+        "title": "Estimates come later",
+        "body": "After a few bills, the months ahead are estimated."
+      },
+      "season": {
+        "title": "Season notes come later",
+        "body": "They compare with the same time last year."
+      },
+      "usage": {
+        "title": "No usage yet",
+        "body": "Usage appears from the first bill that prints it."
+      },
+      "inbox": {
+        "title": "Nothing here yet",
+        "body": "Forwarded bills appear as they’re analysed."
+      },
+      "notices": {
+        "title": "Nothing to flag",
+        "body": "Unusual bills and things to confirm show up here."
+      },
+      "setaside": {
+        "title": "Nothing to set aside",
+        "body": "Estimates start after a few bills."
+      },
+      "plan": {
+        "title": "No instalments",
+        "body": "Bills paid by instalments show their progress here."
+      },
+      "mine": {
+        "title": "Nothing just yours",
+        "body": "Your own bills, like car rego, show here."
+      },
+      "service": {
+        "title": "No bills yet",
+        "body": "This service’s figures appear from its first bill."
+      },
+      "weather": {
+        "title": "No forecast yet",
+        "body": "The week’s weather appears once it has been fetched."
+      },
+      "actions": {
+        "title": "Quick actions",
+        "body": "Add a bill, upload one, copy the bills address."
+      },
+      "start": {
+        "title": "Get started",
+        "body": ""
+      },
+      "postcode": {
+        "title": "Add your postcode",
+        "body": ""
+      }
+    },
+    "rel": {
+      "today": "Today",
+      "tomorrow": "Tomorrow",
+      "inDays": "In {n} days",
+      "overdue": "{n, plural, one {# day} other {# days}} overdue"
+    },
+    "status": {
+      "paid": "Paid",
+      "overdue": "{n, plural, one {# day} other {# days}} overdue",
+      "today": "Due today",
+      "tomorrow": "Due tomorrow",
+      "soon": "Due in {n} days",
+      "due": "Due {date}"
+    },
+    "how": {
+      "upload": "Uploaded by {name}",
+      "forward": "Forwarded by {name}",
+      "email": "Emailed in"
+    },
+    "up": {
+      "yours": "Just yours",
+      "youPay": "You pay {service}",
+      "shareTo": "Your share · to {name}",
+      "nOf": "{n} of {of}",
+      "instalment": "Instalment {n} of {of}",
+      "instalments": "Instalments"
+    },
+    "month": {
+      "title": "{month} so far",
+      "day": "Day {day} of {days}",
+      "billed": "billed",
+      "estimated": "estimated",
+      "tracking": "Tracking to {amount}",
+      "under": "{pct} under last month",
+      "over": "{pct} over last month",
+      "billedShort": "{amount} billed",
+      "estimatedShort": "{amount} estimated",
+      "byService": "By service",
+      "yourShare": "Your share",
+      "of": "of {amount}"
+    },
+    "weather": {
+      "title": "Weather",
+      "hiLo": "H {hi}° L {lo}°",
+      "heatingDay": "Heating day",
+      "coolingDay": "Cooling day",
+      "legend": "Tinted days need heating or cooling. Weather data: Open-Meteo.",
+      "code": {
+        "clear": "Sunny",
+        "partly": "Some cloud",
+        "cloudy": "Cloudy",
+        "fog": "Fog",
+        "drizzle": "Drizzle",
+        "rain": "Rain",
+        "snow": "Snow",
+        "storm": "Storms",
+        "unknown": "–"
+      },
+      "heating": {
+        "more": "A colder week than usual: about {amount} more in heating.",
+        "less": "A milder week than usual: about {amount} less in heating.",
+        "total": "Heating this week: about {amount}."
+      },
+      "cooling": {
+        "more": "A hotter week than usual: about {amount} more in cooling.",
+        "less": "A cooler week than usual: about {amount} less in cooling.",
+        "total": "Cooling this week: about {amount}."
+      }
+    },
+    "nextdue": {
+      "title": "Next due",
+      "markPaid": "Mark paid",
+      "markedPaid": "Marked paid",
+      "thisWeek": "{amount} this week"
+    },
+    "owes": {
+      "title": "Settle up",
+      "netCaption": "owed to you, after what you owe",
+      "both": "Owes you {owes} · you owe {owe}",
+      "owesYou": "Owes you {amount}",
+      "youOwe": "You owe {amount}",
+      "owedToYou": "{amount} owed to you",
+      "remind": "Remind",
+      "settle": "Settle up"
+    },
+    "trend": {
+      "title": "Monthly cost",
+      "label": "Monthly cost, last 12 months",
+      "avg": "Avg {amount}"
+    },
+    "services": {
+      "title": "Services",
+      "thisMonth": "This month",
+      "thisMonthLow": "this month",
+      "latestBill": "Latest bill",
+      "vsLastYear": "{pct} on last year"
+    },
+    "usage": {
+      "perDay": "{unit} a day",
+      "under": "{pct}% under your limit",
+      "over": "{pct}% over your limit",
+      "yourLimit": "Your limit",
+      "lastYear": "Last year",
+      "similar": "Similar homes"
+    },
+    "notices": {
+      "title": "Heads up",
+      "count": "{count, plural, one {# thing} other {# things}}",
+      "unusualTitle": "{service} is unusual",
+      "unusualBody": "{pct} against the same time last year.",
+      "unusualBodyPlain": "Higher than the bills before it.",
+      "planTitle": "How will you pay {service}?",
+      "planBody": "In full, or by instalments. Choose on the bill.",
+      "whoseTitle": "Who’s {service} for?",
+      "whoseBody": "Just you, or the household’s?",
+      "inboxTitle": "{count, plural, one {# document} other {# documents}} to confirm",
+      "inboxBody": "Check a detail or two, then the bill is created.",
+      "seasonTitle": "{service} and the season ahead",
+      "seasonBody": "{pct} last year at the change of season."
+    },
+    "inbox": {
+      "title": "Inbox",
+      "analysedThisWeek": "analysed this week",
+      "toConfirm": "{count, plural, one {# to confirm} other {# to confirm}}",
+      "confirm": "Confirm",
+      "waiting": "Waiting to be analysed"
+    },
+    "address": {
+      "label": "Forward bills to"
+    },
+    "settled": {
+      "title": "Shares settled",
+      "short": "Settled",
+      "caption": "shares paid in {month}",
+      "open": "{n} open",
+      "whose": "{month}’s shares"
+    },
+    "forecast": {
+      "title": "Next six months",
+      "estimates": "Estimates",
+      "tip": "{month} · about {amount}"
+    },
+    "setaside": {
+      "title": "Set aside for {month}",
+      "short": "Set aside",
+      "caption": "for you, for {month}"
+    },
+    "mine": {
+      "title": "Just yours"
+    },
+    "plan": {
+      "yourPart": "Your part {amount}"
+    },
+    "calendar": {
+      "title": "Due dates",
+      "twoWeeks": "Next two weeks",
+      "due": "{n, plural, one {# due} other {# due}} · {amount}"
+    },
+    "activity": {
+      "title": "Recent activity",
+      "arrived": "{title} arrived",
+      "failed": "{title} couldn’t be analysed",
+      "analysed": "{title} analysed",
+      "sharePaid": "{who} paid {whom} {amount}",
+      "billPaid": "{who} paid {service} {amount}",
+      "serviceInstalment": "{service}, instalment {n}",
+      "bill": "{service} bill"
+    },
+    "week": {
+      "title": "This week in the house",
+      "share": "your {amount} share of {service}",
+      "instalment": "the {n, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} {service} instalment",
+      "bill": "{service} ({amount})",
+      "overdue": "{items} {count, plural, one {is} other {are}} overdue.",
+      "soon": "{items} {count, plural, one {is} other {are}} due {when}.",
+      "today": "today",
+      "tomorrow": "tomorrow",
+      "later": "Then {items}.",
+      "onDay": "{service} on {day}",
+      "debt": "{from} still owes {to} {amount} for {service}.",
+      "cold": "{n, plural, one {One cold day} other {# cold days}} ahead, so heating will stay high.",
+      "hot": "{n, plural, one {One hot day} other {# hot days}} ahead, so cooling will cost more.",
+      "quiet": "A quiet week: nothing due in the next seven days."
+    },
+    "actions": {
+      "title": "Quick actions",
+      "add": "Add a bill",
+      "upload": "Upload",
+      "address": "Bills address",
+      "record": "Record payment"
+    },
+    "season": {
+      "title": "Season ahead",
+      "daysTo": "days to {season}",
+      "ranHigher": "{service} ran {pct} last {season}",
+      "starts": "{season} starts {date}",
+      "inDays": "in {n} days",
+      "moreAMonth": "About {amount} a month more at the change of season, on last year.",
+      "lessAMonth": "About {amount} a month less at the change of season, on last year.",
+      "names": {
+        "summer": "summer",
+        "autumn": "autumn",
+        "winter": "winter",
+        "spring": "spring",
+        "wet": "the wet season",
+        "dry": "the dry season"
+      }
+    },
+    "start": {
+      "title": "Get started",
+      "done": "{done} of {of} done",
+      "household": "Household set up",
+      "householdSub": "Name, currency and time zone are in.",
+      "firstBill": "Forward your first bill",
+      "firstBillSub": "From your own inbox to {address}. Its service sets itself up.",
+      "firstBillSubNoAddress": "Upload a PDF or photo, or enter one by hand.",
+      "invite": "Invite your housemates",
+      "inviteSub": "They choose their own colours and PIN when they join.",
+      "postcode": "Postcode added",
+      "postcodeDone": "Weather and season notes are on.",
+      "postcodeSub": "Add it for weather and season notes.",
+      "copyAddress": "Copy the address",
+      "byHand": "Enter one by hand"
+    },
+    "postcode": {
+      "body": "Add your postcode to see the week’s weather and what heating or cooling will cost.",
+      "add": "Add postcode"
+    },
+    "edit": {
+      "title": "Edit Home",
+      "add": "Add widget",
+      "addOne": "Add",
+      "addTitle": "Add a widget",
+      "homeEyebrow": "Home",
+      "allOn": "Every widget is already on Home. Remove one to add it at another size.",
+      "grid": "Grid",
+      "reset": "Reset",
+      "resetDone": "Home is back to the default layout",
+      "done": "Done",
+      "remove": "Remove",
+      "size": "Change size",
+      "page": "Page {n}"
+    }
   }
 }

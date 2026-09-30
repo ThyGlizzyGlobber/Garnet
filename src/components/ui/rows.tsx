@@ -51,7 +51,7 @@ export function Rows({ className, children }: { className?: string; children: Re
   return <div className={cx('rows', className)}>{children}</div>;
 }
 
-function InstDots({ states, label }: { states: InstalmentState[]; label: string }) {
+export function InstDots({ states, label }: { states: InstalmentState[]; label: string }) {
   return (
     <span className="inst-dots" aria-label={label}>
       {states.map((s, i) => (

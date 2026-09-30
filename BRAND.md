@@ -248,7 +248,8 @@ The studio's `.ring` is `.gauge` here (Tailwind owns `ring`):
   `src/styles/shell.css`; its numbers come from `shellView()` (`src/lib/shell.ts`).
 - **Top bar**: search on the left; Inbox and Add bill on the right.
 - Pages keep a reading width of 1240 px; very wide screens cap at about 1600.
-- **Home is a widget grid** sized to the screen, like the iPhone home screen:
+- **Home is a widget grid** (`src/components/home`, engine in `src/lib/home-grid.ts`,
+  data in `src/lib/home-data.ts`) sized to the screen, like the iPhone home screen:
   5 × 3 on desktop and iPad landscape, 3 × 4 on iPad portrait, 2 × 4 on iPhone
   (each also comfier or denser). Six widgets on page one ("This month so far"
   is 2 × 2); more pages swipe sideways. **Edit Home**: long-press or Edit, then

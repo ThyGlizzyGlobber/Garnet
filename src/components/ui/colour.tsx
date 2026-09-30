@@ -31,18 +31,6 @@ export function Swatch({
   );
 }
 
-/** A bar filled to `pct` (0–100) in a colour, e.g. a service's share of the year. */
-export function ColourBar({ colour, pct }: { colour: string; pct: number }) {
-  return (
-    <div className="mt-1 h-2 rounded-full bg-track">
-      <div
-        className="h-2 rounded-full"
-        style={{ width: `${Math.min(100, Math.max(0, pct))}%`, background: colourCss(colour) }}
-      />
-    </div>
-  );
-}
-
 export type IdentitySize = 'sm' | 'md' | 'lg';
 
 /** A member's initial on their colour, fading towards the accent. */

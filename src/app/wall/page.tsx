@@ -10,7 +10,8 @@ import { todayIn } from '@/lib/dates';
 import { formatDate, formatMoney, formatMonth, formatWeekday, toMajor } from '@/lib/format';
 import { wallView } from '@/lib/home';
 import { getHousehold } from '@/lib/households';
-import { weatherCodeKey, weatherWeek } from '@/lib/weather-week';
+import { weatherCodeKey } from '@/lib/weather-codes';
+import { weatherWeek } from '@/lib/weather-week';
 import { AutoRefresh } from './auto-refresh';
 
 export const dynamic = 'force-dynamic';

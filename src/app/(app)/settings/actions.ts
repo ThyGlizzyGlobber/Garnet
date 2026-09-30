@@ -7,22 +7,15 @@ import { fieldErrors, str, zodToState } from '@/lib/actions';
 import { requireMember, requireOperator, requireOwner, signOut } from '@/lib/auth/session';
 import { replaceAlias } from '@/lib/bills-address';
 import { getHousehold, updateHousehold } from '@/lib/households';
-import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { exitDemo } from '@/lib/demo';
-import { requestIsHttps } from '@/lib/request';
 import { isPreset, isTheme } from '@/lib/appearance';
 import { rememberAppearance } from '@/lib/auth/appearance';
 import { updateMember } from '@/lib/members';
 import { cancelUpdateRequest, checkForUpdate, requestUpdate } from '@/lib/updates';
 import { readMissingMetrics } from '@/ingest/metrics';
 import { computeRegionalStats, regionalEnabled, setRegionalSharing } from '@/lib/regional';
-import {
-  clearHouseholdLocation,
-  LOCATION_PROMPT_COOKIE,
-  LocationError,
-  setHouseholdLocation,
-} from '@/lib/location';
+import { clearHouseholdLocation, LocationError, setHouseholdLocation } from '@/lib/location';
 
 const schema = z.object({
   name: z.string().min(1, 'required').max(60),
@@ -151,19 +144,6 @@ export async function removeLocationAction(): Promise<void> {
   const me = await requireOwner();
   clearHouseholdLocation(me.householdId);
   revalidatePath('/settings');
-}
-
-/** "Not now" on the dashboard's postcode prompt: hidden in this browser for 30 days. */
-export async function dismissLocationPromptAction(): Promise<void> {
-  const jar = await cookies();
-  jar.set(LOCATION_PROMPT_COOKIE, '1', {
-    maxAge: 30 * 86_400,
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: await requestIsHttps(),
-    path: '/',
-  });
-  revalidatePath('/');
 }
 
 /** Area comparisons on or off (admins). Turning it off takes the household out of every figure now. */

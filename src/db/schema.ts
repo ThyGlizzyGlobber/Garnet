@@ -726,3 +726,34 @@ export type WeatherForecast = typeof weatherForecast.$inferSelect;
 export type NewBill = typeof bill.$inferInsert;
 export type Share = typeof share.$inferSelect;
 export type BillInstalment = typeof billInstalment.$inferSelect;
+
+/**
+ * A person's Home layout for one kind of screen (desktop, iPad landscape or
+ * portrait, phone), and their wall's: the grid density and the widgets on
+ * each page, in order (packing decides where each lands). Missing = the
+ * default layout (src/lib/home-grid.ts).
+ */
+export const homeLayout = sqliteTable(
+  'home_layout',
+  {
+    id: text('id').primaryKey(),
+    householdId: householdId(),
+    memberId: text('member_id')
+      .notNull()
+      .references(() => member.id, { onDelete: 'cascade' }),
+    device: text('device', { enum: ['desktop', 'tabletL', 'tabletP', 'phone'] }).notNull(),
+    kind: text('kind', { enum: ['home', 'wall'] })
+      .notNull()
+      .default('home'),
+    density: text('density', { enum: ['comfy', 'standard', 'dense'] })
+      .notNull()
+      .default('standard'),
+    /** JSON: pages of {id, w, h}. */
+    pages: text('pages', { mode: 'json' })
+      .$type<{ id: string; w: number; h: number }[][]>()
+      .notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (t) => [uniqueIndex('home_layout_member_device_kind').on(t.memberId, t.device, t.kind)],
+);
+export type HomeLayout = typeof homeLayout.$inferSelect;

@@ -2,6 +2,7 @@
 @import '../styles/components.css' layer(components);
 @import '../styles/charts.css' layer(components);
 @import '../styles/shell.css' layer(components);
+@import '../styles/home.css' layer(components);
 
 /*
   Design tokens: "Almanac 2" with the Frost Glass material (BRAND.md). The

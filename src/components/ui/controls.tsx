@@ -68,6 +68,7 @@ export function Segmented({
   small = false,
   label,
   className,
+  onChange,
 }: {
   items: SegmentItem[];
   value: string;
@@ -76,6 +77,8 @@ export function Segmented({
   /** Accessible name of the group. */
   label?: string;
   className?: string;
+  /** In a client component: change the value in place instead of submitting. */
+  onChange?: (value: string) => void;
 }) {
   return (
     <div className={cx('seg', small && 'seg-sm', className)} role="group" aria-label={label}>
@@ -100,11 +103,13 @@ export function Segmented({
         ) : (
           <button
             key={it.value}
+            type={onChange ? 'button' : 'submit'}
             className="seg-b"
             name={name}
             value={it.value}
             aria-pressed={on}
             aria-label={it.label ? undefined : it.value}
+            onClick={onChange ? () => onChange(it.value) : undefined}
           >
             {inner}
           </button>

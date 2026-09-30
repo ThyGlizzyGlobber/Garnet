@@ -32,6 +32,11 @@ export function overlapDays(
   return Math.round((end - start) / DAY_MS) + 1;
 }
 
+/** Whole days from one date to another (negative when `to` is earlier). */
+export function daysBetween(from: string, to: string): number {
+  return Math.round((toUtcMs(to) - toUtcMs(from)) / 86_400_000);
+}
+
 export function addDays(date: string, days: number): string {
   return fromUtcMs(toUtcMs(date) + days * DAY_MS);
 }
