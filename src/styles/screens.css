@@ -761,14 +761,16 @@ a.paper:hover .paper-stamp {
   display: grid;
   gap: var(--gap);
 }
+/* The cards flow down columns so a tall card leaves no gap beside it. */
 .set-col {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: var(--gap);
-  align-items: start;
+  columns: 3 300px;
+  column-gap: var(--gap);
+  margin-bottom: calc(-1 * var(--gap));
 }
 .set-col > * {
   min-width: 0;
+  break-inside: avoid;
+  margin-bottom: var(--gap);
 }
 .set-lede {
   margin: -4px 0 0;
