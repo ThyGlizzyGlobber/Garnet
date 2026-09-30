@@ -24,7 +24,9 @@
     "justYours": "Just yours",
     "noServices": "Each provider’s first bill adds its service here.",
     "householdHome": "{household}, Home",
-    "account": "Your account"
+    "account": "Your account",
+    "showSubs": "Show sub-services",
+    "hideSubs": "Hide sub-services"
   },
   "setup": {
     "title": "Set up your household.",
@@ -401,7 +403,19 @@
       "notYet": "Not yet",
       "perDay": "{qty} {unit} a day",
       "justYours": "Just yours",
-      "justYoursBody": "Personal bills aren’t split and don’t appear in the household’s totals."
+      "justYoursBody": "Personal bills aren’t split and don’t appear in the household’s totals.",
+      "afterCancelTitle": "Charged after {service} was cancelled",
+      "afterCancelBody": "It was cancelled on {date}, but this bill is dated after that. Check it has really stopped."
+    },
+    "upcoming": "{count, plural, =0 {Upcoming} other {Upcoming · #}}",
+    "upcomingOnly": "Nothing up to this month. {count, plural, one {# bill is} other {# bills are}} in later months.",
+    "move": {
+      "title": "Move to another service",
+      "body": "Filed under the wrong service? Move it. It’s split again by that service’s rules, unless someone has already paid their share.",
+      "label": "Service",
+      "button": "Move",
+      "yours": "Just yours",
+      "cancelled": "cancelled"
     }
   },
   "services": {
@@ -436,7 +450,6 @@
       "cadence": "How often",
       "usageUnit": "Usage unit",
       "noUsage": "No usage tracking",
-      "colour": "Colour",
       "notes": "Notes",
       "isActive": "Tracking",
       "splitting": "Who pays and how it’s split",
@@ -475,12 +488,14 @@
       "newTitle": "Add a service",
       "newLede": "Most services set themselves up from their first bill. Add one here to track something that doesn’t send one.",
       "whatItIs": "What it is",
-      "colourHint": "Its disc, its bars and its line on charts.",
       "admins": "Admins",
       "stop": {
         "title": "Stop tracking",
         "body": "Switch it off to stop tracking. Its bills and history stay; new bills from this provider start a new service."
-      }
+      },
+      "subProvider": "Which one",
+      "subProviderHint": "The service or charity itself. It’s listed under its main service.",
+      "subProviderPlaceholder": "Netflix, Spotify, Red Cross…"
     },
     "nextBill": "Next bill about {amount} · due {date}",
     "noHistory": "No bills yet",
@@ -567,7 +582,10 @@
       "split": "Split {parts}.",
       "unusual": "Flagged as unusual.",
       "next": "Next bill expected around {date}.",
-      "last": "Last bill {amount}, {status}."
+      "last": "Last bill {amount}, {status}.",
+      "cancelled": "Cancelled {date}.",
+      "cancelledBy": "Cancelled {date} by {name}.",
+      "afterCancel": "{count, plural, one {# bill} other {# bills}} arrived after that."
     },
     "page": {
       "ledeProvider": "{provider}, {cadence}.",
@@ -606,6 +624,30 @@
       "limit": "Usage limit a month",
       "autoPay": "Payment",
       "autoPayOn": "Paid automatically"
+    },
+    "cancelled": "Cancelled",
+    "group": {
+      "count": "{count, plural, one {# service} other {# services}}",
+      "year": "{amount} in the last 12 months",
+      "lede": "{count, plural, =0 {Nothing going} other {# going}}{cancelled, plural, =0 {} other {, # cancelled}}. {amount} in the last 12 months.",
+      "ledeEmpty": "Nothing here yet. Add each of your {type}, or forward a bill or receipt and it’s set up for you.",
+      "add": "Add one",
+      "emptyTitle": "No {type} yet",
+      "emptyBody": "Each one is its own service with its own bills, and can be cancelled on its own.",
+      "cancelledHead": "Cancelled"
+    },
+    "cancel": {
+      "title": "Cancelled it?",
+      "body": "Mark {name} as cancelled. Its bills stay, and a bill dated after today is flagged.",
+      "button": "Cancel {name}",
+      "confirm": "Mark {name} as cancelled? Its bills are kept.",
+      "resumeTitle": "Going again?",
+      "resumeBody": "Started {name} again? Mark it as going.",
+      "resume": "It’s going again",
+      "byOn": "Cancelled by {name} on {date}",
+      "on": "Cancelled on {date}",
+      "afterBody": "{count, plural, one {A bill} other {# bills}} arrived dated after that. Check it has really stopped.",
+      "keptBody": "Its bills are kept."
     }
   },
   "members": {
@@ -1440,8 +1482,10 @@
         "single": "From your only bill",
         "weather": "Normal weather, your bills",
         "area": "Similar households nearby",
-        "none": ""
-      }
+        "none": "",
+        "fixed": "Same price every bill"
+      },
+      "fixed": "The same price as your recent bills"
     },
     "chartUsage": "Usage per day, each bill",
     "chartCost": "Cost per day, each bill",
@@ -1450,7 +1494,8 @@
     "limitLine": "Your limit · {qty} {unit} a day",
     "comparedWith": "Compared with",
     "sameShort": "same",
-    "latestLine": "Latest bill: {qty} {unit} a day, about {month} {unit} a month."
+    "latestLine": "Latest bill: {qty} {unit} a day, about {month} {unit} a month.",
+    "chartCostBill": "Cost of each bill"
   },
   "seasons": {
     "name": {
@@ -1724,7 +1769,6 @@
     "numberAboveZero": "Enter a number above zero",
     "aboveZero": "Must be above zero",
     "validEmail": "Enter a valid email",
-    "pickColour": "Pick a colour",
     "chooseService": "Choose a service",
     "chooseType": "Choose a type",
     "unknownUnit": "Unknown unit",
@@ -1740,7 +1784,6 @@
     "serviceNotFound": "Service not found",
     "documentNotFound": "Document not found",
     "memberNotFound": "Member not found",
-    "sameOwner": "Choose a service with the same owner, or change whose it is",
     "whoseFailed": "Couldn’t change whose it is",
     "makePersonal": "Only the person who brought its bills in can make it personal",
     "editOthers": "Only admins can edit other members.",
@@ -1750,7 +1793,8 @@
     "percentFor": "Enter a percentage for {name}",
     "percentTotal": "The percentages add up to {total}%, not 100%.",
     "amountFor": "Enter an amount for {name}, or leave it blank",
-    "amountNeeded": "Enter an amount for at least one person, or split it evenly."
+    "amountNeeded": "Enter an amount for at least one person, or split it evenly.",
+    "moveNotAllowed": "It can’t move there. Only whoever brought a bill in can make it their own, and once a housemate has paid a share it stays with the household."
   },
   "common": {
     "copy": "Copy",
@@ -1841,6 +1885,12 @@
       "uploadedBy": "Uploaded by {name}",
       "forward": "Forwarded by {name}",
       "email": "Emailed in"
+    },
+    "pager": {
+      "nav": "Pages",
+      "previous": "Previous",
+      "next": "Next",
+      "page": "Page {n}"
     }
   },
   "design": {
@@ -2152,7 +2202,9 @@
       "inboxTitle": "{count, plural, one {# document} other {# documents}} to confirm",
       "inboxBody": "Check a detail or two, then the bill is created.",
       "seasonTitle": "{service} and the season ahead",
-      "seasonBody": "{pct} last year at the change of season."
+      "seasonBody": "{pct} last year at the change of season.",
+      "cancelledTitle": "{service} charged after cancelling",
+      "cancelledBody": "A bill arrived dated after it was cancelled. Check it has really stopped."
     },
     "inbox": {
       "title": "Inbox",

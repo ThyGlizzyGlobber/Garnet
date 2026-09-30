@@ -109,6 +109,8 @@ const ICONS: Record<string, string> = {
   'house-shield':
     '<path d="M3 11 12 4l9 7" /> <path d="M5.5 9.5V20h13V9.5" /> <path d="M12 11.5l-3 1.2v2.1c0 1.8 1.3 3.2 3 3.7 1.7-.5 3-1.9 3-3.7v-2.1l-3-1.2z" />',
   receipt: '<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z" /> <path d="M9 8h6M9 12h6" />',
+  'hand-heart':
+    '<path d="M12 11.5S8.5 9.4 8.5 6.9A1.9 1.9 0 0 1 12 5.9a1.9 1.9 0 0 1 3.5 1c0 2.5-3.5 4.6-3.5 4.6z" /> <path d="M3 14.5h3l3.5 1.5h4a1.5 1.5 0 0 1 0 3H9.5M13.5 19l5-2.2a1.5 1.5 0 0 1 1.5 2.5L14 21.5H6.5L3 20" />',
 };
 
 /** Names the screens used before the redesign, kept as spellings of the studio's icons. */

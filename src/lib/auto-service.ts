@@ -5,7 +5,6 @@ import { daysInclusive } from '@/lib/dates';
 import { sameProvider } from '@/lib/provider-match';
 import { hasHousemates, listMembers } from '@/lib/members';
 import type { Scope } from '@/lib/scope';
-import { nextPaletteColour, TYPE_COLOUR } from '@/lib/palette';
 import {
   createService,
   listServices,
@@ -57,8 +56,9 @@ export function typeFits(serviceType: string, billType: string | null | undefine
 /**
  * A bill of a known type landed on a service still filed as "Other" (set up
  * before that type existed, or from an unsure reading): file the service
- * under the bill's type. A service that was named after its type ("Other")
- * takes the new type's name, and the Other colour gives way to the type's.
+ * under the bill's type (and so its colour). A service that was named after
+ * its type ("Other") takes the new type's name, or the provider's for a
+ * sub-service (Netflix under Subscriptions).
  * Returns the service, changed or not.
  */
 export function promoteServiceType(
@@ -81,9 +81,14 @@ export function promoteServiceType(
     svc.id,
     {
       typeSlug: type.slug,
-      ...(namedAfterType ? { name: taken ? `${type.label} (${svc.provider})` : type.label } : {}),
-      ...(svc.colour.toLowerCase() === TYPE_COLOUR.other && TYPE_COLOUR[type.slug]
-        ? { colour: TYPE_COLOUR[type.slug] }
+      ...(namedAfterType
+        ? {
+            name: type.hasSubServices
+              ? svc.provider
+              : taken
+                ? `${type.label} (${svc.provider})`
+                : type.label,
+          }
         : {}),
     },
     db,
@@ -115,15 +120,17 @@ export function serviceForNewProvider(
     { includeInactive: true, ...(opts.scope ?? { everyone: true }) },
     db,
   );
-  // A service for the same provider (a cancelled one is switched back on) is
+  // A service for the same provider (a stopped one is switched back on) is
   // reused rather than duplicated, but only when exactly one fits; otherwise
-  // a person picks.
+  // a person picks. A sub-service someone cancelled stays cancelled: its new
+  // bill is flagged as charged after cancelling instead.
   const same = all.filter((s) => sameProvider(s.provider, provider));
   const typed = same.filter((s) => typeFits(s.typeSlug, bill.serviceType));
   if (typed.length) {
     const exact = typed.filter((s) => s.typeSlug === bill.serviceType);
     const existing = typed.length === 1 ? typed[0]! : exact.length === 1 ? exact[0]! : null;
     if (!existing) return null;
+    if (existing.cancelledAt) return { service: existing, created: false };
     if (!existing.isActive) updateService(householdId, existing.id, { isActive: true }, db);
     return { service: { ...existing, isActive: true }, created: false };
   }
@@ -135,9 +142,13 @@ export function serviceForNewProvider(
   // Either way, whoever brought the bill in is asked to confirm (ownership.ts).
   const together = hasHousemates(householdId, db);
   const owner = type.personalByDefault && opts.member && together ? opts.member : null;
-  const name = all.some((s) => s.name.toLowerCase() === type.label.toLowerCase())
-    ? `${type.label} (${provider})`
-    : type.label;
+  // A sub-service is named after its provider (Netflix, Red Cross); any other
+  // service after its type.
+  const name = type.hasSubServices
+    ? provider
+    : all.some((s) => s.name.toLowerCase() === type.label.toLowerCase())
+      ? `${type.label} (${provider})`
+      : type.label;
   const members = listMembers(householdId, db);
   const payer =
     (opts.payerMemberId && members.find((m) => m.id === opts.payerMemberId)?.id) ??
@@ -157,7 +168,6 @@ export function serviceForNewProvider(
       ownerMemberId: owner,
       setUpByMemberId: opts.member ?? null,
       ownerAskedAt: together ? new Date().toISOString() : null,
-      colour: TYPE_COLOUR[type.slug] ?? nextPaletteColour(all.map((s) => s.colour)),
       autoPay: bill.autoPay ?? false,
       trustedSenders: opts.trustedDomain ? [opts.trustedDomain] : [],
       notes: 'Set up automatically from its first bill. Check who pays it and how it’s split.',

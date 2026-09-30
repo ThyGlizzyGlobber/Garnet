@@ -121,6 +121,14 @@ const GENERIC_WORDS = new Set([
   'city',
   'shire',
   'rates',
+  'donation',
+  'donations',
+  'charity',
+  'foundation',
+  'appeal',
+  'subscription',
+  'subscriptions',
+  'streaming',
 ]);
 
 /**

@@ -7,7 +7,13 @@ import { runMigrations } from '@/db/migrate';
 import { createBill } from '@/lib/bills';
 import { createHousehold } from '@/lib/households';
 import { createMember } from '@/lib/members';
-import { estimatePerDay, nextBillGuess, projectMonth } from '@/lib/projections';
+import {
+  estimatePerDay,
+  fixedMonthly,
+  fixedPrice,
+  nextBillGuess,
+  projectMonth,
+} from '@/lib/projections';
 import { remindersFor, summariseReminders } from '@/lib/reminders';
 import { createService } from '@/lib/services';
 
@@ -53,7 +59,48 @@ describe('estimatePerDay', () => {
   });
 });
 
+describe('fixedPrice', () => {
+  it('is the price when the latest bills all cost the same', () => {
+    const flat = [
+      m(12900, '2026-04-14', '2026-05-13'),
+      m(12900, '2026-05-14', '2026-06-13'),
+      m(12900, '2026-06-14', '2026-07-13'),
+    ];
+    expect(fixedPrice(flat)).toBe(12900);
+    expect(fixedMonthly('monthly', flat)).toBe(12900);
+    expect(fixedMonthly('quarterly', flat)).toBe(4300);
+    // Weekly and irregular bills don't follow the calendar's months.
+    expect(fixedMonthly('weekly', flat)).toBeNull();
+    // A price rise: the last three differ, so it's worked out per day again.
+    expect(fixedPrice([...flat.slice(0, 2), m(13900, '2026-06-14', '2026-07-13')])).toBeNull();
+    // One bill isn't a pattern.
+    expect(fixedPrice(flat.slice(0, 1))).toBeNull();
+  });
+
+  it('keeps per-day estimates for bills that vary', () => {
+    const r = estimatePerDay(
+      [
+        m(3000, '2026-06-01', '2026-06-30'),
+        m(4100, '2026-07-01', '2026-07-31'),
+        m(3500, '2026-08-01', '2026-08-31'),
+      ],
+      '2026-10',
+    );
+    expect(r.method).toBe('recent');
+  });
+});
+
 describe('nextBillGuess', () => {
+  it('uses a fixed price as it is, whatever the length of the next period', () => {
+    const n = nextBillGuess(
+      { periodStart: '2026-06-14', periodEnd: '2026-07-13', dueDate: '2026-06-14' },
+      'monthly',
+      412,
+      12900,
+    );
+    expect(n?.amountMinor).toBe(12900);
+  });
+
   it('projects the next period and due date from the cadence', () => {
     const n = nextBillGuess(
       { periodStart: '2026-09-14', periodEnd: '2026-10-13', dueDate: '2026-09-28' },
@@ -139,13 +186,14 @@ describe('projectMonth + reminders', () => {
   it('projects October and splits the set-aside between members', () => {
     const p = projectMonth(hid, '2026-10', db);
     expect(p.services).toHaveLength(1);
-    expect(p.services[0]?.method).toBe('recent');
-    // Mean daily cost of the last three bills (100, 100, 103.3) × 31 days.
-    expect(p.totalMinor).toBe(3134);
-    expect(p.setAside.map((s) => s.minor).sort()).toEqual([1567, 1567]);
-    expect(p.setAsideEach).toBe(1567);
-    // Cached row exists and is idempotent on re-run.
-    expect(projectMonth(hid, '2026-10', db).totalMinor).toBe(3134);
+    // The same $31 every month: October is $31 too, not 31 days at a
+    // 30-day month's daily rate.
+    expect(p.services[0]?.method).toBe('fixed');
+    expect(p.totalMinor).toBe(3100);
+    expect(p.services[0]?.nextBill?.amountMinor).toBe(3100);
+    expect(p.setAside.map((s) => s.minor).sort()).toEqual([1550, 1550]);
+    expect(p.setAsideEach).toBe(1550);
+    expect(projectMonth(hid, '2026-10', db).totalMinor).toBe(3100);
   });
 
   it('counts known accrual in a partly billed month', () => {

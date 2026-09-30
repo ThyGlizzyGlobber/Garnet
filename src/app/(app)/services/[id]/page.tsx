@@ -10,6 +10,8 @@ import { Chip } from '@/components/ui/chip';
 import { Avatar, Disc } from '@/components/ui/colour';
 import { BackLink } from '@/components/ui/controls';
 import { BillRow, Rows } from '@/components/ui/rows';
+import { Pager } from '@/components/ui/pager';
+import { pageParam, paginate } from '@/lib/paging';
 import { SAME_BAND } from '@/lib/averages';
 import { DAYS_PER_MONTH } from '@/lib/consumption';
 import { pageContext } from '@/lib/context';
@@ -18,7 +20,11 @@ import { isAdmin } from '@/lib/roles';
 import { visibleTo } from '@/lib/scope';
 import { seasonNoticeText } from '@/lib/season-text';
 import { serviceOverview } from '@/lib/service-overview';
-import { getService } from '@/lib/services';
+import { getMember } from '@/lib/members';
+import { chargedAfterCancel, getService } from '@/lib/services';
+import { listBills } from '@/lib/bills';
+import { InlineAction } from '@/components/ui/form';
+import { cancelServiceAction, resumeServiceAction } from '../actions';
 import { unitLabel } from '@/lib/units';
 import { formatMonth } from '@/lib/format';
 import { partText } from '../split-text';
@@ -29,8 +35,18 @@ import { partText } from '../split-text';
  * compared with, how it's split and what's coming. Numbers come from
  * serviceOverview() (src/lib/service-overview.ts).
  */
-export default async function ServicePage({ params }: { params: Promise<{ id: string }> }) {
+/** Bills per page in "Every bill": a year of monthly bills. */
+const BILLS_PER_PAGE = 12;
+
+export default async function ServicePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ p?: string }>;
+}) {
   const { id } = await params;
+  const { p: pageRaw } = await searchParams;
   const ctx = await pageContext();
   const { hh, me, money, month, qty, today } = ctx;
   const t = await getTranslations('usage');
@@ -50,6 +66,13 @@ export default async function ServicePage({ params }: { params: Promise<{ id: st
   const split = o.split;
   const payer = split?.parts.find((p) => p.member.id === svc.payerMemberId)?.member;
   const payerName = payer?.name ?? null;
+  // A sub-service (Netflix under Subscriptions): back to its main service,
+  // and it can be cancelled.
+  const sub = svc.type.hasSubServices;
+  const cancelledBy = svc.cancelledByMemberId ? getMember(hh.id, svc.cancelledByMemberId) : null;
+  const afterCancel = svc.cancelledAt
+    ? listBills(hh.id, { serviceId: svc.id }).filter((b) => chargedAfterCancel(svc, b))
+    : [];
 
   // "Northwind Energy, quarterly. $1,864 last financial year, about $155 a
   // month. The latest bill used 5% more than the same time last year…"
@@ -110,7 +133,13 @@ export default async function ServicePage({ params }: { params: Promise<{ id: st
           {ts('form.seasonal')}
         </Chip>
       )}
-      {!svc.isActive && <Chip tone="neutral">{ts('inactive')}</Chip>}
+      {svc.cancelledAt ? (
+        <Chip tone={afterCancel.length ? 'bad' : 'neutral'} icon="x">
+          {ts('cancelled')}
+        </Chip>
+      ) : (
+        !svc.isActive && <Chip tone="neutral">{ts('inactive')}</Chip>
+      )}
     </>
   );
 
@@ -168,12 +197,38 @@ export default async function ServicePage({ params }: { params: Promise<{ id: st
     : null;
   const ta = await getTranslations('area');
   const area = o.area;
+  // "Every bill", a page at a time (newest first), under each year's heading
+  // with the whole year's count and total.
+  const billPage = paginate(o.bills, pageParam(pageRaw), BILLS_PER_PAGE);
+  const pageYears = o.byYear
+    .map((y) => ({
+      year: y.year,
+      count: y.bills.length,
+      totalMinor: y.totalMinor,
+      bills: y.bills.filter((b) => billPage.items.includes(b)),
+    }))
+    .filter((y) => y.bills.length > 0);
+  const tp = await getTranslations('ui.pager');
+  const pagerLabels = {
+    nav: tp('nav'),
+    previous: tp('previous'),
+    next: tp('next'),
+    page: (n: number) => tp('page', { n }),
+  };
   const tsp = await getTranslations('services.split');
-  const chartTitle = o.barsAreUsage ? t('chartUsage') : t('chartCost');
+  const chartTitle = o.barsAreUsage
+    ? t('chartUsage')
+    : o.barsPerBill
+      ? t('chartCostBill')
+      : t('chartCost');
 
   return (
     <div className="scr d3-service">
-      <BackLink href="/services">{ts('title')}</BackLink>
+      {sub ? (
+        <BackLink href={`/services/group/${svc.typeSlug}`}>{svc.type.label}</BackLink>
+      ) : (
+        <BackLink href="/services">{ts('title')}</BackLink>
+      )}
       <PageTitle
         eyebrow={`${svc.type.label} · ${ts(`form.cadences.${svc.cadence}`)}`}
         title={svc.name}
@@ -207,9 +262,11 @@ export default async function ServicePage({ params }: { params: Promise<{ id: st
                       : '',
                   tip: `${formatMonthRange(b.periodStart, b.periodEnd, hh.locale)} · ${
                     o.barsAreUsage && b.usage !== null
-                      ? t('perDay', { qty: qty(b.usage), unit })
-                      : t('costPerDay', { amount: money(Math.round(b.value)) })
-                  } · ${money(b.amountMinor)}`,
+                      ? `${t('perDay', { qty: qty(b.usage), unit })} · `
+                      : o.barsPerBill
+                        ? ''
+                        : `${t('costPerDay', { amount: money(Math.round(b.value)) })} · `
+                  }${money(b.amountMinor)}`,
                   href: `/bills/${b.billId}`,
                   flag: b.unusual,
                 }))}
@@ -252,7 +309,7 @@ export default async function ServicePage({ params }: { params: Promise<{ id: st
               </div>
             </Card>
           )}
-          <Card className="d3-every">
+          <Card className="d3-every" id="bills">
             <SectionHead
               title={ts('page.everyBill')}
               right={
@@ -262,32 +319,60 @@ export default async function ServicePage({ params }: { params: Promise<{ id: st
             {o.bills.length === 0 ? (
               <p className="muted">{ts('page.noBills')}</p>
             ) : (
-              <div className="d3-tl">
-                {o.byYear.map((y) => (
-                  <div key={y.year} className="year-group">
-                    <div className="year-h">
-                      <span>{y.year}</span>
-                      <span className="muted">
-                        {ts('page.billCount', { count: y.bills.length })} ·{' '}
-                        {money(y.totalMinor, hh.currency, { whole: true })}
-                      </span>
+              <>
+                <div className="d3-tl">
+                  {pageYears.map((y) => (
+                    <div key={y.year} className="year-group">
+                      <div className="year-h">
+                        <span>{y.year}</span>
+                        <span className="muted">
+                          {ts('page.billCount', { count: y.count })} ·{' '}
+                          {money(y.totalMinor, hh.currency, { whole: true })}
+                        </span>
+                      </div>
+                      <Rows>
+                        {y.bills.map((b) => (
+                          <BillRow
+                            key={b.id}
+                            bill={billRowFor(b, rc, { inService: true, noDisc: true })}
+                          />
+                        ))}
+                      </Rows>
                     </div>
-                    <Rows>
-                      {y.bills.map((b) => (
-                        <BillRow
-                          key={b.id}
-                          bill={billRowFor(b, rc, { inService: true, noDisc: true })}
-                        />
-                      ))}
-                    </Rows>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+                <Pager
+                  page={billPage.page}
+                  pages={billPage.pages}
+                  href={(n) => `/services/${svc.id}${n > 1 ? `?p=${n}` : ''}#bills`}
+                  labels={pagerLabels}
+                />
+              </>
             )}
           </Card>
         </div>
 
         <aside className="d3-aside">
+          {svc.cancelledAt && (
+            <Notice
+              tone={afterCancel.length ? 'bad' : 'neutral'}
+              icon={afterCancel.length ? 'alert' : 'x'}
+              title={
+                cancelledBy
+                  ? ts('cancel.byOn', {
+                      name: cancelledBy.id === me.id ? ts('page.you') : cancelledBy.name,
+                      date: ctx.date(svc.cancelledAt.slice(0, 10)),
+                    })
+                  : ts('cancel.on', { date: ctx.date(svc.cancelledAt.slice(0, 10)) })
+              }
+              body={
+                afterCancel.length
+                  ? ts('cancel.afterBody', { count: afterCancel.length })
+                  : ts('cancel.keptBody')
+              }
+              href={afterCancel.length ? `/bills/${afterCancel[0]!.id}` : `/bills?s=${svc.id}`}
+            />
+          )}
           <Card className="d3-nums">
             <div>
               <span className="muted small">
@@ -532,6 +617,33 @@ export default async function ServicePage({ params }: { params: Promise<{ id: st
               <span className="muted small">{svc.type.label}</span>
             </div>
           </Card>
+
+          {sub && (
+            <Card className={svc.cancelledAt ? undefined : 'danger'}>
+              <SectionHead title={ts(svc.cancelledAt ? 'cancel.resumeTitle' : 'cancel.title')} />
+              <p className="muted small">
+                {ts(svc.cancelledAt ? 'cancel.resumeBody' : 'cancel.body', { name: svc.name })}
+              </p>
+              <div className="mt-3">
+                {svc.cancelledAt ? (
+                  <InlineAction
+                    action={resumeServiceAction}
+                    hidden={{ id: svc.id }}
+                    label={ts('cancel.resume')}
+                    variant="secondary"
+                  />
+                ) : (
+                  <InlineAction
+                    action={cancelServiceAction}
+                    hidden={{ id: svc.id }}
+                    label={ts('cancel.button', { name: svc.name })}
+                    variant="danger"
+                    confirm={ts('cancel.confirm', { name: svc.name })}
+                  />
+                )}
+              </div>
+            </Card>
+          )}
         </aside>
       </div>
     </div>

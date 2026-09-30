@@ -169,3 +169,38 @@ export function mayChangeOwner(
 ): boolean {
   return canChangeOwner(me, svc, billBringers(householdId, svc.id, db)) || asksMember(svc, me);
 }
+
+/** Who brought one bill in (uploaded, forwarded from their address, or entered it), if known. */
+function billBroughtInBy(householdId: string, billId: string, db: Db): string | null {
+  const d = db
+    .select({
+      createdBy: bill.createdByMemberId,
+      memberId: sourceDocument.memberId,
+      senderVerified: sourceDocument.senderVerified,
+      emailFrom: sourceDocument.emailFrom,
+    })
+    .from(bill)
+    .leftJoin(sourceDocument, eq(sourceDocument.id, bill.sourceDocumentId))
+    .where(and(eq(bill.householdId, householdId), eq(bill.id, billId)))
+    .get();
+  return d ? (actingMember(householdId, d, db) ?? d.createdBy) : null;
+}
+
+/**
+ * May this member move a bill to that service? Between two services on the
+ * same side (the household's, or their own) yes. Out of the household into
+ * their own only when they brought that bill in; from their own into the
+ * household's always (only they can see it). Never onto someone else's.
+ */
+export function mayMoveBill(
+  householdId: string,
+  me: { id: string },
+  b: { id: string; ownerMemberId: string | null },
+  target: { ownerMemberId: string | null },
+  db: Db = getDb(),
+): boolean {
+  if (!visibleTo(b.ownerMemberId, me.id) || !visibleTo(target.ownerMemberId, me.id)) return false;
+  if ((b.ownerMemberId ?? null) === (target.ownerMemberId ?? null)) return true;
+  if (b.ownerMemberId === me.id) return true;
+  return billBroughtInBy(householdId, b.id, db) === me.id;
+}

@@ -74,7 +74,6 @@ export default async function EditServicePage({ params }: { params: Promise<{ id
           usageLimit: s.usageLimitMonthly?.toString() ?? '',
           splitMode: s.splitMode,
           payerMemberId: s.payerMemberId ?? '',
-          colour: s.colour,
           isActive: s.isActive,
           notes: s.notes ?? '',
           trustedSenders: s.trustedSenders.join(', '),

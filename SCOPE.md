@@ -105,6 +105,13 @@ Key properties:
 - Car rego, car insurance, roadside assistance, gym and vehicle repairs that a member uploads or forwards are guessed to be theirs (a per-type setting in the catalog); anything else is guessed to be the household's, and whoever brought the bill in is asked "Who's this for?" once. Any service can be switched between household and personal from its bill or its page: its owner hands it back; a household one can be made someone's own by whoever set it up or brought every one of its bills in, and by an admin or its payer only when nobody is known to have. Refused once a housemate has paid a share of one of its bills.
 - Home has a **Household · Mine** switch in households with more than one member. "Mine" shows what the member pays, all in: their share of household bills plus their personal bills, kept apart — this month, this financial year, a 12-month trend, where the money goes, what they owe, and their personal bills and services.
 
+### Sub-services (owner, 2026-09-30)
+
+- Subscriptions and Donations are main services that hold sub-services: each streaming service, app or charity (Netflix, Spotify, Red Cross) is its own service with its own bills, split and owner, listed under its main service in the nav (behind an arrow), on the Services page and on the main service's own page. A new provider's bill sets one up automatically; one can also be added by hand.
+- A sub-service can be cancelled: it records who cancelled it and when, keeps every bill, and a bill that arrives dated after the cancellation is flagged ("charged after cancelling").
+- Any bill can be moved to another service or sub-service from its page.
+- Every service type has one colour, the same in every household; households don't pick service colours.
+
 ### Projections
 
 - Next-bill estimate per service from recent cycles, seasonally aware (winter gas ≠ summer gas)

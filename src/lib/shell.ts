@@ -6,7 +6,7 @@ import { monthBounds } from '@/lib/periods';
 import { documentCounts } from '@/lib/review';
 import { billsAddress } from '@/lib/bills-address';
 import { isAdmin } from '@/lib/roles';
-import { listServices } from '@/lib/services';
+import { groupServices, listServices, type ServiceWithType } from '@/lib/services';
 import { totalsForRange } from '@/lib/stats';
 
 /**
@@ -23,11 +23,27 @@ interface ShellService {
   minor: number;
 }
 
+/**
+ * A line in the nav's services: a service on its own, or a main service with
+ * its sub-services under an arrow (Subscriptions → Netflix, Spotify), whose
+ * figure is theirs added up.
+ */
+export type ShellEntry =
+  | ({ kind: 'service' } & ShellService)
+  | {
+      kind: 'group';
+      typeSlug: string;
+      name: string;
+      colour: string;
+      minor: number;
+      children: ShellService[];
+    };
+
 export interface ShellView {
   household: { name: string; members: string[] };
   split: boolean;
-  services: ShellService[];
-  mine: ShellService[];
+  services: ShellEntry[];
+  mine: ShellEntry[];
   inboxCount: number;
   /** The household's bills address, for the Add bill sheet. */
   address: string | null;
@@ -38,18 +54,11 @@ export function shellView(hh: Household, me: Member, today: string, db: Db = get
   const { start, end } = monthBounds(today.slice(0, 7));
   const month = totalsForRange(hh.id, start, end, db);
   const accrued = new Map(month.byService.map((t) => [t.service.id, t.minor]));
-  const services = listServices(hh.id, {}, db).map((s) => ({
-    id: s.id,
-    name: s.name,
-    colour: s.colour,
-    minor: accrued.get(s.id) ?? 0,
-  }));
-  const mine = listServices(hh.id, { owner: me.id }, db).map((s) => ({
-    id: s.id,
-    name: s.name,
-    colour: s.colour,
-    minor: listBills(hh.id, { serviceId: s.id, limit: 1 }, db)[0]?.amountMinor ?? 0,
-  }));
+  const services = entries(listServices(hh.id, {}, db), (s) => accrued.get(s.id) ?? 0);
+  const mine = entries(
+    listServices(hh.id, { owner: me.id }, db),
+    (s) => listBills(hh.id, { serviceId: s.id, limit: 1 }, db)[0]?.amountMinor ?? 0,
+  );
   return {
     household: { name: hh.name, members: listActiveMembers(hh.id, today, db).map((m) => m.name) },
     split: hh.splitMode === 'shared',
@@ -59,4 +68,25 @@ export function shellView(hh: Household, me: Member, today: string, db: Db = get
     address: billsAddress(hh, db),
     me: { name: me.name, colour: me.colour, admin: isAdmin(me) },
   };
+}
+
+function entries(services: ServiceWithType[], minor: (s: ServiceWithType) => number): ShellEntry[] {
+  const line = (s: ServiceWithType): ShellService => ({
+    id: s.id,
+    name: s.name,
+    colour: s.colour,
+    minor: minor(s),
+  });
+  return groupServices(services).map((g): ShellEntry => {
+    if (!g.typeSlug) return { kind: 'service', ...line(g.services[0]!) };
+    const children = g.services.map(line);
+    return {
+      kind: 'group',
+      typeSlug: g.typeSlug,
+      name: g.label,
+      colour: g.colour,
+      minor: children.reduce((sum, c) => sum + c.minor, 0),
+      children,
+    };
+  });
 }

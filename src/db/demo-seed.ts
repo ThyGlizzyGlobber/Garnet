@@ -8,11 +8,11 @@ import {
   setSharePaid,
   type BillInput,
 } from '@/lib/bills';
-import { bill } from '@/db/schema';
+import { bill, service } from '@/db/schema';
 import { createHousehold, isSetUp } from '@/lib/households';
 import { setHouseholdLocation } from '@/lib/location';
 import { createMember } from '@/lib/members';
-import { createService } from '@/lib/services';
+import { cancelService, createService } from '@/lib/services';
 import { demoExited } from '@/lib/demo';
 import { eq } from 'drizzle-orm';
 import { sourceDocument, type Member, type Service } from '@/db/schema';
@@ -105,7 +105,6 @@ export async function seedDemo(db: Db = getDb()) {
       provider: 'Harbour Lane Realty',
       cadence: 'monthly',
       payerMemberId: alex.id,
-      colour: '#4a3aa7',
       splitMode: 'percent',
       customSplits: { [alex.id]: 40, [jordan.id]: 30, [sam.id]: 30 },
     },
@@ -122,7 +121,6 @@ export async function seedDemo(db: Db = getDb()) {
       usageLimitMonthly: 600,
       seasonal: true,
       payerMemberId: jordan.id,
-      colour: '#eda100',
     },
     db,
   );
@@ -136,7 +134,6 @@ export async function seedDemo(db: Db = getDb()) {
       usageUnit: 'MJ',
       seasonal: true,
       payerMemberId: jordan.id,
-      colour: '#eb6834',
     },
     db,
   );
@@ -149,7 +146,6 @@ export async function seedDemo(db: Db = getDb()) {
       cadence: 'quarterly',
       usageUnit: 'kL',
       payerMemberId: alex.id,
-      colour: '#1baf7a',
     },
     db,
   );
@@ -161,7 +157,6 @@ export async function seedDemo(db: Db = getDb()) {
       provider: 'Brightline Broadband',
       cadence: 'monthly',
       payerMemberId: alex.id,
-      colour: '#2a78d6',
     },
     db,
   );
@@ -173,7 +168,6 @@ export async function seedDemo(db: Db = getDb()) {
       provider: 'City of Riverside',
       cadence: 'annual',
       payerMemberId: alex.id,
-      colour: '#4f8a3a',
     },
     db,
   );
@@ -186,7 +180,43 @@ export async function seedDemo(db: Db = getDb()) {
       provider: 'Transport Registry',
       cadence: 'annual',
       ownerMemberId: alex.id,
-      colour: '#e87ba4',
+    },
+    db,
+  );
+
+  // Subscriptions, one sub-service each: Streamly still going, Flickbox
+  // cancelled by Sam in August (and charged once more in September).
+  const streamly = createService(
+    hh.id,
+    {
+      typeSlug: 'subscriptions',
+      name: 'Streamly',
+      provider: 'Streamly',
+      cadence: 'monthly',
+      payerMemberId: jordan.id,
+    },
+    db,
+  );
+  const flickbox = createService(
+    hh.id,
+    {
+      typeSlug: 'subscriptions',
+      name: 'Flickbox',
+      provider: 'Flickbox',
+      cadence: 'monthly',
+      payerMemberId: sam.id,
+    },
+    db,
+  );
+  // Alex's own donation to a food bank (Donations → Riverside Food Bank).
+  const foodBank = createService(
+    hh.id,
+    {
+      typeSlug: 'donations',
+      name: 'Riverside Food Bank',
+      provider: 'Riverside Food Bank',
+      cadence: 'monthly',
+      ownerMemberId: alex.id,
     },
     db,
   );
@@ -408,6 +438,46 @@ export async function seedDemo(db: Db = getDb()) {
     paid: null,
   });
 
+  // Subscriptions and the donation: monthly, charged on the 5th.
+  for (let m = 1; m <= 9; m++) {
+    const from = `2026-${mm(m)}-05`;
+    const to = addDays(`2026-${mm(m + 1)}-05`, -1);
+    add(`streamly-${m}`, streamly.id, {
+      amountMinor: 2299,
+      periodStart: from,
+      periodEnd: to,
+      issueDate: from,
+      dueDate: from,
+      externalRef: `STR-77120-${mm(m)}`,
+      paid: from,
+    });
+    if (m >= 3)
+      add(`flickbox-${m}`, flickbox.id, {
+        amountMinor: 1699,
+        periodStart: from,
+        periodEnd: to,
+        issueDate: from,
+        dueDate: from,
+        externalRef: `FBX-3310-${mm(m)}`,
+        paid: from,
+      });
+    add(`foodbank-${m}`, foodBank.id, {
+      amountMinor: 2500,
+      periodStart: from,
+      periodEnd: from,
+      issueDate: from,
+      dueDate: from,
+      externalRef: `RFB-D-${mm(m)}`,
+      paid: from,
+    });
+  }
+  // Sam cancelled Flickbox on 20 Aug; the 5 Sep charge came anyway.
+  cancelService(hh.id, flickbox.id, sam.id, db);
+  db.update(service)
+    .set({ cancelledAt: at('2026-08-20') })
+    .where(eq(service.id, flickbox.id))
+    .run();
+
   await seedDocuments(
     hh.id,
     { alex, jordan },
@@ -484,8 +554,9 @@ async function seedDocuments(
 
   for (const [key, ref] of bills) {
     const b = byId.get(ref.id)!;
-    const service = services.get(b.serviceId)!;
-    if (service.id === svc.rent.id) continue;
+    const service = services.get(b.serviceId);
+    // Rent, the subscriptions and the donation were entered by hand: no document.
+    if (!service || service.id === svc.rent.id) continue;
     const domain = domains[service.id];
     const scan = service.id === svc.rates.id || service.id === svc.rego.id;
     const forwarded = service.id === svc.power.id;
