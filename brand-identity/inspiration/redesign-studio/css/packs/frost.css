@@ -1,0 +1,175 @@
+/*
+  Pack 3 · FROST — matte, milky glass.
+  Heavy blur with little saturation, no rims, long soft shadows. Headings in
+  a characterful grotesque; status as a word with a coloured dot; controls
+  are outlines and one solid ink button. Type: Bricolage Grotesque + Figtree.
+*/
+[data-pack~='frost'] {
+  --f-display: 'Bricolage Grotesque', 'Figtree', system-ui, sans-serif;
+  --f-body: 'Figtree', system-ui, sans-serif;
+  --f-num: 'Figtree', system-ui, sans-serif;
+  --f-mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+  --fw-display: 620;
+  --fw-num: 600;
+  --ls-display: -0.03em;
+  --fs-body: 15px;
+  --fs-small: 13px;
+  --fs-h1: 32px;
+  --fs-h3: 17px;
+  --r-win: 26px;
+  --r-card: 22px;
+  --r-inner: 14px;
+  --r-ctl: 999px;
+  --r-chip: 999px;
+  --r-disc: 999px;
+  --r-nav: 999px;
+  --pad: 22px;
+  --wpad: 18px;
+  --gap: 18px;
+  --g-bg: rgba(252, 251, 249, 0.5);
+  --g-bg-strong: rgba(252, 251, 249, 0.82);
+  --g-blur: 44px;
+  --g-sat: 112%;
+  --g-bright: 1.04;
+  --g-rim: transparent;
+  --g-hi: rgba(255, 255, 255, 0.35);
+  --g-shadow: 0 34px 60px -34px rgba(40, 30, 20, 0.34), 0 2px 6px -4px rgba(40, 30, 20, 0.1);
+  --g-solid: #faf8f5;
+  --ring-w: 5;
+  --glow: 0;
+  --ticks: 0;
+  --btn-h: 42px;
+  --btn-h-sm: 34px;
+  --nav-h: 58px;
+  --nav-gap: 16px;
+  --nav-on-bg: var(--p-fg);
+  --nav-on-fg: var(--p-bg);
+  --seg-on: var(--p-fg);
+  --chip-weight: 600;
+}
+body[data-mode='dark'] [data-pack~='frost'] {
+  --g-bg: rgba(30, 32, 38, 0.46);
+  --g-bg-strong: rgba(32, 34, 40, 0.84);
+  --g-hi: rgba(255, 255, 255, 0.05);
+  --g-shadow: 0 34px 60px -30px rgba(0, 0, 0, 0.7), 0 2px 6px -4px rgba(0, 0, 0, 0.3);
+  --g-solid: #25272d;
+}
+
+[data-pack~='frost'] .eyebrow {
+  letter-spacing: 0.13em;
+  font-weight: 600;
+}
+/* status as a word with a dot */
+[data-pack~='frost'] .chip {
+  background: transparent;
+  padding: 0 2px 0 0;
+  height: 22px;
+  gap: 6px;
+  color: var(--p-fg2);
+  font-weight: 600;
+}
+[data-pack~='frost'] .chip .ic {
+  display: none;
+}
+[data-pack~='frost'] .chip::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--t);
+  flex: none;
+}
+[data-pack~='frost'] .chip.t-analysed::before {
+  border-radius: 2px;
+  transform: rotate(45deg);
+  width: 7px;
+  height: 7px;
+}
+[data-pack~='frost'] .btn-primary {
+  background: var(--p-fg);
+  color: var(--p-bg);
+  box-shadow: none;
+}
+[data-pack~='frost'] .btn-glass,
+[data-pack~='frost'] .ibtn,
+[data-pack~='frost'] .chip-btn,
+[data-pack~='frost'] .back {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--line-2);
+}
+[data-pack~='frost'] .ibtn.accent,
+[data-pack~='frost'] .chip-btn[aria-pressed='true'] {
+  background: var(--p-fg);
+  color: var(--p-bg);
+  box-shadow: none;
+}
+[data-pack~='frost'] .btn-plain {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  color: var(--p-fg);
+}
+[data-pack~='frost'] .seg {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--line-2);
+}
+[data-pack~='frost'] .seg-b[aria-pressed='true'] {
+  color: var(--p-bg);
+  box-shadow: none;
+}
+[data-pack~='frost'] .disc {
+  background: color-mix(in srgb, var(--svc) 20%, var(--g-solid));
+  color: color-mix(in srgb, var(--svc) 85%, var(--p-fg));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--svc) 30%, transparent);
+}
+[data-pack~='frost'] .mark {
+  border-radius: 50%;
+  background: var(--p-fg);
+  color: var(--p-bg);
+  box-shadow: none;
+}
+[data-pack~='frost'] .stat,
+[data-pack~='frost'] .cm,
+[data-pack~='frost'] .sp-person,
+[data-pack~='frost'] .d1-svc-bills {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+[data-pack~='frost'] .wg-h {
+  font-family: var(--f-display);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--p-fg);
+  letter-spacing: -0.01em;
+}
+[data-pack~='frost'] .wg-h .ic {
+  display: none;
+}
+[data-pack~='frost'] .notice {
+  box-shadow: none;
+  background: color-mix(in srgb, var(--t) 8%, transparent);
+}
+[data-pack~='frost'] .progress i,
+[data-pack~='frost'] .pill.solid {
+  background: var(--p-fg);
+  box-shadow: none;
+}
+[data-pack~='frost'] .spark-dot,
+[data-pack~='frost'] .chart-pt {
+  box-shadow: 0 0 0 2px var(--g-solid);
+}
+[data-pack~='frost'] .nav-i {
+  font-weight: 600;
+}
+.app[data-pack~='frost'][data-device='desktop'] .nav.horizontal .nav-i .ic,
+.app[data-pack~='frost'][data-navplace='header'] .nav-i .ic {
+  display: none;
+}
+.app[data-pack~='frost'][data-navplace='header'] .nav-i span {
+  display: inline !important;
+}
+.app[data-pack~='frost'][data-device='desktop'] .nav.horizontal .nav-i {
+  padding: 0 20px;
+}
+[data-pack~='frost'] .rows > * + * {
+  box-shadow: 0 -1px 0 var(--line);
+}
