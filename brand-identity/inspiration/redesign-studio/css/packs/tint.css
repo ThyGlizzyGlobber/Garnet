@@ -1,0 +1,161 @@
+/*
+  Pack 4 · TINT — colour-tinted glass.
+  Surfaces pick up the colour of what they hold (a service's colour, or the
+  accent), with a glossy top highlight, chunky rounded shapes, gradient
+  buttons and 3D icon discs. Type: Sora + Instrument Sans.
+*/
+[data-pack='tint'] {
+  --f-display: 'Sora', system-ui, sans-serif;
+  --f-body: 'Instrument Sans', system-ui, sans-serif;
+  --f-num: 'Sora', system-ui, sans-serif;
+  --f-mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+  --fw-display: 650;
+  --fw-num: 650;
+  --ls-display: -0.035em;
+  --fs-body: 14.5px;
+  --fs-small: 12.5px;
+  --fs-h1: 30px;
+  --r-win: 34px;
+  --r-card: 26px;
+  --r-inner: 18px;
+  --r-ctl: 16px;
+  --r-chip: 10px;
+  --r-disc: 16px;
+  --r-nav: 26px;
+  --pad: 18px;
+  --wpad: 16px;
+  --gap: 14px;
+  --tint: var(--p-accent);
+  --g-bg: color-mix(in srgb, var(--tint) 12%, rgba(255, 255, 255, 0.44));
+  --g-bg-strong: color-mix(in srgb, var(--tint) 9%, rgba(255, 255, 255, 0.82));
+  --g-blur: 26px;
+  --g-sat: 175%;
+  --g-rim: rgba(255, 255, 255, 0.7);
+  --g-hi: rgba(255, 255, 255, 1);
+  --g-shadow: 0 22px 44px -22px color-mix(in srgb, var(--tint) 55%, rgba(0, 0, 0, 0.5));
+  --g-solid: #fbfaf8;
+  --ring-w: 12;
+  --glow: 0.9;
+  --ticks: 0;
+  --btn-h: 44px;
+  --btn-h-sm: 34px;
+  --nav-h: 66px;
+  --nav-gap: 14px;
+  --nav-on-bg: linear-gradient(145deg, var(--p-accent), var(--p-accent2));
+  --nav-on-fg: var(--p-on-accent);
+  --chip-weight: 700;
+}
+body[data-mode='dark'] [data-pack='tint'] {
+  --g-bg: color-mix(in srgb, var(--tint) 14%, rgba(30, 32, 44, 0.46));
+  --g-bg-strong: color-mix(in srgb, var(--tint) 10%, rgba(30, 32, 42, 0.86));
+  --g-rim: rgba(255, 255, 255, 0.14);
+  --g-hi: rgba(255, 255, 255, 0.28);
+  --g-shadow: 0 24px 50px -22px rgba(0, 0, 0, 0.7);
+  --g-solid: #262833;
+}
+
+/* anything that carries a service colour is tinted by it */
+[data-pack='tint'] .g[style*='--svc'],
+[data-pack='tint'] [style*='--svc'] > .g {
+  --tint: var(--svc);
+}
+[data-pack='tint'] .widget[data-wid='nextdue'],
+[data-pack='tint'] .widget[data-wid='weather'],
+[data-pack='tint'] .widget[data-wid='forecast'] {
+  --tint: var(--p-accent2);
+}
+[data-pack='tint'] .widget[data-wid='usage'] {
+  --tint: #eda100;
+}
+[data-pack='tint'] .widget[data-wid='notices'] {
+  --tint: var(--warn);
+}
+[data-pack='tint'] .widget[data-wid='plan'] {
+  --tint: #4f8a3a;
+}
+[data-pack='tint'] .widget[data-wid='mine'] {
+  --tint: #e87ba4;
+}
+[data-pack='tint'] .g,
+[data-pack='tint'] .g-strong {
+  isolation: isolate;
+}
+/* gloss: the top half catches the light */
+[data-pack='tint'] .g::after {
+  content: '';
+  position: absolute;
+  inset: 0 0 45% 0;
+  z-index: -1;
+  border-radius: inherit;
+  border-bottom-left-radius: 50% 30%;
+  border-bottom-right-radius: 50% 30%;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.32), rgba(255, 255, 255, 0));
+}
+body[data-mode='dark'] [data-pack='tint'] .g::after {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0));
+}
+[data-pack='tint'] .btn-primary,
+[data-pack='tint'] .ibtn.accent,
+[data-pack='tint'] .chip-btn[aria-pressed='true'] {
+  background: linear-gradient(145deg, var(--p-accent), var(--p-accent2));
+  color: var(--p-on-accent);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    0 12px 24px -12px var(--p-accent);
+}
+[data-pack='tint'] .btn-glass,
+[data-pack='tint'] .ibtn {
+  background: color-mix(in srgb, var(--tint) 14%, rgba(255, 255, 255, 0.5));
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.6),
+    inset 0 1px 0 #fff;
+}
+body[data-mode='dark'] [data-pack='tint'] .btn-glass,
+body[data-mode='dark'] [data-pack='tint'] .ibtn {
+  background: color-mix(in srgb, var(--tint) 18%, rgba(255, 255, 255, 0.06));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+[data-pack='tint'] .chip {
+  height: 25px;
+  background: color-mix(in srgb, var(--t) 18%, transparent);
+}
+[data-pack='tint'] .disc {
+  background:
+    radial-gradient(90% 70% at 30% 15%, rgba(255, 255, 255, 0.65), transparent 60%),
+    linear-gradient(160deg, color-mix(in srgb, var(--svc) 80%, #fff), var(--svc) 55%, color-mix(in srgb, var(--svc) 70%, #000));
+  box-shadow:
+    inset 0 -3px 6px rgba(0, 0, 0, 0.2),
+    inset 0 1px 1px rgba(255, 255, 255, 0.8),
+    0 10px 20px -8px var(--svc);
+}
+[data-pack='tint'] .stat,
+[data-pack='tint'] .cm,
+[data-pack='tint'] .sp-person,
+[data-pack='tint'] .d1-svc-bills {
+  background: color-mix(in srgb, var(--tint) 10%, rgba(255, 255, 255, 0.3));
+}
+body[data-mode='dark'] [data-pack='tint'] .stat,
+body[data-mode='dark'] [data-pack='tint'] .cm,
+body[data-mode='dark'] [data-pack='tint'] .sp-person,
+body[data-mode='dark'] [data-pack='tint'] .d1-svc-bills {
+  background: color-mix(in srgb, var(--tint) 12%, rgba(255, 255, 255, 0.04));
+}
+[data-pack='tint'] .nav-i[aria-current='page'] {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    0 10px 20px -10px var(--p-accent);
+}
+[data-pack='tint'] .nav-i .ic {
+  stroke-width: 2.2;
+}
+[data-pack='tint'] .wg-h {
+  color: var(--p-fg);
+  font-weight: 750;
+}
+[data-pack='tint'] .wg-h .ic {
+  color: color-mix(in srgb, var(--tint) 80%, var(--p-fg));
+}
+[data-pack='tint'] .mark {
+  border-radius: 13px;
+}

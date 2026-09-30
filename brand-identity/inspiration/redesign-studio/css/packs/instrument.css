@@ -1,0 +1,147 @@
+/*
+  Pack 2 · INSTRUMENT — precise frosted tiles.
+  Denser frosted glass with a hairline rim and a thin top highlight line,
+  tick-marked rings, mono labels on every tile, solid accent controls,
+  glowing icon discs. Type: today's faces (Outfit, Manrope, JetBrains Mono).
+*/
+[data-pack='instrument'] {
+  --f-display: 'Outfit', system-ui, sans-serif;
+  --f-body: 'Manrope', system-ui, sans-serif;
+  --f-num: 'Outfit', system-ui, sans-serif;
+  --f-mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+  --fw-display: 600;
+  --fw-num: 600;
+  --ls-display: -0.015em;
+  --fs-body: 14px;
+  --fs-small: 12.5px;
+  --fs-h1: 28px;
+  --r-win: 28px;
+  --r-card: 18px;
+  --r-inner: 12px;
+  --r-ctl: 10px;
+  --r-chip: 7px;
+  --r-disc: 11px;
+  --r-nav: 18px;
+  --pad: 16px;
+  --wpad: 14px;
+  --gap: 12px;
+  --g-bg: rgba(255, 255, 255, 0.55);
+  --g-bg-strong: rgba(250, 249, 246, 0.86);
+  --g-blur: 28px;
+  --g-sat: 140%;
+  --g-rim: rgba(255, 255, 255, 0.85);
+  --g-hi: rgba(255, 255, 255, 0.95);
+  --g-shadow: 0 0 0 1px rgba(20, 20, 30, 0.05), 0 12px 30px -16px rgba(20, 22, 40, 0.3);
+  --g-solid: #f8f7f4;
+  --ring-w: 7;
+  --glow: 0.5;
+  --ticks: 0.55;
+  --btn-h: 38px;
+  --btn-h-sm: 30px;
+  --nav-h: 56px;
+  --nav-gap: 14px;
+  --nav-on-bg: var(--p-accent);
+  --nav-on-fg: var(--p-on-accent);
+  --seg-on: var(--g-solid);
+}
+body[data-mode='dark'] [data-pack='instrument'] {
+  --g-bg: rgba(255, 255, 255, 0.055);
+  --g-bg-strong: rgba(28, 32, 40, 0.88);
+  --g-rim: rgba(255, 255, 255, 0.1);
+  --g-hi: rgba(255, 255, 255, 0.14);
+  --g-shadow: 0 0 0 1px rgba(0, 0, 0, 0.2), 0 16px 36px -16px rgba(0, 0, 0, 0.6);
+  --g-solid: #232831;
+}
+
+[data-pack='instrument'] .g,
+[data-pack='instrument'] .g-strong {
+  isolation: isolate;
+}
+[data-pack='instrument'] .g::after {
+  content: '';
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  top: 0;
+  height: 1px;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, var(--g-hi), transparent);
+}
+
+/* mono labels: the instrument panel voice */
+[data-pack='instrument'] .eyebrow,
+[data-pack='instrument'] .wg-h,
+[data-pack='instrument'] .gal-l,
+[data-pack='instrument'] .stat-l,
+[data-pack='instrument'] .bpp-kv span,
+[data-pack='instrument'] .bt-h,
+[data-pack='instrument'] .lgroup,
+[data-pack='instrument'] .nav-sec {
+  font-family: var(--f-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  font-size: 10.5px;
+  font-weight: 500;
+}
+[data-pack='instrument'] .wg-h .ic {
+  color: var(--p-accent);
+}
+[data-pack='instrument'] .sec-head h3 {
+  font-size: 14px;
+}
+[data-pack='instrument'] .chip {
+  height: 22px;
+  padding: 0 8px;
+  font-size: 11.5px;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--t) 25%, transparent);
+}
+[data-pack='instrument'] .disc {
+  box-shadow:
+    0 0 0 4px color-mix(in srgb, var(--svc) 14%, transparent),
+    0 0 24px -2px color-mix(in srgb, var(--svc) 65%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+[data-pack='instrument'] .btn-glass,
+[data-pack='instrument'] .ibtn {
+  background: var(--g-solid);
+  box-shadow:
+    inset 0 0 0 1px var(--line-2),
+    0 1px 2px rgba(0, 0, 0, 0.06);
+}
+[data-pack='instrument'] .seg {
+  border-radius: 12px;
+}
+[data-pack='instrument'] .seg-b {
+  border-radius: 9px;
+}
+[data-pack='instrument'] .stat,
+[data-pack='instrument'] .cm,
+[data-pack='instrument'] .sp-person {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--line-2);
+}
+[data-pack='instrument'] .stat-v,
+[data-pack='instrument'] .kpi b {
+  font-weight: 500;
+}
+[data-pack='instrument'] .progress,
+[data-pack='instrument'] .stackbar {
+  border-radius: 3px;
+}
+[data-pack='instrument'] .stackbar i {
+  border-radius: 2px;
+}
+[data-pack='instrument'] .nav-i {
+  border-radius: 12px;
+}
+[data-pack='instrument'] .hg-dots {
+  border-radius: 6px;
+}
+[data-pack='instrument'] .spark-dot,
+[data-pack='instrument'] .chart-pt {
+  box-shadow:
+    0 0 0 2px var(--g-solid),
+    0 0 14px var(--c),
+    0 0 4px var(--c);
+}

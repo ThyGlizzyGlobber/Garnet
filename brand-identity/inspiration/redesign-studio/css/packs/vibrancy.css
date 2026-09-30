@@ -1,0 +1,230 @@
+/*
+  Pack 5 · VIBRANCY — macOS materials.
+  Very high blur and saturation (the "vibrancy" look), hairline rims and
+  separators, small radii, compact 13 px type and controls, and a docked
+  sidebar / tab bar instead of floating capsules. Type: Geist + Geist Mono.
+*/
+[data-pack='vibrancy'] {
+  --f-display: 'Geist', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --f-body: 'Geist', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --f-num: 'Geist', -apple-system, system-ui, sans-serif;
+  --f-mono: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --fw-display: 600;
+  --fw-num: 600;
+  --ls-display: -0.02em;
+  --fs-body: 13.5px;
+  --fs-small: 12px;
+  --fs-eyebrow: 10.5px;
+  --fs-h1: 24px;
+  --fs-h3: 13.5px;
+  --r-win: 14px;
+  --r-card: 12px;
+  --r-inner: 8px;
+  --r-ctl: 7px;
+  --r-chip: 5px;
+  --r-disc: 8px;
+  --r-nav: 12px;
+  --pad: 14px;
+  --wpad: 12px;
+  --gap: 10px;
+  --g-bg: rgba(250, 250, 252, 0.64);
+  --g-bg-strong: rgba(238, 238, 242, 0.8);
+  --g-blur: 44px;
+  --g-sat: 185%;
+  --g-rim: rgba(0, 0, 0, 0.08);
+  --g-hi: rgba(255, 255, 255, 0.75);
+  --g-shadow: 0 1px 2px rgba(0, 0, 0, 0.05), 0 10px 26px -14px rgba(0, 0, 0, 0.22);
+  --g-solid: #ffffff;
+  --ring-w: 6;
+  --glow: 0.15;
+  --ticks: 0;
+  --btn-h: 30px;
+  --btn-h-sm: 26px;
+  --nav-h: 52px;
+  --nav-gap: 12px;
+  --nav-on-bg: color-mix(in srgb, var(--p-accent) 18%, transparent);
+  --nav-on-fg: var(--p-fg);
+  --seg-on: #fff;
+  --chip-weight: 600;
+}
+body[data-mode='dark'] [data-pack='vibrancy'] {
+  --g-bg: rgba(38, 38, 44, 0.6);
+  --g-bg-strong: rgba(34, 34, 40, 0.8);
+  --g-rim: rgba(255, 255, 255, 0.09);
+  --g-hi: rgba(255, 255, 255, 0.07);
+  --g-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 30px -14px rgba(0, 0, 0, 0.6);
+  --g-solid: #2c2c31;
+  --seg-on: rgba(255, 255, 255, 0.17);
+  --nav-on-bg: color-mix(in srgb, var(--p-accent) 26%, transparent);
+}
+
+[data-pack='vibrancy'] .btn {
+  font-size: 13px;
+  font-weight: 550;
+  padding: 0 12px;
+}
+[data-pack='vibrancy'] .btn-glass,
+[data-pack='vibrancy'] .ibtn,
+[data-pack='vibrancy'] .back {
+  background: var(--g-solid);
+  box-shadow:
+    0 0 0 0.5px rgba(0, 0, 0, 0.14),
+    0 1px 1.5px rgba(0, 0, 0, 0.08);
+}
+body[data-mode='dark'] [data-pack='vibrancy'] .btn-glass,
+body[data-mode='dark'] [data-pack='vibrancy'] .ibtn,
+body[data-mode='dark'] [data-pack='vibrancy'] .back {
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow:
+    0 0 0 0.5px rgba(255, 255, 255, 0.12),
+    0 1px 1.5px rgba(0, 0, 0, 0.3);
+}
+[data-pack='vibrancy'] .ibtn {
+  width: 32px;
+  height: 32px;
+}
+[data-pack='vibrancy'] .search {
+  height: 30px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+[data-pack='vibrancy'] .seg {
+  padding: 2px;
+  border-radius: 8px;
+}
+[data-pack='vibrancy'] .seg-b {
+  height: 24px;
+  border-radius: 6px;
+  font-weight: 550;
+  font-size: 12.5px;
+}
+[data-pack='vibrancy'] .chip {
+  height: 20px;
+  padding: 0 7px;
+  font-size: 11.5px;
+}
+[data-pack='vibrancy'] .disc {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--svc) 75%, #fff), var(--svc));
+  box-shadow:
+    inset 0 0 0 0.5px rgba(0, 0, 0, 0.15),
+    0 1px 2px rgba(0, 0, 0, 0.12);
+}
+[data-pack='vibrancy'] .av {
+  box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.15);
+}
+[data-pack='vibrancy'] .mark {
+  border-radius: 8px;
+  box-shadow: none;
+}
+[data-pack='vibrancy'] .bill-row,
+[data-pack='vibrancy'] .doc-row {
+  padding: 8px 8px;
+  border-radius: 6px;
+}
+[data-pack='vibrancy'] .rows > * + * {
+  box-shadow: 0 -0.5px 0 var(--line-2);
+}
+[data-pack='vibrancy'] .stat,
+[data-pack='vibrancy'] .cm,
+[data-pack='vibrancy'] .sp-person,
+[data-pack='vibrancy'] .d1-svc-bills {
+  background: var(--g-solid);
+  box-shadow: 0 0 0 0.5px var(--line-2);
+}
+body[data-mode='dark'] [data-pack='vibrancy'] .stat,
+body[data-mode='dark'] [data-pack='vibrancy'] .cm,
+body[data-mode='dark'] [data-pack='vibrancy'] .sp-person,
+body[data-mode='dark'] [data-pack='vibrancy'] .d1-svc-bills {
+  background: rgba(255, 255, 255, 0.05);
+}
+[data-pack='vibrancy'] .wg-h {
+  font-size: 12px;
+  font-weight: 600;
+}
+[data-pack='vibrancy'] .stat-v {
+  font-size: 19px;
+}
+[data-pack='vibrancy'] .nav-i {
+  font-weight: 550;
+  font-size: 13px;
+  border-radius: 7px;
+}
+[data-pack='vibrancy'] .nav-i[aria-current='page'] .ic {
+  color: var(--p-accent);
+}
+body[data-mode='dark'] [data-pack='vibrancy'] .nav-i[aria-current='page'] .ic {
+  color: var(--p-fg);
+}
+
+/* docked nav: a real sidebar on the left or right, a real tab bar at the bottom */
+.app[data-pack='vibrancy'][data-navplace='overlay'] {
+  --nav-gap: 0px;
+}
+.app[data-pack='vibrancy'][data-device='desktop'] {
+  --nav-wv: 224px;
+}
+.app[data-pack='vibrancy'][data-navplace='overlay'] .nav.vertical {
+  top: 0;
+  bottom: 0;
+  transform: none;
+  border-radius: 0;
+  padding: calc(var(--safe-t) + 10px) 10px 10px;
+  gap: 6px;
+}
+.app[data-pack='vibrancy'][data-navplace='overlay'] .nav[data-pos='left'] {
+  left: 0;
+  box-shadow: 1px 0 0 var(--line-2);
+}
+.app[data-pack='vibrancy'][data-navplace='overlay'] .nav[data-pos='right'] {
+  right: 0;
+  box-shadow: -1px 0 0 var(--line-2);
+}
+.app[data-pack='vibrancy'][data-device='desktop'] .nav.vertical .nav-i {
+  height: 32px;
+  padding: 0 10px;
+  gap: 9px;
+}
+.app[data-pack='vibrancy'][data-device='desktop'] .nav.vertical .nav-i .ic {
+  width: 18px;
+  height: 18px;
+}
+.app[data-pack='vibrancy'][data-navplace='overlay'] .nav[data-pos='bottom'] {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: auto !important;
+  transform: none;
+  height: calc(var(--nav-h) + var(--safe-b));
+  padding: 4px 8px var(--safe-b);
+  border-radius: 0;
+  justify-content: center;
+  box-shadow: 0 -1px 0 var(--line-2);
+}
+.app[data-pack='vibrancy'][data-navplace='overlay'][data-nav='bottom'] {
+  --in-b: var(--nav-h);
+}
+.app[data-pack='vibrancy'][data-navplace='overlay'][data-device='desktop'] .nav[data-pos='bottom'] .nav-items,
+.app[data-pack='vibrancy'][data-navplace='overlay'][data-device='tablet'] .nav[data-pos='bottom'] .nav-items {
+  gap: 24px;
+}
+.app[data-pack='vibrancy'][data-navplace='overlay'] .nav[data-pos='bottom'] .nav-i {
+  flex-direction: column;
+  gap: 2px;
+  font-size: 10.5px;
+  padding: 0 14px;
+  background: none;
+  box-shadow: none;
+}
+.app[data-pack='vibrancy'][data-navplace='overlay'] .nav[data-pos='bottom'] .nav-i[aria-current='page'] {
+  color: var(--p-accent);
+}
+body[data-mode='dark'] .app[data-pack='vibrancy'][data-navplace='overlay'] .nav[data-pos='bottom'] .nav-i[aria-current='page'] {
+  color: var(--p-fg);
+}
+.app[data-pack='vibrancy'][data-navplace='overlay'][data-device='phone'] .nav[data-pos='bottom'] {
+  width: auto;
+}
+.app[data-pack='vibrancy'][data-chrome='float'] .tb-l .brand,
+.app[data-pack='vibrancy'][data-chrome='float'] .tb-r {
+  border-radius: 12px;
+}

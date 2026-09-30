@@ -1,0 +1,178 @@
+/*
+  Pack 1 · LIQUID — Apple's Liquid Glass.
+  Clear glass (low fill, strong blur and saturation), a bright specular rim
+  that catches light from the top-left, a soft lensing glow inside the edge,
+  capsule controls, and a lighter "lens" capsule for the active nav item.
+  Type: SF Pro on Apple devices (system face), Inter elsewhere.
+*/
+[data-pack='liquid'] {
+  --f-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif;
+  --f-body: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', system-ui, sans-serif;
+  --f-num: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif;
+  --f-mono: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, monospace;
+  --fw-display: 700;
+  --fw-num: 600;
+  --ls-display: -0.024em;
+  --fs-body: 15px;
+  --fs-small: 13px;
+  --fs-h1: 32px;
+  --fs-h3: 16px;
+  --r-win: 40px;
+  --r-card: 30px;
+  --r-inner: 18px;
+  --r-ctl: 999px;
+  --r-chip: 999px;
+  --r-disc: 14px;
+  --r-nav: 999px;
+  --pad: 20px;
+  --wpad: 18px;
+  --gap: 16px;
+  --g-bg: rgba(255, 255, 255, 0.2);
+  --g-bg-strong: rgba(255, 255, 255, 0.48);
+  --g-blur: 20px;
+  --g-sat: 190%;
+  --g-bright: 1.08;
+  --g-rim: rgba(255, 255, 255, 0.28);
+  --g-hi: rgba(255, 255, 255, 0.9);
+  --g-lens: rgba(255, 255, 255, 0.28);
+  --g-spec: rgba(255, 255, 255, 0.95);
+  --g-shadow: 0 26px 50px -24px rgba(30, 30, 60, 0.32), 0 2px 8px -3px rgba(30, 30, 60, 0.1);
+  --g-solid: #f5f5f7;
+  --ctl-bg: rgba(255, 255, 255, 0.38);
+  --ctl-rim: rgba(255, 255, 255, 0.65);
+  --ring-w: 11;
+  --glow: 0.75;
+  --ticks: 0;
+  --btn-h: 44px;
+  --btn-h-sm: 34px;
+  --nav-h: 64px;
+  --nav-gap: 16px;
+  --nav-on-bg: rgba(255, 255, 255, 0.72);
+  --nav-on-fg: var(--p-fg);
+  --seg-on: rgba(255, 255, 255, 0.9);
+  --chip-weight: 600;
+}
+body[data-mode='dark'] [data-pack='liquid'] {
+  --g-bg: rgba(255, 255, 255, 0.06);
+  --g-bg-strong: rgba(44, 46, 56, 0.5);
+  --g-bright: 0.95;
+  --g-rim: rgba(255, 255, 255, 0.1);
+  --g-hi: rgba(255, 255, 255, 0.32);
+  --g-lens: rgba(255, 255, 255, 0.07);
+  --g-spec: rgba(255, 255, 255, 0.5);
+  --g-shadow: 0 28px 60px -22px rgba(0, 0, 0, 0.65), 0 2px 8px -3px rgba(0, 0, 0, 0.3);
+  --g-solid: #2b2d34;
+  --ctl-bg: rgba(255, 255, 255, 0.1);
+  --ctl-rim: rgba(255, 255, 255, 0.18);
+  --nav-on-bg: rgba(255, 255, 255, 0.16);
+  --seg-on: rgba(255, 255, 255, 0.2);
+}
+
+/* the glass: clear fill, lensing glow inside the edge, specular rim, soft top sheen */
+[data-pack='liquid'] .g,
+[data-pack='liquid'] .g-strong {
+  isolation: isolate;
+  box-shadow:
+    inset 0 0 22px var(--g-lens),
+    inset 0 1px 0 var(--g-hi),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.08),
+    var(--g-shadow);
+}
+[data-pack='liquid'] .g::before,
+[data-pack='liquid'] .g-strong::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  padding: 1.25px;
+  pointer-events: none;
+  background: linear-gradient(140deg, var(--g-spec), rgba(255, 255, 255, 0.18) 26%, rgba(255, 255, 255, 0) 48%, rgba(255, 255, 255, 0.1) 70%, color-mix(in srgb, var(--g-spec) 70%, transparent));
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+[data-pack='liquid'] .g::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(120% 60% at 18% -12%, rgba(255, 255, 255, 0.3), transparent 60%);
+}
+body[data-mode='dark'] [data-pack='liquid'] .g::after {
+  background: radial-gradient(120% 60% at 18% -12%, rgba(255, 255, 255, 0.08), transparent 60%);
+}
+
+/* controls: little glass capsules */
+[data-pack='liquid'] .btn-glass,
+[data-pack='liquid'] .ibtn,
+[data-pack='liquid'] .seg,
+[data-pack='liquid'] .search,
+[data-pack='liquid'] .chip-btn,
+[data-pack='liquid'] .back,
+[data-pack='liquid'] .hg-edit,
+[data-pack='liquid'] .hg-dots {
+  background: var(--ctl-bg);
+  box-shadow:
+    inset 0 0 0 1px var(--ctl-rim),
+    inset 0 1px 0 var(--g-hi),
+    0 6px 16px -10px rgba(0, 0, 0, 0.3);
+}
+[data-pack='liquid'] .btn-primary {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--p-accent) 80%, #fff) 0%, var(--p-accent) 55%, color-mix(in srgb, var(--p-accent) 88%, #000) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -1px 1px rgba(0, 0, 0, 0.12),
+    0 10px 22px -10px var(--p-accent);
+}
+[data-pack='liquid'] .seg-b[aria-pressed='true'] {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 3px 10px -3px rgba(0, 0, 0, 0.22);
+}
+[data-pack='liquid'] .chip {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--t) 20%, transparent);
+}
+[data-pack='liquid'] .disc {
+  background: linear-gradient(165deg, color-mix(in srgb, var(--svc) 70%, #fff) 0%, var(--svc) 50%, color-mix(in srgb, var(--svc) 85%, #000) 100%);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.75),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.18),
+    0 8px 18px -8px var(--svc);
+}
+[data-pack='liquid'] .rows > * + * {
+  box-shadow: 0 -1px 0 var(--line);
+}
+[data-pack='liquid'] .d1-svc-bills,
+[data-pack='liquid'] .stat,
+[data-pack='liquid'] .sp-person,
+[data-pack='liquid'] .cm {
+  background: var(--ctl-bg);
+  box-shadow: inset 0 0 0 1px var(--ctl-rim);
+}
+
+/* nav: the active item is a lighter lens capsule */
+[data-pack='liquid'] .nav-i[aria-current='page'] {
+  box-shadow:
+    inset 0 0 0 1px var(--ctl-rim),
+    inset 0 1px 0 var(--g-hi),
+    0 6px 16px -6px rgba(0, 0, 0, 0.25);
+}
+[data-pack='liquid'] .nav-i[aria-current='page'] .ic {
+  color: var(--p-accent);
+}
+body[data-mode='dark'] [data-pack='liquid'] .nav-i[aria-current='page'] .ic {
+  color: var(--p-fg);
+}
+[data-pack='liquid'] .ring-track,
+[data-pack='liquid'] .arc-track {
+  stroke: color-mix(in srgb, var(--p-fg) 9%, transparent);
+}
+[data-pack='liquid'] .wg-h {
+  font-size: 13px;
+  font-weight: 650;
+}
