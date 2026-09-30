@@ -42,6 +42,8 @@ export interface ServiceFormValues {
   trustedSenders: string;
   autoPay: boolean;
   seasonal: boolean;
+  /** The same charge every cadence (src/lib/recurring.ts). */
+  recurring: boolean;
   /** Just for the member filling in the form (only they see it; not split). */
   personal: boolean;
 }
@@ -105,6 +107,8 @@ export function ServiceForm({
   const sub = !!types.find((x) => x.slug === typeSlug)?.hasSubServices;
   const [personal, setPersonal] = useState(initial.personal);
   const [personalTouched, setPersonalTouched] = useState(false);
+  const [recurring, setRecurring] = useState(initial.recurring);
+  const [recurringTouched, setRecurringTouched] = useState(false);
   const unitLabel = units.find((u) => u.key === usageUnit)?.label ?? usageUnit;
 
   return (
@@ -131,6 +135,8 @@ export function ServiceForm({
                       // A new car rego or car insurance is usually one person's own.
                       if (!initial.id && !personalTouched && canBePersonal)
                         setPersonal(!!ty.personalByDefault);
+                      // A new subscription or donation repeats unless told otherwise.
+                      if (!initial.id && !recurringTouched) setRecurring(!!ty.hasSubServices);
                     }
                   }}
                 />
@@ -237,6 +243,17 @@ export function ServiceForm({
               </Field>
               <ToggleRow title={t('seasonal')} sub={t('seasonalHint')}>
                 <Toggle name="seasonal" label={t('seasonal')} defaultChecked={initial.seasonal} />
+              </ToggleRow>
+              <ToggleRow title={t('recurring')} sub={t('recurringHint')}>
+                <Toggle
+                  name="recurring"
+                  label={t('recurring')}
+                  checked={recurring}
+                  onChange={(e) => {
+                    setRecurring(e.target.checked);
+                    setRecurringTouched(true);
+                  }}
+                />
               </ToggleRow>
               <ToggleRow title={t('autoPay')} sub={t('autoPayHint')}>
                 <Toggle name="autoPay" label={t('autoPay')} defaultChecked={initial.autoPay} />

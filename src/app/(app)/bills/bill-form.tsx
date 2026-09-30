@@ -17,6 +17,8 @@ export interface BillFormService {
   provider: string;
   usageUnit: string | null;
   cadence: string;
+  /** Recurring now: the same charge every cadence. */
+  recurring?: boolean;
 }
 
 export interface BillFormValues {
@@ -86,6 +88,7 @@ export function BillForm({
   const [usageUnit, setUsageUnit] = useState(initial.usageUnit || svc?.usageUnit || '');
   const [amount, setAmount] = useState(initial.amount);
   const [whoseValue, setWhoseValue] = useState(whose?.value ?? 'household');
+  const [recurring, setRecurring] = useState(!!svc?.recurring);
   const split = splits[serviceId];
   const minor = parseMoneyToMinor(amount, currency) ?? 0;
   const money = (m: number) => formatMoney(m, currency, locale);
@@ -111,6 +114,7 @@ export function BillForm({
                     setServiceId(e.target.value);
                     const next = services.find((s) => s.id === e.target.value);
                     if (next?.usageUnit) setUsageUnit(next.usageUnit);
+                    setRecurring(!!next?.recurring);
                   }}
                   disabled={locked}
                 >
@@ -265,6 +269,19 @@ export function BillForm({
                   <p className="muted small">
                     {split.how}. {t('split.live')}
                   </p>
+                </Card>
+              )}
+              {svc && svc.cadence !== 'irregular' && (
+                <Card>
+                  <input type="hidden" name="recurringShown" value="1" />
+                  <ToggleRow title={t('recurring')} sub={t('recurringHint')}>
+                    <Toggle
+                      name="recurring"
+                      label={t('recurring')}
+                      checked={recurring}
+                      onChange={(e) => setRecurring(e.target.checked)}
+                    />
+                  </ToggleRow>
                 </Card>
               )}
               {whose && (

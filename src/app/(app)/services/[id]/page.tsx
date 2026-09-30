@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import { billRowFor, rowCtx, statusLabel } from '@/components/app/bill-rows';
+import { billRowFor, rowCtx, statusLabel, upcomingRowFor } from '@/components/app/bill-rows';
 import { PeriodBars } from '@/components/charts/period-bars';
 import { StackBar } from '@/components/charts/stack-bar';
 import { Card, LinkButton } from '@/components/ui';
@@ -24,7 +24,7 @@ import { getMember } from '@/lib/members';
 import { chargedAfterCancel, getService } from '@/lib/services';
 import { listBills } from '@/lib/bills';
 import { InlineAction } from '@/components/ui/form';
-import { cancelServiceAction, resumeServiceAction } from '../actions';
+import { cancelServiceAction, resumeServiceAction, setRecurringAction } from '../actions';
 import { unitLabel } from '@/lib/units';
 import { formatMonth } from '@/lib/format';
 import { partText } from '../split-text';
@@ -131,6 +131,11 @@ export default async function ServicePage({
       {svc.seasonal && (
         <Chip tone="neutral" icon="sun">
           {ts('form.seasonal')}
+        </Chip>
+      )}
+      {o.recurring.on && (
+        <Chip tone="info" icon="repeat">
+          {ts('recurring.chip')}
         </Chip>
       )}
       {svc.cancelledAt ? (
@@ -321,6 +326,23 @@ export default async function ServicePage({
             ) : (
               <>
                 <div className="d3-tl">
+                  {/* The next charge of a recurring service, before any bill for it. */}
+                  {o.recurring.upcoming && billPage.page === 1 && (
+                    <div className="year-group">
+                      <div className="year-h">
+                        <span>{ts('recurring.upcomingHead')}</span>
+                        <span className="muted">{ts('recurring.upcomingNote')}</span>
+                      </div>
+                      <Rows>
+                        <BillRow
+                          bill={upcomingRowFor(o.recurring.upcoming, svc, rc, {
+                            inService: true,
+                            noDisc: true,
+                          })}
+                        />
+                      </Rows>
+                    </div>
+                  )}
                   {pageYears.map((y) => (
                     <div key={y.year} className="year-group">
                       <div className="year-h">
@@ -399,7 +421,9 @@ export default async function ServicePage({
               <span className="muted small">{ts('page.statNext')}</span>
               <b>
                 {o.stats.next
-                  ? `≈ ${money(o.stats.next.amountMinor, hh.currency, { whole: true })}`
+                  ? o.stats.next.method === 'fixed'
+                    ? money(o.stats.next.amountMinor)
+                    : `≈ ${money(o.stats.next.amountMinor, hh.currency, { whole: true })}`
                   : '—'}
               </b>
               <span className="muted small">
@@ -410,6 +434,27 @@ export default async function ServicePage({
             </div>
           </Card>
 
+          {o.recurring.priceChange && (
+            <Notice
+              tone="warn"
+              icon={
+                o.recurring.priceChange.toMinor > o.recurring.priceChange.fromMinor
+                  ? 'trend-up'
+                  : 'trend-down'
+              }
+              title={ts(
+                o.recurring.priceChange.toMinor > o.recurring.priceChange.fromMinor
+                  ? 'recurring.priceUp'
+                  : 'recurring.priceDown',
+                {
+                  from: money(o.recurring.priceChange.fromMinor),
+                  to: money(o.recurring.priceChange.toMinor),
+                },
+              )}
+              body={ts('recurring.priceBody')}
+              href={`/bills/${o.recurring.priceChange.billId}`}
+            />
+          )}
           {o.unusual && (
             <Notice
               tone="warn"
@@ -609,8 +654,30 @@ export default async function ServicePage({
                   ? [ts('page.limit'), `${qty(svc.usageLimitMonthly)} ${unit}`]
                   : null,
                 svc.autoPay ? [ts('page.autoPay'), ts('page.autoPayOn')] : null,
+                [
+                  ts('recurring.label'),
+                  o.recurring.upcoming
+                    ? ts('recurring.nextCharge', {
+                        cadence: ts(`form.cadences.${svc.cadence}`).toLowerCase(),
+                        date: rc.dateYear(o.recurring.upcoming.dueDate),
+                        amount: money(o.recurring.upcoming.amountMinor),
+                      })
+                    : o.recurring.on
+                      ? ts('recurring.onNoBill')
+                      : ts('recurring.off'),
+                ],
               ]}
             />
+            {svc.cadence !== 'irregular' && !svc.cancelledAt && (
+              <div className="mt-3">
+                <InlineAction
+                  action={setRecurringAction}
+                  hidden={{ id: svc.id, on: o.recurring.on ? 'false' : 'true' }}
+                  label={ts(o.recurring.on ? 'recurring.stop' : 'recurring.start')}
+                  variant="secondary"
+                />
+              </div>
+            )}
             {svc.notes && <p className="muted small mt-3 whitespace-pre-wrap">{svc.notes}</p>}
             <div className="mt-3 flex items-center gap-3">
               <Disc icon={svc.type.icon} colour={svc.colour} size="sm" />

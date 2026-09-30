@@ -14,6 +14,7 @@ import {
   projectMonth,
 } from '@/lib/projections';
 import { areaComparison } from '@/lib/regional';
+import { recurringView } from '@/lib/recurring';
 import { seasonAhead } from '@/lib/seasons';
 import type { ServiceWithType } from '@/lib/services';
 import { splitView } from '@/lib/split-view';
@@ -142,6 +143,8 @@ export function serviceOverview(
       ? null
       : nextBillGuess(latest, svc.cadence, est.perDay, calendar ? fixedPrice(bills) : null);
   const barsAreUsage = !!unit && (history?.periods ?? []).some((p) => p.perDay !== null);
+  // Recurring: the next charge is expected at the latest bill's price.
+  const recurring = recurringView(svc, bills);
   const usageOf = new Map((history?.periods ?? []).map((p) => [p.billId, p.perDay]));
 
   const byYear = new Map<string, BillListItem[]>();
@@ -169,13 +172,19 @@ export function serviceOverview(
             status: billDue(latest, today).status,
           }
         : null,
-      next: guess
+      next: recurring.upcoming
         ? {
-            amountMinor: guess.amountMinor,
-            dueDate: guess.dueDate,
-            method: calendar && fixedPrice(bills) !== null ? 'fixed' : est.method,
+            amountMinor: recurring.upcoming.amountMinor,
+            dueDate: recurring.upcoming.dueDate,
+            method: 'fixed' as const,
           }
-        : null,
+        : guess
+          ? {
+              amountMinor: guess.amountMinor,
+              dueDate: guess.dueDate,
+              method: calendar && fixedPrice(bills) !== null ? 'fixed' : est.method,
+            }
+          : null,
     },
     /**
      * Each bill, oldest first, as a bar: usage per day when the service has
@@ -197,6 +206,8 @@ export function serviceOverview(
       usage: usageOf.get(b.id) ?? null,
       unusual: b.isAnomaly,
     })),
+    /** Recurring: on or not, the next charge (upcoming), and a price change on the latest bill. */
+    recurring,
     /** Bars measure usage per day (true) or cost (false). */
     barsAreUsage,
     /** Cost bars are each bill's cost (true) or its cost per day (false). */

@@ -261,7 +261,9 @@
         "body": "Deletes the bill and its file. Shares already paid back are removed with it.",
         "cta": "Delete bill",
         "confirm": "Delete this bill completely? Its shares, its figures and the PDF or email it came from are removed too. This cannot be undone."
-      }
+      },
+      "recurring": "Recurring",
+      "recurringHint": "The same charge each time: the next one shows as upcoming, and is recorded if no bill comes in."
     },
     "anomaly": "Unusual",
     "download": "Download everything",
@@ -416,6 +418,23 @@
       "button": "Move",
       "yours": "Just yours",
       "cancelled": "cancelled"
+    },
+    "assumed": {
+      "title": "Assumed charge",
+      "body": "{service} is recurring and no bill has come in for this charge yet, so it’s been added at the latest price. When the bill arrives, it takes this one’s place."
+    },
+    "price": {
+      "up": "{service} went up from {from} to {to}",
+      "down": "{service} went down from {from} to {to}",
+      "body": "Upcoming charges use the new price."
+    },
+    "recurring": {
+      "label": "Recurring",
+      "next": "Yes · next {date} at {amount}",
+      "on": "Yes",
+      "off": "No",
+      "stop": "Stop recurring",
+      "start": "Make it recurring"
     }
   },
   "services": {
@@ -495,7 +514,9 @@
       },
       "subProvider": "Which one",
       "subProviderHint": "The service or charity itself. It’s listed under its main service.",
-      "subProviderPlaceholder": "Netflix, Spotify, Red Cross…"
+      "subProviderPlaceholder": "Netflix, Spotify, Red Cross…",
+      "recurring": "Recurring",
+      "recurringHint": "The same charge each time at the latest price: the next one shows as upcoming, and is recorded if no bill comes in."
     },
     "nextBill": "Next bill about {amount} · due {date}",
     "noHistory": "No bills yet",
@@ -648,6 +669,20 @@
       "on": "Cancelled on {date}",
       "afterBody": "{count, plural, one {A bill} other {# bills}} arrived dated after that. Check it has really stopped.",
       "keptBody": "Its bills are kept."
+    },
+    "recurring": {
+      "chip": "Recurring",
+      "upcomingHead": "Upcoming",
+      "upcomingNote": "Expected at the latest price",
+      "label": "Recurring",
+      "nextCharge": "Yes, {cadence} · next {date} at {amount}",
+      "onNoBill": "Yes, from its first bill",
+      "off": "No",
+      "stop": "Stop recurring",
+      "start": "Make it recurring",
+      "priceUp": "Price up from {from} to {to}",
+      "priceDown": "Price down from {from} to {to}",
+      "priceBody": "The latest bill changed the price. Upcoming charges use the new one."
     }
   },
   "members": {
@@ -1878,7 +1913,11 @@
       "alert": {
         "payment_failed": "Payment failed",
         "overdue": "Provider says overdue"
-      }
+      },
+      "assumed": "Assumed",
+      "expected": "Expected {date}",
+      "upcoming": "Upcoming",
+      "recurring": "Recurring"
     },
     "how": {
       "upload": "Uploaded",
@@ -2204,7 +2243,10 @@
       "seasonTitle": "{service} and the season ahead",
       "seasonBody": "{pct} last year at the change of season.",
       "cancelledTitle": "{service} charged after cancelling",
-      "cancelledBody": "A bill arrived dated after it was cancelled. Check it has really stopped."
+      "cancelledBody": "A bill arrived dated after it was cancelled. Check it has really stopped.",
+      "priceUpTitle": "{service} went up",
+      "priceDownTitle": "{service} went down",
+      "priceBody": "{from} → {to} on the latest bill."
     },
     "inbox": {
       "title": "Inbox",

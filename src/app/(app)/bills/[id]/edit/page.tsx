@@ -44,6 +44,7 @@ export default async function EditBillPage({ params }: { params: Promise<{ id: s
           provider: s.provider,
           usageUnit: s.usageUnit,
           cadence: s.cadence,
+          recurring: !!s.recurringSince,
         }))}
         units={listUnits().map((u) => ({ key: u.key, label: u.label }))}
         currency={hh.currency}

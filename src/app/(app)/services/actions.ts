@@ -28,6 +28,7 @@ import {
 } from '@/lib/services';
 import { splitProblem } from '@/lib/splits';
 import { UNITS } from '@/lib/units';
+import { setRecurring } from '@/lib/recurring';
 import { isAdmin } from '@/lib/roles';
 
 const schema = z.object({
@@ -125,6 +126,7 @@ async function read(
       notes: v.notes || null,
       trustedSenders: parseSenderList(str(fd, 'trustedSenders')),
       autoPay: fd.get('autoPay') === 'on',
+      recurring: fd.get('recurring') === 'on',
       seasonal: fd.get('seasonal') === 'on',
       ...(v.splitMode === 'fixed'
         ? { fixedAmounts }
@@ -268,5 +270,18 @@ export async function resumeServiceAction(fd: FormData): Promise<void> {
   resumeService(me.householdId, id);
   revalidatePath('/services');
   revalidatePath(`/services/${id}`);
+  revalidatePath('/');
+}
+
+/** Recurring on or off from the service's page (or a bill's): the next charge is expected at the latest price. */
+export async function setRecurringAction(fd: FormData): Promise<void> {
+  const me = await requireMember();
+  const id = str(fd, 'id');
+  const svc = getService(me.householdId, id);
+  if (!svc || !visibleTo(svc.ownerMemberId, me.id) || svc.cadence === 'irregular') return;
+  setRecurring(me.householdId, id, str(fd, 'on') === 'true');
+  revalidatePath(`/services/${id}`);
+  revalidatePath('/services');
+  revalidatePath('/bills');
   revalidatePath('/');
 }

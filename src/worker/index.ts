@@ -1,4 +1,5 @@
 import { settleAutoPaidBills } from '@/lib/autopay';
+import { recordRecurringCharges } from '@/lib/recurring';
 import { refileAll } from '@/lib/filing';
 import { sendDueReminders, sendSeasonAhead } from '@/lib/notifications';
 import { retryBusyReads } from '@/ingest/pipeline';
@@ -20,6 +21,12 @@ const g = globalThis as unknown as {
  * others.
  */
 const QUARTER_HOURLY: { name: string; run: () => number | Promise<number>; done: string }[] = [
+  {
+    // Before auto-pay, so an assumed charge on a card is marked paid the same tick.
+    name: 'recurring',
+    run: () => recordRecurringCharges(),
+    done: 'recorded {n} recurring charge(s)',
+  },
   {
     name: 'autopay',
     run: () => settleAutoPaidBills(),

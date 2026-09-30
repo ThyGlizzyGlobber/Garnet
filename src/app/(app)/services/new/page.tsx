@@ -81,6 +81,7 @@ export default async function NewServicePage({
           trustedSenders: '',
           autoPay: false,
           seasonal: SEASONAL_TYPES.includes(first.slug),
+          recurring: !!first.hasSubServices,
           personal: personal || (housemates && first.personalByDefault),
         }}
       />

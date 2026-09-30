@@ -123,7 +123,7 @@ export function estimatePerDay(
 }
 
 /** Same day `n` months later, clamped to the month's length. */
-function addCalendarMonths(date: string, n: number): string {
+export function addCalendarMonths(date: string, n: number): string {
   const [y, m, d] = date.split('-').map(Number) as [number, number, number];
   const target = new Date(Date.UTC(y, m - 1 + n, 1));
   const last = new Date(

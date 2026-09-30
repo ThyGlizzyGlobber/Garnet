@@ -79,6 +79,7 @@ export default async function EditServicePage({ params }: { params: Promise<{ id
           trustedSenders: s.trustedSenders.join(', '),
           autoPay: s.autoPay,
           seasonal: s.seasonal,
+          recurring: !!s.recurringSince,
           personal: !!s.ownerMemberId,
         }}
       />

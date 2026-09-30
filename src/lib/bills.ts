@@ -15,7 +15,7 @@ import {
 import type { BillInstalmentOption } from '@/ingest/extractors/types';
 import { fullPaymentOpen, instalmentDueDate, planLock } from '@/lib/instalments';
 import { ownerCondition, type Scope } from '@/lib/scope';
-import { addDays, todayIn } from '@/lib/dates';
+import { addDays, daysInclusive, todayIn, toUtcMs } from '@/lib/dates';
 import { ulid } from '@/lib/ids';
 import { getHousehold } from '@/lib/households';
 import { listMembers } from '@/lib/members';
@@ -45,6 +45,8 @@ export interface BillInput {
   createdByMemberId?: string | null;
   /** The instalments the bill offers (amount and due date are then the pay-in-full option). */
   instalments?: BillInstalmentOption[] | null;
+  /** Recorded by the app for a recurring service, no bill in yet (src/lib/recurring.ts). */
+  assumed?: boolean;
 }
 
 type ShareWithMember = Share & { member: Member };
@@ -88,6 +90,13 @@ export function createBill(householdId: string, input: BillInput, db: Db = getDb
     throw new Error('Billing period end is before its start');
   if (!Number.isInteger(input.amountMinor) || input.amountMinor < 0)
     throw new Error('Amount must be a non-negative integer');
+  // The real bill for a charge the app assumed (a recurring subscription)
+  // takes the assumed bill's place, with its own price and details.
+  const offersInstalments = !!input.instalments && input.instalments.length >= 2;
+  if (!input.assumed && !offersInstalments) {
+    const assumed = assumedBillFor(householdId, input, db);
+    if (assumed) return takeAssumedPlace(householdId, assumed, input, db);
+  }
   if (input.externalRef) {
     const dup = db
       .select({ id: bill.id })
@@ -130,6 +139,7 @@ export function createBill(householdId: string, input: BillInput, db: Db = getDb
         createdByMemberId: input.createdByMemberId ?? null,
         fullAmountMinor: options ? input.amountMinor : null,
         fullDueDate: options ? input.dueDate : null,
+        assumed: input.assumed ?? false,
         createdAt: now,
         updatedAt: now,
       })
@@ -162,6 +172,129 @@ export function createBill(householdId: string, input: BillInput, db: Db = getDb
 
   refreshAnomalies(householdId, input.serviceId, db);
   return getBill(householdId, id, db)!;
+}
+
+/**
+ * An assumed charge of the same service that a new bill is the real one for:
+ * due within ten days of it, or covering most of the same period.
+ */
+function assumedBillFor(householdId: string, input: BillInput, db: Db): Bill | null {
+  const candidates = db
+    .select()
+    .from(bill)
+    .where(
+      and(
+        eq(bill.householdId, householdId),
+        eq(bill.serviceId, input.serviceId),
+        eq(bill.assumed, true),
+      ),
+    )
+    .all();
+  const days = (a: string, b: string) => Math.abs(toUtcMs(a) - toUtcMs(b)) / 86_400_000;
+  const overlap = (b: Bill) => {
+    const s = b.periodStart > input.periodStart ? b.periodStart : input.periodStart;
+    const e = b.periodEnd < input.periodEnd ? b.periodEnd : input.periodEnd;
+    return e < s ? 0 : daysInclusive(s, e);
+  };
+  const shorter = (b: Bill) =>
+    Math.min(
+      daysInclusive(b.periodStart, b.periodEnd),
+      daysInclusive(input.periodStart, input.periodEnd),
+    );
+  return (
+    candidates
+      .filter((b) => days(b.dueDate, input.dueDate) <= 10 || overlap(b) * 2 >= shorter(b))
+      .sort((a, b) => days(a.dueDate, input.dueDate) - days(b.dueDate, input.dueDate))[0] ?? null
+  );
+}
+
+/**
+ * The real bill arrived for an assumed charge: the assumed bill becomes it
+ * (amount, dates, invoice, document…), keeping its id. Split again when the
+ * price or period changed; a housemate who had already paid their share of
+ * the assumed charge stays paid (the difference, a price rise's few cents
+ * or dollars, isn't asked of them again).
+ */
+function takeAssumedPlace(
+  householdId: string,
+  assumed: Bill,
+  input: BillInput,
+  db: Db,
+): BillDetail {
+  const hh = getHousehold(householdId, db)!;
+  const svc = getService(householdId, input.serviceId, db)!;
+  if (input.externalRef) {
+    const dup = db
+      .select({ id: bill.id })
+      .from(bill)
+      .where(and(eq(bill.serviceId, input.serviceId), eq(bill.externalRef, input.externalRef)))
+      .get();
+    if (dup && dup.id !== assumed.id)
+      throw new Error(`A bill with reference ${input.externalRef} already exists for this service`);
+  }
+  const currency = input.currency ?? hh.currency;
+  const now = new Date().toISOString();
+  const resplit =
+    input.amountMinor !== assumed.amountMinor ||
+    input.periodStart !== assumed.periodStart ||
+    input.periodEnd !== assumed.periodEnd;
+  db.transaction((tx) => {
+    tx.update(bill)
+      .set({
+        sourceDocumentId: input.sourceDocumentId ?? assumed.sourceDocumentId,
+        amountMinor: input.amountMinor,
+        currency,
+        taxMinor: input.taxMinor ?? null,
+        taxLabel: input.taxLabel ?? null,
+        periodStart: input.periodStart,
+        periodEnd: input.periodEnd,
+        issueDate: input.issueDate ?? null,
+        dueDate: input.dueDate,
+        usageQuantity: input.usageQuantity ?? null,
+        usageUnit: input.usageUnit ?? svc.usageUnit ?? null,
+        source: input.source,
+        extractor: input.extractor ?? null,
+        confidence: input.confidence ?? null,
+        externalRef: input.externalRef ?? null,
+        paidToProviderAt: input.paidToProviderAt ?? assumed.paidToProviderAt,
+        notes: input.notes ?? assumed.notes,
+        createdByMemberId: input.createdByMemberId ?? assumed.createdByMemberId,
+        assumed: false,
+        updatedAt: now,
+      })
+      .where(eq(bill.id, assumed.id))
+      .run();
+    if (!resplit || hh.splitMode !== 'shared') return;
+    const before = tx.select().from(share).where(eq(share.billId, assumed.id)).all();
+    tx.delete(share).where(eq(share.billId, assumed.id)).run();
+    insertShares(
+      tx,
+      householdId,
+      assumed.id,
+      svc,
+      { ...input, currency },
+      hh.paymentReferenceTemplate,
+      hh.locale,
+      now,
+    );
+    for (const was of before.filter((x) => x.paidAt && x.paidMethod !== 'payer'))
+      tx.update(share)
+        .set({
+          paidAt: was.paidAt,
+          paidMethod: was.paidMethod,
+          markedByMemberId: was.markedByMemberId,
+        })
+        .where(
+          and(
+            eq(share.billId, assumed.id),
+            eq(share.memberId, was.memberId),
+            eq(share.instalment, was.instalment),
+          ),
+        )
+        .run();
+  });
+  refreshAnomalies(householdId, input.serviceId, db);
+  return getBill(householdId, assumed.id, db)!;
 }
 
 /**

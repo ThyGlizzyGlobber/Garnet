@@ -50,13 +50,11 @@ export function createServiceType(
 
 /** The colour every service of a type wears (service_type.colour). */
 function typeColour(slug: string, db: Db): string {
-  return (
-    db
-      .select({ colour: serviceType.colour })
-      .from(serviceType)
-      .where(eq(serviceType.slug, slug))
-      .get()?.colour ?? DEFAULT_COLOUR
-  );
+  return typeRow(slug, db)?.colour ?? DEFAULT_COLOUR;
+}
+
+function typeRow(slug: string, db: Db): ServiceType | undefined {
+  return db.select().from(serviceType).where(eq(serviceType.slug, slug)).get();
 }
 
 /**
@@ -158,6 +156,11 @@ export interface ServiceInput {
   trustedSenders?: string[];
   /** Provider charges automatically (card on file / direct debit). */
   autoPay?: boolean;
+  /**
+   * The same charge every cadence (src/lib/recurring.ts). Defaults to on for
+   * sub-services (Subscriptions, Donations); never for irregular bills.
+   */
+  recurring?: boolean;
   /** memberId → percentage or ratio; replaces the service's splits when provided. */
   customSplits?: Record<string, number>;
   /** memberId → amount per bill (minor units); replaces the service's splits when provided. */
@@ -189,9 +192,12 @@ export function createService(
 ): ServiceWithType {
   const now = new Date().toISOString();
   const id = ulid();
-  const { customSplits, fixedAmounts, ...rest } = input;
+  const { customSplits, fixedAmounts, recurring, ...rest } = input;
   assertPayerInHousehold(householdId, rest.payerMemberId, db);
   assertPayerInHousehold(householdId, rest.ownerMemberId, db);
+  const cadence = rest.cadence ?? 'monthly';
+  const repeats =
+    cadence !== 'irregular' && (recurring ?? !!typeRow(rest.typeSlug, db)?.hasSubServices);
   db.insert(service)
     .values({
       id,
@@ -200,7 +206,7 @@ export function createService(
       name: rest.name.trim(),
       provider: rest.provider.trim(),
       accountRef: rest.accountRef ?? null,
-      cadence: rest.cadence ?? 'monthly',
+      cadence,
       usageUnit: rest.usageUnit ?? null,
       usageLimitMonthly: rest.usageLimitMonthly ?? null,
       seasonal: rest.seasonal ?? SEASONAL_TYPES.includes(rest.typeSlug),
@@ -215,6 +221,7 @@ export function createService(
       notes: rest.notes ?? null,
       trustedSenders: rest.trustedSenders ?? [],
       autoPay: rest.autoPay ?? false,
+      recurringSince: repeats ? now : null,
       createdAt: now,
       updatedAt: now,
     })
@@ -233,8 +240,18 @@ export function updateService(
   const existing = getService(householdId, id, db);
   if (!existing) throw new Error('Service not found');
   // Who owns it changes only through setServiceOwner (its bills and shares move too).
-  const { customSplits, fixedAmounts, ...rest } = input;
+  const { customSplits, fixedAmounts, recurring, ...rest } = input;
   delete rest.ownerMemberId;
+  // Recurring from when it's switched on; left alone when it stays on.
+  const cadence = rest.cadence ?? existing.cadence;
+  const recurringSince =
+    recurring === undefined
+      ? cadence === 'irregular'
+        ? null
+        : existing.recurringSince
+      : recurring && cadence !== 'irregular'
+        ? (existing.recurringSince ?? new Date().toISOString())
+        : null;
   // A personal service is always paid by its owner.
   if (existing.ownerMemberId) rest.payerMemberId = existing.ownerMemberId;
   assertPayerInHousehold(householdId, rest.payerMemberId, db);
@@ -246,6 +263,7 @@ export function updateService(
       // Its colour is its type's.
       ...(rest.typeSlug ? { colour: typeColour(rest.typeSlug, db) } : {}),
       ...(rest.isActive ? { cancelledAt: null, cancelledByMemberId: null } : {}),
+      recurringSince,
       updatedAt: new Date().toISOString(),
     })
     .where(and(eq(service.householdId, householdId), eq(service.id, id)))

@@ -110,6 +110,7 @@ Key properties:
 - Subscriptions and Donations are main services that hold sub-services: each streaming service, app or charity (Netflix, Spotify, Red Cross) is its own service with its own bills, split and owner, listed under its main service in the nav (behind an arrow), on the Services page and on the main service's own page. A new provider's bill sets one up automatically; one can also be added by hand.
 - A sub-service can be cancelled: it records who cancelled it and when, keeps every bill, and a bill that arrives dated after the cancellation is flagged ("charged after cancelling").
 - Any bill can be moved to another service or sub-service from its page.
+- Any service can be recurring (on by default for subscriptions and donations): the next charge is shown as upcoming at the latest price; once its date passes with no bill in it's recorded as an assumed bill, and the real bill, when it arrives, takes its place. A price change on the real bill carries forward and the household is told.
 - Every service type has one colour, the same in every household; households don't pick service colours.
 
 ### Projections

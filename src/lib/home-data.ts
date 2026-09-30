@@ -14,6 +14,7 @@ import { ownershipQuestions } from '@/lib/ownership';
 import { addMonths, lastMonths, monthBounds } from '@/lib/periods';
 import { nextMonth, projectMonth } from '@/lib/projections';
 import { documentCounts } from '@/lib/review';
+import { priceChange } from '@/lib/recurring';
 import { seasonAhead } from '@/lib/seasons';
 import { chargedAfterCancel, listServices } from '@/lib/services';
 import { hasAnyBills, monthlySeries, totalsForRange } from '@/lib/stats';
@@ -122,6 +123,7 @@ export interface HomeData {
   } | null;
   notices: (
     | { kind: 'cancelled'; serviceName: string; href: string }
+    | { kind: 'price'; serviceName: string; fromMinor: number; toMinor: number; href: string }
     | { kind: 'unusual'; serviceName: string; pct: number | null; href: string }
     | { kind: 'plan'; serviceName: string; href: string }
     | { kind: 'whose'; serviceName: string; href: string }
@@ -420,6 +422,20 @@ export function homeData(hh: Household, me: Member, today: string, db: Db = getD
 
   // Heads up.
   const notices: HomeData['notices'] = [];
+  // A recurring service whose latest bill changed the price, in the last 45 days.
+  for (const svc of listServices(hh.id, { viewer: me.id }, db)) {
+    const own = bills.filter((b) => b.serviceId === svc.id);
+    const change = priceChange(svc, own);
+    const changed = change && own.find((b) => b.id === change.billId);
+    if (change && changed && billDate(changed) >= addDays(today, -45))
+      notices.push({
+        kind: 'price',
+        serviceName: svc.name,
+        fromMinor: change.fromMinor,
+        toMinor: change.toMinor,
+        href: `/bills/${change.billId}`,
+      });
+  }
   // A cancelled subscription that's still charging, in the last three months.
   for (const b of bills.filter(
     (x) => chargedAfterCancel(x.service, x) && billDate(x) >= addDays(today, -90),

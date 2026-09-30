@@ -3,6 +3,7 @@ import { billDue, type BillStatus } from '@/lib/bill-status';
 import type { BillFile } from '@/lib/bill-files';
 import type { BillRowModel, DocRowModel, FileRowModel } from '@/components/ui/rows';
 import type { ReviewItem } from '@/lib/review';
+import type { ExpectedCharge } from '@/lib/recurring';
 import { paysByInstalments } from '@/lib/instalments';
 import { unitLabel } from '@/lib/units';
 import { formatDayRange, formatPeriod } from '@/lib/format';
@@ -65,6 +66,35 @@ function instalmentStates(b: BillListItem): BillRowModel['instalments'] {
   );
 }
 
+/**
+ * A recurring service's next charge, not a bill yet: a row that says so
+ * ("Upcoming"), at the latest price, leading to the service.
+ */
+export function upcomingRowFor(
+  charge: ExpectedCharge,
+  svc: { id: string; name: string; provider: string; colour: string; type: { icon: string } },
+  c: RowCtx,
+  o: { inService?: boolean; noDisc?: boolean; personal?: boolean } = {},
+): BillRowModel {
+  const period = formatPeriod(charge.periodStart, charge.periodEnd, c.locale);
+  return {
+    href: `/services/${svc.id}`,
+    title: o.inService ? period : svc.name,
+    provider: o.inService ? undefined : svc.provider,
+    sub: o.inService
+      ? c.t('row.expected', { date: c.date(charge.dueDate) })
+      : `${period} · ${c.t('row.expected', { date: c.date(charge.dueDate) })}`,
+    amount: c.money(charge.amountMinor),
+    status: { label: c.t('row.upcoming'), tone: 'info' },
+    tags: [
+      { label: c.t('row.recurring'), tone: 'neutral', icon: 'repeat' },
+      ...(o.personal ? [{ label: c.t('row.yours'), tone: 'info' as const, icon: 'user' }] : []),
+    ],
+    disc: o.noDisc ? undefined : { icon: svc.type.icon, colour: svc.colour },
+    colour: svc.colour,
+  };
+}
+
 export function billRowFor(
   b: BillListItem,
   c: RowCtx,
@@ -102,6 +132,7 @@ export function billRowFor(
     (s) => s.memberId === c.viewerId && s.instalment === (due.instalment?.n ?? 0),
   );
   const tags: BillRowModel['tags'] = [];
+  if (b.assumed) tags.push({ label: c.t('row.assumed'), tone: 'neutral', icon: 'repeat' });
   if (b.isAnomaly) tags.push({ label: c.t('row.unusual'), tone: 'warn', icon: 'trend-up' });
   if (personal) tags.push({ label: c.t('row.yours'), tone: 'info', icon: 'user' });
   if (b.alertKind)

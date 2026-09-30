@@ -686,6 +686,18 @@ const CATALOG: WidgetDef[] = [
         n: HomeData['notices'][number],
       ): { tone: Tone; icon: string; title: string; body: string } => {
         switch (n.kind) {
+          case 'price':
+            return {
+              tone: 'warn',
+              icon: n.toMinor > n.fromMinor ? 'trend-up' : 'trend-down',
+              title: t(
+                n.toMinor > n.fromMinor ? 'notices.priceUpTitle' : 'notices.priceDownTitle',
+                {
+                  service: n.serviceName,
+                },
+              ),
+              body: t('notices.priceBody', { from: f.money(n.fromMinor), to: f.money(n.toMinor) }),
+            };
           case 'cancelled':
             return {
               tone: 'bad',

@@ -7,6 +7,7 @@ import { refileDocuments } from '@/lib/filing';
 import type { Member } from '@/db/schema';
 import { visibleTo } from '@/lib/scope';
 import { getService } from '@/lib/services';
+import { setRecurring } from '@/lib/recurring';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
@@ -129,6 +130,7 @@ export async function createBillAction(_prev: ActionState, fd: FormData): Promis
   let id: string;
   try {
     id = createBill(hh.id, { ...input, source: 'manual', createdByMemberId: me.id }).id;
+    applyRecurring(me, input.serviceId, fd);
     notifyInBackground(notifyBillCreated(hh.id, id, { except: me.id }));
   } catch (e) {
     return { error: (e as Error).message };
@@ -158,6 +160,7 @@ export async function updateBillAction(_prev: ActionState, fd: FormData): Promis
     };
   try {
     if (moving) moveBill(hh.id, id, target.id);
+    applyRecurring(me, target.id, fd);
     // Keep the original paid timestamp if it was already paid and still is.
     const paidToProviderAt = input.paidToProviderAt
       ? (existing.paidToProviderAt ?? input.paidToProviderAt)
@@ -324,4 +327,14 @@ export async function moveBillAction(_prev: ActionState, fd: FormData): Promise<
   revalidatePath(`/services/${target.id}`);
   revalidatePath('/');
   redirect(`/bills/${id}`);
+}
+
+/** The bill form's "Recurring" switch applies to the bill's service when it changed. */
+function applyRecurring(me: Member, serviceId: string, fd: FormData) {
+  if (!fd.get('recurringShown')) return;
+  const svc = visibleService(me, serviceId);
+  const on = fd.get('recurring') === 'on';
+  if (!svc || svc.cadence === 'irregular' || on === !!svc.recurringSince) return;
+  setRecurring(me.householdId, svc.id, on);
+  revalidatePath(`/services/${svc.id}`);
 }

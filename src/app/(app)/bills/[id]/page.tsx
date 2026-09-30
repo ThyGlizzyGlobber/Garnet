@@ -9,7 +9,9 @@ import { BackLink } from '@/components/ui/controls';
 import { InlineAction } from '@/components/ui/form';
 import { billFiles, personNotes } from '@/lib/bill-files';
 import { billDue } from '@/lib/bill-status';
-import { getBill, housematesPaid } from '@/lib/bills';
+import { getBill, housematesPaid, listBills } from '@/lib/bills';
+import { recurringView } from '@/lib/recurring';
+import { setRecurringAction } from '../../services/actions';
 import { pageContext } from '@/lib/context';
 import { daysInclusive } from '@/lib/dates';
 import { formatMonthRange, formatPeriod } from '@/lib/format';
@@ -132,6 +134,10 @@ export default async function BillPage({ params }: { params: Promise<{ id: strin
       return out;
     }, []);
   const afterCancel = chargedAfterCancel(b.service, b);
+  // Recurring: the service's next charge, and whether this bill changed the price.
+  const serviceBills = listBills(hh.id, { serviceId: b.serviceId });
+  const recurring = recurringView(b.service, serviceBills);
+  const priceChanged = recurring.priceChange?.billId === b.id ? recurring.priceChange : null;
   const iPayProvider = personal || !split || payer?.id === me.id || !payer;
 
   return (
@@ -284,6 +290,28 @@ export default async function BillPage({ params }: { params: Promise<{ id: strin
             </Card>
           )}
 
+          {b.assumed && (
+            <Card className="bg-accent-soft">
+              <SectionHead title={t('assumed.title')} />
+              <p className="muted small">{t('assumed.body', { service: b.service.name })}</p>
+            </Card>
+          )}
+
+          {priceChanged && (
+            <Notice
+              tone="warn"
+              icon={priceChanged.toMinor > priceChanged.fromMinor ? 'trend-up' : 'trend-down'}
+              title={t(priceChanged.toMinor > priceChanged.fromMinor ? 'price.up' : 'price.down', {
+                service: b.service.name,
+                from: money(priceChanged.fromMinor, b.currency),
+                to: money(priceChanged.toMinor, b.currency),
+              })}
+              body={t('price.body')}
+              href={`/services/${b.service.id}`}
+              className="bp-notice"
+            />
+          )}
+
           {afterCancel && (
             <Notice
               tone="bad"
@@ -394,6 +422,19 @@ export default async function BillPage({ params }: { params: Promise<{ id: strin
                       }),
                     ]
                   : null,
+                b.service.cadence !== 'irregular'
+                  ? [
+                      t('recurring.label'),
+                      recurring.upcoming
+                        ? t('recurring.next', {
+                            date: date(recurring.upcoming.dueDate),
+                            amount: money(recurring.upcoming.amountMinor, b.currency),
+                          })
+                        : recurring.on
+                          ? t('recurring.on')
+                          : t('recurring.off'),
+                    ]
+                  : null,
                 housemates
                   ? [
                       t('whose.label'),
@@ -403,6 +444,16 @@ export default async function BillPage({ params }: { params: Promise<{ id: strin
               ]}
             />
             {notes && <p className="muted small mt-3 whitespace-pre-wrap">{notes}</p>}
+            {b.service.cadence !== 'irregular' && !b.service.cancelledAt && (
+              <div className="mt-3">
+                <InlineAction
+                  action={setRecurringAction}
+                  hidden={{ id: b.service.id, on: recurring.on ? 'false' : 'true' }}
+                  label={t(recurring.on ? 'recurring.stop' : 'recurring.start')}
+                  variant="secondary"
+                />
+              </div>
+            )}
             {housemates &&
               (!personal && housematesPaid(hh.id, b.serviceId) ? (
                 <p className="muted small mt-3">{t('whose.lockedShares')}</p>

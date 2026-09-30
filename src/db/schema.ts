@@ -257,6 +257,14 @@ export const service = sqliteTable(
      * cancelling. Null = not cancelled.
      */
     cancelledAt: text('cancelled_at'),
+    /**
+     * Recurring (a subscription, rent): the same charge is expected every
+     * cadence at the latest bill's price, shown as upcoming, and recorded as
+     * an assumed bill once its date passes with no bill in. When it was
+     * switched on (ISO time); charges due before then are never assumed.
+     * Null = not recurring.
+     */
+    recurringSince: text('recurring_since'),
     cancelledByMemberId: text('cancelled_by_member_id').references(() => member.id, {
       onDelete: 'set null',
     }),
@@ -349,7 +357,8 @@ export const sourceDocument = sqliteTable(
   ],
 );
 
-export const BILL_SOURCES = ['template', 'llm', 'manual'] as const;
+/** recurring: an assumed charge of a recurring service (src/lib/recurring.ts). */
+export const BILL_SOURCES = ['template', 'llm', 'manual', 'recurring'] as const;
 export type BillSource = (typeof BILL_SOURCES)[number];
 
 export const bill = sqliteTable(
@@ -414,6 +423,12 @@ export const bill = sqliteTable(
      * amount_minor is their sum and due_date the next unpaid instalment's.
      */
     paymentPlan: text('payment_plan', { enum: ['full', 'instalments'] }),
+    /**
+     * Recorded by the app for a recurring service because its date passed with
+     * no bill in (src/lib/recurring.ts). The real bill, when it comes, takes
+     * its place and clears this.
+     */
+    assumed: integer('assumed', { mode: 'boolean' }).notNull().default(false),
     notes: text('notes'),
     createdByMemberId: text('created_by_member_id').references(() => member.id, {
       onDelete: 'set null',

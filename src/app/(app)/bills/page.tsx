@@ -2,12 +2,12 @@ import Link from 'next/link';
 import { Fragment } from 'react';
 import { getTranslations } from 'next-intl/server';
 import { Icon } from '@/components/app/icons';
-import { billRowFor, rowCtx } from '@/components/app/bill-rows';
+import { billRowFor, rowCtx, upcomingRowFor } from '@/components/app/bill-rows';
 import { Highlight } from '@/components/app/highlight';
 import { Card, FilterChip, LinkButton } from '@/components/ui';
 import { EmptyCard, PageTitle } from '@/components/ui/blocks';
 import { Segmented, SearchField } from '@/components/ui/controls';
-import { BillRow, Rows } from '@/components/ui/rows';
+import { BillRow, Rows, type BillRowModel } from '@/components/ui/rows';
 import { Swatch } from '@/components/ui/colour';
 import { billsAddress } from '@/lib/bills-address';
 import { listBills } from '@/lib/bills';
@@ -20,10 +20,22 @@ import { listDocuments, searchDocuments } from '@/lib/review';
 import { CopyButton } from '@/components/ui/copy';
 import { Pager } from '@/components/ui/pager';
 import { pageParam, paginateGroups } from '@/lib/paging';
+import { upcomingCharge } from '@/lib/recurring';
+import { matchesAll } from '@/lib/search';
 
 type Filter = 'all' | 'unpaid' | 'paid' | 'unusual' | 'overdue';
 /** Household bills, my personal bills, or both. */
 type Whose = 'all' | 'household' | 'mine';
+/** One row in the list: a bill, or a recurring service's upcoming charge. */
+interface ListItem {
+  key: string;
+  /** The day it's filed under. */
+  date: string;
+  amountMinor: number;
+  /** Someone's own: left out of the month's household total. */
+  personal: boolean;
+  row: BillRowModel;
+}
 /** Up to this month (the default), the months after it, or every month. */
 type When = 'now' | 'upcoming' | 'all';
 const FILTERS: Filter[] = ['all', 'unpaid', 'paid', 'unusual'];
@@ -86,12 +98,63 @@ export default async function BillsPage({
   const year = years.includes(params.y ?? '') ? params.y! : null;
   const hasServices = listServices(hh.id, { viewer: me.id }).length > 0;
   const address = billsAddress(hh);
-  const { entries, tokens, later } = filterBills(
+  const {
+    entries,
+    tokens,
+    later: laterBills,
+  } = filterBills(
     all,
     { q, status: filter, serviceId, year, when, typeSlug },
     { locale: hh.locale, today: ctx.today },
   );
-  const groups = groupByMonth(entries, (e) => e.date);
+  // Recurring services' next charges (not bills yet), filed like bills and
+  // passing the same filters: shown as "Upcoming" at the latest price.
+  const thisMonth = ctx.today.slice(0, 7);
+  const upcoming = listServices(hh.id, { viewer: me.id })
+    .filter((svc) =>
+      whose === 'mine' ? svc.ownerMemberId : whose === 'household' ? !svc.ownerMemberId : true,
+    )
+    .filter(
+      (svc) => (!serviceId || svc.id === serviceId) && (!typeSlug || svc.typeSlug === typeSlug),
+    )
+    .flatMap((svc) => {
+      const charge = upcomingCharge(
+        svc,
+        everything.filter((b) => b.serviceId === svc.id),
+      );
+      if (!charge || filter === 'paid' || filter === 'unusual' || filter === 'overdue') return [];
+      if (year && charge.periodStart.slice(0, 4) !== year) return [];
+      const hay = `${svc.name} ${svc.provider} ${svc.type.label} upcoming recurring`.toLowerCase();
+      if (tokens.length && !matchesAll(hay, tokens)) return [];
+      return [{ svc, charge, date: charge.periodStart }];
+    });
+  const upcomingLater = upcoming.filter((u) => u.date.slice(0, 7) > thisMonth);
+  const shownUpcoming = upcoming.filter((u) =>
+    when === 'all'
+      ? true
+      : when === 'upcoming'
+        ? u.date.slice(0, 7) > thisMonth
+        : u.date.slice(0, 7) <= thisMonth,
+  );
+  const later = laterBills + upcomingLater.length;
+  // Bills and upcoming charges as one list of rows.
+  const items: ListItem[] = [
+    ...entries.map((e) => ({
+      key: e.bill.id,
+      date: e.date,
+      amountMinor: e.amountMinor,
+      personal: !!e.bill.ownerMemberId,
+      row: billRowFor(e.bill, rc, { share: hh.splitMode === 'shared' }),
+    })),
+    ...shownUpcoming.map((u) => ({
+      key: `up-${u.svc.id}`,
+      date: u.date,
+      amountMinor: u.charge.amountMinor,
+      personal: !!u.svc.ownerMemberId,
+      row: upcomingRowFor(u.charge, u.svc, rc, { personal: !!u.svc.ownerMemberId }),
+    })),
+  ];
+  const groups = groupByMonth(items, (e) => e.date);
   // Coming up reads soonest first; everything else latest first.
   if (when === 'upcoming') groups.reverse();
   const paged = paginateGroups(
@@ -227,7 +290,7 @@ export default async function BillsPage({
             className="flex items-center gap-2"
           >
             <Icon name="calendar" width={14} height={14} />
-            {t('upcoming', { count: when === 'upcoming' ? entries.length : later })}
+            {t('upcoming', { count: when === 'upcoming' ? items.length : later })}
           </FilterChip>
         )}
         {services.length > 1 &&
@@ -285,8 +348,8 @@ export default async function BillsPage({
       {filtered && (
         <p className="muted small -mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
           {q
-            ? t('searchResults', { count: entries.length, q })
-            : t('filterResults', { count: entries.length })}
+            ? t('searchResults', { count: items.length, q })
+            : t('filterResults', { count: items.length })}
           <Link href="/bills" className="font-semibold text-accent">
             {t('clearSearch')}
           </Link>
@@ -301,7 +364,7 @@ export default async function BillsPage({
         </p>
       )}
 
-      {entries.length === 0 ? (
+      {items.length === 0 ? (
         <EmptyCard
           icon="search"
           title={t('empty.noMatch')}
@@ -334,7 +397,7 @@ export default async function BillsPage({
               <span className="muted">
                 {m.slice(0, 4)} · {t('summary.count', { count: items.length })} ·{' '}
                 {money(
-                  items.reduce((sum, e) => sum + (e.bill.ownerMemberId ? 0 : e.amountMinor), 0),
+                  items.reduce((sum, e) => sum + (e.personal ? 0 : e.amountMinor), 0),
                   hh.currency,
                   { whole: true },
                 )}
@@ -343,10 +406,7 @@ export default async function BillsPage({
             <Card className="p-2">
               <Rows>
                 {items.map((e) => (
-                  <BillRow
-                    key={e.bill.id}
-                    bill={billRowFor(e.bill, rc, { share: hh.splitMode === 'shared' })}
-                  />
+                  <BillRow key={e.key} bill={e.row} />
                 ))}
               </Rows>
             </Card>
