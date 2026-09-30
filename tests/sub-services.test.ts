@@ -112,8 +112,12 @@ describe('the catalog', () => {
 
   it('gives every type one colour, the same for every household', () => {
     const types = listServiceTypes(db);
-    expect(types.find((t) => t.slug === 'electricity')!.colour).toBe('#eda100');
-    expect(types.find((t) => t.slug === 'water')!.colour).toBe('#1baf7a');
+    // The colour of what it is: electricity yellow, gas orange, water blue, gardening green.
+    const colour = (slug: string) => types.find((t) => t.slug === slug)!.colour;
+    expect(colour('electricity')).toBe('#eda100');
+    expect(colour('gas')).toBe('#eb6834');
+    expect(colour('water')).toBe('#2a78d6');
+    expect(colour('gardening')).toBe('#008300');
     // The everyday bills never share a colour.
     const common = ['internet', 'electricity', 'gas', 'water', 'phone', 'rent', 'council_rates'];
     const colours = common.map((slug) => types.find((t) => t.slug === slug)!.colour);
@@ -129,7 +133,7 @@ describe('service colours', () => {
       db,
     );
     expect(svc.colour).toBe('#eb6834');
-    expect(updateService(hh.id, svc.id, { typeSlug: 'water' }, db).colour).toBe('#1baf7a');
+    expect(updateService(hh.id, svc.id, { typeSlug: 'water' }, db).colour).toBe('#2a78d6');
   });
 });
 

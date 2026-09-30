@@ -115,6 +115,26 @@ Colours go through `colourCss`/`tintStyle`, never raw hex in components.
 difference between the themes is a token in the three mode blocks at the top of
 `globals.css`; components only read tokens.
 
+### Service colours (the same for every household)
+
+Every service wears its type's colour, chosen for what the thing is, from the
+eight-colour data palette (`src/lib/palette.ts`, validated for colour
+blindness). The everyday bills never share one; rarer types do.
+
+| Colour  | Types                                                            |
+| ------- | ---------------------------------------------------------------- |
+| Blue    | Water, Pool & spa, Vehicle registration                          |
+| Yellow  | Electricity, Repairs & maintenance, Roadside assistance          |
+| Orange  | Gas, Pest control, Vehicle repairs & servicing, Gym              |
+| Green   | Council rates, Gardening                                         |
+| Aqua    | Phone, Cleaning                                                  |
+| Violet  | Internet, Strata, Building insurance, Car insurance              |
+| Magenta | Rent, Contents insurance, Health insurance, Subscriptions, Other |
+| Red     | Ambulance cover, Donations                                       |
+
+Custom types take the palette in turn. Sub-services of one type (Netflix and
+Spotify under Subscriptions) get distinct palette colours in charts only.
+
 ## 3. The scene
 
 Behind everything, fixed to the viewport (`<Scene />` in the root layout):
