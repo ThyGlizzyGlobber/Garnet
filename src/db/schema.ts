@@ -358,14 +358,14 @@ export const sourceDocument = sqliteTable(
 );
 
 /**
- * A thing a household pays several kinds of bills for: a vehicle (its rego,
- * insurance, roadside cover, servicing) or a policy (health insurance,
- * ambulance cover). Entered once; the bills of its category's services are
- * filed under it (bill.asset_id). Household or one member's own, like a
- * service: a personal one is seen only by that member, and its bills are
- * that member's personal bills.
+ * A vehicle the household pays several kinds of bills for (its rego,
+ * insurance, roadside cover, servicing). Entered once; the bills of the
+ * Vehicles services are filed under it (bill.asset_id). Household or one
+ * member's own, like a service: a personal one is seen only by that member,
+ * and its bills are that member's personal bills. (kind stays a column so
+ * other kinds of things can join later.)
  */
-export const ASSET_KINDS = ['vehicle', 'policy'] as const;
+export const ASSET_KINDS = ['vehicle'] as const;
 export type AssetKind = (typeof ASSET_KINDS)[number];
 
 export const asset = sqliteTable(
@@ -374,9 +374,9 @@ export const asset = sqliteTable(
     id: text('id').primaryKey(),
     householdId: householdId(),
     kind: text('kind', { enum: ASSET_KINDS }).notNull(),
-    /** What the household calls it: "Ford Fiesta 2011", "Bupa family cover". */
+    /** What the household calls it: "Ford Fiesta 2011". */
     name: text('name').notNull(),
-    /** As entered: a number plate or VIN, a policy or membership number. */
+    /** As entered: a number plate or VIN. */
     identifier: text('identifier'),
     /** The identifier in capitals without spaces or punctuation, for matching bills. */
     identifierKey: text('identifier_key'),
@@ -466,12 +466,11 @@ export const bill = sqliteTable(
      * its place and clears this.
      */
     assumed: integer('assumed', { mode: 'boolean' }).notNull().default(false),
-    /** The vehicle or policy it's for (bills of the Vehicles and Health services). */
+    /** The vehicle it's for (bills of the Vehicles services). */
     assetId: text('asset_id').references(() => asset.id, { onDelete: 'set null' }),
     /**
-     * Identifiers printed on the bill (number plates, VINs, policy and
-     * membership numbers), matching keys (see identifierKey), for filing it
-     * under a vehicle or policy added later.
+     * Identifiers printed on the bill (number plates, VINs), as matching
+     * keys (see identifierKey), for filing it under a vehicle added later.
      */
     assetRefs: text('asset_refs', { mode: 'json' }).$type<string[]>(),
     notes: text('notes'),

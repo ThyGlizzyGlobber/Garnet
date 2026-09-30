@@ -1,14 +1,13 @@
 import Link from 'next/link';
-import { Fragment } from 'react';
 import { getTranslations } from 'next-intl/server';
 import { Icon } from '@/components/app/icons';
+import { PopoverClose } from '@/components/app/popover-close';
 import { billRowFor, rowCtx, upcomingRowFor } from '@/components/app/bill-rows';
 import { Highlight } from '@/components/app/highlight';
-import { Card, FilterChip, LinkButton } from '@/components/ui';
+import { Button, Card, Field, LinkButton, Select } from '@/components/ui';
 import { EmptyCard, PageTitle } from '@/components/ui/blocks';
 import { Segmented, SearchField } from '@/components/ui/controls';
 import { BillRow, Rows, type BillRowModel } from '@/components/ui/rows';
-import { Swatch } from '@/components/ui/colour';
 import { billsAddress } from '@/lib/bills-address';
 import { listBills } from '@/lib/bills';
 import { pageContext } from '@/lib/context';
@@ -60,11 +59,22 @@ export default async function BillsPage({
     w?: string;
     /** A main service's sub-services together (Subscriptions), by type. */
     t?: string;
+    /** The Filters panel's service: s:<id> or t:<main service>. */
+    sv?: string;
     /** Page number (whole months, about BILLS_PER_PAGE bills a page). */
     p?: string;
   }>;
 }) {
-  const params = await searchParams;
+  const raw = await searchParams;
+  // The Filters panel sends its service as one field; links send s= or t=.
+  const params =
+    raw.sv !== undefined
+      ? {
+          ...raw,
+          s: raw.sv.startsWith('s:') ? raw.sv.slice(2) : undefined,
+          t: raw.sv.startsWith('t:') ? raw.sv.slice(2) : undefined,
+        }
+      : raw;
   const q = (params.q ?? '').trim();
   const filter: Filter = ([...FILTERS, 'overdue'] as string[]).includes(params.f ?? '')
     ? (params.f as Filter)
@@ -74,7 +84,7 @@ export default async function BillsPage({
   const t = await getTranslations('bills');
   const tu = await getTranslations('ui');
   const tp = await getTranslations('ui.pager');
-  const ta = await getTranslations('assets');
+  const ta = await getTranslations('main');
   const rc = rowCtx(ctx, tu);
   // The household's bills and this member's own (nobody else's personal bills).
   const everything = listBills(hh.id, { viewer: me.id });
@@ -195,6 +205,19 @@ export default async function BillsPage({
   };
   const filtered =
     filter !== 'all' || !!serviceId || !!typeSlug || !!year || !!q || whose !== 'all';
+  // The Filters panel: what it has set, as pills that each take one away.
+  const pickedService = services.find((svc) => svc.id === serviceId);
+  const groupName = (g: (typeof serviceGroups)[number]) =>
+    g.category ? ta(`main.${g.category}`) : g.label;
+  const pills = [
+    typeSlug && picked ? { key: 't', label: groupName(picked), href: href({ t: null }) } : null,
+    pickedService ? { key: 's', label: pickedService.name, href: href({ s: null }) } : null,
+    year ? { key: 'y', label: year, href: href({ y: null }) } : null,
+    whose !== 'all'
+      ? { key: 'o', label: t(`whoseFilter.${whose}`), href: href({ o: 'all' }) }
+      : null,
+    when !== 'now' ? { key: 'w', label: t(`when.${when}`), href: href({ w: 'now' }) } : null,
+  ].filter((x): x is { key: string; label: string; href: string } => !!x);
   const inboxMatches = q
     ? searchDocuments(listDocuments(hh.id, { viewer: me.id }), q, hh.locale).docs.length
     : 0;
@@ -232,36 +255,25 @@ export default async function BillsPage({
         title={t('title')}
         lede={t('lede')}
         right={
-          <>
-            {canExport && (
-              <a
-                href="/api/export?kind=zip"
-                download
-                className="btn btn-glass btn-sm"
-                title={t(canExportHousehold(me, hh) ? 'downloadHint' : 'downloadMineHint')}
-                aria-label={t(canExportHousehold(me, hh) ? 'download' : 'downloadMine')}
-              >
-                <Icon name="download" width={15} height={15} />
-                <span className="hidden sm:inline">
-                  {t(canExportHousehold(me, hh) ? 'download' : 'downloadMine')}
-                </span>
-              </a>
-            )}
-            <Segmented
-              small
-              label={t('filters.label')}
-              value={filter}
-              items={FILTERS.map((f) => ({
-                value: f,
-                label: t(`filters.${f}`),
-                href: href({ f }),
-              }))}
-            />
-          </>
+          canExport && (
+            <a
+              href="/api/export?kind=zip"
+              download
+              className="btn btn-glass btn-sm"
+              title={t(canExportHousehold(me, hh) ? 'downloadHint' : 'downloadMineHint')}
+              aria-label={t(canExportHousehold(me, hh) ? 'download' : 'downloadMine')}
+            >
+              <Icon name="download" width={15} height={15} />
+              <span className="hidden sm:inline">
+                {t(canExportHousehold(me, hh) ? 'download' : 'downloadMine')}
+              </span>
+            </a>
+          )
         }
       />
-      <div className="filters">
-        <form action="/bills" method="get" className="contents">
+      {/* One bar: search, what to show, and the rest behind Filters. */}
+      <div className="bf-bar">
+        <form action="/bills" method="get" className="bf-search">
           {whose !== 'all' && <input type="hidden" name="o" value={whose} />}
           {filter !== 'all' && <input type="hidden" name="f" value={filter} />}
           {when !== 'now' && <input type="hidden" name="w" value={when} />}
@@ -273,84 +285,136 @@ export default async function BillsPage({
             placeholder={t('search.placeholder')}
             label={t('search.label')}
             defaultValue={q}
-            className="w-full sm:w-72"
+            className="w-full"
           />
         </form>
-        {hasPersonal && (
-          <Segmented
-            small
-            label={t('whoseFilter.label')}
-            value={whose}
-            items={(['all', 'household', 'mine'] as const).map((o) => ({
-              value: o,
-              label: t(`whoseFilter.${o}`),
-              href: href({ o }),
-            }))}
-          />
-        )}
-        {(when !== 'now' || later > 0) && (
-          <FilterChip
-            href={href({ w: when === 'upcoming' ? 'now' : 'upcoming' })}
-            active={when === 'upcoming'}
-            className="flex items-center gap-2"
-          >
-            <Icon name="calendar" width={14} height={14} />
-            {t('upcoming', { count: when === 'upcoming' ? items.length : later })}
-          </FilterChip>
-        )}
-        {services.length > 1 &&
-          serviceGroups.map((g) => {
-            const key = groupKey(g);
-            if (!key) {
-              const svc = g.services[0]!;
-              return (
-                <FilterChip
-                  key={svc.id}
-                  href={href({ s: serviceId === svc.id ? null : svc.id, t: null })}
-                  active={serviceId === svc.id}
-                  className="flex items-center gap-2"
-                >
-                  <Swatch colour={svc.colour} />
-                  {svc.name}
-                </FilterChip>
-              );
-            }
-            const open = typeSlug === key || g.services.some((x) => x.id === serviceId);
-            return (
-              <Fragment key={`g-${key}`}>
-                <FilterChip
-                  href={href({ t: typeSlug === key ? null : key, s: null })}
-                  active={typeSlug === key}
-                  className="flex items-center gap-2"
-                >
-                  <Swatch colour={g.colour} />
-                  {g.category ? ta(`main.${g.category}`) : g.label}
-                  <Icon name={open ? 'chevron-down' : 'chevron-right'} width={13} height={13} />
-                </FilterChip>
-                {open &&
-                  g.services.map((svc) => (
-                    <FilterChip
-                      key={svc.id}
-                      href={href({
-                        s: serviceId === svc.id ? null : svc.id,
-                        t: serviceId === svc.id ? key : null,
-                      })}
-                      active={serviceId === svc.id}
-                      className="flex items-center gap-2"
-                    >
-                      {svc.name}
-                    </FilterChip>
+        <Segmented
+          small
+          label={t('filters.label')}
+          value={filter}
+          className="bf-status"
+          items={FILTERS.map((f) => ({
+            value: f,
+            label: t(`filters.${f}`),
+            href: href({ f }),
+          }))}
+        />
+        <details className="bf-more" data-popover>
+          <PopoverClose />
+          <summary className={`btn btn-glass btn-sm${pills.length ? ' is-on' : ''}`}>
+            <Icon name="sliders" width={15} height={15} />
+            {t('filters.more')}
+            {pills.length > 0 && <span className="bf-count">{pills.length}</span>}
+          </summary>
+          <form action="/bills" method="get" className="glass-strong bf-panel">
+            {q && <input type="hidden" name="q" value={q} />}
+            {filter !== 'all' && <input type="hidden" name="f" value={filter} />}
+            <Field label={t('filters.service')}>
+              <Select
+                name="sv"
+                defaultValue={serviceId ? `s:${serviceId}` : typeSlug ? `t:${typeSlug}` : ''}
+              >
+                <option value="">{t('search.allServices')}</option>
+                {serviceGroups.map((g) => {
+                  const key = groupKey(g);
+                  if (!key) {
+                    const svc = g.services[0]!;
+                    return (
+                      <option key={svc.id} value={`s:${svc.id}`}>
+                        {svc.name}
+                      </option>
+                    );
+                  }
+                  return (
+                    <optgroup key={key} label={groupName(g)}>
+                      <option value={`t:${key}`}>
+                        {t('filters.everyIn', { name: groupName(g) })}
+                      </option>
+                      {g.services.map((svc) => (
+                        <option key={svc.id} value={`s:${svc.id}`}>
+                          {svc.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  );
+                })}
+              </Select>
+            </Field>
+            {years.length > 1 && (
+              <Field label={t('filters.year')}>
+                <Select name="y" defaultValue={year ?? ''}>
+                  <option value="">{t('search.allYears')}</option>
+                  {years.map((y) => (
+                    <option key={y} value={y}>
+                      {y}
+                    </option>
                   ))}
-              </Fragment>
-            );
-          })}
-        {years.length > 1 &&
-          years.map((y) => (
-            <FilterChip key={y} href={href({ y: year === y ? null : y })} active={year === y}>
-              {y}
-            </FilterChip>
-          ))}
+                </Select>
+              </Field>
+            )}
+            {hasPersonal && (
+              <Field label={t('whoseFilter.label')}>
+                <Select name="o" defaultValue={whose}>
+                  {(['all', 'household', 'mine'] as const).map((o) => (
+                    <option key={o} value={o}>
+                      {t(`whoseFilter.${o}`)}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            )}
+            <Field label={t('filters.when')}>
+              <Select name="w" defaultValue={when}>
+                {(['now', 'upcoming', 'all'] as const).map((w) => (
+                  <option key={w} value={w}>
+                    {t(`when.${w}`)}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <div className="bf-acts">
+              <Button type="submit" size="sm">
+                {t('filters.apply')}
+              </Button>
+              <Link
+                href={href({ s: null, t: null, y: null, o: 'all', w: 'now' })}
+                className="btn btn-plain btn-sm"
+              >
+                {t('filters.reset')}
+              </Link>
+            </div>
+          </form>
+        </details>
       </div>
+      {(pills.length > 0 || (when === 'now' && later > 0)) && (
+        <div className="bf-pills">
+          {pills.map((p) => (
+            <Link
+              key={p.key}
+              href={p.href}
+              className="bf-pill"
+              aria-label={t('filters.remove', { name: p.label })}
+            >
+              {p.label}
+              <Icon name="x" width={12} height={12} />
+            </Link>
+          ))}
+          {pills.length > 1 && (
+            <Link
+              href={href({ s: null, t: null, y: null, o: 'all', w: 'now' })}
+              className="bf-clear"
+            >
+              {t('filters.clearAll')}
+            </Link>
+          )}
+          {when === 'now' && later > 0 && (
+            <Link href={href({ w: 'upcoming' })} className="bf-clear bf-later">
+              <Icon name="calendar" width={13} height={13} />
+              {t('upcoming', { count: later })}
+            </Link>
+          )}
+        </div>
+      )}
       {filtered && (
         <p className="muted small -mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
           {q

@@ -2,55 +2,56 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Button, Field, Input, Select } from '@/components/ui';
+import { Button, Card, Field, Input, LinkButton, Select } from '@/components/ui';
+import { SectionHead } from '@/components/ui/blocks';
 import { Segmented } from '@/components/ui/controls';
 import { ActionForm, type FormAction } from '@/components/ui/form';
 
 /**
- * Adding or changing a vehicle or policy: what the household calls it, its
- * plate or policy number (bills that print it are filed under it by
+ * Adding or changing a vehicle, on its own page: what the household calls
+ * it, its plate or VIN (bills that print it are filed under it by
  * themselves), and whose it is when others live there.
  */
-export function AssetForm({
+export function VehicleForm({
   action,
-  kind,
-  asset,
+  vehicle,
   whose,
+  cancelHref,
 }: {
   action: FormAction;
-  kind: 'vehicle' | 'policy';
   /** Editing: the one being changed. */
-  asset?: { id: string; name: string; identifier: string | null; mine: boolean };
-  /** Offer "Just mine": others live there (and, editing, it may change hands). */
+  vehicle?: { id: string; name: string; identifier: string | null; mine: boolean };
+  /** Offer "Just mine": others live there. */
   whose: boolean;
+  cancelHref: string;
 }) {
-  const t = useTranslations('assets');
-  const [owner, setOwner] = useState(asset?.mine ? 'mine' : 'household');
+  const t = useTranslations('main.vehicle');
+  const [owner, setOwner] = useState(vehicle?.mine ? 'mine' : 'household');
   return (
-    <ActionForm action={action} submitLabel="" hideSubmit className="asset-form">
+    <ActionForm action={action} submitLabel="" hideSubmit className="form-scr">
       {(errors, pending) => (
-        <>
-          <input type="hidden" name="kind" value={kind} />
-          {asset && <input type="hidden" name="id" value={asset.id} />}
-          <Field label={t(`${kind}.name`)} error={errors.name}>
+        <Card className="vform">
+          <SectionHead title={t('details')} />
+          {vehicle && <input type="hidden" name="id" value={vehicle.id} />}
+          <Field label={t('name')} error={errors.name}>
             <Input
               name="name"
               required
               maxLength={60}
-              defaultValue={asset?.name}
-              placeholder={t(`${kind}.namePlaceholder`)}
+              defaultValue={vehicle?.name}
+              placeholder={t('namePlaceholder')}
             />
           </Field>
           <Field
-            label={t(`${kind}.identifier`)}
+            label={t('identifier')}
             optional
-            hint={t(`${kind}.identifierHint`)}
+            hint={t('identifierHint')}
             error={errors.identifier}
           >
             <Input
               name="identifier"
               maxLength={40}
-              defaultValue={asset?.identifier ?? ''}
+              defaultValue={vehicle?.identifier ?? ''}
               className="mono"
               autoCapitalize="characters"
               autoComplete="off"
@@ -72,44 +73,45 @@ export function AssetForm({
               />
             </div>
           )}
-          <div>
-            <Button type="submit" disabled={pending} icon={asset ? 'check' : 'plus'}>
-              {pending ? '…' : asset ? t('save') : t(`${kind}.add`)}
+          <div className="form-acts">
+            <Button type="submit" disabled={pending} icon={vehicle ? 'check' : 'plus'}>
+              {pending ? '…' : vehicle ? t('save') : t('add')}
             </Button>
+            <LinkButton href={cancelHref} variant="ghost">
+              {t('cancel')}
+            </LinkButton>
           </div>
-        </>
+        </Card>
       )}
     </ActionForm>
   );
 }
 
 /**
- * "Which vehicle?" beside a bill waiting under "No vehicle yet": pick one
- * and it's filed there (moving to the vehicle's side when it's someone's own).
+ * "Which vehicle?" beside a bill not filed under one yet: pick one and it's
+ * filed there (moving to the vehicle's side when it's someone's own).
  */
 export function FileBillForm({
   action,
   billId,
-  kind,
   assets,
   back,
 }: {
   action: FormAction;
   billId: string;
-  kind: 'vehicle' | 'policy';
   assets: { id: string; name: string }[];
   back: string;
 }) {
-  const t = useTranslations('assets');
+  const t = useTranslations('main.vehicle');
   return (
     <ActionForm action={action} submitLabel="" hideSubmit className="asset-file">
       {(errors, pending) => (
         <>
           <input type="hidden" name="billId" value={billId} />
           <input type="hidden" name="back" value={back} />
-          <Select name="assetId" defaultValue="" aria-label={t(`${kind}.which`)} required>
+          <Select name="assetId" defaultValue="" aria-label={t('which')} required>
             <option value="" disabled>
-              {t(`${kind}.which`)}
+              {t('which')}
             </option>
             {assets.map((a) => (
               <option key={a.id} value={a.id}>

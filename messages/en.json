@@ -292,7 +292,16 @@
       "unpaid": "To pay",
       "paid": "Paid",
       "unusual": "Unusual",
-      "overdue": "Overdue"
+      "overdue": "Overdue",
+      "more": "Filters",
+      "service": "Service",
+      "year": "Year",
+      "when": "Show",
+      "everyIn": "All of {name}",
+      "apply": "Apply",
+      "reset": "Reset",
+      "remove": "Remove {name}",
+      "clearAll": "Clear all"
     },
     "summary": {
       "count": "{count, plural, one {# bill} other {# bills}}",
@@ -436,6 +445,11 @@
       "off": "No",
       "stop": "Stop recurring",
       "start": "Make it recurring"
+    },
+    "when": {
+      "now": "Up to this month",
+      "upcoming": "Upcoming",
+      "all": "All months"
     }
   },
   "services": {
@@ -684,6 +698,34 @@
       "priceUp": "Price up from {from} to {to}",
       "priceDown": "Price down from {from} to {to}",
       "priceBody": "The latest bill changed the price. Upcoming charges use the new one."
+    },
+    "month": {
+      "label": "Month",
+      "prev": "Previous month",
+      "next": "Next month",
+      "thisMonth": "This month",
+      "lede": "What’s due this month, service by service, and what’s still to come. Tap one for its bills.",
+      "billed": "Due",
+      "billedSub": "{count, plural, =0 {no bills} one {# bill} other {# bills}}",
+      "paid": "Paid",
+      "paidSub": "to the provider",
+      "toPay": "To pay",
+      "toPaySub": "not paid yet",
+      "overdueSub": "{count} overdue",
+      "toCome": "Still to come",
+      "toComeSub": "expected",
+      "toComeChip": "{count, plural, one {# expected} other {# expected}}",
+      "same": "Same as {month}",
+      "up": "Up {pct} on {month}",
+      "down": "Down {pct} on {month}",
+      "bills": "{count} bills",
+      "expected": "Expected {date}",
+      "nextOn": "Next about {date}",
+      "last": "Last bill {month}",
+      "none": "No bills yet",
+      "nothing": "Nothing this month",
+      "count": "{count, plural, one {# service} other {# services}}",
+      "open": "Open {name}"
     }
   },
   "members": {
@@ -1531,7 +1573,14 @@
     "comparedWith": "Compared with",
     "sameShort": "same",
     "latestLine": "Latest bill: {qty} {unit} a day, about {month} {unit} a month.",
-    "chartCostBill": "Cost of each bill"
+    "chartCostBill": "Cost of each bill",
+    "price": {
+      "title": "Price by bill",
+      "hint": "Each dot is a bill",
+      "same": "The same price for all {count} bills",
+      "since": "Since {month} · was {was}",
+      "next": "Next, expected {date}"
+    }
   },
   "seasons": {
     "name": {
@@ -2503,73 +2552,95 @@
       "body": "Showing pages as they were. Changes wait until you’re back."
     }
   },
-  "assets": {
+  "main": {
+    "services": "Services",
     "main": {
       "vehicle": "Vehicles",
-      "health": "Health"
+      "health": "Health",
+      "lifestyle": "Lifestyle"
     },
     "yours": "Yours",
-    "yearShort": "{amount} in the last 12 months",
     "billCount": "{count, plural, one {# bill} other {# bills}}",
-    "edit": "Edit",
-    "save": "Save",
-    "file": "File it",
-    "subServices": "Kinds of bills",
-    "whose": "Whose is it?",
-    "whoseHousehold": "The household’s",
-    "whoseMine": "Just mine",
-    "whoseFollows": "Whose it is follows {name}, the one it’s filed under.",
-    "emptyTitle": "No {type} bills yet",
-    "settings": "Who pays and how it’s split",
-    "settingsBody": "Set on the service behind these bills.",
+    "year": "{amount} in 12 months",
+    "noBills": "No bills yet.",
+    "details": "Service details",
+    "allBills": "All {count} bills",
+    "next": "Next {date}",
+    "cancelled": "Cancelled",
+    "stopped": "Stopped",
+    "stillCharging": "Charged after cancelling",
+    "stoppedHead": "Stopped or cancelled",
+    "lede": "{count, plural, =0 {Nothing going} one {# service} other {# services}}{stopped, plural, =0 {} other {, # stopped}} · {amount} in the last 12 months",
+    "addService": "Add a service",
+    "emptyTitle": "Nothing under {name} yet",
+    "emptyBody": {
+      "health": "Add your health insurance and ambulance cover, or forward a bill and it’s set up for you.",
+      "lifestyle": "Add your gym and other memberships, or forward a bill and it’s set up for you."
+    },
+    "whoseFollows": "Whose it is follows {name}, the vehicle it’s filed under.",
+    "kinds": {
+      "vehicle_registration": "Rego",
+      "car_insurance": "Insurance",
+      "roadside_assistance": "Roadside",
+      "vehicle_maintenance": "Servicing"
+    },
     "vehicle": {
       "label": "Vehicle",
-      "many": "Vehicles",
-      "add": "Add a vehicle",
-      "remove": "Remove this vehicle",
-      "removeConfirm": "Remove {name}? Its bills stay, waiting to be filed under a vehicle again.",
       "none": "No vehicle yet",
       "which": "Which vehicle?",
-      "noBills": "No bills for it yet.",
-      "lede": "{count, plural, =0 {No vehicles yet} one {# vehicle} other {# vehicles}}. {amount} in the last 12 months.{waiting, plural, =0 {} one { # bill is waiting for a vehicle.} other { # bills are waiting for a vehicle.}}",
-      "subLede": "{count, plural, =0 {No vehicles with bills here yet} one {# vehicle} other {# vehicles}}. {amount} in the last 12 months.{waiting, plural, =0 {} one { # bill is waiting for a vehicle.} other { # bills are waiting for a vehicle.}}",
-      "subLine": "{count, plural, =0 {No vehicles yet} one {# vehicle} other {# vehicles}} · {amount} in the last 12 months",
-      "waitingChip": "{count} waiting",
-      "filed": "{count, plural, one {# bill that was waiting is} other {# bills that were waiting are}} now filed under it.",
-      "noneBody": "Pick the vehicle each of these bills is for.",
-      "noneBodyEmpty": "Add your vehicles first, then file these bills under them.",
+      "file": "File it",
       "formHint": "Its bills are kept together under the vehicle.",
+      "add": "Add a vehicle",
+      "addLede": "Its rego, insurance, roadside and servicing bills are kept together under it.",
+      "editLede": "Change its name, plate or whose it is.",
+      "details": "The vehicle",
       "name": "Name",
       "namePlaceholder": "Ford Fiesta 2011",
       "identifier": "Number plate or VIN",
       "identifierHint": "Bills that show it are filed under this vehicle by themselves.",
-      "firstBody": "Add each vehicle once. Its rego, insurance, roadside and servicing bills are then kept together under it.",
-      "emptyBody": "When a bill of this kind comes in, it’s listed under its vehicle here."
-    },
-    "policy": {
-      "label": "Policy",
-      "many": "Policies",
-      "add": "Add a policy",
-      "remove": "Remove this policy",
-      "removeConfirm": "Remove {name}? Its bills stay, waiting to be filed under a policy again.",
-      "none": "No policy yet",
-      "which": "Which policy?",
-      "noBills": "No bills for it yet.",
-      "lede": "{count, plural, =0 {No policies yet} one {# policy} other {# policies}}. {amount} in the last 12 months.{waiting, plural, =0 {} one { # bill is waiting for a policy.} other { # bills are waiting for a policy.}}",
-      "subLede": "{count, plural, =0 {No policies with bills here yet} one {# policy} other {# policies}}. {amount} in the last 12 months.{waiting, plural, =0 {} one { # bill is waiting for a policy.} other { # bills are waiting for a policy.}}",
-      "subLine": "{count, plural, =0 {No policies yet} one {# policy} other {# policies}} · {amount} in the last 12 months",
-      "waitingChip": "{count} waiting",
+      "whose": "Whose is it?",
+      "whoseHousehold": "The household’s",
+      "whoseMine": "Just mine",
+      "save": "Save",
+      "cancel": "Cancel",
+      "edit": "Edit vehicle",
+      "remove": "Remove vehicle",
+      "removeBody": "Its bills stay, waiting to be filed under a vehicle again.",
+      "removeConfirm": "Remove {name}? Its bills stay, waiting to be filed under a vehicle again.",
+      "lede": "{count, plural, =0 {No vehicles yet} one {# vehicle} other {# vehicles}} · {amount} in the last 12 months",
+      "allKinds": "All",
+      "emptyTitle": "No vehicles yet",
+      "emptyBody": "Add each vehicle once. Its rego, insurance, roadside and servicing bills are then kept together under it.",
+      "noneOfKind": "No vehicle has a bill of this kind yet.",
+      "waitingTitle": "Not filed under a vehicle",
+      "waitingBody": "Pick the vehicle each bill is for.",
+      "waitingBodyEmpty": "Add your vehicles, then file these bills under them.",
       "filed": "{count, plural, one {# bill that was waiting is} other {# bills that were waiting are}} now filed under it.",
-      "noneBody": "Pick the policy each of these bills is for.",
-      "noneBodyEmpty": "Add your policies first, then file these bills under them.",
-      "formHint": "Its bills are kept together under the policy.",
-      "name": "Name",
-      "namePlaceholder": "Family hospital and extras",
-      "identifier": "Policy or membership number",
-      "identifierHint": "Bills that show it are filed under this policy by themselves.",
-      "firstBody": "Add each policy once, health insurance or ambulance cover. Its bills are then kept together under it.",
-      "emptyBody": "When a bill of this kind comes in, it’s listed under its policy here."
+      "waitingCount": "{count, plural, one {# bill waiting} other {# bills waiting}} for a vehicle",
+      "allFiled": "Every bill filed"
     },
-    "lastYear": "last 12 months"
+    "overview": {
+      "ahead": "The year ahead",
+      "aheadHint": "Solid: to pay · outlined: expected",
+      "aheadNone": "Nothing due or expected in the next 12 months.",
+      "expectedOn": "expected {date}",
+      "dueOn": "due {date}",
+      "byMonth": "Due each month",
+      "byMonthHint": "Last 12 months",
+      "byMonthNone": "Nothing was due in the last 12 months.",
+      "year": "Last 12 months",
+      "bills": "{count, plural, =0 {no bills} one {# bill} other {# bills}}",
+      "month": "A month on average",
+      "monthSub": "over the last 12 months",
+      "next": "Next due",
+      "nothingNext": "Nothing coming up",
+      "vehicles": "Vehicles",
+      "services": "Services",
+      "byKind": "By kind",
+      "byService": "By service",
+      "byVehicle": "By vehicle"
+    },
+    "stoppedCount": "{count} stopped or cancelled",
+    "allGoing": "All still going"
   }
 }

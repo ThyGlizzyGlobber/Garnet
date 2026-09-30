@@ -63,189 +63,6 @@
   align-items: center;
 }
 
-/* ---------- Services: a year of bills per service ---------- */
-.d3-svc {
-  display: grid;
-  grid-template-columns: 240px 150px minmax(0, 1fr);
-  grid-template-rows: auto auto;
-  gap: 8px 22px;
-  align-items: center;
-  padding: 20px 22px;
-}
-.d3-svc-l {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  border: 0;
-  background: none;
-  padding: 0;
-  cursor: pointer;
-  text-align: left;
-  min-width: 0;
-  color: inherit;
-  text-decoration: none;
-}
-.d3-svc-l > span {
-  display: grid;
-  min-width: 0;
-}
-.d3-svc-l b {
-  font-family: var(--f-display);
-  font-weight: var(--fw-display);
-  font-size: 21px;
-  letter-spacing: var(--ls-display);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.d3-svc-l .muted {
-  font-size: var(--fs-small);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.d3-svc-fig {
-  display: grid;
-  gap: 2px;
-}
-.d3-rib {
-  display: grid;
-  gap: 4px;
-  min-width: 0;
-}
-.d3-rib-track {
-  position: relative;
-  height: 34px;
-  border-radius: 10px;
-  background: var(--inset);
-}
-.d3-rib-axis {
-  position: relative;
-  height: 14px;
-}
-.d3-rib-axis span {
-  position: absolute;
-  font-size: 10.5px;
-  color: var(--p-fg2);
-  font-weight: 600;
-}
-.d3-svc-sum {
-  grid-column: 2 / -1;
-  margin: 0;
-  color: var(--p-fg2);
-}
-/* A main service with sub-services (Subscriptions): a heading line, then its
-   sub-services' ribbons, drawn a little inset. */
-.d3-group {
-  display: flex;
-  flex-direction: column;
-  gap: var(--gap);
-}
-.d3-group-h {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 4px 6px;
-  color: inherit;
-}
-.d3-group-h b {
-  font-family: var(--f-display);
-  font-weight: var(--fw-display);
-  font-size: 19px;
-  letter-spacing: var(--ls-display);
-}
-.d3-group-h .ic {
-  margin-left: auto;
-  color: var(--p-fg2);
-}
-.d3-group-h:hover b {
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-.d3-svc-sub {
-  margin-left: 18px;
-  border-left: 3px solid var(--svc);
-}
-.d3-svc.is-cancelled .d3-rib,
-.d3-svc.is-cancelled .d3-svc-fig {
-  opacity: 0.6;
-}
-.rb {
-  position: absolute;
-  top: 3px;
-  bottom: 3px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 0;
-  border-radius: 7px;
-  cursor: pointer;
-  font-size: 11px;
-  font-weight: 750;
-  overflow: hidden;
-  white-space: nowrap;
-  background: color-mix(in srgb, var(--svc) 34%, transparent);
-  color: var(--p-fg);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--svc) 55%, transparent);
-  transition: filter 0.15s;
-  text-decoration: none;
-}
-.rb:hover {
-  filter: brightness(1.1) saturate(1.2);
-}
-.rb.s-soon {
-  background: repeating-linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--svc) 34%, transparent) 0 5px,
-    color-mix(in srgb, var(--svc) 18%, transparent) 5px 10px
-  );
-  box-shadow: inset 0 0 0 1.5px var(--warn);
-}
-.rb.s-due {
-  background: color-mix(in srgb, var(--svc) 12%, transparent);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--svc) 45%, transparent);
-}
-.rb.s-overdue {
-  box-shadow: inset 0 0 0 1.5px var(--bad);
-}
-.rb.clip {
-  border-top-left-radius: 0;
-  border-bottom-left-radius: 0;
-  -webkit-mask-image: linear-gradient(90deg, transparent, #000 18px);
-  mask-image: linear-gradient(90deg, transparent, #000 18px);
-}
-.rb.flag::after {
-  content: '';
-  position: absolute;
-  top: 3px;
-  right: 3px;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--warn);
-}
-.today-line {
-  position: absolute;
-  top: -2px;
-  bottom: -2px;
-  width: 0;
-  border-left: 1.5px solid var(--p-accent);
-  z-index: 2;
-  pointer-events: none;
-}
-.today-line span {
-  position: absolute;
-  top: -1px;
-  left: 4px;
-  font-size: 10px;
-  font-weight: 750;
-  color: var(--p-accent);
-  font-style: normal;
-}
-.d3-rib .today-line span {
-  display: none;
-}
-
 /* ---------- a service ---------- */
 .sp-head {
   display: flex;
@@ -909,16 +726,6 @@ a.paper:hover .paper-stamp {
 
 /* ---------- an iPad held upright ---------- */
 @media (max-width: 899px) {
-  .d3-svc {
-    grid-template-columns: minmax(0, 1fr) auto;
-  }
-  .d3-rib,
-  .d3-svc-sum {
-    grid-column: 1 / -1;
-  }
-  .d3-svc-sub {
-    margin-left: 0;
-  }
   .d3-cols,
   .d3-bill-grid {
     grid-template-columns: 1fr;
@@ -951,13 +758,6 @@ a.paper:hover .paper-stamp {
   .d3-title > p,
   .d3-title > .lede {
     font-size: 15px;
-  }
-  .d3-svc {
-    padding: 16px;
-  }
-  .d3-svc-fig {
-    justify-items: end;
-    text-align: right;
   }
   .d3-month {
     grid-template-columns: 1fr;
@@ -2349,151 +2149,174 @@ input.inp-plain[type='color'] {
   }
 }
 
-/* ---------- Vehicles and Health: vehicles or policies, and their bills ---------- */
-.asset-grid {
+/* ---------- Services: one month, service by service ---------- */
+.sm-head {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: var(--gap);
-  align-items: start;
-}
-.asset-card {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-.asset-h {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: 12px;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 18px 28px;
   align-items: center;
 }
-.asset-h > div {
-  display: grid;
+.sm-month {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
-.asset-name {
+.sm-month b {
   font-family: var(--f-display);
   font-weight: var(--fw-display);
-  font-size: 19px;
-  letter-spacing: var(--ls-display);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.asset-fig {
-  display: grid;
-  justify-items: end;
-  gap: 3px;
-}
-.asset-fig .fig {
   font-size: 22px;
+  letter-spacing: var(--ls-display);
+  min-width: 170px;
+  text-align: center;
 }
-.asset-lines {
-  display: grid;
-  gap: 2px;
-  margin: 0;
+.sm-month .btn-icon {
+  width: 36px;
+  height: 36px;
   padding: 0;
-  list-style: none;
-}
-.asset-lines a {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
-  gap: 10px;
+  place-items: center;
+}
+.sm-month .is-off {
+  visibility: hidden;
+}
+.sm-stats {
+  justify-self: end;
+}
+.sm-list {
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+}
+/* One service's month: name, amount, where it stands, the change. */
+.sm-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1.4fr) 110px minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
   align-items: center;
-  padding: 8px 10px;
+  padding: 12px 14px;
   border-radius: var(--r-inner);
   color: inherit;
   text-decoration: none;
+  cursor: pointer;
+  list-style: none;
 }
-.asset-lines a:hover {
-  background: var(--inset);
+.sm-row::-webkit-details-marker {
+  display: none;
 }
-.asset-lines i {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: var(--svc);
+.sm-row:hover {
+  background: color-mix(in srgb, var(--svc, var(--p-accent)) 7%, transparent);
 }
-.asset-lines span:nth-child(2) {
+.sm-row:focus-visible {
+  outline: 2px solid var(--p-accent);
+  outline-offset: -2px;
+}
+.sm-list > * + *,
+.sm-sub > * + * {
+  border-top: 1px solid var(--line);
+}
+.sm-name {
+  display: grid;
+  min-width: 0;
+}
+.sm-name b {
+  font-weight: 650;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-weight: 600;
 }
-.asset-edit summary {
-  cursor: pointer;
-  color: var(--p-accent);
-  font-weight: 600;
-  font-size: var(--fs-small);
-  list-style: none;
+.sm-name .muted {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.asset-edit summary::-webkit-details-marker {
-  display: none;
-}
-.asset-edit[open] {
-  display: grid;
-  gap: 12px;
-}
-.asset-form {
-  display: grid;
-  gap: 12px;
-}
-.asset-subs {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: var(--gap);
-}
-.asset-sub {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
-  gap: 12px;
-  align-items: center;
-  padding: 16px 18px;
-  color: inherit;
-  text-decoration: none;
-}
-.asset-sub > span {
-  display: grid;
-  gap: 2px;
-}
-.asset-sub b {
-  font-family: var(--f-display);
-  font-weight: var(--fw-display);
+.sm-amt {
   font-size: 18px;
+  text-align: right;
 }
-.asset-sub .chev {
+.sm-row.is-quiet .sm-amt {
   color: var(--p-fg2);
 }
+.sm-ch {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  color: var(--p-fg2);
+  text-align: right;
+}
+.sm-ch.up {
+  color: var(--warn);
+}
+.sm-ch.down {
+  color: var(--ok, var(--p-fg2));
+}
+.sm-chev {
+  transition: transform 0.2s ease;
+}
+.sm-grp[open] .sm-chev {
+  transform: rotate(180deg);
+}
+.sm-grp {
+  border-radius: var(--r-inner);
+}
+.sm-grp[open] {
+  background: color-mix(in srgb, var(--svc) 5%, transparent);
+}
+.sm-sub {
+  margin: 0 8px 8px 30px;
+  border-left: 2px solid color-mix(in srgb, var(--svc) 45%, transparent);
+  padding-left: 6px;
+}
+.sm-sub .sm-row {
+  padding: 10px 12px;
+}
+.sm-open {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 12px;
+  color: var(--p-accent);
+  font-weight: 600;
+}
 
-/* A vehicle's row on a sub-service's page: opens to show its bills. */
-.asset-g {
+/* ---------- Main services: a card per service or vehicle, its bills inside ---------- */
+.mcards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+.mcard {
   padding: 0;
   overflow: hidden;
 }
-.asset-g > summary {
+.mcard.is-muted > summary {
+  opacity: 0.72;
+}
+.mcard > summary {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto auto auto;
+  grid-template-columns: auto minmax(0, 1fr) auto auto auto auto;
   gap: 14px;
   align-items: center;
   padding: 16px 20px;
   cursor: pointer;
   list-style: none;
 }
-.asset-g > summary::-webkit-details-marker {
+.mcard > summary::-webkit-details-marker {
   display: none;
 }
-.asset-g > summary:hover {
+.mcard > summary:hover {
   background: color-mix(in srgb, var(--svc, var(--p-accent)) 6%, transparent);
 }
-.asset-g > summary:focus-visible {
+.mcard > summary:focus-visible {
   outline: 2px solid var(--p-accent);
   outline-offset: -2px;
 }
-.asset-g-t {
+.mcard-t {
   display: grid;
   gap: 2px;
   min-width: 0;
 }
-.asset-g-t b {
+.mcard-t b {
   font-family: var(--f-display);
   font-weight: var(--fw-display);
   font-size: 20px;
@@ -2502,45 +2325,56 @@ input.inp-plain[type='color'] {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.asset-g-f {
+.mcard-t .muted {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mcard-f {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 10px;
 }
-.asset-g-f .fig {
+.mcard-f .fig {
   font-size: 20px;
 }
-.asset-g-chev {
+.mcard-y {
+  min-width: 118px;
+  text-align: right;
+}
+.mcard-chev {
   color: var(--p-fg2);
   transition: transform 0.2s ease;
 }
-.asset-g[open] .asset-g-chev {
+.mcard[open] .mcard-chev {
   transform: rotate(180deg);
 }
-.asset-g-ic {
-  display: grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  color: var(--warn);
-  background: color-mix(in srgb, var(--warn) 16%, transparent);
-}
-.asset-g-rows {
+.mcard-body {
   border-top: 1px solid var(--line);
   padding: 6px 8px 8px;
 }
-.asset-g-rows.rows {
+.mcard-body > .rows {
   border-radius: 0;
   background: none;
 }
-.asset-wait {
+.mcard-empty {
+  padding: 12px;
+}
+.mcard-foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 6px 4px 0;
+}
+.mcard-wait {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 10px;
   align-items: center;
 }
-.asset-wait + .asset-wait {
+.mcard-wait + .mcard-wait {
   border-top: 1px solid var(--line);
 }
 .asset-file {
@@ -2553,35 +2387,251 @@ input.inp-plain[type='color'] {
 .asset-file select {
   max-width: 220px;
 }
+.vform {
+  max-width: 560px;
+  display: grid;
+  gap: 14px;
+}
+.filed-note {
+  margin-bottom: var(--gap);
+}
 @media (prefers-reduced-motion: reduce) {
-  .asset-g-chev {
+  .mcard-chev,
+  .sm-chev {
     transition: none;
   }
 }
-@media (max-width: 639px) {
-  .asset-g > summary {
+@media (max-width: 899px) {
+  .sm-head {
+    grid-template-columns: 1fr;
+  }
+  .sm-stats {
+    justify-self: stretch;
+  }
+  .sm-row {
     grid-template-columns: auto minmax(0, 1fr) auto;
-    gap: 10px 12px;
-    padding: 14px 16px;
+    gap: 4px 12px;
   }
-  .asset-g-f {
-    grid-column: 2 / 3;
+  .sm-st {
+    grid-column: 2;
+    grid-row: 2;
   }
-  .asset-g-y {
+  .sm-ch {
+    grid-column: 3;
+    grid-row: 2;
+  }
+  .mcard > summary {
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+  }
+  .mcard-y {
     display: none;
   }
-  .asset-g-chev {
+}
+@media (max-width: 639px) {
+  .sm-month b {
+    min-width: 0;
+    flex: 1;
+  }
+  .sm-sub {
+    margin-left: 12px;
+  }
+  .mcard > summary {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 8px 12px;
+    padding: 14px 16px;
+  }
+  .mcard-f {
+    grid-column: 2 / 4;
+    grid-row: 2;
+    justify-content: flex-start;
+  }
+  .mcard-flag {
+    grid-column: 2 / 4;
+    grid-row: 3;
+    justify-self: start;
+  }
+  .mcard-chev {
     grid-row: 1;
     grid-column: 3;
   }
-  .asset-wait {
+  .mcard-wait {
     grid-template-columns: 1fr;
   }
   .asset-file {
     padding: 0 8px 10px;
   }
-  .asset-grid,
-  .asset-subs {
-    grid-template-columns: 1fr;
+}
+
+/* ---------- Bills: one filter bar ---------- */
+.bf-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.bf-search {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+.bf-more {
+  position: relative;
+}
+.bf-more > summary {
+  list-style: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+}
+.bf-more > summary::-webkit-details-marker {
+  display: none;
+}
+.bf-more > summary.is-on {
+  color: var(--p-accent);
+}
+.bf-count {
+  display: grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--p-accent);
+  color: var(--color-on-colour, #fff);
+  font-size: 11px;
+  font-weight: 750;
+}
+/* More specific than .glass-strong, which sets its own position. */
+.bf-more > .bf-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 30;
+  width: 320px;
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  background: color-mix(in srgb, var(--g-solid) 94%, transparent);
+  border-radius: var(--r-card);
+}
+.bf-acts {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.bf-pills {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  margin-top: -4px;
+}
+.bf-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px 4px 11px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--p-accent);
+  background: color-mix(in srgb, var(--p-accent) 13%, transparent);
+  text-decoration: none;
+}
+.bf-pill:hover {
+  background: color-mix(in srgb, var(--p-accent) 22%, transparent);
+}
+.bf-clear {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--p-fg2);
+}
+.bf-later {
+  margin-left: auto;
+  color: var(--p-accent);
+}
+@media (max-width: 639px) {
+  .bf-search {
+    flex-basis: 100%;
   }
+  .bf-status {
+    flex: 1;
+    overflow-x: auto;
+  }
+  .bf-more > .bf-panel {
+    position: fixed;
+    left: 16px;
+    right: 16px;
+    top: auto;
+    bottom: 96px;
+    width: auto;
+  }
+}
+
+/* ---------- Main services: the overview beside the cards ---------- */
+.d3-main-svc .d3-cols {
+  margin-top: 2px;
+}
+.ov-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin-top: 10px;
+  font-size: 12.5px;
+  color: var(--p-fg2);
+}
+.ov-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.ov-list {
+  display: grid;
+  gap: 2px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.ov-list li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto 38px;
+  gap: 10px;
+  align-items: center;
+  padding: 6px 0;
+}
+.ov-list li + li {
+  border-top: 1px solid var(--line);
+}
+.ov-list li > span:nth-child(2) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ov-list .muted {
+  text-align: right;
+}
+.ov-meter {
+  position: relative;
+  width: 36px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--inset);
+  overflow: hidden;
+}
+.ov-meter::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--w);
+  background: var(--p-accent);
+  border-radius: 3px;
+}
+/* Grid items don't shrink below their content by default: a wide table
+   (the year ahead) must scroll inside its card, not widen the column. */
+.d3-main > *,
+.d3-aside > * {
+  min-width: 0;
 }

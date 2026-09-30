@@ -6,7 +6,13 @@ import { monthBounds } from '@/lib/periods';
 import { documentCounts } from '@/lib/review';
 import { billsAddress } from '@/lib/bills-address';
 import { isAdmin } from '@/lib/roles';
-import { byType, groupServices, listServices, type ServiceWithType } from '@/lib/services';
+import {
+  byType,
+  groupServices,
+  listServices,
+  serviceHome,
+  type ServiceWithType,
+} from '@/lib/services';
 import type { GroupedCategory } from '@/lib/service-categories';
 import { totalsForRange } from '@/lib/stats';
 
@@ -76,42 +82,34 @@ export function shellView(hh: Household, me: Member, today: string, db: Db = get
 }
 
 function entries(services: ServiceWithType[], minor: (s: ServiceWithType) => number): ShellEntry[] {
+  // A sub-service opens its card on its main service's page.
   const line = (s: ServiceWithType): ShellService => ({
     id: s.id,
     name: s.name,
     colour: s.colour,
     minor: minor(s),
-    href: `/services/${s.id}`,
+    href: serviceHome(s),
   });
   return groupServices(services).map((g): ShellEntry => {
-    if (g.category) {
-      // Vehicles → one line per type (Registration), each opening its bills by vehicle.
-      const children = byType(g.services).map(({ type, services: of }): ShellService => ({
-        id: type.slug,
-        name: type.label,
-        colour: type.colour,
-        minor: of.reduce((sum, s) => sum + minor(s), 0),
-        href: `/services/group/${type.slug}`,
-      }));
-      return {
-        kind: 'group',
-        key: `c-${g.category}`,
-        href: `/services/category/${g.category}`,
-        name: '',
-        category: g.category,
-        colour: g.colour,
-        minor: children.reduce((sum, c) => sum + c.minor, 0),
-        children,
-      };
-    }
-    if (!g.typeSlug) return { kind: 'service', ...line(g.services[0]!) };
-    const children = g.services.map(line);
+    if (!g.category && !g.typeSlug) return { kind: 'service', ...line(g.services[0]!) };
+    // Vehicles → one line per kind of bill (Registration), each showing
+    // Vehicles with that kind; every other main service → its services.
+    const children =
+      g.category === 'vehicle'
+        ? byType(g.services).map(({ type, services: of }): ShellService => ({
+            id: type.slug,
+            name: type.label,
+            colour: type.colour,
+            minor: of.reduce((sum, s) => sum + minor(s), 0),
+            href: `/services/category/vehicle?kind=${type.slug}`,
+          }))
+        : g.services.map(line);
     return {
       kind: 'group',
-      key: `t-${g.typeSlug}`,
-      href: `/services/group/${g.typeSlug}`,
-      name: g.label,
-      category: null,
+      key: g.category ? `c-${g.category}` : `t-${g.typeSlug}`,
+      href: g.category ? `/services/category/${g.category}` : `/services/group/${g.typeSlug}`,
+      name: g.category ? '' : g.label,
+      category: g.category,
       colour: g.colour,
       minor: children.reduce((sum, c) => sum + c.minor, 0),
       children,

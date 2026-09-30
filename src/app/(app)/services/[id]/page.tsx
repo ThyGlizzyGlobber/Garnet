@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { billRowFor, rowCtx, statusLabel, upcomingRowFor } from '@/components/app/bill-rows';
 import { PeriodBars } from '@/components/charts/period-bars';
+import { PriceSteps } from '@/components/charts/price-steps';
 import { StackBar } from '@/components/charts/stack-bar';
 import { Card, LinkButton } from '@/components/ui';
 import { Delta, Kv, Notice, PageTitle, SectionHead } from '@/components/ui/blocks';
@@ -22,7 +23,7 @@ import { visibleTo } from '@/lib/scope';
 import { seasonNoticeText } from '@/lib/season-text';
 import { serviceOverview } from '@/lib/service-overview';
 import { getMember } from '@/lib/members';
-import { chargedAfterCancel, getService } from '@/lib/services';
+import { chargedAfterCancel, getService, serviceHome } from '@/lib/services';
 import { listBills } from '@/lib/bills';
 import { InlineAction } from '@/components/ui/form';
 import { cancelServiceAction, resumeServiceAction, setRecurringAction } from '../actions';
@@ -53,6 +54,7 @@ export default async function ServicePage({
   const t = await getTranslations('usage');
   const ts = await getTranslations('services');
   const tu = await getTranslations('ui');
+  const tm = await getTranslations('main');
   const rc = rowCtx(ctx, tu);
   const svc = getService(hh.id, id);
   // Another member's personal service doesn't exist, as far as anyone else can tell.
@@ -231,8 +233,10 @@ export default async function ServicePage({
   return (
     <div className="scr d3-service">
       {sub || isGroupedCategory(svc.type.category) ? (
-        // A sub-service: back to its main service's page (Registration: bills by vehicle).
-        <BackLink href={`/services/group/${svc.typeSlug}`}>{svc.type.label}</BackLink>
+        // A sub-service: back to its card on its main service's page.
+        <BackLink href={serviceHome(svc)}>
+          {sub ? svc.type.label : tm(`main.${svc.type.category}`)}
+        </BackLink>
       ) : (
         <BackLink href="/services">{ts('title')}</BackLink>
       )}
@@ -250,49 +254,105 @@ export default async function ServicePage({
       />
       <div className="d3-cols">
         <div className="d3-main">
-          <Card>
-            <SectionHead
-              title={chartTitle}
-              right={o.bars.length > 0 && <span className="muted">{t('chartEach')}</span>}
-            />
-            {o.bars.length > 0 ? (
-              <PeriodBars
-                colour={svc.colour}
-                label={chartTitle}
-                bars={o.bars.slice(-12).map((b) => ({
-                  from: b.periodStart,
-                  to: b.periodEnd,
-                  value: b.value,
-                  label:
-                    Date.parse(b.periodEnd) - Date.parse(b.periodStart) > 45 * 86_400_000
-                      ? month(b.periodStart.slice(0, 7), 'short')
-                      : '',
-                  tip: `${formatMonthRange(b.periodStart, b.periodEnd, hh.locale)} · ${
-                    o.barsAreUsage && b.usage !== null
-                      ? `${t('perDay', { qty: qty(b.usage), unit })} · `
-                      : o.barsPerBill
-                        ? ''
-                        : `${t('costPerDay', { amount: money(Math.round(b.value)) })} · `
-                  }${money(b.amountMinor)}`,
-                  href: `/bills/${b.billId}`,
-                  flag: b.unusual,
-                }))}
-                reference={
-                  o.barsAreUsage && svc.usageLimitMonthly
-                    ? {
-                        value: (svc.usageLimitMonthly * 12) / 365,
-                        label: t('limitLine', {
-                          qty: qty(Math.round(((svc.usageLimitMonthly * 12) / 365) * 10) / 10),
-                          unit,
-                        }),
-                      }
-                    : undefined
-                }
+          {o.price ? (
+            // A fixed price: the price over time, not bars of one height.
+            <Card>
+              <SectionHead
+                title={t('price.title')}
+                right={<span className="muted">{t('price.hint')}</span>}
               />
-            ) : (
-              <p className="muted">{t('none')}</p>
-            )}
-          </Card>
+              <div className="ps-head">
+                <span className="fig fig-md">{money(o.price.currentMinor)}</span>
+                <span className="muted">
+                  {o.price.unchanged
+                    ? t('price.same', { count: o.price.bills.length })
+                    : t('price.since', {
+                        month: month(o.price.since.slice(0, 7), 'long-year'),
+                        was: money(o.price.wasMinor!),
+                      })}
+                </span>
+              </div>
+              <PriceSteps
+                colour={svc.colour}
+                label={t('price.title')}
+                points={[
+                  ...o.price.bills.map(({ bill: b, status }, i, all) => ({
+                    label: month(b.periodStart.slice(0, 7), 'short'),
+                    value: b.amountMinor,
+                    price:
+                      i === 0 || all[i - 1]!.bill.amountMinor !== b.amountMinor
+                        ? money(b.amountMinor)
+                        : undefined,
+                    tip: `${formatMonthRange(b.periodStart, b.periodEnd, hh.locale)} · ${money(b.amountMinor)} · ${statusLabel(rc, status)}`,
+                    href: `/bills/${b.id}`,
+                    state: (status.key === 'paid'
+                      ? 'paid'
+                      : status.key === 'overdue'
+                        ? 'overdue'
+                        : 'due') as 'paid' | 'due' | 'overdue',
+                  })),
+                  ...(o.price.upcoming
+                    ? [
+                        {
+                          label: month(o.price.upcoming.dueDate.slice(0, 7), 'short'),
+                          value: o.price.upcoming.amountMinor,
+                          price:
+                            o.price.upcoming.amountMinor !== o.price.currentMinor
+                              ? money(o.price.upcoming.amountMinor)
+                              : undefined,
+                          tip: `${t('price.next', { date: rc.dateYear(o.price.upcoming.dueDate) })} · ${money(o.price.upcoming.amountMinor)}`,
+                          state: 'upcoming' as const,
+                        },
+                      ]
+                    : []),
+                ]}
+              />
+            </Card>
+          ) : (
+            <Card>
+              <SectionHead
+                title={chartTitle}
+                right={o.bars.length > 0 && <span className="muted">{t('chartEach')}</span>}
+              />
+              {o.bars.length > 0 ? (
+                <PeriodBars
+                  colour={svc.colour}
+                  label={chartTitle}
+                  bars={o.bars.slice(-12).map((b) => ({
+                    from: b.periodStart,
+                    to: b.periodEnd,
+                    value: b.value,
+                    label:
+                      Date.parse(b.periodEnd) - Date.parse(b.periodStart) > 45 * 86_400_000
+                        ? month(b.periodStart.slice(0, 7), 'short')
+                        : '',
+                    tip: `${formatMonthRange(b.periodStart, b.periodEnd, hh.locale)} · ${
+                      o.barsAreUsage && b.usage !== null
+                        ? `${t('perDay', { qty: qty(b.usage), unit })} · `
+                        : o.barsPerBill
+                          ? ''
+                          : `${t('costPerDay', { amount: money(Math.round(b.value)) })} · `
+                    }${money(b.amountMinor)}`,
+                    href: `/bills/${b.billId}`,
+                    flag: b.unusual,
+                  }))}
+                  reference={
+                    o.barsAreUsage && svc.usageLimitMonthly
+                      ? {
+                          value: (svc.usageLimitMonthly * 12) / 365,
+                          label: t('limitLine', {
+                            qty: qty(Math.round(((svc.usageLimitMonthly * 12) / 365) * 10) / 10),
+                            unit,
+                          }),
+                        }
+                      : undefined
+                  }
+                />
+              ) : (
+                <p className="muted">{t('none')}</p>
+              )}
+            </Card>
+          )}
           {o.bands.length > 0 && (
             <Card>
               <SectionHead

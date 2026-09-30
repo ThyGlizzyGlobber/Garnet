@@ -2,7 +2,6 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { ASSET_KINDS, type AssetKind } from '@/db/schema';
 import type { ActionState } from '@/components/ui/form';
 import { errorText, fieldErrors, str } from '@/lib/actions';
 import {
@@ -19,13 +18,14 @@ import { requireMember } from '@/lib/auth/session';
 import { refileDocuments } from '@/lib/filing';
 import { hasHousemates } from '@/lib/members';
 import { visibleTo } from '@/lib/scope';
-import { categoryOfKind } from '@/lib/service-categories';
 
 /**
- * Vehicles and policies (src/lib/assets.ts): adding, changing and removing
- * them, and filing a bill under one. Anyone may add one, the household's or
- * their own; changing or removing follows canEditAsset.
+ * Vehicles (src/lib/assets.ts): adding, changing and removing them, each on
+ * its own page, and filing a bill under one. Anyone may add one, the
+ * household's or their own; changing or removing follows canEditAsset.
  */
+
+const VEHICLES = '/services/category/vehicle';
 
 function refresh() {
   revalidatePath('/services', 'layout');
@@ -33,10 +33,10 @@ function refresh() {
   revalidatePath('/');
 }
 
-/** Back to the Vehicles (or Health) page, saying how many waiting bills were filed. */
-function back(kind: AssetKind, filed: number): never {
-  const page = `/services/category/${categoryOfKind(kind)}`;
-  redirect(filed ? `${page}?filed=${filed}` : page);
+/** Back to Vehicles, the vehicle's card open, saying how many waiting bills were filed. */
+function back(id: string | null, filed: number): never {
+  const q = [id && `open=${id}`, filed && `filed=${filed}`].filter(Boolean).join('&');
+  redirect(`${VEHICLES}${q ? `?${q}` : ''}${id ? `#v-${id}` : ''}`);
 }
 
 /** "mine" makes it this member's own, only when others live there; otherwise the household's. */
@@ -46,23 +46,20 @@ function ownerFrom(fd: FormData, householdId: string, memberId: string): string 
 
 export async function createAssetAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
   const me = await requireMember();
-  const kind = str(fd, 'kind') as AssetKind;
-  if (!ASSET_KINDS.includes(kind)) return { error: (await errorText())('assetNotFound') };
   const name = str(fd, 'name');
   if (!name) return fieldErrors({ name: 'required' });
   if (name.length > 60) return fieldErrors({ name: 'tooLong' });
-  const identifier = str(fd, 'identifier').slice(0, 40);
   const a = createAsset(me.householdId, {
-    kind,
+    kind: 'vehicle',
     name,
-    identifier,
+    identifier: str(fd, 'identifier').slice(0, 40),
     ownerMemberId: ownerFrom(fd, me.householdId, me.id),
     createdByMemberId: me.id,
   });
   const filed = fileWaitingBills(me.householdId, a, me);
   if (filed) refileDocuments(me.householdId);
   refresh();
-  back(kind, filed);
+  back(a.id, filed);
 }
 
 export async function updateAssetAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
@@ -74,13 +71,15 @@ export async function updateAssetAction(_prev: ActionState, fd: FormData): Promi
   const name = str(fd, 'name');
   if (!name) return fieldErrors({ name: 'required' });
   if (name.length > 60) return fieldErrors({ name: 'tooLong' });
-  const identifier = str(fd, 'identifier').slice(0, 40);
   let filed = 0;
   try {
     const whose = fd.has('whose') ? ownerFrom(fd, me.householdId, me.id) : a.ownerMemberId;
     if ((whose ?? null) !== (a.ownerMemberId ?? null))
       setAssetOwner(me.householdId, a.id, whose, me);
-    const saved = updateAsset(me.householdId, a.id, { name, identifier });
+    const saved = updateAsset(me.householdId, a.id, {
+      name,
+      identifier: str(fd, 'identifier').slice(0, 40),
+    });
     if (saved.identifierKey && saved.identifierKey !== a.identifierKey)
       filed = fileWaitingBills(me.householdId, saved, me);
     refileDocuments(me.householdId);
@@ -88,7 +87,7 @@ export async function updateAssetAction(_prev: ActionState, fd: FormData): Promi
     return { error: (e as Error).message };
   }
   refresh();
-  back(a.kind, filed);
+  back(a.id, filed);
 }
 
 export async function deleteAssetAction(fd: FormData): Promise<void> {
@@ -97,13 +96,10 @@ export async function deleteAssetAction(fd: FormData): Promise<void> {
   if (!a || !visibleTo(a.ownerMemberId, me.id) || !canEditAsset(me, a)) return;
   deleteAsset(me.householdId, a.id);
   refresh();
-  back(a.kind, 0);
+  back(null, 0);
 }
 
-/**
- * File a bill under a vehicle or policy (or none), from a sub-service's
- * "No vehicle yet" list. Goes back to where it was sent from.
- */
+/** File a bill under a vehicle, from the "Not filed under a vehicle" card. */
 export async function fileBillAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
   const me = await requireMember();
   const assetId = str(fd, 'assetId') || null;

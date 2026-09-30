@@ -113,14 +113,21 @@ Key properties:
 - Any service can be recurring (on by default for subscriptions and donations): the next charge is shown as upcoming at the latest price; once its date passes with no bill in it's recorded as an assumed bill, and the real bill, when it arrives, takes its place. A price change on the real bill carries forward and the household is told.
 - Every service type has one colour, the same in every household; households don't pick service colours.
 
-### Vehicles and Health (owner, 2026-09-30)
+### Vehicles, Health and Lifestyle (owner, 2026-09-30; reworked 2026-10-01)
 
-- **Vehicles** and **Health** are main services whose sub-services are their types: Vehicles → Registration, Car insurance, Roadside assistance, Repairs & servicing; Health → Health insurance, Ambulance cover. They sit in the nav (behind an arrow), on the Services page, in the Bills filters and in the Move list like Subscriptions.
-- A household enters each **vehicle** (or **policy**, for Health) once, on the Vehicles (Health) page: a name ("Ford Fiesta 2011"), an optional number plate or VIN (policy or membership number), and whether it's the household's or one person's own.
-- A sub-service's page lists each vehicle that has a bill of that kind, as a row that opens to show those bills; a vehicle with no bill of that kind isn't listed there. Bills not filed under a vehicle yet wait in a "No vehicle yet" row, each with "Which vehicle?".
-- A new bill that prints a vehicle's plate or VIN (a policy's number) is filed under it by itself; adding a vehicle, or giving it a plate, files the waiting bills that print it.
+- **Vehicles**, **Health** and **Lifestyle** are main services whose sub-services are their types: Vehicles → Registration, Car insurance, Roadside assistance, Repairs & servicing; Health → Health insurance, Ambulance cover; Lifestyle → Gym and other lifestyle types. Subscriptions and Donations stay their own main services (they hold their providers). All sit in the nav (behind an arrow), on the Services page, in the Bills filters and in the Move list.
+- Every main service's page (Vehicles, Health, Lifestyle, Subscriptions, Donations) is laid out like a service's own page: the year ahead (what's due or expected each of the next twelve months, a row per vehicle or service), what was due each month over the last twelve, the four figures (last 12 months, a month on average, next due, how many), and where the money goes (by kind or service, and by vehicle); then a card per vehicle or service, opening to its bills. "Add a vehicle" / "Add a service" is a button top right that opens its own page.
+- **Vehicles** is one page: a card per vehicle holding all its bills, each labelled Rego, Insurance, Roadside or Servicing; chips show one kind (the nav's Registration, Car insurance… open Vehicles with that kind). A household enters each vehicle once (a name, an optional number plate or VIN, the household's or one person's own) on its own page; bills not filed under a vehicle wait in a "Not filed under a vehicle" card, each with "Which vehicle?".
+- **Health** and **Lifestyle** have no policies or vehicles: their cards are their services (Bupa, Ambulance Victoria, the gym), each holding its bills.
+- A new bill that prints a vehicle's plate or VIN is filed under it by itself; adding a vehicle, or giving it a plate, files the waiting bills that print it.
 - A bill is on its vehicle's side: a household vehicle's bills are the household's and split as usual; someone's own vehicle's bills are theirs alone. Filing a bill under a vehicle on the other side moves it there (same rules as moving a bill: only whoever brought it in can take it out of the household, and not once a housemate has paid a share). Changing whose a vehicle is moves its bills with it.
-- A bill can be moved to a sub-service and a vehicle in one step from its page (a rego notice filed under insurance → Registration · Ford Fiesta), and the bill form has a Vehicle (Policy) field.
+- A bill can be moved to a sub-service and a vehicle in one step from its page (a rego notice filed under insurance → Registration · Ford Fiesta), and the bill form has a Vehicle field.
+
+### The Services page and the Bills filters (owner, 2026-10-01)
+
+- The Services page shows one month at a time (‹ October 2026 ›, up to next month): what's due, paid, to pay and still to come that month, then a line per service with what it has due that month (by due date; each instalment in its own month), where it stands and the change from the bill before, or when its next bill is expected. Main services fold their services away, closed by default.
+- A service whose bills follow the calendar at a (nearly) fixed price (internet, a subscription) shows its price over time (a step line, a dot per bill) instead of cost bars of one height.
+- The Bills page has one filter bar: search, All · To pay · Paid · Unusual, and a Filters button (service, year, whose, which months) whose choices show as removable pills.
 
 ### Projections
 

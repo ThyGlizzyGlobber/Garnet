@@ -20,7 +20,7 @@ import { moneyView } from '@/lib/money';
 import { remindDebtors } from '@/lib/notifications';
 import { serviceOverview } from '@/lib/service-overview';
 import { createService } from '@/lib/services';
-import { servicesView } from '@/lib/services-view';
+import { servicesMonth } from '@/lib/services-month';
 
 /**
  * The shown screens' view functions (redesign R5): the Services ribbons, a
@@ -128,41 +128,43 @@ function setup() {
   return { hh, alex, jordan, sam, power, rego, latest };
 }
 
-describe('servicesView', () => {
-  it('draws a year of bills per service on a 13-month window, with the facts for its sentence', () => {
+describe('servicesMonth', () => {
+  it('lists what each service has due in a month, how it compares, and what is still to come', () => {
     const { hh, alex, jordan, power, latest } = setup();
-    const v = servicesView(hh, alex.id, TODAY, 'all', db);
-    expect(v.window.start).toBe('2025-10-01');
-    expect(v.window.end).toBe('2026-11-01');
-    expect(v.window.months).toHaveLength(13);
-    expect(v.window.today).toBeGreaterThan(90);
+    // The latest power bill is due 20 Sep.
+    const sep = servicesMonth(hh, alex.id, TODAY, undefined, 'all', db);
+    expect([sep.month, sep.prev, sep.next]).toEqual(['2026-09', '2026-08', '2026-10']);
     // Alex sees the household's service, not Jordan's rego.
-    expect(v.services.map((s) => s.name)).toEqual(['Electricity']);
-    const s = v.services[0]!;
-    expect(s.id).toBe(power.id);
-    // The last twelve months by bill month: Dec, Mar, Jun and Sep bills.
-    expect(s.yearBills).toBe(4);
-    expect(s.yearMinor).toBe(30_000 + 32_000 + 31_000 + 48_621);
-    // The Jun–Aug 2025 bill ends before the window; Sep–Nov 2025 starts before it, so it is clipped.
-    expect(s.blocks.map((b) => b.clipped)).toEqual([false, false, false, true]);
-    for (const b of s.blocks) {
-      expect(b.left).toBeGreaterThanOrEqual(0);
-      expect(b.left + b.width).toBeLessThanOrEqual(100.0001);
-    }
-    expect(s.latest).toMatchObject({ billId: latest.id, amountMinor: 48_621 });
-    expect(s.latest!.status.key).toBe('overdue');
-    // Cost per day against Jun–Aug 2025: 48,621 vs 42,000 over the same days.
-    expect(s.vsLastYear).toBeCloseTo(48_621 / 42_000 - 1, 5);
-    expect(s.nextDue).toBe('2026-12-21');
-    expect(s.percentages).toBeNull();
-    // Jordan sees both; "mine" is only the rego.
-    expect(servicesView(hh, jordan.id, TODAY, 'all', db).services.map((x) => x.name)).toEqual([
-      'Electricity',
-      'Car rego',
-    ]);
-    const mine = servicesView(hh, jordan.id, TODAY, 'mine', db).services;
-    expect(mine.map((x) => [x.name, x.personal])).toEqual([['Car rego', true]]);
-    expect(mine[0]!.latest!.status.key).toBe('due');
+    expect(sep.entries).toHaveLength(1);
+    const e = sep.entries[0]!;
+    if (e.kind !== 'service') throw new Error('not a service');
+    expect(e.item.service.id).toBe(power.id);
+    expect(e.item.bills.map((b) => b.bill.id)).toEqual([latest.id]);
+    expect(e.item.amountMinor).toBe(48_621);
+    expect(e.item.status?.key).toBe('overdue');
+    // Against the bill before it (due 20 Jun).
+    expect(e.item.change).toMatchObject({ dir: 'up', month: '2026-06' });
+    expect(e.item.change!.pct).toBeCloseTo(48_621 / 31_000 - 1, 5);
+    expect(sep.totalMinor).toBe(48_621);
+    expect(sep.counts).toMatchObject({ bills: 1, paid: 0, overdue: 1 });
+
+    // October: nothing due for power; the next bill is expected in December.
+    const oct = servicesMonth(hh, alex.id, TODAY, '2026-10', 'all', db);
+    expect(oct.next).toBeNull();
+    const o = oct.entries[0]!;
+    if (o.kind !== 'service') throw new Error('not a service');
+    expect(o.item.bills).toEqual([]);
+    expect(o.item.expected?.dueDate).toBe('2026-12-21');
+    expect(oct.counts.toCome).toBe(0);
+
+    // Jordan's rego, due 18 Oct, is in October, under Vehicles.
+    const jo = servicesMonth(hh, jordan.id, TODAY, '2026-10', 'all', db);
+    const vehicles = jo.entries.find((x) => x.kind === 'group');
+    expect(vehicles).toMatchObject({ kind: 'group', category: 'vehicle', amountMinor: 91_250 });
+    expect(vehicles?.kind === 'group' && vehicles.status?.key).toBe('due');
+    const mine = servicesMonth(hh, jordan.id, TODAY, '2026-10', 'mine', db);
+    expect(mine.entries).toHaveLength(1);
+    expect(mine.totalMinor).toBe(91_250);
   });
 });
 

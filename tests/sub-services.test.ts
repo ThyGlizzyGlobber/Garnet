@@ -30,7 +30,7 @@ import {
   resumeService,
   updateService,
 } from '@/lib/services';
-import { servicesView } from '@/lib/services-view';
+import { serviceCardsView } from '@/lib/main-view';
 import { shellView } from '@/lib/shell';
 
 const TODAY = '2026-09-29';
@@ -188,8 +188,9 @@ describe('cancelling a sub-service', () => {
 
     // Out of the nav and the Services page, still on its main service's page.
     expect(listServices(hh.id, {}, db).some((s) => s.id === flickbox.id)).toBe(false);
-    const group = servicesView(hh, alex.id, TODAY, 'all', db, 'subscriptions');
-    expect(group.services.at(-1)).toMatchObject({ id: flickbox.id, cancelled: { by: sam.id } });
+    const group = serviceCardsView(hh, alex, { typeSlug: 'subscriptions' }, TODAY, db);
+    expect(group.stopped.map((c) => c.service.id)).toEqual([flickbox.id]);
+    expect(group.stopped[0]!.service.cancelledByMemberId).toBe(sam.id);
 
     // A new bill from Flickbox still lands on it, stays cancelled, and is flagged.
     const again = serviceForNewProvider(hh.id, extracted({ provider: 'Flickbox' }), {}, db)!;
@@ -203,9 +204,7 @@ describe('cancelling a sub-service', () => {
     });
     expect(chargedAfterCancel(getService(hh.id, flickbox.id, db)!, later)).toBe(true);
     expect(
-      servicesView(hh, alex.id, TODAY, 'all', db, 'subscriptions').services.find(
-        (s) => s.id === flickbox.id,
-      )!.afterCancel,
+      serviceCardsView(hh, alex, { typeSlug: 'subscriptions' }, TODAY, db).stopped[0]!.afterCancel,
     ).toBe(1);
 
     const resumed = resumeService(hh.id, flickbox.id, db);

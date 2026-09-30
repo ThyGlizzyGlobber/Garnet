@@ -25,37 +25,35 @@ export function groupTypes<T extends { category?: string | null }>(types: T[]) {
 
 /**
  * Categories that are a main service of their own, holding their types as
- * sub-services (Vehicles → Registration, Car insurance…; Health → Health
- * insurance, Ambulance cover), and the things their bills are filed under:
- * vehicles or policies (src/lib/assets.ts).
+ * sub-services: Vehicles (Registration, Car insurance…), Health (Health
+ * insurance, Ambulance cover) and Lifestyle (Gym…). A type that holds
+ * sub-services of its own (Subscriptions, Donations) stays its own main
+ * service whatever its category. Vehicles' bills are also filed under the
+ * household's vehicles (src/lib/assets.ts).
  */
-const CATEGORY_ASSETS = { vehicle: 'vehicle', health: 'policy' } as const;
-export type GroupedCategory = keyof typeof CATEGORY_ASSETS;
+const MAIN_CATEGORIES = ['vehicle', 'health', 'lifestyle'] as const;
+export type GroupedCategory = (typeof MAIN_CATEGORIES)[number];
 
 /** The icon a grouped category's main service wears. */
-export const CATEGORY_ICONS: Record<GroupedCategory, string> = { vehicle: 'car', health: 'heart' };
+export const CATEGORY_ICONS: Record<GroupedCategory, string> = {
+  vehicle: 'car',
+  health: 'heart',
+  lifestyle: 'sun',
+};
 
 export function isGroupedCategory(
   category: string | null | undefined,
 ): category is GroupedCategory {
-  return !!category && category in CATEGORY_ASSETS;
+  return (MAIN_CATEGORIES as readonly string[]).includes(category ?? '');
 }
 
-/** The kind of thing a category's bills are filed under, or null for categories without. */
-export function assetKindOf(category: string | null | undefined): 'vehicle' | 'policy' | null {
-  return isGroupedCategory(category) ? CATEGORY_ASSETS[category] : null;
-}
+/** Is this type one of a main service's sub-services (Registration under Vehicles)? */
+export const inMainCategory = (ty: {
+  category?: string | null;
+  hasSubServices?: boolean;
+}): boolean => isGroupedCategory(ty.category) && !ty.hasSubServices;
 
-/** The category whose bills are filed under this kind of thing. */
-export function categoryOfKind(kind: 'vehicle' | 'policy'): GroupedCategory {
-  return kind === 'vehicle' ? 'vehicle' : 'health';
-}
-
-/** Types of the categories that are main services, by category (Vehicles, then Health). */
-export function groupedCategoryTypes<T extends { category?: string | null }>(
-  types: T[],
-): { category: GroupedCategory; types: T[] }[] {
-  return (Object.keys(CATEGORY_ASSETS) as GroupedCategory[])
-    .map((category) => ({ category, types: types.filter((ty) => ty.category === category) }))
-    .filter((g) => g.types.length > 0);
+/** Bills of this category are filed under vehicles; null for every other category. */
+export function assetKindOf(category: string | null | undefined): 'vehicle' | null {
+  return category === 'vehicle' ? 'vehicle' : null;
 }

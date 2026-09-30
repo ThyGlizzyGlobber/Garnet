@@ -1,82 +1,52 @@
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import { LinkButton } from '@/components/ui';
-import { EmptyCard, PageTitle, SectionHead } from '@/components/ui/blocks';
-import { BackLink } from '@/components/ui/controls';
 import { pageContext } from '@/lib/context';
+import { serviceCardsView } from '@/lib/main-view';
+import { inMainCategory } from '@/lib/service-categories';
 import { listServiceTypes } from '@/lib/services';
-import { servicesView } from '@/lib/services-view';
-import { ribbonRenderer } from '../../ribbon';
-import { AssetBillsPage } from './asset-bills';
-import { subServiceView } from '@/lib/asset-view';
-import { isGroupedCategory } from '@/lib/service-categories';
+import { ServiceCardsPage } from '../../service-cards';
 
 /**
- * A sub-service of Vehicles or Health (see AssetBillsPage), or a main service and its sub-services (Subscriptions → Netflix, Spotify):
- * what they add up to, a ribbon for each still going, then the ones someone
- * cancelled, with their bills kept. Numbers from servicesView().
+ * A main service with sub-services (Subscriptions → Netflix, Spotify;
+ * Donations → Red Cross): a card each, opening to its bills, the cancelled
+ * ones after. A type under Vehicles, Health or Lifestyle has no page of its
+ * own: it opens its main service's (Vehicles showing that kind).
  */
-export default async function ServiceGroupPage({ params }: { params: Promise<{ type: string }> }) {
+export default async function ServiceGroupPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ type: string }>;
+  searchParams: Promise<{ open?: string }>;
+}) {
   const { type: slug } = await params;
-  const type = listServiceTypes().find(
-    (ty) => ty.slug === slug && (ty.hasSubServices || isGroupedCategory(ty.category)),
-  );
+  const type = listServiceTypes().find((ty) => ty.slug === slug);
   if (!type) notFound();
+  if (inMainCategory(type))
+    redirect(
+      type.category === 'vehicle'
+        ? `/services/category/vehicle?kind=${type.slug}`
+        : `/services/category/${type.category}`,
+    );
+  if (!type.hasSubServices) notFound();
+  const { open } = await searchParams;
   const ctx = await pageContext();
-  // A sub-service of Vehicles or Health: its bills under the vehicle or policy each is for.
-  const assets = subServiceView(ctx.hh, ctx.me, type, ctx.today);
-  if (assets) return <AssetBillsPage ctx={ctx} view={assets} />;
-  const { hh, me, money } = ctx;
   const t = await getTranslations('services');
-  const view = servicesView(hh, me.id, ctx.today, 'all', undefined, type.slug);
-  const ribbon = await ribbonRenderer(ctx, view.window);
-  const going = view.services.filter((s) => !s.cancelled);
-  const cancelled = view.services.filter((s) => s.cancelled);
-  const yearMinor = view.services.reduce((sum, s) => sum + s.yearMinor, 0);
-  const add = `/services/new?type=${encodeURIComponent(type.slug)}`;
-
+  const tm = await getTranslations('main');
   return (
-    <div className="scr d3-services">
-      <BackLink href="/services">{t('title')}</BackLink>
-      <PageTitle
-        eyebrow={t(`categories.${type.category}`)}
-        title={type.label}
-        lede={
-          view.services.length
-            ? t('group.lede', {
-                count: going.length,
-                cancelled: cancelled.length,
-                amount: money(yearMinor, hh.currency, { whole: true }),
-              })
-            : t('group.ledeEmpty', { type: type.label.toLowerCase() })
-        }
-        right={
-          <LinkButton href={add} variant="secondary" size="sm" icon="plus">
-            {t('group.add')}
-          </LinkButton>
-        }
-      />
-      {view.services.length === 0 ? (
-        <EmptyCard
-          icon={type.icon}
-          title={t('group.emptyTitle', { type: type.label })}
-          body={t('group.emptyBody')}
-        >
-          <LinkButton href={add} variant="secondary" icon="plus">
-            {t('group.add')}
-          </LinkButton>
-        </EmptyCard>
-      ) : (
-        <>
-          {going.map((s) => ribbon(s))}
-          {cancelled.length > 0 && (
-            <>
-              <SectionHead title={t('group.cancelledHead')} className="mt-2" />
-              {cancelled.map((s) => ribbon(s))}
-            </>
-          )}
-        </>
-      )}
-    </div>
+    <ServiceCardsPage
+      ctx={ctx}
+      view={serviceCardsView(ctx.hh, ctx.me, { typeSlug: type.slug }, ctx.today)}
+      title={type.label}
+      eyebrow={tm('services')}
+      addHref={`/services/new?type=${encodeURIComponent(type.slug)}`}
+      addLabel={t('group.add')}
+      empty={{
+        icon: type.icon,
+        title: t('group.emptyTitle', { type: type.label }),
+        body: t('group.emptyBody'),
+      }}
+      open={open ?? null}
+    />
   );
 }

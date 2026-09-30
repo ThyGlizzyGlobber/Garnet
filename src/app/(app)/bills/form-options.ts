@@ -10,7 +10,7 @@ import type { BillFormService } from './bill-form';
  */
 export async function formServices(services: ServiceWithType[]): Promise<BillFormService[]> {
   const t = await getTranslations('bills');
-  const ta = await getTranslations('assets');
+  const ta = await getTranslations('main');
   return services.map((s) => ({
     id: s.id,
     name: `${
@@ -30,7 +30,7 @@ export async function formServices(services: ServiceWithType[]): Promise<BillFor
 
 /** The vehicles and policies this member sees, for the form's "Vehicle" field. */
 export async function formAssets(householdId: string, memberId: string) {
-  const ta = await getTranslations('assets');
+  const ta = await getTranslations('main');
   return listAssets(householdId, { viewer: memberId }).map((a) => ({
     id: a.id,
     kind: a.kind,

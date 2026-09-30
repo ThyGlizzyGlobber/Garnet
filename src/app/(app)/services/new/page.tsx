@@ -11,33 +11,46 @@ import { todayIn } from '@/lib/dates';
 import { createServiceAction } from '../actions';
 import { ServiceForm } from '../service-form';
 import { isAdmin } from '@/lib/roles';
+import { isGroupedCategory } from '@/lib/service-categories';
 
 export default async function NewServicePage({
   searchParams,
 }: {
-  searchParams: Promise<{ personal?: string; type?: string }>;
+  searchParams: Promise<{ personal?: string; type?: string; category?: string }>;
 }) {
   const { hh, me } = await pageContext();
   const t = await getTranslations('services');
+  const tm = await getTranslations('main');
   const ts = await getTranslations('services.split');
   const current = listMembers(hh.id).filter(
     (m) => m.activeTo === null || m.activeTo >= todayIn(hh.timezone),
   );
-  const types = listServiceTypes();
+  const params = await searchParams;
+  // "Add a service" on Health or Lifestyle: only that main service's kinds.
+  const category = isGroupedCategory(params.category) ? params.category : null;
+  const all = listServiceTypes();
+  const types = category ? all.filter((ty) => ty.category === category && !ty.hasSubServices) : all;
   // From the personal dashboard: start on a kind of service that's usually one person's own.
   const housemates = hasHousemates(hh.id);
-  const params = await searchParams;
   const personal = housemates && !!params.personal;
   // "Add a subscription" from a main service's page starts on its type.
   const first =
     types.find((ty) => ty.slug === params.type) ??
     (personal ? types.find((ty) => ty.personalByDefault) : undefined) ??
     types[0]!;
-  const back = first.hasSubServices && params.type ? `/services/group/${first.slug}` : '/services';
+  const back = category
+    ? `/services/category/${category}`
+    : first.hasSubServices && params.type
+      ? `/services/group/${first.slug}`
+      : '/services';
   return (
     <div className="scr">
       <BackLink href={back}>
-        {first.hasSubServices && params.type ? first.label : t('title')}
+        {category
+          ? tm(`main.${category}`)
+          : first.hasSubServices && params.type
+            ? first.label
+            : t('title')}
       </BackLink>
       <PageTitle title={t('form.newTitle')} lede={t('form.newLede')} />
       <ServiceForm

@@ -208,6 +208,12 @@ export function serviceOverview(
     })),
     /** Recurring: on or not, the next charge (upcoming), and a price change on the latest bill. */
     recurring,
+    /**
+     * A fixed price (internet, a subscription): bills that follow the
+     * calendar and cost within 15% of each other over the last twelve, drawn
+     * as a price over time instead of bars of one height. Null otherwise.
+     */
+    price: fixedPriceHistory(bills, calendar && !barsAreUsage, recurring.upcoming, today),
     /** Bars measure usage per day (true) or cost (false). */
     barsAreUsage,
     /** Cost bars are each bill's cost (true) or its cost per day (false). */
@@ -255,5 +261,37 @@ export function unusualOf(b: {
     pct: m ? (Number(m[1]) / 100) * (m[2] === 'above' ? 1 : -1) : null,
     basis: b.anomalyBasis,
     note: b.anomalyNote,
+  };
+}
+
+/**
+ * A fixed price over time: the last twelve bills (oldest first) with their
+ * status, the next expected charge, the current price and since when, and the
+ * price before it. Null unless its bills follow the calendar and stay within
+ * 15% of each other.
+ */
+function fixedPriceHistory(
+  bills: BillListItem[],
+  calendar: boolean,
+  upcoming: { dueDate: string; amountMinor: number } | null,
+  today: string,
+) {
+  const recent = bills.slice(0, 12).reverse();
+  if (!calendar || recent.length < 2) return null;
+  const amounts = recent.map((b) => b.amountMinor);
+  const hi = Math.max(...amounts);
+  if (hi <= 0 || (hi - Math.min(...amounts)) / hi > 0.15) return null;
+  const current = recent.at(-1)!.amountMinor;
+  // The run of bills at today's price, and the price before it.
+  let from = recent.length - 1;
+  while (from > 0 && recent[from - 1]!.amountMinor === current) from--;
+  return {
+    bills: recent.map((b) => ({ bill: b, status: billDue(b, today).status })),
+    upcoming,
+    currentMinor: current,
+    since: recent[from]!.periodStart,
+    /** Every bill so far at this price. */
+    unchanged: from === 0,
+    wasMinor: from > 0 ? recent[from - 1]!.amountMinor : null,
   };
 }

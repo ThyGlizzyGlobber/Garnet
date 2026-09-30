@@ -11,7 +11,7 @@ interface MoveOption {
   value: string;
   name: string;
   /** Its bills are filed under vehicles or policies. */
-  kind: 'vehicle' | 'policy' | null;
+  kind: 'vehicle' | null;
 }
 
 /** Where a bill can go: groups of services (a main service's sub-services together). */
@@ -40,11 +40,11 @@ export function MoveBill({
   current: string;
   currentAssetId: string | null;
   targets: MoveTarget[];
-  /** Vehicles and policies this member sees ("Yours" already in the name). */
-  assets: { id: string; name: string; kind: 'vehicle' | 'policy' }[];
+  /** Vehicles this member sees ("Yours" already in the name). */
+  assets: { id: string; name: string; kind: 'vehicle' }[];
 }) {
   const t = useTranslations('bills.move');
-  const ta = useTranslations('assets');
+  const ta = useTranslations('main');
   const [value, setValue] = useState(current);
   const kind = targets.flatMap((g) => g.options).find((o) => o.value === value)?.kind ?? null;
   const choices = kind ? assets.filter((a) => a.kind === kind) : [];
@@ -90,10 +90,10 @@ export function MoveBill({
                 defaultValue={
                   choices.some((a) => a.id === currentAssetId) ? (currentAssetId ?? '') : ''
                 }
-                aria-label={ta(`${kind}.label`)}
+                aria-label={ta('vehicle.label')}
                 className="min-w-0 flex-1"
               >
-                <option value="">{ta(`${kind}.none`)}</option>
+                <option value="">{ta('vehicle.none')}</option>
                 {choices.map((a) => (
                   <option key={a.id} value={a.id}>
                     {a.name}

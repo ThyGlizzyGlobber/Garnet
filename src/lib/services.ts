@@ -13,7 +13,12 @@ import { ulid } from '@/lib/ids';
 import { DEFAULT_COLOUR, PALETTE } from '@/lib/palette';
 import { getMember } from '@/lib/members';
 import { ownerCondition, type Scope } from '@/lib/scope';
-import { CATEGORY_ICONS, isGroupedCategory, type GroupedCategory } from '@/lib/service-categories';
+import {
+  CATEGORY_ICONS,
+  inMainCategory,
+  isGroupedCategory,
+  type GroupedCategory,
+} from '@/lib/service-categories';
 
 export type ServiceWithType = Service & { type: ServiceType };
 
@@ -384,7 +389,8 @@ export function groupServices<S extends { type: ServiceType }>(services: S[]): S
   const out: ServiceGroup<S>[] = [];
   const byKey = new Map<string, ServiceGroup<S>>();
   for (const s of services) {
-    const category = isGroupedCategory(s.type.category) ? s.type.category : null;
+    // Subscriptions keeps its own providers even though it's a lifestyle type.
+    const category = inMainCategory(s.type) ? (s.type.category as GroupedCategory) : null;
     if (!category && !s.type.hasSubServices) {
       out.push({
         typeSlug: null,
@@ -435,4 +441,21 @@ export function byType<S extends { type: ServiceType }>(
     else out.push({ type: s.type, services: [s] });
   }
   return out;
+}
+
+/**
+ * Where a service is shown among the others: its card on its main service's
+ * page (Netflix on Subscriptions, Bupa on Health, opened), Vehicles showing
+ * its kind of bill, or its own page for a service on its own.
+ */
+export function serviceHome(svc: {
+  id: string;
+  typeSlug: string;
+  type: { category: string; hasSubServices: boolean };
+}): string {
+  if (svc.type.hasSubServices) return `/services/group/${svc.typeSlug}?open=${svc.id}#s-${svc.id}`;
+  if (svc.type.category === 'vehicle') return `/services/category/vehicle?kind=${svc.typeSlug}`;
+  if (isGroupedCategory(svc.type.category))
+    return `/services/category/${svc.type.category}?open=${svc.id}#s-${svc.id}`;
+  return `/services/${svc.id}`;
 }

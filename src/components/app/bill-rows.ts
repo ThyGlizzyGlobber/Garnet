@@ -98,7 +98,14 @@ export function upcomingRowFor(
 export function billRowFor(
   b: BillListItem,
   c: RowCtx,
-  o: { inService?: boolean; share?: boolean; noDisc?: boolean; noAsset?: boolean } = {},
+  o: {
+    inService?: boolean;
+    share?: boolean;
+    noDisc?: boolean;
+    noAsset?: boolean;
+    /** Inside something already marked as theirs: no "Yours" on each row. */
+    noYours?: boolean;
+  } = {},
 ): BillRowModel {
   const due = billDue(b, c.today);
   const byInstalments = paysByInstalments(b);
@@ -136,7 +143,7 @@ export function billRowFor(
   const tags: BillRowModel['tags'] = [];
   if (b.assumed) tags.push({ label: c.t('row.assumed'), tone: 'neutral', icon: 'repeat' });
   if (b.isAnomaly) tags.push({ label: c.t('row.unusual'), tone: 'warn', icon: 'trend-up' });
-  if (personal) tags.push({ label: c.t('row.yours'), tone: 'info', icon: 'user' });
+  if (personal && !o.noYours) tags.push({ label: c.t('row.yours'), tone: 'info', icon: 'user' });
   if (b.alertKind)
     tags.push({ label: c.t(`row.alert.${b.alertKind}`), tone: 'bad', icon: 'alert' });
   return {

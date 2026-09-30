@@ -8,7 +8,8 @@ import { runMigrations } from '@/db/migrate';
 import { sourceDocument, type Household, type Member } from '@/db/schema';
 import { archiveDocument } from '@/ingest/archive';
 import { processDocument } from '@/ingest/pipeline';
-import { categoryView, subServiceView } from '@/lib/asset-view';
+import { serviceCardsView, vehiclesView } from '@/lib/main-view';
+import { assetKindOf } from '@/lib/service-categories';
 import {
   autoFileBill,
   canEditAsset,
@@ -140,13 +141,13 @@ describe('Vehicles and Health are main services', () => {
       'vehicle_registration',
       'car_insurance',
     ]);
-    // The nav: Vehicles → Registration, Car insurance, each opening its bills by vehicle.
+    // The nav: Vehicles → Registration, Car insurance, each showing Vehicles with that kind.
     const nav = shellView(hh, mum, TODAY, db).services.find(
       (e) => e.kind === 'group' && e.category === 'vehicle',
     );
     expect(nav?.kind === 'group' && nav.children.map((c) => c.href)).toEqual([
-      '/services/group/vehicle_registration',
-      '/services/group/car_insurance',
+      '/services/category/vehicle?kind=vehicle_registration',
+      '/services/category/vehicle?kind=car_insurance',
     ]);
     expect(nav?.kind === 'group' && nav.href).toBe('/services/category/vehicle');
   });
@@ -314,7 +315,7 @@ describe('whose a vehicle is', () => {
   });
 });
 
-describe('matching by plate or policy number', () => {
+describe('matching by plate', () => {
   const regoNotice = (refs: string[]): AiOutput => ({
     document_type: 'bill',
     provider: 'VicRoads',
@@ -413,42 +414,48 @@ describe('matching by plate or policy number', () => {
 });
 
 describe('the pages', () => {
-  it('a sub-service lists only the vehicles with its bills, and the ones waiting', () => {
+  it('Vehicles is a card per vehicle holding its bills, one kind at a time if asked', () => {
     const { hh, mum, dad, svc } = setup();
     const rego = svc('vehicle_registration', 'VicRoads');
     const insure = svc('car_insurance', 'RACV');
     const fiesta = createAsset(hh.id, { kind: 'vehicle', name: 'Fiesta' }, db);
     const ute = createAsset(hh.id, { kind: 'vehicle', name: 'Ute' }, db);
-    const own = createAsset(
-      hh.id,
-      { kind: 'vehicle', name: 'Dad’s bike', ownerMemberId: dad.id },
-      db,
-    );
+    createAsset(hh.id, { kind: 'vehicle', name: 'Dad’s bike', ownerMemberId: dad.id }, db);
     bill(hh, rego.id, { assetId: fiesta.id, periodStart: '2025-10-01', periodEnd: '2026-09-30' });
     bill(hh, rego.id, { assetId: fiesta.id });
-    bill(hh, insure.id, { assetId: ute.id, amountMinor: 60000 });
+    bill(hh, insure.id, { assetId: fiesta.id, amountMinor: 60000 });
     bill(hh, rego.id);
-    const type = (slug: string) => listServiceTypes(db).find((t) => t.slug === slug)!;
-    const regoView = subServiceView(hh, mum, type('vehicle_registration'), TODAY, db)!;
-    expect(regoView.groups.map((g) => [g.asset.name, g.bills.length])).toEqual([['Fiesta', 2]]);
-    expect(regoView.waiting.length).toBe(1);
+    const all = vehiclesView(hh, mum, TODAY, null, db);
     // Dad's own bike is only Dad's to see.
-    expect(regoView.assets.map((a) => a.name)).toEqual(['Fiesta', 'Ute']);
-    expect(subServiceView(hh, dad, type('vehicle_registration'), TODAY, db)!.assets).toHaveLength(
-      3,
-    );
-    expect(subServiceView(hh, mum, type('electricity'), TODAY, db)).toBeNull();
+    expect(all.cards.map((c) => [c.asset.name, c.bills.length])).toEqual([
+      ['Fiesta', 3],
+      ['Ute', 0],
+    ]);
+    expect(all.waiting).toHaveLength(1);
+    expect(all.kinds.map((k) => [k.type.slug, k.bills])).toEqual([
+      ['vehicle_registration', 3],
+      ['car_insurance', 1],
+    ]);
+    const regoOnly = vehiclesView(hh, mum, TODAY, 'car_insurance', db);
+    expect(regoOnly.kind).toBe('car_insurance');
+    expect(regoOnly.cards.map((c) => c.bills.length)).toEqual([1, 0]);
+    expect(regoOnly.waiting).toEqual([]);
+    expect(vehiclesView(hh, dad, TODAY, 'nonsense', db)).toMatchObject({ kind: null });
+    expect(vehiclesView(hh, dad, TODAY, null, db).cards).toHaveLength(3);
+    expect(ute.ownerMemberId).toBeNull();
+  });
 
-    const cat = categoryView(hh, mum, 'vehicle', TODAY, db);
-    expect(cat.assets.map((a) => [a.asset.name, a.lines.map((l) => l.type.slug)])).toEqual([
-      ['Fiesta', ['vehicle_registration']],
-      ['Ute', ['car_insurance']],
+  it('Health is a card per service holding its bills; no policies', () => {
+    const { hh, mum, svc } = setup();
+    const bupa = svc('health_insurance', 'Bupa');
+    svc('ambulance_cover', 'Ambulance Victoria');
+    bill(hh, bupa.id, { amountMinor: 21000 });
+    const v = serviceCardsView(hh, mum, { category: 'health' }, TODAY, db);
+    expect(v.cards.map((c) => [c.service.provider, c.bills.length])).toEqual([
+      ['Bupa', 1],
+      ['Ambulance Victoria', 0],
     ]);
-    expect(cat.types.map((l) => [l.type.slug, l.assets, l.waiting])).toEqual([
-      ['vehicle_registration', 1, 1],
-      ['car_insurance', 1, 0],
-    ]);
-    expect(own.ownerMemberId).toBe(dad.id);
+    expect(assetKindOf('health')).toBeNull();
   });
 
   it('bills can be found by their vehicle, and filtered to Vehicles', () => {

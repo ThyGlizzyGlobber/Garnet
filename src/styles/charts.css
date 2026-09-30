@@ -418,3 +418,174 @@
 .cal-d.today .cal-dots i {
   box-shadow: 0 0 0 1px var(--p-on-accent);
 }
+
+/* ---------- a fixed price over time (PriceSteps) ---------- */
+.chart-price .chart-plot {
+  min-height: 150px;
+}
+.ps-line {
+  fill: none;
+  stroke: var(--c);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+}
+.ps-ahead {
+  stroke-dasharray: 5 5;
+  opacity: 0.7;
+}
+.ps-pt {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  transform: translate(-50%, 50%);
+  background: var(--c);
+  box-shadow: 0 0 0 3px var(--g-solid);
+  cursor: pointer;
+}
+.ps-pt.s-due {
+  background: var(--g-solid);
+  box-shadow:
+    inset 0 0 0 2.5px var(--c),
+    0 0 0 3px var(--g-solid);
+}
+.ps-pt.s-overdue {
+  background: var(--bad);
+}
+.ps-pt.s-upcoming {
+  background: var(--g-solid);
+  box-shadow:
+    inset 0 0 0 2px var(--p-fg2),
+    0 0 0 3px var(--g-solid);
+}
+.ps-pt:hover {
+  transform: translate(-50%, 50%) scale(1.25);
+}
+.ps-price {
+  position: absolute;
+  transform: translate(-50%, -14px);
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.chart-price .ps-x span:first-child,
+.chart-price .ps-x span:last-child {
+  transform: translateX(-50%);
+}
+.ps-head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  margin: 2px 0 18px;
+}
+
+/* ---------- months stacked by series (MonthBars) ---------- */
+.chart-months,
+.chart-price {
+  height: auto;
+}
+.chart-months .chart-plot {
+  min-height: 150px;
+}
+.mb-cols {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 6px;
+}
+.mb-col {
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: center;
+  gap: 2px;
+  height: 100%;
+}
+.mb-part {
+  display: block;
+  width: min(100%, 30px);
+  border-radius: 5px;
+  background: var(--c);
+  min-height: 3px;
+}
+.mb-part:hover {
+  filter: brightness(1.12);
+}
+.mb-x {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 6px;
+  padding-top: 6px;
+}
+.mb-x span {
+  text-align: center;
+  font-size: 10.5px;
+  color: var(--p-fg2);
+}
+
+/* ---------- the year ahead (YearAhead) ---------- */
+.ya {
+  display: grid;
+  gap: 4px;
+  overflow-x: auto;
+}
+.ya-row {
+  display: grid;
+  grid-template-columns: minmax(90px, 140px) repeat(12, minmax(44px, 1fr));
+  gap: 3px;
+  align-items: center;
+  min-width: 640px;
+}
+.ya-head span {
+  font-size: 10.5px;
+  font-weight: 650;
+  color: var(--p-fg2);
+  text-align: center;
+}
+.ya-head .is-now {
+  color: var(--p-accent);
+}
+.ya-l {
+  font-weight: 650;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ya-cell {
+  display: grid;
+  gap: 3px;
+  min-height: 34px;
+  align-content: center;
+  border-radius: 8px;
+  background: var(--inset);
+  padding: 3px;
+}
+.ya-cell.is-now {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--p-accent) 45%, transparent);
+}
+.ya-mark {
+  display: block;
+  padding: 3px 2px;
+  border-radius: 6px;
+  font-size: 10.5px;
+  letter-spacing: -0.01em;
+  font-weight: 700;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--color-on-colour, #fff);
+  background: var(--c);
+  text-decoration: none;
+}
+.ya-mark.is-exp {
+  color: var(--c);
+  background: color-mix(in srgb, var(--c) 12%, transparent);
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--c) 70%, transparent);
+}
+.ya-mark.is-late {
+  box-shadow: 0 0 0 2px var(--bad);
+}

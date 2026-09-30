@@ -33,7 +33,8 @@ export function NavGroup({
   children: ReactNode;
 }) {
   const pathname = usePathname();
-  const here = pathname === href || childHrefs.includes(pathname);
+  // Open on the main service's page or a sub-service's (their links may carry ?open=).
+  const here = pathname === href || childHrefs.some((h) => h.split(/[?#]/)[0] === pathname);
   const [open, setOpen] = useState<boolean | null>(null);
   const shown = open ?? here;
   return (

@@ -19,9 +19,15 @@ import { formatMonthRange, formatPeriod } from '@/lib/format';
 import { canChoosePlan, paysByInstalments } from '@/lib/instalments';
 import { getMember, hasHousemates } from '@/lib/members';
 import { asksMember, mayChangeOwner, mayMoveBill } from '@/lib/ownership';
-import { chargedAfterCancel, groupServices, listServices, listServiceTypes } from '@/lib/services';
+import {
+  chargedAfterCancel,
+  groupServices,
+  listServices,
+  listServiceTypes,
+  serviceHome,
+} from '@/lib/services';
 import { listAssets } from '@/lib/assets';
-import { assetKindOf, groupedCategoryTypes, isGroupedCategory } from '@/lib/service-categories';
+import { assetKindOf, inMainCategory } from '@/lib/service-categories';
 import { visibleTo } from '@/lib/scope';
 import { unusualOf } from '@/lib/service-overview';
 import { unitLabel } from '@/lib/units';
@@ -51,7 +57,7 @@ export default async function BillPage({ params }: { params: Promise<{ id: strin
   const ctx = await pageContext();
   const { hh, me, money, date, today } = ctx;
   const t = await getTranslations('bills');
-  const ta = await getTranslations('assets');
+  const ta = await getTranslations('main');
   const tu = await getTranslations('ui');
   const rc = rowCtx(ctx, tu);
   const b = getBill(hh.id, id);
@@ -126,15 +132,13 @@ export default async function BillPage({ params }: { params: Promise<{ id: strin
     kind: a.kind,
     name: a.ownerMemberId ? `${a.name} · ${ta('yours')}` : a.name,
   }));
-  // Vehicles and Health: once the household has a vehicle (or policy), their
-  // sub-services not set up yet can be picked too (set up on the vehicle's
-  // or policy's side when the bill moves there).
-  const missing = listServiceTypes().filter(
-    (ty) =>
-      isGroupedCategory(ty.category) &&
-      assets.some((a) => a.kind === assetKindOf(ty.category)) &&
-      !movable.some((s) => s.typeSlug === ty.slug),
-  );
+  // Vehicles: once the household has a vehicle, its sub-services not set up
+  // yet can be picked too (set up on the vehicle's side when the bill moves there).
+  const missing = assets.length
+    ? listServiceTypes().filter(
+        (ty) => assetKindOf(ty.category) && !movable.some((s) => s.typeSlug === ty.slug),
+      )
+    : [];
   const moveTargets: MoveTarget[] = [
     { owner: false, label: '' },
     { owner: true, label: t('move.yours') },
@@ -160,9 +164,9 @@ export default async function BillPage({ params }: { params: Promise<{ id: strin
       return out;
     }, []);
   // The sub-services not set up yet go in with their main service's.
-  for (const { category, types: of } of groupedCategoryTypes(missing)) {
-    const label = ta(`main.${category}`);
-    const options = of.map((ty) => ({
+  if (missing.length) {
+    const label = ta('main.vehicle');
+    const options = missing.map((ty) => ({
       value: `type:${ty.slug}`,
       name: t('move.newType', { type: ty.label }),
       kind: assetKindOf(ty.category),
@@ -180,12 +184,14 @@ export default async function BillPage({ params }: { params: Promise<{ id: strin
 
   return (
     <div className="scr d3-bill">
-      {kind ? (
-        // A Vehicles or Health bill: back to its sub-service, bills by vehicle.
-        <BackLink href={`/services/group/${b.service.typeSlug}`}>{b.service.type.label}</BackLink>
-      ) : (
-        <BackLink href={`/services/${b.service.id}`}>{b.service.name}</BackLink>
-      )}
+      {/* Back to where its service is shown: its card on Health, Vehicles, Subscriptions… */}
+      <BackLink href={serviceHome(b.service)}>
+        {inMainCategory(b.service.type)
+          ? ta(`main.${b.service.type.category}`)
+          : b.service.type.hasSubServices
+            ? b.service.type.label
+            : b.service.name}
+      </BackLink>
       <div className="d3-bill-grid">
         <div className="d3-doc">
           <Paper bill={b} file={billFile} ctx={ctx} />
@@ -480,11 +486,11 @@ export default async function BillPage({ params }: { params: Promise<{ id: strin
                   : null,
                 kind
                   ? [
-                      ta(`${kind}.label`),
+                      ta('vehicle.label'),
                       b.asset ? (
                         <Link
                           key="as"
-                          href={`/services/group/${b.service.typeSlug}#a-${b.asset.id}`}
+                          href={`/services/category/vehicle?open=${b.asset.id}#v-${b.asset.id}`}
                           className="link"
                         >
                           {b.asset.name}
@@ -494,7 +500,7 @@ export default async function BillPage({ params }: { params: Promise<{ id: strin
                         </Link>
                       ) : (
                         <span key="as" className="muted">
-                          {ta(`${kind}.none`)}
+                          {ta('vehicle.none')}
                         </span>
                       ),
                     ]
