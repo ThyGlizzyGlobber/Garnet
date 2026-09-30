@@ -18,6 +18,8 @@ import { groupByMonth } from '@/lib/bill-month';
 import { billEntry, filterBills } from '@/lib/bill-search';
 import { listDocuments, searchDocuments } from '@/lib/review';
 import { CopyButton } from '@/components/ui/copy';
+import { Pager } from '@/components/ui/pager';
+import { pageParam, paginateGroups } from '@/lib/paging';
 
 type Filter = 'all' | 'unpaid' | 'paid' | 'unusual' | 'overdue';
 /** Household bills, my personal bills, or both. */
@@ -25,6 +27,8 @@ type Whose = 'all' | 'household' | 'mine';
 /** Up to this month (the default), the months after it, or every month. */
 type When = 'now' | 'upcoming' | 'all';
 const FILTERS: Filter[] = ['all', 'unpaid', 'paid', 'unusual'];
+/** About this many bills a page; a month is never split across pages. */
+const BILLS_PER_PAGE = 30;
 
 /**
  * Bills, filed by the month each belongs to (billDate), one row per bill (a
@@ -44,6 +48,8 @@ export default async function BillsPage({
     w?: string;
     /** A main service's sub-services together (Subscriptions), by type. */
     t?: string;
+    /** Page number (whole months, about BILLS_PER_PAGE bills a page). */
+    p?: string;
   }>;
 }) {
   const params = await searchParams;
@@ -55,6 +61,7 @@ export default async function BillsPage({
   const { hh, me, money, month } = ctx;
   const t = await getTranslations('bills');
   const tu = await getTranslations('ui');
+  const tp = await getTranslations('ui.pager');
   const rc = rowCtx(ctx, tu);
   // The household's bills and this member's own (nobody else's personal bills).
   const everything = listBills(hh.id, { viewer: me.id });
@@ -87,6 +94,12 @@ export default async function BillsPage({
   const groups = groupByMonth(entries, (e) => e.date);
   // Coming up reads soonest first; everything else latest first.
   if (when === 'upcoming') groups.reverse();
+  const paged = paginateGroups(
+    groups,
+    ([, items]) => items.length,
+    pageParam(params.p),
+    BILLS_PER_PAGE,
+  );
   // Links that change one filter and keep the rest.
   const href = (change: {
     f?: Filter;
@@ -96,6 +109,8 @@ export default async function BillsPage({
     o?: Whose;
     w?: When;
     t?: string | null;
+    /** Any other change starts again at the first page. */
+    p?: number;
   }) => {
     const next = { f: filter, s: serviceId, y: year, q, o: whose, w: when, t: typeSlug, ...change };
     const u = new URLSearchParams();
@@ -106,6 +121,7 @@ export default async function BillsPage({
     if (next.s) u.set('s', next.s);
     if (next.y) u.set('y', next.y);
     if (next.q) u.set('q', next.q);
+    if (change.p && change.p > 1) u.set('p', String(change.p));
     const qs = u.toString();
     return qs ? `/bills?${qs}` : '/bills';
   };
@@ -309,7 +325,7 @@ export default async function BillsPage({
           )}
         </EmptyCard>
       ) : (
-        groups.map(([m, items]) => (
+        paged.items.map(([m, items]) => (
           <section key={m} className="d3-month">
             <div className="d3-month-h">
               <h2>
@@ -337,6 +353,17 @@ export default async function BillsPage({
           </section>
         ))
       )}
+      <Pager
+        page={paged.page}
+        pages={paged.pages}
+        href={(n) => href({ p: n })}
+        labels={{
+          nav: tp('nav'),
+          previous: tp('previous'),
+          next: tp('next'),
+          page: (n) => tp('page', { n }),
+        }}
+      />
     </div>
   );
 }

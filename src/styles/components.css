@@ -1179,3 +1179,62 @@
     animation: none;
   }
 }
+
+/* Page links under a long list (Pager). */
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-top: 4px;
+}
+.pg-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: var(--fs-small);
+  color: var(--p-fg);
+  background: var(--inset);
+}
+.pg-step.off {
+  opacity: 0.4;
+}
+.pg-nums {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.pg-n {
+  display: grid;
+  place-items: center;
+  min-width: 34px;
+  height: 34px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-family: var(--f-num);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--p-fg2);
+}
+.pg-n:hover {
+  background: var(--inset);
+  color: var(--p-fg);
+}
+.pg-n[aria-current='page'] {
+  background: var(--p-accent);
+  color: var(--p-on-accent);
+}
+.pg-gap {
+  color: var(--p-fg2);
+  padding: 0 2px;
+}
+@media (max-width: 639px) {
+  .pg-step span {
+    display: none;
+  }
+}

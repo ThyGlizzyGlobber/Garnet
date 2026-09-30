@@ -1,12 +1,18 @@
 import { getDb, type Db } from '@/db/client';
 import type { Household } from '@/db/schema';
-import { costPerDay } from '@/lib/averages';
+import { costPerDay, mean } from '@/lib/averages';
 import { billDue } from '@/lib/bill-status';
 import { listBills, type BillListItem } from '@/lib/bills';
 import { compareUsage, usageHistory, type Change } from '@/lib/consumption';
 import { daysInclusive } from '@/lib/dates';
 import { addMonths, fiscalYearBounds } from '@/lib/periods';
-import { estimatePerDay, nextBillGuess, projectMonth } from '@/lib/projections';
+import {
+  estimatePerDay,
+  fixedPrice,
+  MONTHS_PER_BILL,
+  nextBillGuess,
+  projectMonth,
+} from '@/lib/projections';
 import { areaComparison } from '@/lib/regional';
 import { seasonAhead } from '@/lib/seasons';
 import type { ServiceWithType } from '@/lib/services';
@@ -29,12 +35,12 @@ function accrued(b: BillListItem, start: string, end: string): number {
   );
 }
 
-/** One bar on the service page's chart: a bill's period and its usage (or cost) per day. */
+/** One bar on the service page's chart: a bill's period and its usage, or its cost (per day or per bill). */
 export interface ServiceBar {
   billId: string;
   periodStart: string;
   periodEnd: string;
-  /** Usage per day in the service's unit, or cost per day in minor units. */
+  /** Usage per day in the service's unit, else the bill's cost (per bill or per day) in minor units. */
   value: number;
   amountMinor: number;
   usage: number | null;
@@ -109,11 +115,33 @@ export function serviceOverview(
   const yearEnd = year.end > today ? today : year.end;
   const yearBills = inFy(year);
   const yearMinor = yearBills.reduce((s, b) => s + accrued(b, year.start, yearEnd), 0);
-  const yearMonths = Math.max(1, daysInclusive(year.start, yearEnd) / (365 / 12));
+  const unit = history?.unit ?? svc.usageUnit;
+  // A month's average over the part of the year its bills cover: a service
+  // that began in December isn't averaged over the months before it.
+  const coveredStart = yearBills.reduce(
+    (min, b) => (b.periodStart < min ? b.periodStart : min),
+    yearEnd,
+  );
+  const coveredEnd = yearBills.reduce((max, b) => (b.periodEnd > max ? b.periodEnd : max), '');
+  const from = coveredStart > year.start ? coveredStart : year.start;
+  const to = coveredEnd && coveredEnd < yearEnd ? coveredEnd : yearEnd;
+  const yearMonths = Math.max(1, (to >= from ? daysInclusive(from, to) : 0) / (365 / 12));
+  // Bills that follow the calendar: a month is the year's average bill over
+  // the months one covers, so a fixed price (internet, rent) is exactly its
+  // price, whether a month has 30 days or 31.
+  const monthsPerBill = MONTHS_PER_BILL[svc.cadence];
+  const calendar = !!monthsPerBill;
+  const billMonthMinor =
+    monthsPerBill && yearBills.length
+      ? Math.round(mean(yearBills.map((b) => b.amountMinor)) / monthsPerBill)
+      : null;
 
   const est = estimatePerDay(bills, today.slice(0, 7));
-  const guess = svc.cadence === 'irregular' ? null : nextBillGuess(latest, svc.cadence, est.perDay);
-  const unit = history?.unit ?? svc.usageUnit;
+  const guess =
+    svc.cadence === 'irregular'
+      ? null
+      : nextBillGuess(latest, svc.cadence, est.perDay, calendar ? fixedPrice(bills) : null);
+  const barsAreUsage = !!unit && (history?.periods ?? []).some((p) => p.perDay !== null);
   const usageOf = new Map((history?.periods ?? []).map((p) => [p.billId, p.perDay]));
 
   const byYear = new Map<string, BillListItem[]>();
@@ -132,7 +160,7 @@ export function serviceOverview(
         current: year.current,
         minor: yearMinor,
         bills: yearBills.length,
-        perMonthMinor: Math.round(yearMinor / yearMonths),
+        perMonthMinor: billMonthMinor ?? Math.round(yearMinor / yearMonths),
       },
       latest: latest
         ? {
@@ -142,21 +170,37 @@ export function serviceOverview(
           }
         : null,
       next: guess
-        ? { amountMinor: guess.amountMinor, dueDate: guess.dueDate, method: est.method }
+        ? {
+            amountMinor: guess.amountMinor,
+            dueDate: guess.dueDate,
+            method: calendar && fixedPrice(bills) !== null ? 'fixed' : est.method,
+          }
         : null,
     },
-    /** Each bill, oldest first, as a bar: usage per day when the service has usage, else cost per day. */
+    /**
+     * Each bill, oldest first, as a bar: usage per day when the service has
+     * usage; else the bill's cost when its bills follow the calendar (a
+     * month's internet is $129 whether the month has 30 days or 31), else its
+     * cost per day.
+     */
     bars: [...bills].reverse().map((b): ServiceBar => ({
       billId: b.id,
       periodStart: b.periodStart,
       periodEnd: b.periodEnd,
-      value: unit && usageOf.get(b.id) != null ? usageOf.get(b.id)! : costPerDay(b),
+      value:
+        unit && usageOf.get(b.id) != null
+          ? usageOf.get(b.id)!
+          : calendar
+            ? b.amountMinor
+            : costPerDay(b),
       amountMinor: b.amountMinor,
       usage: usageOf.get(b.id) ?? null,
       unusual: b.isAnomaly,
     })),
-    /** Bars measure usage per day (true) or cost per day (false). */
-    barsAreUsage: !!unit && (history?.periods ?? []).some((p) => p.perDay !== null),
+    /** Bars measure usage per day (true) or cost (false). */
+    barsAreUsage,
+    /** Cost bars are each bill's cost (true) or its cost per day (false). */
+    barsPerBill: !barsAreUsage && calendar,
     /** The latest bill's usage by tariff band, each against the bill before. */
     bands: (c?.latest.parts ?? []).map((p) => {
       const was = before.find((b) => b.key === p.key);

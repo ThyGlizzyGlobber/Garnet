@@ -10,6 +10,8 @@ import { Chip } from '@/components/ui/chip';
 import { Avatar, Disc } from '@/components/ui/colour';
 import { BackLink } from '@/components/ui/controls';
 import { BillRow, Rows } from '@/components/ui/rows';
+import { Pager } from '@/components/ui/pager';
+import { pageParam, paginate } from '@/lib/paging';
 import { SAME_BAND } from '@/lib/averages';
 import { DAYS_PER_MONTH } from '@/lib/consumption';
 import { pageContext } from '@/lib/context';
@@ -33,8 +35,18 @@ import { partText } from '../split-text';
  * compared with, how it's split and what's coming. Numbers come from
  * serviceOverview() (src/lib/service-overview.ts).
  */
-export default async function ServicePage({ params }: { params: Promise<{ id: string }> }) {
+/** Bills per page in "Every bill": a year of monthly bills. */
+const BILLS_PER_PAGE = 12;
+
+export default async function ServicePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ p?: string }>;
+}) {
   const { id } = await params;
+  const { p: pageRaw } = await searchParams;
   const ctx = await pageContext();
   const { hh, me, money, month, qty, today } = ctx;
   const t = await getTranslations('usage');
@@ -185,8 +197,30 @@ export default async function ServicePage({ params }: { params: Promise<{ id: st
     : null;
   const ta = await getTranslations('area');
   const area = o.area;
+  // "Every bill", a page at a time (newest first), under each year's heading
+  // with the whole year's count and total.
+  const billPage = paginate(o.bills, pageParam(pageRaw), BILLS_PER_PAGE);
+  const pageYears = o.byYear
+    .map((y) => ({
+      year: y.year,
+      count: y.bills.length,
+      totalMinor: y.totalMinor,
+      bills: y.bills.filter((b) => billPage.items.includes(b)),
+    }))
+    .filter((y) => y.bills.length > 0);
+  const tp = await getTranslations('ui.pager');
+  const pagerLabels = {
+    nav: tp('nav'),
+    previous: tp('previous'),
+    next: tp('next'),
+    page: (n: number) => tp('page', { n }),
+  };
   const tsp = await getTranslations('services.split');
-  const chartTitle = o.barsAreUsage ? t('chartUsage') : t('chartCost');
+  const chartTitle = o.barsAreUsage
+    ? t('chartUsage')
+    : o.barsPerBill
+      ? t('chartCostBill')
+      : t('chartCost');
 
   return (
     <div className="scr d3-service">
@@ -228,9 +262,11 @@ export default async function ServicePage({ params }: { params: Promise<{ id: st
                       : '',
                   tip: `${formatMonthRange(b.periodStart, b.periodEnd, hh.locale)} · ${
                     o.barsAreUsage && b.usage !== null
-                      ? t('perDay', { qty: qty(b.usage), unit })
-                      : t('costPerDay', { amount: money(Math.round(b.value)) })
-                  } · ${money(b.amountMinor)}`,
+                      ? `${t('perDay', { qty: qty(b.usage), unit })} · `
+                      : o.barsPerBill
+                        ? ''
+                        : `${t('costPerDay', { amount: money(Math.round(b.value)) })} · `
+                  }${money(b.amountMinor)}`,
                   href: `/bills/${b.billId}`,
                   flag: b.unusual,
                 }))}
@@ -273,7 +309,7 @@ export default async function ServicePage({ params }: { params: Promise<{ id: st
               </div>
             </Card>
           )}
-          <Card className="d3-every">
+          <Card className="d3-every" id="bills">
             <SectionHead
               title={ts('page.everyBill')}
               right={
@@ -283,27 +319,35 @@ export default async function ServicePage({ params }: { params: Promise<{ id: st
             {o.bills.length === 0 ? (
               <p className="muted">{ts('page.noBills')}</p>
             ) : (
-              <div className="d3-tl">
-                {o.byYear.map((y) => (
-                  <div key={y.year} className="year-group">
-                    <div className="year-h">
-                      <span>{y.year}</span>
-                      <span className="muted">
-                        {ts('page.billCount', { count: y.bills.length })} ·{' '}
-                        {money(y.totalMinor, hh.currency, { whole: true })}
-                      </span>
+              <>
+                <div className="d3-tl">
+                  {pageYears.map((y) => (
+                    <div key={y.year} className="year-group">
+                      <div className="year-h">
+                        <span>{y.year}</span>
+                        <span className="muted">
+                          {ts('page.billCount', { count: y.count })} ·{' '}
+                          {money(y.totalMinor, hh.currency, { whole: true })}
+                        </span>
+                      </div>
+                      <Rows>
+                        {y.bills.map((b) => (
+                          <BillRow
+                            key={b.id}
+                            bill={billRowFor(b, rc, { inService: true, noDisc: true })}
+                          />
+                        ))}
+                      </Rows>
                     </div>
-                    <Rows>
-                      {y.bills.map((b) => (
-                        <BillRow
-                          key={b.id}
-                          bill={billRowFor(b, rc, { inService: true, noDisc: true })}
-                        />
-                      ))}
-                    </Rows>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+                <Pager
+                  page={billPage.page}
+                  pages={billPage.pages}
+                  href={(n) => `/services/${svc.id}${n > 1 ? `?p=${n}` : ''}#bills`}
+                  labels={pagerLabels}
+                />
+              </>
             )}
           </Card>
         </div>

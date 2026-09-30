@@ -1482,8 +1482,10 @@
         "single": "From your only bill",
         "weather": "Normal weather, your bills",
         "area": "Similar households nearby",
-        "none": ""
-      }
+        "none": "",
+        "fixed": "Same price every bill"
+      },
+      "fixed": "The same price as your recent bills"
     },
     "chartUsage": "Usage per day, each bill",
     "chartCost": "Cost per day, each bill",
@@ -1492,7 +1494,8 @@
     "limitLine": "Your limit · {qty} {unit} a day",
     "comparedWith": "Compared with",
     "sameShort": "same",
-    "latestLine": "Latest bill: {qty} {unit} a day, about {month} {unit} a month."
+    "latestLine": "Latest bill: {qty} {unit} a day, about {month} {unit} a month.",
+    "chartCostBill": "Cost of each bill"
   },
   "seasons": {
     "name": {
@@ -1882,6 +1885,12 @@
       "uploadedBy": "Uploaded by {name}",
       "forward": "Forwarded by {name}",
       "email": "Emailed in"
+    },
+    "pager": {
+      "nav": "Pages",
+      "previous": "Previous",
+      "next": "Next",
+      "page": "Page {n}"
     }
   },
   "design": {

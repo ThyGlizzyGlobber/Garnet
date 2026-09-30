@@ -10,7 +10,8 @@ import { computeShares } from '@/lib/splits';
 import { normalMonthCostPerDay } from '@/lib/weather-model';
 import { areaMonthCostPerDay } from '@/lib/regional';
 
-export type ProjectionMethod = 'seasonal' | 'weather' | 'recent' | 'area' | 'single' | 'none';
+export type ProjectionMethod =
+  'fixed' | 'seasonal' | 'weather' | 'recent' | 'area' | 'single' | 'none';
 
 export interface ServiceProjection {
   service: ServiceWithType;
@@ -47,6 +48,43 @@ const CADENCE_DAYS: Record<Cadence, number | null> = {
 };
 
 const perDay = costPerDay;
+
+/** How many months one bill covers, for cadences that follow the calendar. */
+export const MONTHS_PER_BILL: Partial<Record<Cadence, number>> = {
+  monthly: 1,
+  bimonthly: 2,
+  quarterly: 3,
+  annual: 12,
+};
+
+/**
+ * A fixed price (internet, rent, a subscription): the latest bills, at least
+ * two and up to three, all cost the same (within 1%), so the next one will
+ * too, whatever number of days it covers. Their average, else null. Working
+ * these out per day would make a 31-day month dearer than a 30-day one.
+ */
+export function fixedPrice(bills: Pick<Bill, 'amountMinor' | 'periodStart'>[]): number | null {
+  const recent = [...bills].sort((a, b) => a.periodStart.localeCompare(b.periodStart)).slice(-3);
+  if (recent.length < 2) return null;
+  const amounts = recent.map((b) => b.amountMinor);
+  const lo = Math.min(...amounts);
+  const hi = Math.max(...amounts);
+  if (hi <= 0 || hi - lo > hi * 0.01) return null;
+  return Math.round(mean(amounts));
+}
+
+/**
+ * A fixed-price service whose bills follow the calendar costs the same each
+ * month: its price over the months one bill covers. Null otherwise.
+ */
+export function fixedMonthly(
+  cadence: Cadence,
+  bills: Pick<Bill, 'amountMinor' | 'periodStart'>[],
+): number | null {
+  const months = MONTHS_PER_BILL[cadence];
+  const price = fixedPrice(bills);
+  return months && price !== null ? Math.round(price / months) : null;
+}
 
 /**
  * Daily cost estimate for one service in a target month.
@@ -100,18 +138,14 @@ export function nextBillGuess(
   latest: Pick<Bill, 'periodStart' | 'periodEnd' | 'dueDate'> | undefined,
   cadence: Cadence,
   perDayMinor: number,
+  /** A fixed price (see fixedPrice): the next bill costs exactly that. */
+  fixedMinor: number | null = null,
 ): ServiceProjection['nextBill'] {
   if (!latest) return null;
   const periodStart = addDays(latest.periodEnd, 1);
   // Calendar-based cadences keep the calendar shape (a monthly bill spans a whole month,
   // whatever its length); the rest use the cadence's nominal length.
-  const monthsFor: Partial<Record<Cadence, number>> = {
-    monthly: 1,
-    bimonthly: 2,
-    quarterly: 3,
-    annual: 12,
-  };
-  const months = monthsFor[cadence];
+  const months = MONTHS_PER_BILL[cadence];
   const periodEnd = months
     ? addDays(addCalendarMonths(periodStart, months), -1)
     : addDays(
@@ -121,7 +155,12 @@ export function nextBillGuess(
   const len = daysInclusive(periodStart, periodEnd);
   const dueOffset = Math.max(0, daysInclusive(latest.periodStart, latest.dueDate) - 1);
   const dueDate = addDays(periodStart, dueOffset);
-  return { periodStart, periodEnd, dueDate, amountMinor: Math.round(perDayMinor * len) };
+  return {
+    periodStart,
+    periodEnd,
+    dueDate,
+    amountMinor: fixedMinor ?? Math.round(perDayMinor * len),
+  };
 }
 
 /**
@@ -168,16 +207,23 @@ export function projectMonth(
       if (perDay !== null) est = { perDay, method: 'area', basisCount: est.basisCount };
     }
     const remainingDays = Math.max(0, days - knownDays);
-    const monthMinor = knownMinor + Math.round(est.perDay * remainingDays);
+    // A fixed price costs the same every month, however many days it has.
+    const fixed = fixedMonthly(svc.cadence, history);
+    const monthMinor = fixed ?? knownMinor + Math.round(est.perDay * remainingDays);
     const latest = history[history.length - 1];
     if (latest) latestMinor.set(svc.id, latest.amountMinor);
     rows.push({
       service: svc,
       monthMinor,
-      method: est.method,
+      method: fixed !== null ? 'fixed' : est.method,
       perDay: est.perDay,
-      basisCount: est.basisCount,
-      nextBill: nextBillGuess(latest, svc.cadence, est.perDay),
+      basisCount: fixed !== null ? Math.min(3, history.length) : est.basisCount,
+      nextBill: nextBillGuess(
+        latest,
+        svc.cadence,
+        est.perDay,
+        MONTHS_PER_BILL[svc.cadence] ? fixedPrice(history) : null,
+      ),
     });
   }
   const totalMinor = rows.reduce((s, r) => s + r.monthMinor, 0);
