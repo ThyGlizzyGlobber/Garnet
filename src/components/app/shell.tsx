@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { Avatar } from '@/components/ui/colour';
-import { IconButton, SearchField } from '@/components/ui/controls';
+import { IconButton } from '@/components/ui/controls';
 import { colourCss } from '@/lib/palette';
 import type { ShellEntry, ShellView } from '@/lib/shell';
 import { AddBillButton } from './add-bill';
@@ -13,7 +13,8 @@ import { NavItems, SectionName, type NavItem } from './nav-items';
 /**
  * The app's frame (BRAND.md §9): the scene behind, a floating nav column
  * beside the page (a rail of icons on an iPad, a bottom bar on a phone),
- * and a simple top bar: search, Inbox, Add bill. Layout in
+ * and a simple top bar: the page's way back on the left; search and Add bill
+ * on the right (the Inbox is in the nav). Layout in
  * src/styles/shell.css; the numbers come from shellView().
  */
 export interface ShellLabels {
@@ -167,18 +168,11 @@ export function AppShell({
               </span>
             </span>
           </Link>
-          <form action="/bills" method="get" className="tb-search">
-            <SearchField placeholder={labels.search} />
-          </form>
-          <IconButton icon="search" label={labels.search} href="/bills" className="tb-search-btn" />
+          {/* A page's way back lands here (TopBack). */}
+          <span id="tb-back" className="tb-back" />
         </div>
         <div className="tb-r">
-          <IconButton
-            icon="inbox"
-            label={labels.nav.inbox}
-            href="/inbox"
-            badge={view.inboxCount || undefined}
-          />
+          <IconButton icon="search" label={labels.search} href="/bills?find=1" />
           <AddBillButton address={view.address} className="tb-add" />
           <Link href="/settings" className="me tb-me" aria-label={labels.settings}>
             <Avatar name={view.me.name} colour={view.me.colour} />

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { ComponentProps, ReactNode } from 'react';
 import { Icon } from '@/components/app/icons';
+import { TopBack } from '@/components/app/top-back';
 import { cx } from './cx';
 
 /**
@@ -167,6 +168,7 @@ export function SearchField({
   small = false,
   className,
   id,
+  autoFocus = false,
 }: {
   placeholder: string;
   /** Accessible name; the placeholder when left out. */
@@ -176,6 +178,8 @@ export function SearchField({
   small?: boolean;
   className?: string;
   id?: string;
+  /** Focus it as the page opens (the top bar's search icon leads here). */
+  autoFocus?: boolean;
 }) {
   return (
     <label className={cx('search', small && 'search-sm', className)}>
@@ -187,17 +191,13 @@ export function SearchField({
         placeholder={placeholder}
         aria-label={label ?? placeholder}
         defaultValue={defaultValue}
+        autoFocus={autoFocus}
       />
     </label>
   );
 }
 
-/** A back link with a chevron: "‹ Electricity". */
+/** A page's way back: a round arrow in the top bar (TopBack); `children` names where it goes. */
 export function BackLink({ href, children }: { href: string; children: ReactNode }) {
-  return (
-    <Link href={href} className="back">
-      <Icon name="chevron-left" width={18} height={18} />
-      <span>{children}</span>
-    </Link>
-  );
+  return <TopBack href={href}>{children}</TopBack>;
 }

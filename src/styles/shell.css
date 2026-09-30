@@ -56,11 +56,9 @@
   gap: 8px;
   min-width: 0;
 }
-.tb-search {
-  width: min(380px, 100%);
-}
-.tb-search-btn {
-  display: none;
+/* The page's way back (TopBack) sits in here; nothing when there's none. */
+.tb-back {
+  display: contents;
 }
 .brand {
   display: none;
@@ -105,14 +103,6 @@
 }
 .tb-me {
   display: none;
-}
-@media (max-width: 1199px) {
-  .tb-search {
-    display: none;
-  }
-  .tb-search-btn {
-    display: grid;
-  }
 }
 @media (max-width: 639px) {
   .topbar {

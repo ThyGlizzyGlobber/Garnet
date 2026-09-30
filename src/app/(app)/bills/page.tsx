@@ -63,6 +63,8 @@ export default async function BillsPage({
     sv?: string;
     /** Page number (whole months, about BILLS_PER_PAGE bills a page). */
     p?: string;
+    /** From the top bar's search icon: the search field is focused. */
+    find?: string;
   }>;
 }) {
   const raw = await searchParams;
@@ -282,6 +284,7 @@ export default async function BillsPage({
           {year && <input type="hidden" name="y" value={year} />}
           <SearchField
             small
+            autoFocus={!!raw.find}
             placeholder={t('search.placeholder')}
             label={t('search.label')}
             defaultValue={q}
