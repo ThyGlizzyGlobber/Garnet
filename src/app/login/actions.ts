@@ -6,6 +6,7 @@ import { getTranslations } from 'next-intl/server';
 import type { ActionState } from '@/components/ui/form';
 import { str } from '@/lib/actions';
 import { signInAccount } from '@/lib/accounts';
+import { rememberAppearance } from '@/lib/auth/appearance';
 import { issueLoginCode, verifyLoginCode } from '@/lib/auth/codes';
 import { recordPinFailure, resetPinFailures } from '@/lib/auth/devices';
 import { hashPin, PIN_PATTERN, verifyPin } from '@/lib/auth/pin';
@@ -155,6 +156,10 @@ export async function setPinAction(_prev: ActionState, fd: FormData): Promise<Ac
 }
 
 export async function logout(): Promise<void> {
+  // The sign-in page keeps this person's colours on this device.
+  const s = await authState();
+  if (s.kind === 'ok')
+    await rememberAppearance({ preset: s.member.appearancePreset, theme: s.member.theme });
   await signOut();
   redirect('/login');
 }

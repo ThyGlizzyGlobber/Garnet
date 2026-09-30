@@ -106,6 +106,11 @@ const householdId = () =>
     .notNull()
     .references(() => household.id, { onDelete: 'cascade' });
 
+/** Colour presets anyone can pick for themselves (BRAND.md §2); the tokens are in globals.css. */
+export const APPEARANCE_PRESETS = ['mist', 'harbour', 'ruby', 'cobalt', 'violet'] as const;
+/** Light, dark, or auto (follow the device). */
+export const THEMES = ['auto', 'light', 'dark'] as const;
+
 export const member = sqliteTable(
   'member',
   {
@@ -137,6 +142,11 @@ export const member = sqliteTable(
       .$type<{ label: string; value: string }[]>()
       .notNull()
       .default([]),
+    /** This person's colours, on every device they sign in on (src/lib/appearance.ts). */
+    appearancePreset: text('appearance_preset', { enum: APPEARANCE_PRESETS })
+      .notNull()
+      .default('harbour'),
+    theme: text('theme', { enum: THEMES }).notNull().default('auto'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },

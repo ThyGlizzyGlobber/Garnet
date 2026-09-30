@@ -13,14 +13,14 @@ import { pageContext } from '@/lib/context';
 import { getEnv, isInboundEmailConfigured, isLlmConfigured } from '@/lib/env';
 import { SettingsForm } from './settings-form';
 import { InlineAction } from '@/components/ui/form';
-import { getTheme, THEMES } from '@/lib/theme';
+import { PresetCards } from '@/components/app/preset-cards';
 import {
   exitDemoAction,
   readMissingMetricsAction,
   removeLocationAction,
   saveSharingAction,
   replaceBillsAddressAction,
-  setThemeAction,
+  saveAppearanceAction,
 } from './actions';
 import { catchUpCount, isReadingMetrics } from '@/ingest/metrics';
 import { UpdateCard } from './update-card';
@@ -41,7 +41,7 @@ export default async function SettingsPage() {
   const address = billsAddress(hh);
   const t = await getTranslations('settings');
   const env = getEnv();
-  const theme = await getTheme();
+  const ta = await getTranslations('appearance');
   const tl = await getTranslations('location');
   const ts = await getTranslations('sharing');
   const tg = await getTranslations('settings.glance');
@@ -133,6 +133,36 @@ export default async function SettingsPage() {
         </Link>
       </section>
 
+      <Card className="mb-4 flex flex-col gap-4" id="appearance">
+        <div className="flex items-center justify-between gap-3">
+          <SectionTitle icon="sun">{ta('title')}</SectionTitle>
+          <span className="text-sm text-fg-2">{ta('justYou')}</span>
+        </div>
+        <p className="max-w-[56ch] text-sm text-fg-2">{ta('body', { household: hh.name })}</p>
+        <form action={saveAppearanceAction}>
+          <PresetCards current={me.appearancePreset} />
+        </form>
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-t border-line pt-4">
+          <span className="flex min-w-0 flex-col">
+            <b className="font-semibold">{ta('lightOrDark')}</b>
+            <span className="text-sm text-fg-2">{ta('lightOrDarkBody')}</span>
+          </span>
+          <form action={saveAppearanceAction} className="flex flex-wrap gap-2">
+            {(['light', 'dark', 'auto'] as const).map((th) => (
+              <button
+                key={th}
+                name="theme"
+                value={th}
+                aria-pressed={me.theme === th}
+                className={`rounded-full px-4 py-2 text-sm font-semibold transition ${me.theme === th ? 'bg-accent text-on-accent' : 'glass-ctl text-fg-2 hover:text-fg'}`}
+              >
+                {ta(`themes.${th}`)}
+              </button>
+            ))}
+          </form>
+        </div>
+      </Card>
+
       <div className="grid items-start gap-4 lg:grid-cols-2">
         <div className="flex flex-col gap-4">
           <SettingsForm
@@ -152,22 +182,6 @@ export default async function SettingsPage() {
               membersCanExport: hh.membersCanExport,
             }}
           />
-          <Card className="flex flex-col gap-3" id="appearance">
-            <SectionTitle icon="sun">{t('theme.title')}</SectionTitle>
-            <p className="text-xs text-fg-muted">{t('theme.body')}</p>
-            <form action={setThemeAction} className="flex flex-wrap gap-2">
-              {THEMES.map((th) => (
-                <button
-                  key={th}
-                  name="theme"
-                  value={th}
-                  className={`rounded-full px-4 py-2 text-sm font-semibold transition ${theme === th ? 'bg-accent text-accent-fg' : 'bg-surface-2 text-fg-muted hover:text-fg'}`}
-                >
-                  {t(`theme.${th}`)}
-                </button>
-              ))}
-            </form>
-          </Card>
           {demo && isAdmin(me) && (
             <Card className="flex flex-col gap-3 border-warning/40 bg-warning-soft">
               <h2 className="font-display font-semibold">{t('demo.title')}</h2>

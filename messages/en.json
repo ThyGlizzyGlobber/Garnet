@@ -561,13 +561,6 @@
       "off": "Off",
       "billsAddresses": "Bills addresses"
     },
-    "theme": {
-      "title": "Appearance",
-      "body": "Applies to this browser or device only. Auto follows the device setting.",
-      "auto": "Auto",
-      "light": "Light",
-      "dark": "Dark"
-    },
     "demo": {
       "title": "Demo mode",
       "body": "This household is the fictional demo. Exiting deletes every demo member, service and bill on this server and opens the setup wizard for your real household. Demo data will not be re-created, even with DEMO_MODE still set.",
@@ -1434,5 +1427,39 @@
   "common": {
     "copy": "Copy",
     "copied": "Copied"
+  },
+  "appearance": {
+    "title": "Appearance",
+    "justYou": "Just for you",
+    "body": "Pick the colours you like. Only you see your choice; everyone in {household} picks their own.",
+    "lightOrDark": "Light or dark",
+    "lightOrDarkBody": "Automatic follows your phone or computer.",
+    "themes": {
+      "light": "Light",
+      "dark": "Dark",
+      "auto": "Automatic"
+    },
+    "presets": {
+      "mist": {
+        "name": "Ink & Mist",
+        "blurb": "The original colours. Slate, mist and sand."
+      },
+      "harbour": {
+        "name": "Harbour",
+        "blurb": "Deep blue, sea glass and sand."
+      },
+      "ruby": {
+        "name": "Ruby",
+        "blurb": "Warm reds with a touch of raspberry."
+      },
+      "cobalt": {
+        "name": "Cobalt",
+        "blurb": "Clear blues, bright and simple."
+      },
+      "violet": {
+        "name": "Violet",
+        "blurb": "Soft purples, calm and cool."
+      }
+    }
   }
 }

@@ -1,6 +1,7 @@
 import { and, asc, count, eq } from 'drizzle-orm';
 import { getDb, type Db } from '@/db/client';
 import { member, service, share, sourceDocument, type Member } from '@/db/schema';
+import { DEFAULT_APPEARANCE, type Preset, type Theme } from '@/lib/appearance';
 import { ulid } from '@/lib/ids';
 import { DEFAULT_COLOUR } from '@/lib/palette';
 import { isAdmin } from '@/lib/roles';
@@ -56,6 +57,8 @@ export interface MemberInput {
   activeTo?: string | null;
   colour?: string;
   paymentDetails?: { label: string; value: string }[];
+  appearancePreset?: Preset;
+  theme?: Theme;
 }
 
 export function createMember(householdId: string, input: MemberInput, db: Db = getDb()): Member {
@@ -78,6 +81,8 @@ export function createMember(householdId: string, input: MemberInput, db: Db = g
     notifyReminders: true,
     notifyProblems: true,
     paymentDetails: input.paymentDetails ?? [],
+    appearancePreset: input.appearancePreset ?? DEFAULT_APPEARANCE.preset,
+    theme: input.theme ?? DEFAULT_APPEARANCE.theme,
     createdAt: now,
     updatedAt: now,
   };

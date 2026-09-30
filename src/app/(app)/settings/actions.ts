@@ -11,7 +11,9 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { exitDemo } from '@/lib/demo';
 import { requestIsHttps } from '@/lib/request';
-import { THEME_COOKIE, THEMES, type Theme } from '@/lib/theme';
+import { isPreset, isTheme } from '@/lib/appearance';
+import { rememberAppearance } from '@/lib/auth/appearance';
+import { updateMember } from '@/lib/members';
 import { cancelUpdateRequest, checkForUpdate, requestUpdate } from '@/lib/updates';
 import { readMissingMetrics } from '@/ingest/metrics';
 import { computeRegionalStats, regionalEnabled, setRegionalSharing } from '@/lib/regional';
@@ -59,20 +61,20 @@ export async function updateSettingsAction(_prev: ActionState, fd: FormData): Pr
   return { ok: true };
 }
 
-/** Per-browser theme choice; any member can set it. */
-export async function setThemeAction(fd: FormData): Promise<void> {
-  await requireMember();
-  const v = str(fd, 'theme');
-  const theme: Theme = (THEMES as readonly string[]).includes(v) ? (v as Theme) : 'auto';
-  const jar = await cookies();
-  if (theme === 'auto') jar.delete(THEME_COOKIE);
-  else
-    jar.set(THEME_COOKIE, theme, {
-      path: '/',
-      maxAge: 60 * 60 * 24 * 365,
-      sameSite: 'lax',
-      secure: await requestIsHttps(),
-    });
+/**
+ * This person's colours (Settings → Appearance). Saved on the member, so every
+ * device they sign in on follows; a field left out keeps its current value.
+ */
+export async function saveAppearanceAction(fd: FormData): Promise<void> {
+  const me = await requireMember();
+  const preset = str(fd, 'preset');
+  const theme = str(fd, 'theme');
+  const next = {
+    preset: isPreset(preset) ? preset : me.appearancePreset,
+    theme: isTheme(theme) ? theme : me.theme,
+  };
+  updateMember(me.householdId, me.id, { appearancePreset: next.preset, theme: next.theme });
+  await rememberAppearance(next);
   revalidatePath('/', 'layout');
 }
 

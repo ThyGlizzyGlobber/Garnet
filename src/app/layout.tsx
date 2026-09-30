@@ -1,14 +1,21 @@
 import type { Metadata, Viewport } from 'next';
-import { JetBrains_Mono, Manrope, Outfit } from 'next/font/google';
+import { Bricolage_Grotesque, Figtree, JetBrains_Mono } from 'next/font/google';
 import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getMessages, getTranslations } from 'next-intl/server';
 import { RegisterServiceWorker } from '@/components/app/pwa';
 import { Scene } from '@/components/app/scene';
-import { getTheme } from '@/lib/theme';
+import { themeColor } from '@/lib/appearance';
+import { getAppearance } from '@/lib/auth/appearance';
 import './globals.css';
 
-const manrope = Manrope({ subsets: ['latin'], variable: '--font-manrope', display: 'swap' });
-const outfit = Outfit({ subsets: ['latin'], variable: '--font-outfit', display: 'swap' });
+// Display: Bricolage Grotesque with its optical-size axis (tighter at big sizes). Body: Figtree.
+const display = Bricolage_Grotesque({
+  subsets: ['latin'],
+  variable: '--font-bricolage',
+  display: 'swap',
+  axes: ['opsz'],
+});
+const body = Figtree({ subsets: ['latin'], variable: '--font-figtree', display: 'swap' });
 const mono = JetBrains_Mono({
   subsets: ['latin'],
   variable: '--font-jetbrains',
@@ -28,25 +35,25 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export const viewport: Viewport = {
-  width: 'device-width',
-  initialScale: 1,
-  viewportFit: 'cover',
-  // The browser's own chrome: keep in step with --color-bg in globals.css.
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#e9e4dc' },
-    { media: '(prefers-color-scheme: dark)', color: '#12151b' },
-  ],
-};
+/** The browser's own chrome follows the person's colours (theme-color). */
+export async function generateViewport(): Promise<Viewport> {
+  return {
+    width: 'device-width',
+    initialScale: 1,
+    viewportFit: 'cover',
+    themeColor: themeColor(await getAppearance()),
+  };
+}
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const locale = await getLocale();
   const messages = await getMessages();
-  const theme = await getTheme();
+  const { preset, theme } = await getAppearance();
   return (
     <html
       lang={locale}
-      className={`${manrope.variable} ${outfit.variable} ${mono.variable}`}
+      className={`${display.variable} ${body.variable} ${mono.variable}`}
+      data-palette={preset}
       data-theme={theme === 'auto' ? undefined : theme}
     >
       <body>
