@@ -2711,9 +2711,6 @@ input.inp-plain[type='color'] {
   gap: 4px;
   margin: 2px 0 16px;
 }
-.subs-cancelled .bill-row {
-  opacity: 0.72;
-}
 .vx-tile.is-muted {
   opacity: 0.72;
 }
@@ -2819,4 +2816,32 @@ input.inp-plain[type='color'] {
   .st-ch {
     display: none;
   }
+}
+
+/* Subscriptions: the next charge of each */
+.subs-next {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.subs-next li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 0;
+}
+.subs-next li + li {
+  border-top: 1px solid var(--line);
+}
+.subs-next li > span:nth-child(2) {
+  display: grid;
+  min-width: 0;
+}
+.subs-next li > span:nth-child(2) b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

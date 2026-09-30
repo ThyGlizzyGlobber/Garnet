@@ -2719,12 +2719,20 @@
       "aMonthFor": "a month for {count, plural, one {# subscription} other {# subscriptions}}",
       "aYear": "{amount} a year",
       "yearSpent": "{amount} charged in the last 12 months.",
-      "nextOn": "next {date}",
       "cancelledOn": "Cancelled {date}",
       "cancelledHead": "Cancelled",
-      "cancelled": "Cancelled",
       "stillCharging": "Charged after cancelling",
-      "noCharges": "No charges yet"
+      "noCharges": "No charges yet",
+      "goingHead": "Your subscriptions",
+      "noneGoing": "None going right now.",
+      "tileSub": "a month · {amount} in the last 12 months",
+      "noMore": "No charges since cancelling",
+      "perMonth": "What they cost",
+      "comingUp": "Coming up",
+      "comingHint": "the next charge of each",
+      "nothingNext": "Nothing coming up.",
+      "chargingTitle": "{name} charged after it was cancelled",
+      "chargingBody": "{count, plural, one {# charge} other {# charges}} since you cancelled on {date}. Check with them, or say it’s going again."
     }
   }
 }

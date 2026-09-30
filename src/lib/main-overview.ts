@@ -3,6 +3,7 @@ import { billStatus, type BillStatus } from '@/lib/bill-status';
 import type { BillListItem } from '@/lib/bills';
 import { PALETTE, shadesOf } from '@/lib/palette';
 import { addMonths } from '@/lib/periods';
+import { MONTHS_PER_BILL } from '@/lib/projections';
 import type { ServiceWithType } from '@/lib/services';
 import { dueParts, expectedNext } from '@/lib/services-month';
 
@@ -27,6 +28,8 @@ export interface OverviewRow {
   bills: BillListItem[];
   /** The services whose next bill this row expects (each with this row's bills of it). */
   services: ServiceWithType[];
+  /** A stopped or cancelled service: left out of the year ahead once nothing is left to pay. */
+  stopped?: boolean;
 }
 
 interface Due {
@@ -157,36 +160,45 @@ export function mainOverview(input: {
     .filter((r) => r.minor > 0)
     .sort((a, b) => b.minor - a.minor);
 
-  // The year ahead: what's still to pay, and each service's next bill when
-  // none of its bills is still waiting to be paid.
+  // The year ahead: what's still to pay, and each service's bills expected
+  // after its latest one, through the year.
   const aheadMonths = Array.from({ length: 12 }, (_, i) => addMonths(thisMonth, i));
   const last = aheadMonths.at(-1)!;
-  const aheadRows = rows.map((r) => {
-    const open = dues(r.bills).filter((d) => !d.paidAt);
-    const expected = r.services.flatMap((svc): Due[] => {
-      const own = r.bills.filter((b) => b.serviceId === svc.id);
-      if (open.some((d) => own.some((b) => b.id === d.billId))) return [];
-      const next = expectedNext(svc, own, today);
-      return next
-        ? [
-            {
-              billId: null,
-              seriesKey: input.seriesOfService(svc),
-              amountMinor: next.amountMinor,
-              dueDate: next.dueDate,
-              paidAt: null,
-              expected: true,
-            },
-          ]
-        : [];
-    });
-    const items = [...open, ...expected]
-      .map((d) => ({ ...d, month: d.dueDate.slice(0, 7) }))
-      .map((d) => (d.month < thisMonth ? { ...d, month: thisMonth } : d))
-      .filter((d) => d.month <= last)
-      .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
-    return { key: r.key, label: r.label, items };
-  });
+  const aheadRows = rows
+    .map((r) => {
+      const open = dues(r.bills).filter((d) => !d.paidAt);
+      const expected = r.services.flatMap((svc): Due[] => {
+        const own = r.bills.filter((b) => b.serviceId === svc.id);
+        // Expected after its latest bill, paid or still to pay.
+        const next = expectedNext(svc, own, today);
+        if (!next) return [];
+        // Then again each cadence through the year (a monthly subscription is
+        // twelve marks, a quarterly bill four), at the same amount.
+        const every = MONTHS_PER_BILL[svc.cadence];
+        const dates = [next.dueDate];
+        while (every && dates.length < 12) {
+          const d = stepMonths(next.dueDate, every * dates.length);
+          if (d.slice(0, 7) > last) break;
+          dates.push(d);
+        }
+        return dates.map((dueDate) => ({
+          billId: null,
+          seriesKey: input.seriesOfService(svc),
+          amountMinor: next.amountMinor,
+          dueDate,
+          paidAt: null,
+          expected: true,
+        }));
+      });
+      const items = [...open, ...expected]
+        .map((d) => ({ ...d, month: d.dueDate.slice(0, 7) }))
+        .map((d) => (d.month < thisMonth ? { ...d, month: thisMonth } : d))
+        .filter((d) => d.month <= last)
+        .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+      return { key: r.key, label: r.label, items };
+    })
+    // A stopped service with nothing left to pay has no row.
+    .filter((r, i) => r.items.length || !rows[i]!.stopped);
 
   // Next: overdue or soonest unpaid, else the soonest expected.
   const rowOf = (billId: string | null, dueDate: string) =>
@@ -242,4 +254,12 @@ function perMonth(bills: BillListItem[], today: string): number {
   const months =
     first > from ? Math.max(1, (ms(today) - ms(first)) / (86_400_000 * (365.25 / 12))) : 12;
   return Math.round(accrued / Math.min(12, months));
+}
+
+/** A date some months on, on the same day or the month's last ("2026-01-31" + 1 → "2026-02-28"). */
+function stepMonths(date: string, months: number): string {
+  const month = addMonths(date.slice(0, 7), months);
+  const [y, m] = month.split('-').map(Number) as [number, number];
+  const lastDay = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  return `${month}-${String(Math.min(Number(date.slice(8, 10)), lastDay)).padStart(2, '0')}`;
 }

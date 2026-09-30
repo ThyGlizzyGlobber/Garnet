@@ -112,6 +112,7 @@ export function serviceCardsView(
         label: c.service.name,
         bills: c.bills,
         services: going(c.service) ? [c.service] : [],
+        stopped: !going(c.service),
       })),
       series,
       seriesOf: (b) => b.serviceId,
@@ -283,6 +284,10 @@ export interface SubscriptionLine {
   bills: number;
   /** Bills dated after it was cancelled (it's still charging). */
   afterCancel: number;
+  /** Charged in the last 12 months. */
+  yearMinor: number;
+  /** Its own last twelve months and what's next (see mainOverview). */
+  overview: MainOverview;
 }
 
 export interface SubscriptionsView {
@@ -291,12 +296,14 @@ export interface SubscriptionsView {
   /** Every subscription still going, a month. */
   monthlyMinor: number;
   yearMinor: number;
+  /** All of them together: the year ahead, each month (see mainOverview). */
+  overview: MainOverview;
 }
 
 /**
- * Subscriptions as a list (like the Bills page): each one's price a month and
- * its next charge, the cancelled ones after; and together, what they cost a
- * month and which take the most.
+ * Subscriptions, built like Health: each one's price a month, its last
+ * twelve months and its next charge, the cancelled ones after; and
+ * together, what they cost a month, which take the most, and the year ahead.
  */
 export function subscriptionsView(
   hh: Household,
@@ -326,6 +333,8 @@ export function subscriptionsView(
       latest,
       bills: c.bills.length,
       afterCancel: c.afterCancel,
+      yearMinor: c.yearMinor,
+      overview: c.overview,
     };
   };
   const going = v.cards.map(line).sort((a, b) => (b.monthlyMinor ?? 0) - (a.monthlyMinor ?? 0));
@@ -334,5 +343,6 @@ export function subscriptionsView(
     cancelled: v.stopped.map(line),
     monthlyMinor: going.reduce((sum, l) => sum + (l.monthlyMinor ?? 0), 0),
     yearMinor: v.yearMinor,
+    overview: v.overview,
   };
 }

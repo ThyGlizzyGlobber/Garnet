@@ -3,11 +3,10 @@ import { rowCtx, statusLabel } from '@/components/app/bill-rows';
 import { SummaryTile } from '@/components/app/summary-tile';
 import { StackBar } from '@/components/charts/stack-bar';
 import { Card, LinkButton } from '@/components/ui';
-import { EmptyCard, PageTitle, SectionHead } from '@/components/ui/blocks';
+import { EmptyCard, Notice, PageTitle, SectionHead } from '@/components/ui/blocks';
+import { Chip, StatusChip } from '@/components/ui/chip';
 import { Swatch } from '@/components/ui/colour';
 import { BackLink } from '@/components/ui/controls';
-import { BillRow, Rows, type BillRowModel } from '@/components/ui/rows';
-import { billDue } from '@/lib/bill-status';
 import type { PageContext } from '@/lib/context';
 import type {
   ServiceCard,
@@ -140,10 +139,12 @@ export async function ServiceTilesPage({
 }
 
 /**
- * Subscriptions, as plain as the Bills page: a row per subscription (its
- * price a month and its next charge; the row opens its own page), the
- * cancelled ones after; beside them, all of them together a month and
- * which take the most. Numbers from subscriptionsView().
+ * Subscriptions, built like Health and Vehicles: anything charging after it
+ * was cancelled first, then a tile per subscription (its price a month, its
+ * last twelve months and its next charge; the tile opens its own page), the
+ * cancelled ones after, then all of them together: what they cost a month
+ * and which take the most, what's coming up, the year ahead and each month.
+ * Numbers from subscriptionsView().
  */
 export async function SubscriptionsPage({
   ctx,
@@ -160,56 +161,63 @@ export async function SubscriptionsPage({
   addLabel: string;
   empty: { icon: string; title: string; body: string };
 }) {
-  const { hh, money } = ctx;
+  const { hh, money, me } = ctx;
   const t = await getTranslations('main.subs');
   const tm = await getTranslations('main');
   const ts = await getTranslations('services');
   const rc = rowCtx(ctx, await getTranslations('ui'));
   const whole = (minor: number) => money(minor, hh.currency, { whole: true });
+  const name = (_: string, label: string) => label;
   const count = view.going.length + view.cancelled.length;
 
-  const row = (l: SubscriptionLine): BillRowModel => {
+  const tile = (l: SubscriptionLine) => {
     const svc = l.service;
     const cancelled = !!svc.cancelledAt;
-    return {
-      href: `/services/${svc.id}`,
-      title: svc.name,
-      provider: svc.provider !== svc.name ? svc.provider : undefined,
-      sub: cancelled
-        ? t('cancelledOn', { date: rc.dateYear(svc.cancelledAt!.slice(0, 10)) })
-        : [
-            ts(`form.cadences.${svc.cadence}`),
-            l.next && !l.next.status ? t('nextOn', { date: rc.date(l.next.dueDate) }) : null,
-          ]
-            .filter(Boolean)
-            .join(' · '),
-      amount: l.monthlyMinor === null ? '—' : money(l.monthlyMinor),
-      share: l.monthlyMinor === null ? undefined : t('aMonth'),
-      // A charge still to pay, else how the latest one stands.
-      status: l.next?.status
-        ? { label: statusLabel(rc, l.next.status), tone: l.next.status.tone }
-        : l.latest
-          ? (() => {
-              const st = billDue(l.latest, ctx.today).status;
-              return { label: statusLabel(rc, st), tone: st.tone };
-            })()
-          : { label: t('noCharges'), tone: 'neutral' },
-      tags: [
-        ...(cancelled
-          ? [
-              l.afterCancel
-                ? { label: t('stillCharging'), tone: 'bad' as const, icon: 'alert' }
-                : { label: t('cancelled'), tone: 'neutral' as const },
-            ]
-          : []),
-        ...(svc.ownerMemberId ? [{ label: tm('yours'), tone: 'info' as const, icon: 'user' }] : []),
-      ],
-      disc: { icon: svc.type.icon, colour: l.colour },
-      colour: l.colour,
-    };
+    return (
+      <SummaryTile
+        key={svc.id}
+        href={`/services/${svc.id}`}
+        icon={svc.type.icon}
+        colour={l.colour}
+        title={svc.name}
+        meta={[
+          svc.provider !== svc.name ? svc.provider : null,
+          cancelled
+            ? t('cancelledOn', { date: rc.dateYear(svc.cancelledAt!.slice(0, 10)) })
+            : ts(`form.cadences.${svc.cadence}`),
+          svc.ownerMemberId === me.id ? tm('yours') : null,
+        ]
+          .filter(Boolean)
+          .join(' · ')}
+        figure={l.monthlyMinor === null ? '—' : money(l.monthlyMinor)}
+        figureSub={
+          l.monthlyMinor === null ? t('noCharges') : t('tileSub', { amount: whole(l.yearMinor) })
+        }
+        next={
+          cancelled ? (
+            l.afterCancel ? (
+              <Chip tone="bad" icon="alert">
+                {t('stillCharging')}
+              </Chip>
+            ) : (
+              <span className="muted small">{t('noMore')}</span>
+            )
+          ) : (
+            <NextLine ctx={ctx} next={l.overview.next} name={null} />
+          )
+        }
+        muted={cancelled && !l.afterCancel}
+      />
+    );
   };
 
+  // The next charge of each subscription still going, soonest first.
+  const coming = view.going
+    .filter((l) => l.next)
+    .sort((a, b) => a.next!.dueDate.localeCompare(b.next!.dueDate));
   const priced = view.going.filter((l) => l.monthlyMinor);
+  const charging = view.cancelled.filter((l) => l.afterCancel);
+
   return (
     <div className="scr d3-main-svc">
       <BackLink href="/services">{tm('services')}</BackLink>
@@ -234,31 +242,41 @@ export async function SubscriptionsPage({
           </LinkButton>
         </EmptyCard>
       ) : (
-        <div className="d3-cols">
-          <div className="d3-main">
-            <Card className="p-2">
-              <Rows>
-                {view.going.map((l) => (
-                  <BillRow key={l.service.id} bill={row(l)} />
-                ))}
-              </Rows>
-            </Card>
-            {view.cancelled.length > 0 && (
-              <>
-                <SectionHead title={t('cancelledHead')} className="mt-2" />
-                <Card className="p-2 subs-cancelled">
-                  <Rows>
-                    {view.cancelled.map((l) => (
-                      <BillRow key={l.service.id} bill={row(l)} />
-                    ))}
-                  </Rows>
-                </Card>
-              </>
-            )}
-          </div>
-          <aside className="d3-aside">
+        <>
+          {/* A cancelled one that still charges needs someone to act. */}
+          {charging.map((l) => (
+            <Notice
+              key={l.service.id}
+              tone="bad"
+              icon="alert"
+              href={`/services/${l.service.id}`}
+              title={t('chargingTitle', { name: l.service.name })}
+              body={t('chargingBody', {
+                count: l.afterCancel,
+                date: rc.dateYear(l.service.cancelledAt!.slice(0, 10)),
+              })}
+            />
+          ))}
+
+          {/* Each subscription first, each opening its own page. */}
+          <SectionHead title={t('goingHead')} />
+          {view.going.length ? (
+            <div className="vx-grid">{view.going.map(tile)}</div>
+          ) : (
+            <p className="muted small">{t('noneGoing')}</p>
+          )}
+          {view.cancelled.length > 0 && (
+            <>
+              <SectionHead title={t('cancelledHead')} className="mt-2" />
+              <div className="vx-grid">{view.cancelled.map(tile)}</div>
+            </>
+          )}
+
+          {/* Then all of them together. */}
+          <SectionHead title={t('together')} className="mt-2" />
+          <div className="vx-top">
             <Card>
-              <SectionHead title={t('together')} />
+              <SectionHead title={t('perMonth')} />
               <div className="subs-total">
                 <span className="fig hero-fig">{money(view.monthlyMinor)}</span>
                 <span className="muted">
@@ -295,8 +313,48 @@ export async function SubscriptionsPage({
                 {t('yearSpent', { amount: whole(view.yearMinor) })}
               </p>
             </Card>
-          </aside>
-        </div>
+            <Card>
+              <SectionHead
+                title={t('comingUp')}
+                right={<span className="muted">{t('comingHint')}</span>}
+              />
+              {coming.length ? (
+                <ul className="subs-next">
+                  {coming.map((l) => (
+                    <li key={l.service.id}>
+                      <Swatch colour={l.colour} />
+                      <span>
+                        <b>{l.service.name}</b>
+                        <span className="muted small">{rc.dateYear(l.next!.dueDate)}</span>
+                      </span>
+                      {l.next!.status ? (
+                        <StatusChip
+                          status={{
+                            label: statusLabel(rc, l.next!.status),
+                            tone: l.next!.status.tone,
+                          }}
+                        />
+                      ) : (
+                        <span />
+                      )}
+                      <b>
+                        {l.next!.amountMinor === null
+                          ? '—'
+                          : l.next!.status
+                            ? money(l.next!.amountMinor)
+                            : `≈ ${money(l.next!.amountMinor)}`}
+                      </b>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="muted small">{t('nothingNext')}</p>
+              )}
+            </Card>
+          </div>
+          <YearAheadCard ctx={ctx} overview={view.overview} seriesName={name} />
+          <MonthsCard ctx={ctx} overview={view.overview} seriesName={name} />
+        </>
       )}
     </div>
   );

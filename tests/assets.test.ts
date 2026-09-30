@@ -546,6 +546,13 @@ describe('the pages', () => {
       ['Cloud', 1000],
     ]);
     expect(subs.monthlyMinor).toBe(3299);
+    // The year ahead repeats each expected charge by its cadence: Netflix
+    // (monthly) through the year, the yearly plan once.
+    const marks = (label: string) =>
+      subs.overview.ahead.rows.find((r) => r.label === label)?.items.filter((i) => i.expected)
+        .length ?? 0;
+    expect(marks('Netflix')).toBeGreaterThanOrEqual(11);
+    expect(marks('Cloud')).toBe(1);
   });
 
   it('bills can be found by their vehicle, and filtered to Vehicles', () => {
