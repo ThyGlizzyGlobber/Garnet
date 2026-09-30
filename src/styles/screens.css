@@ -2296,3 +2296,14 @@ input.inp-plain[type='color'] {
 .mcard > p {
   margin: 0;
 }
+
+/* a phone: a file's buttons go under its name rather than squeezing it */
+@media (max-width: 639px) {
+  .file-row:not(.manual) {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .file-row:not(.manual) > :last-child:not(.fr-main) {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+}
