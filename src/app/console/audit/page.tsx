@@ -18,13 +18,9 @@ export default async function ConsoleAuditPage({
   const lines = auditLines(undefined, { limit: PAGE + 1, offset: (page - 1) * PAGE });
   const more = lines.length > PAGE;
   const shown = lines.slice(0, PAGE);
-  const actionWord = (a: string) => {
-    try {
-      return t(`actions.${a}`);
-    } catch {
-      return a;
-    }
-  };
+  // Action keys read "request.approved"; the message key is "request_approved" (dots nest in next-intl).
+  const actionWord = (a: string) =>
+    t.has(`actions.${a.replace(/\./g, '_')}`) ? t(`actions.${a.replace(/\./g, '_')}`) : a;
   return (
     <Card>
       <p className="muted set-lede">{t('lede')}</p>
