@@ -1,43 +1,34 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { cx } from '@/components/ui/cx';
-import { Sheet } from '@/components/ui/sheet';
 import { Icon } from './icons';
 
-/** One household in the switcher: words and figures already formatted. */
+/** One household in the switcher. */
 export interface SwitcherRow {
   memberId: string;
   name: string;
-  primary: boolean;
   current: boolean;
-  /** The role's name: "Admin", "Tenant"… */
-  role: string;
   /** The household type's icon. */
   icon: string;
-  /** What you owe there ("$215"), or null when nothing. */
-  figure: string | null;
-  /** Something waiting or overdue there. */
-  attention: boolean;
 }
 
 export interface SwitcherLabels {
+  /** "Your households", the list's name for screen readers. */
   title: string;
-  hint: string;
-  primary: string;
-  all: string;
-  start: string;
-  join: string;
   open: string;
+  /** The Account Dashboard. */
+  dashboard: string;
 }
 
 /**
- * The household name top-left, as a button that opens the switcher
- * (SCOPE-accounts.md §3b): every household this person belongs to, the
- * primary first and the current one ticked; then All households, Start a
- * household and Join with a code. Picking one posts `action` with its member
- * id. The same piece draws the nav column's brand and the phone top bar's.
+ * The household name top-left, as a button that drops down a plain list of
+ * every household this person belongs to (the current one ticked), and under
+ * them the Dashboard (owner, 2026-10-02: simple, no starting or joining from
+ * here; those live on the Dashboard). Picking a household posts `action` with
+ * its member id. The same piece draws the nav column's brand and the phone
+ * top bar's.
  */
 export function HouseholdSwitcher({
   place,
@@ -57,15 +48,32 @@ export function HouseholdSwitcher({
   action: (fd: FormData) => Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
   const column = place === 'column';
+  useEffect(() => {
+    if (!open) return;
+    const onClick = (e: MouseEvent) => {
+      if (!box.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('click', onClick);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('click', onClick);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
   return (
-    <>
+    <div ref={box} className={cx('sw', column ? 'sw-column' : 'sw-topbar')}>
       <button
         type="button"
         className={cx(column ? 'nc-brand' : 'brand', 'sw-btn')}
         aria-label={labels.open}
-        aria-haspopup="dialog"
-        onClick={() => setOpen(true)}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        onClick={() => setOpen((o) => !o)}
       >
         <span className="mark">
           <Icon name={icon} width={17} height={17} />
@@ -78,60 +86,30 @@ export function HouseholdSwitcher({
           <span>{sub}</span>
         </span>
       </button>
-      <Sheet
-        open={open}
-        onClose={() => setOpen(false)}
-        eyebrow={labels.hint}
-        title={labels.title}
-        className="sw-sheet"
-      >
-        <div className="sw-list">
+      {open && (
+        <div className="sw-menu" role="menu" aria-label={labels.title}>
           {rows.map((r) => (
             <form key={r.memberId} action={action}>
               <input type="hidden" name="memberId" value={r.memberId} />
               <button
                 type="submit"
-                className={cx('sw-row', r.current && 'on')}
+                role="menuitem"
+                className={cx('sw-item', r.current && 'on')}
                 aria-current={r.current ? 'true' : undefined}
               >
-                <span className="sw-ic">
-                  <Icon name={r.icon} width={16} height={16} />
-                </span>
-                <span className="sw-t">
-                  <b>
-                    {r.name}
-                    {r.primary && (
-                      <i className="sw-prim" title={labels.primary}>
-                        <Icon name="home" width={11} height={11} />
-                      </i>
-                    )}
-                  </b>
-                  <span className="muted small">{r.role}</span>
-                </span>
-                <span className="sw-fig">
-                  {r.figure && <b>{r.figure}</b>}
-                  {r.attention && <i className="sw-dot" aria-hidden="true" />}
-                  {r.current && <Icon name="check" width={16} height={16} />}
-                </span>
+                <Icon name={r.icon} width={17} height={17} />
+                <span>{r.name}</span>
+                {r.current && <Icon name="check" width={16} height={16} className="sw-tick" />}
               </button>
             </form>
           ))}
-        </div>
-        <div className="sw-links">
-          <Link href="/account" className="sw-link" onClick={() => setOpen(false)}>
+          <div className="sw-sep" role="separator" />
+          <Link href="/account" role="menuitem" className="sw-item" onClick={() => setOpen(false)}>
             <Icon name="grid" width={17} height={17} />
-            <span>{labels.all}</span>
-          </Link>
-          <Link href="/setup" className="sw-link" onClick={() => setOpen(false)}>
-            <Icon name="plus" width={17} height={17} />
-            <span>{labels.start}</span>
-          </Link>
-          <Link href="/account#join" className="sw-link" onClick={() => setOpen(false)}>
-            <Icon name="link" width={17} height={17} />
-            <span>{labels.join}</span>
+            <span>{labels.dashboard}</span>
           </Link>
         </div>
-      </Sheet>
-    </>
+      )}
+    </div>
   );
 }

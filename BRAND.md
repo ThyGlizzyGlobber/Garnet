@@ -320,16 +320,28 @@ The studio's `.ring` is `.gauge` here (Tailwind owns `ring`):
 
 ## 9. Layout and navigation
 
-- **Desktop (≥ 1200 px): the nav column.** A floating strong-glass column,
-  250 px wide, 16 px from the screen edges, radius 30: the household at the
-  top, then Home · Services · Bills · Money · Inbox (42 px items, radius 14),
-  then the services list with this month's amount beside each (it scrolls
-  after about 8, with "All services"), and you at the bottom → Settings.
-- **iPad (640–1199 px): the rail.** (An iPad in landscape, 1180 px, keeps the rail.) The same column at 92 px, icons only.
+- **Desktop (≥ 1200 px): the nav column.** A strong-glass panel down the
+  whole left edge, 292 px wide, square, with a hairline on its right (owner,
+  2026-10-02: full height, not a floating card, and wider): the household at
+  the top, then Home · Services · Bills · Money · Inbox (42 px items, radius
+  14), then the services list with this month's amount beside each, and you
+  at the foot.
+- **The household switcher**: the household's name drops down a plain list of
+  every household you belong to (the current one ticked) and, under a line,
+  **Dashboard** (the Account Dashboard). Starting or joining a household lives
+  on the Dashboard, not here.
+- **The account menu**: clicking yourself at the foot of the column (or your
+  avatar in a phone's top bar) opens a menu, not on hover (owner): your name
+  and email, then Account dashboard · Household settings · Notifications ·
+  Appearance, then Wall display · Backend management (developers), then Sign
+  out in Pyrope red. Menus are opaque (`--tip-bg`), never glass.
+- **iPad (640–1199 px): the rail.** (An iPad in landscape, 1180 px, keeps the
+  rail.) The same full-height column at 92 px, icons only; its menus open
+  beside it.
 - **iPhone (< 640 px): the bottom bar.** Five items, 58 px, strong glass,
   above the safe area.
-- Money is hidden in households that don't split bills. Members, the wall
-  display and Sign out live inside Settings. Old links to `/ledger` and
+- Money is hidden in households that don't split bills. Members live inside
+  Settings; the wall display and Sign out are in the account menu. Old links to `/ledger` and
   `/review` redirect to `/money` and `/inbox`.
 - The frame lives in `src/components/app/shell.tsx` with its CSS in
   `src/styles/shell.css`; its numbers come from `shellView()` (`src/lib/shell.ts`).

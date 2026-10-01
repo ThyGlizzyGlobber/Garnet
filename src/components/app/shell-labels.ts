@@ -8,6 +8,7 @@ export async function shellLabels(householdName: string): Promise<ShellLabels> {
   const tm = await getTranslations('main');
   const ts = await getTranslations('switcher');
   const tr = await getTranslations('roles');
+  const tam = await getTranslations('accountMenu');
   return {
     nav: {
       home: t('home'),
@@ -53,12 +54,18 @@ export async function shellLabels(householdName: string): Promise<ShellLabels> {
     yourHouseholds: t('yourHouseholds'),
     switcher: {
       title: ts('title'),
-      hint: ts('hint'),
-      primary: ts('primary'),
-      all: ts('all'),
-      start: ts('start'),
-      join: ts('join'),
       open: ts('open'),
+      dashboard: ts('dashboard'),
+    },
+    accountMenu: {
+      open: tam('open'),
+      dashboard: tam('dashboard'),
+      settings: tam('settings'),
+      notifications: tam('notifications'),
+      appearance: tam('appearance'),
+      wall: tam('wall'),
+      backend: tam('backend'),
+      signOut: tam('signOut'),
     },
   };
 }

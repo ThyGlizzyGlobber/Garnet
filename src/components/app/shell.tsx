@@ -4,6 +4,8 @@ import { Avatar } from '@/components/ui/colour';
 import { IconButton } from '@/components/ui/controls';
 import { colourCss } from '@/lib/palette';
 import type { ShellEntry, ShellView } from '@/lib/shell';
+import { logout } from '@/app/login/actions';
+import { AccountMenu, type AccountMenuItem } from './account-menu';
 import { AddBillButton } from './add-bill';
 import { Icon } from './icons';
 import { NavGroup } from './nav-group';
@@ -14,11 +16,12 @@ import { HouseholdSwitcher, type SwitcherLabels, type SwitcherRow } from './hous
 import { roleKey, typeIcon } from '@/lib/household-types';
 
 /**
- * The app's frame (BRAND.md §9): the scene behind, a floating nav column
- * beside the page (a rail of icons on an iPad, a bottom bar on a phone),
+ * The app's frame (BRAND.md §9): the scene behind, a nav column down the
+ * whole left edge (a rail of icons on an iPad, a bottom bar on a phone),
  * and a simple top bar: the page's way back on the left; search and Add bill
- * on the right (the Inbox is in the nav). Layout in
- * src/styles/shell.css; the numbers come from shellView().
+ * on the right (the Inbox is in the nav). The household at the top of the
+ * column drops down the switcher; the person at its foot opens the account
+ * menu. Layout in src/styles/shell.css; the numbers come from shellView().
  */
 export interface ShellLabels {
   nav: { home: string; services: string; bills: string; money: string; inbox: string };
@@ -55,6 +58,16 @@ export interface ShellLabels {
   /** "Your households", under the product's name in the account variant. */
   yourHouseholds: string;
   switcher: SwitcherLabels;
+  accountMenu: {
+    open: string;
+    dashboard: string;
+    settings: string;
+    notifications: string;
+    appearance: string;
+    wall: string;
+    backend: string;
+    signOut: string;
+  };
 }
 
 export function AppShell({
@@ -94,14 +107,9 @@ export function AppShell({
   const rows: SwitcherRow[] = view.households.map((h) => ({
     memberId: h.memberId,
     name: h.name,
-    primary: h.primary,
     current: h.current,
-    role: labels.roles[roleKey(h.role, h.type)] ?? (h.admin ? labels.admin : labels.member),
     icon: typeIcon(h.type),
-    figure: h.oweMinor > 0 ? money(h.oweMinor, h.currency, h.locale) : null,
-    attention: h.waiting > 0 || h.overdue > 0,
   }));
-  const meHref = account ? '/account#account' : '/settings';
   const brandTitle = account ? labels.product : view.household.name;
   const brandIcon = account ? 'grid' : typeIcon(view.household.type);
   const myRole =
@@ -111,6 +119,28 @@ export function AppShell({
     view.household.members.length <= 1
       ? labels.justYou
       : new Intl.ListFormat(locale, { type: 'conjunction' }).format(view.household.members);
+  const am = labels.accountMenu;
+  const menuGroups: AccountMenuItem[][] = [
+    [
+      { href: '/account', label: am.dashboard, icon: 'grid' },
+      ...(account
+        ? []
+        : [
+            { href: '/settings', label: am.settings, icon: 'sliders' },
+            { href: '/settings#emails', label: am.notifications, icon: 'bell' },
+          ]),
+      { href: '/account#account', label: am.appearance, icon: 'sun' },
+    ],
+    [
+      ...(account ? [] : [{ href: '/wall', label: am.wall, icon: 'wall' }]),
+      ...(view.developer ? [{ href: '/console', label: am.backend, icon: 'shield' }] : []),
+    ],
+  ];
+  const menuMe = {
+    name: view.me.name,
+    colour: view.me.colour,
+    sub: view.me.email ?? (account ? labels.account : `${myRole} · ${view.household.name}`),
+  };
   const line = (s: { name: string; minor: number }) => (
     <>
       <i aria-hidden="true" />
@@ -211,14 +241,21 @@ export function AppShell({
             </>
           )}
         </div>
-        <Link href={meHref} className="nc-me" aria-label={`${view.me.name} · ${labels.settings}`}>
+        <AccountMenu
+          place="column"
+          me={menuMe}
+          groups={menuGroups}
+          signOutLabel={am.signOut}
+          signOut={logout}
+          openLabel={`${view.me.name} · ${am.open}`}
+        >
           <Avatar name={view.me.name} colour={view.me.colour} />
           <span className="nc-bt">
             <b>{view.me.name}</b>
-            <span>{account ? labels.account : `${myRole} · ${labels.settings}`}</span>
+            <span>{account ? labels.account : myRole}</span>
           </span>
-          <Icon name="sliders" width={18} height={18} />
-        </Link>
+          <Icon name="more" width={18} height={18} />
+        </AccountMenu>
       </nav>
 
       <header className="topbar">
@@ -238,9 +275,16 @@ export function AppShell({
         <div className="tb-r">
           {!account && <IconButton icon="search" label={labels.search} href="/bills?find=1" />}
           {!account && <AddBillButton address={view.address} className="tb-add" />}
-          <Link href={meHref} className="me tb-me" aria-label={labels.settings}>
+          <AccountMenu
+            place="topbar"
+            me={menuMe}
+            groups={menuGroups}
+            signOutLabel={am.signOut}
+            signOut={logout}
+            openLabel={`${view.me.name} · ${am.open}`}
+          >
             <Avatar name={view.me.name} colour={view.me.colour} />
-          </Link>
+          </AccountMenu>
         </div>
       </header>
 

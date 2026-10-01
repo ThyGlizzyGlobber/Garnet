@@ -17,7 +17,8 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   const me = state.member;
   const hh = getHousehold(me.householdId);
   if (!hh) redirect('/login');
-  const view = shellView(hh, me, todayIn(hh.timezone));
+  const shell = shellView(hh, me, todayIn(hh.timezone));
+  const view = { ...shell, me: { ...shell.me, email: state.account?.email ?? null } };
   return (
     <AppShell
       view={view}

@@ -2824,7 +2824,7 @@ input.inp-plain[type='color'] {
   white-space: nowrap;
 }
 
-/* ---------- the Account Dashboard and the household switcher ---------- */
+/* ---------- the Account Dashboard and the household switcher's button ---------- */
 .sw-btn {
   cursor: pointer;
 }
@@ -2834,47 +2834,6 @@ input.inp-plain[type='color'] {
   margin-left: 4px;
   color: var(--p-fg2);
 }
-.sw-list {
-  display: grid;
-  gap: 6px;
-}
-.sw-list form {
-  display: contents;
-}
-.sw-row {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: 12px;
-  align-items: center;
-  width: 100%;
-  padding: 10px 12px;
-  border: 0;
-  border-radius: var(--r-inner);
-  background: var(--ctl-bg, var(--inset));
-  box-shadow: inset 0 0 0 1px var(--ctl-rim, var(--line));
-  text-align: left;
-  color: inherit;
-  cursor: pointer;
-}
-.sw-row:hover {
-  box-shadow: inset 0 0 0 1.5px var(--p-accent);
-}
-.sw-row.on {
-  box-shadow: inset 0 0 0 1.5px var(--p-accent);
-}
-.sw-t {
-  display: grid;
-  min-width: 0;
-}
-.sw-t b {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.sw-prim,
 .hh-prim {
   display: inline-grid;
   place-items: center;
@@ -2883,46 +2842,6 @@ input.inp-plain[type='color'] {
   border-radius: 6px;
   color: var(--p-accent);
   background: color-mix(in srgb, var(--p-accent) 14%, transparent);
-}
-.sw-fig {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-family: var(--f-num);
-  color: var(--p-fg2);
-}
-.sw-fig .ic {
-  color: var(--p-accent);
-}
-.sw-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--warn);
-  flex: none;
-}
-.sw-links {
-  display: grid;
-  gap: 2px;
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid var(--line);
-}
-.sw-link {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 9px 10px;
-  border-radius: var(--r-inner);
-  color: inherit;
-  text-decoration: none;
-  font-weight: 600;
-}
-.sw-link:hover {
-  background: var(--inset);
-}
-.sw-link .ic {
-  color: var(--p-accent);
 }
 
 .account .acct-section {
@@ -3099,7 +3018,6 @@ input.inp-plain[type='color'] {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 .rcard-ic,
-.sw-ic,
 .hh-ic {
   display: inline-grid;
   place-items: center;

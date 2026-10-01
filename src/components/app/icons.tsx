@@ -54,6 +54,7 @@ const ICONS: Record<string, string> = {
   'arrow-down': 'M12 5v13.5 M6.5 13l5.5 5.5 5.5-5.5',
   'arrow-right': 'M5 12h13.5 M13 6.5l5.5 5.5-5.5 5.5',
   'arrow-left': 'M19 12H5.5 M11 6.5 5.5 12l5.5 5.5',
+  logout: 'M10 4.5H6.5a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2H10 M15 8l4 4-4 4 M19 12H9.5',
   alert: 'M12 3.8 2.8 19.5h18.4z M12 10v4.2 M12 16.8v.2',
   info: '<circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.2M12 7.8v.2"/>',
   user: '<circle cx="12" cy="8.2" r="3.8"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/>',

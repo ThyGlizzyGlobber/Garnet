@@ -1,18 +1,18 @@
 /*
-  The app's frame (BRAND.md §9), from the studio's Almanac 2 layout: a
-  floating nav column on wide screens, a rail of icons on an iPad, a bottom
-  bar on a phone; a simple top bar; the page beside the column. The studio
-  scrolls a frame; here the document scrolls, so the column and the bar are
-  fixed to the viewport. Breakpoints: the column from 1200 px (the studio's
-  iPad landscape at 1180 shows the rail), the rail from 640 px.
+  The app's frame (BRAND.md §9): a nav column down the whole left edge on
+  wide screens (owner, 2026-10-02: full height, not a floating card, and
+  wider), a rail of icons on an iPad (also full height), a floating bottom
+  bar on a phone; a simple top bar; the page beside the column. The document
+  scrolls, so the column and the bar are fixed to the viewport. Breakpoints:
+  the column from 1200 px, the rail from 640 px.
 */
 .app {
   --gut: 28px;
   --safe-t: env(safe-area-inset-top, 0px);
   --safe-b: env(safe-area-inset-bottom, 0px);
   --nav-gap: 16px;
-  --nav-wv: 250px;
-  --in-l: calc(var(--nav-wv) + var(--nav-gap));
+  --nav-wv: 292px;
+  --in-l: var(--nav-wv);
   --in-b: 0px;
   min-height: 100dvh;
   display: flex;
@@ -207,15 +207,20 @@
 /* ---------- the column and the rail ---------- */
 .nav.column {
   position: fixed;
-  left: var(--nav-gap);
-  top: calc(var(--safe-t) + var(--nav-gap));
-  bottom: calc(var(--safe-b) + var(--nav-gap));
+  left: 0;
+  top: 0;
+  bottom: 0;
   width: var(--nav-wv);
-  padding: 14px 12px 12px;
-  border-radius: 30px;
+  padding: calc(var(--safe-t) + 16px) 14px calc(var(--safe-b) + 12px);
+  border-radius: 0;
+  box-shadow: inset -1px 0 0 var(--line);
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+/* A full-height panel has no floating card's lit rim. */
+.nav.column::before {
+  display: none;
 }
 .nav.column .nav-items {
   gap: 2px;
@@ -347,18 +352,27 @@
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 10px;
-  padding: 12px 6px 2px;
+  width: 100%;
+  padding: 10px 8px;
   border: 0;
-  border-top: 1px solid var(--line);
+  border-radius: 14px;
   background: none;
+  font: inherit;
   text-align: left;
   color: var(--p-fg2);
   cursor: pointer;
-  text-decoration: none;
+}
+.nc-me:hover,
+.nc-me[aria-expanded='true'] {
+  background: var(--inset);
+  color: var(--p-fg);
+}
+.nc-me .nc-bt b {
+  color: var(--p-fg);
 }
 @media (max-width: 1199px) {
   .nav.column {
-    padding: 12px 8px;
+    padding: calc(var(--safe-t) + 12px) 8px calc(var(--safe-b) + 12px);
     align-items: stretch;
   }
   .nav.column .nc-bt,
@@ -386,8 +400,7 @@
   .nav.column .nc-me {
     grid-template-columns: 1fr;
     justify-items: center;
-    margin-top: auto;
-    padding: 12px 0 2px;
+    padding: 8px 0;
   }
 }
 @media (max-width: 639px) {
@@ -514,5 +527,157 @@
 @media (prefers-reduced-motion: reduce) {
   .nav-sec-chev {
     transition: none;
+  }
+}
+
+/* ---------- the household switcher's dropdown ---------- */
+.sw {
+  position: relative;
+  min-width: 0;
+}
+.sw-menu,
+.am-menu {
+  position: absolute;
+  z-index: 60;
+  display: grid;
+  padding: 6px;
+  border-radius: 18px;
+  background: var(--tip-bg);
+  color: var(--p-fg);
+  box-shadow:
+    inset 0 0 0 1px var(--line),
+    0 18px 40px -14px rgba(0, 0, 0, 0.35),
+    0 2px 8px -4px rgba(0, 0, 0, 0.15);
+}
+.sw-menu {
+  top: calc(100% + 6px);
+  left: 0;
+  width: max(100%, 260px);
+  gap: 2px;
+}
+.sw-menu form {
+  display: contents;
+}
+.sw-item,
+.am-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 11px;
+  background: none;
+  font: inherit;
+  font-size: 14.5px;
+  font-weight: 500;
+  text-align: left;
+  color: var(--p-fg);
+  text-decoration: none;
+  cursor: pointer;
+}
+.sw-item span,
+.am-item span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sw-item > .ic,
+.am-item > .ic {
+  color: var(--p-fg2);
+}
+.sw-item:hover,
+.sw-item:focus-visible,
+.am-item:hover,
+.am-item:focus-visible {
+  background: var(--inset);
+  outline: none;
+}
+.sw-item.on {
+  font-weight: 650;
+}
+.sw-item .sw-tick {
+  color: var(--p-accent);
+}
+.sw-sep {
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--line);
+}
+.sw-topbar .sw-menu {
+  width: 260px;
+}
+
+/* ---------- the account menu (the person at the column's foot) ---------- */
+.am {
+  position: relative;
+}
+.am-column {
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+.am-menu {
+  width: 100%;
+  min-width: 270px;
+}
+.am-column .am-menu {
+  left: 0;
+  bottom: calc(100% + 8px);
+}
+.am-topbar .am-menu {
+  right: 0;
+  top: calc(100% + 8px);
+  width: 280px;
+}
+.am-who {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 10px 10px 14px;
+}
+.am-who > span {
+  display: grid;
+  min-width: 0;
+  line-height: 1.25;
+}
+.am-who b {
+  font-size: 15.5px;
+  font-weight: 600;
+}
+.am-who span span {
+  font-size: 13px;
+  color: var(--p-fg2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.am-group {
+  display: grid;
+  gap: 1px;
+  padding: 6px 0;
+  border-top: 1px solid var(--line);
+}
+.am-group:last-child {
+  padding-bottom: 0;
+}
+.am-out,
+.am-out > .ic {
+  color: var(--bad);
+}
+@media (max-width: 1199px) {
+  /* The rail is narrow: the menus open beside it. */
+  .nav.column .sw-menu {
+    left: calc(100% + 12px);
+    top: 0;
+    width: 260px;
+  }
+  .am-column .am-menu {
+    left: calc(100% + 12px);
+    bottom: 0;
+    width: 280px;
   }
 }

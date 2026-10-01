@@ -60,7 +60,14 @@ export interface ShellView {
   inboxCount: number;
   /** The household's bills address, for the Add bill sheet. */
   address: string | null;
-  me: { name: string; colour: string; admin: boolean; role: string };
+  me: {
+    name: string;
+    colour: string;
+    admin: boolean;
+    role: string;
+    /** The account's email, for the account menu (none for demo sign-ins). */
+    email?: string | null;
+  };
   /** A developer of the install sees the Console (SCOPE-console.md). */
   developer: boolean;
 }

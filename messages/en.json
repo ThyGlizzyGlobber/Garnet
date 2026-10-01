@@ -35,7 +35,7 @@
     "accountShort": "Account",
     "yourHouseholds": "Your households",
     "allowance": "Allowance",
-    "console": "Console"
+    "console": "Backend management"
   },
   "setup": {
     "title": "Set up your household.",
@@ -2828,12 +2828,18 @@
   },
   "switcher": {
     "title": "Your households",
-    "hint": "Switch between them, or see them all",
-    "primary": "Your home",
-    "all": "All households",
-    "start": "Start a household",
-    "join": "Join with a code",
-    "open": "Switch household"
+    "open": "Switch household",
+    "dashboard": "Dashboard"
+  },
+  "accountMenu": {
+    "open": "Account menu",
+    "dashboard": "Account dashboard",
+    "settings": "Household settings",
+    "notifications": "Notifications",
+    "appearance": "Appearance",
+    "wall": "Wall display",
+    "backend": "Backend management",
+    "signOut": "Sign out"
   },
   "account": {
     "title": "Hey, {name}.",

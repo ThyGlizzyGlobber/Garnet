@@ -34,7 +34,13 @@ export default async function AccountLayout({ children }: { children: ReactNode 
     mine: [],
     inboxCount: 0,
     address: null,
-    me: { name, colour: me?.colour ?? DEFAULT_COLOUR, admin: false, role: 'member' },
+    me: {
+      name,
+      colour: me?.colour ?? DEFAULT_COLOUR,
+      admin: false,
+      role: 'member',
+      email: account?.email ?? null,
+    },
     developer: isDeveloper(account),
   };
   return (
