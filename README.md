@@ -1,4 +1,4 @@
-# Home Utilities Dashboard — Prototype 1
+# Garnet · by BRJ Labs — Prototype 1
 
 Self-hosted household bills dashboard by BRJ Labs. Households forward their bills
 to their own bills address (or upload them); an AI reader turns each one into a

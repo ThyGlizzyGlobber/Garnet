@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-# Single-container image for the Home Utilities Dashboard.
+# Single-container image for Garnet (BRJ Labs).
 # Debian slim (not Alpine) so better-sqlite3 uses its prebuilt glibc binary.
 
 FROM node:22-bookworm-slim AS deps

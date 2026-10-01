@@ -139,7 +139,7 @@ state). Choices made while designing them, worth a conscious yes:
 7. **Doesn't split:** Money leaves the nav, Settle up becomes Due dates, bills
    have no split card and say "everyone in the house sees it".
 8. **Status** (operator only) keeps technical terms, per D11.
-9. **Name:** sign-in pages say "Home Utilities" until the product is named.
+9. **Name:** sign-in pages say "Home Utilities" until the product is named. (Named Garnet on 2026-10-01; the app now says Garnet.)
 
 **R1 · Foundations (M).**
 

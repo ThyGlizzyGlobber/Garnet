@@ -255,7 +255,7 @@ After ~2 billing cycles with our household:
 - ~~Rent itself: in or out of scope for the dashboard?~~ → **Resolved:** in scope as a first-class fixed recurring service type (Phase 1)
 - Portal-only providers: manual entry acceptable, or build a fetch step later?
 - Can one account belong to several households (e.g. someone who manages a parent's bills)? The data model allows it; the alpha UI assumes one.
-- Product name (the public hostname is a placeholder until then).
+- ~~Product name~~ → **Resolved:** Garnet · by BRJ Labs (owner, 2026-10-01; see BRAND.md §1). Served at `garnet.brjlabs.com`.
 
 ---
 

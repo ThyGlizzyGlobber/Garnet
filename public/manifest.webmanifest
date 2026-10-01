@@ -1,7 +1,7 @@
 {
-  "name": "Home Utilities",
-  "short_name": "Utilities",
-  "description": "Household bills, shares and projections",
+  "name": "Garnet",
+  "short_name": "Garnet",
+  "description": "Household bills, fairly shared",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

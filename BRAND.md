@@ -1,4 +1,4 @@
-# Home Utilities — Brand & Design System
+# Garnet — Brand & Design System
 
 The single reference for how the product looks, sounds and moves. The design is
 **Almanac 2** with the **Frost Glass** material, chosen by the owner in the
@@ -13,10 +13,59 @@ Code reads these values from `src/app/globals.css` (every token),
 
 ## 1. Identity
 
-**Name (working):** Home Utilities · by BRJ Labs. Product names to test with
-households: _Homebill_, _Housekeep_, _Tally_. The mark is a house outline in a
-rounded square; the app icon is `public/icon.svg`. Sign-in pages say "Home
-Utilities" until the product is named.
+**Name:** Garnet · by BRJ Labs (owner, 2026-10-01). Two syllables, a deep red
+stone; the word comes from the Latin for pomegranate, many seeds making one
+fruit, as housemates' shares make one bill. Say "Garnet"; "Garnet House" is the
+two-word form if a trademark needs one. Garnet is a name, not a colour:
+red means overdue in the app, so the brand stays on the presets and garnet is at
+most an accent in the mark. It lives at `garnet.brjlabs.com`; bills addresses
+stay `{alias}@brjlabs.com`. (`garnet.house` and `garnethouse.com.au` looked free
+on 2026-10-01 if it ever needs its own domain.) The app is called Garnet
+everywhere a person sees it: tab, home screen, sign-in, wall, emails. The mark
+is a house outline in a rounded square; the app icon is `public/icon.svg`.
+
+**Brand red:** Pyrope `#A8141F`, the classic blood-red garnet (owner,
+2026-10-02, chosen over a brighter signal red, `#EC2309`, which read as an
+overdue warning). Red and grey make up the brand identity. The new mark is a
+faceted garnet drawn in Pyrope tones, lit from the top left (highlights ×1.4,
+shadows ×0.9 of the Balanced cut, owner, 2026-10-02). **Pyrope ramp (owner, 2026-10-02):** 50 `#FCEDEE` · 100 `#F9D7D8` · 200
+`#F3B4B8` · 300 `#EA868B` · 400 `#DE545D` · 500 `#D3222E` · 600 `#A8141F`
+(Pyrope) · 700 `#810E18` · 800 `#550C13` · 900 `#330A0F`. Light mode: buttons
+and links 600 (white on 600 is 7.5:1), chips 50 with 700 text. Dark mode:
+buttons 500 (white on 500 is 5.2:1), links 300 (6.7:1 on 900 grey), chips 900
+with 200 text; 600 is too dark to read on the dark grey (2.3:1). Pyrope is for the brand and for warnings
+(overdue, payment problems), never for everyday buttons.
+
+**Action colour: Graphite (owner, 2026-10-02)** for Mark paid and every other
+button: 50 `#F5F5F5` · 100 `#EBEBEB` · 200 `#D6D6D6` · 300 `#B8B8B8` · 400
+`#949494` · 500 `#757575` · 600 `#3A3A3A` · 700 `#2E2E2E` · 800 `#242424` · 900
+`#1C1C1C`. Light mode: main buttons 600 with white text, quieter buttons 100 with
+800 text. Dark mode: main buttons 200 with 900 text, quieter buttons 600 with
+100 text. Chosen over teal, sapphire, emerald and gold so that red only ever
+means Garnet or "needs attention". Overdue moves from `--bad` (`#a43b32` /
+`#eca49d`) to Pyrope: 50 chips with 700 text in light mode, 900 with 200 in
+dark.
+
+**Brand grey:** neutral (owner, 2026-10-02, over warm, greige and cool slate):
+50 `#F5F5F5` · 100 `#EBEBEB` · 200 `#D6D6D6` · 300 `#B8B8B8` · 400 `#949494` ·
+500 `#757575` · 600 `#5C5C5C` · 700 `#454545` · 800 `#2E2E2E` · 900 `#1C1C1C`.
+Pure grey, so the red carries all the warmth.
+
+| #   | Facet           | Hex       | #   | Facet            | Hex       |
+| --- | --------------- | --------- | --- | ---------------- | --------- |
+| 1   | Top-left crown  | `#E04440` | 9   | Lower-right star | `#C00A15` |
+| 2   | Left upper      | `#DF3433` | 10  | Bottom-left      | `#DE2526` |
+| 3   | Left star       | `#CB1C22` | 11  | Left lower       | `#DF3433` |
+| 4   | Top-right crown | `#8F111E` | 12  | Lower-left star  | `#BF1921` |
+| 5   | Right upper     | `#7F0F1C` | 13  | Table highlight  | `#E8988E` |
+| 6   | Right star      | `#BF1921` | 14  | Table right      | `#A0131F` |
+| 7   | Bottom-right    | `#660C19` | 15  | Table sparkle    | `#DC0B12` |
+| 8   | Right lower     | `#770E1C` | 16  | Table shadow     | `#8F111E` |
+
+The outline has four corners (top, right, bottom, left) and a point halfway
+along each edge; the table is the inner diamond, split into four from its
+centre. Each edge triangle runs from a corner to the halfway point to the
+table's corner, as in the Affinity file.
 
 **One line:** Bills in, totals out, everyone knows their share.
 

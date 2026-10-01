@@ -1,4 +1,4 @@
-# Deploying Home Utilities Dashboard
+# Deploying Garnet
 
 One container, one port, one data volume. The volume holds everything: the
 SQLite database, config, and every raw bill file under `inbox/`. Nothing else
@@ -128,7 +128,7 @@ To move a household from another machine: stop the app, copy that machine's
 ## 7. Remote access (Cloudflare Tunnel)
 
 Install **Cloudflared** from Apps → Discover with your tunnel token, and in the
-Cloudflare dashboard point the public hostname (e.g. `nameplaceholder.brjlabs.com`) at
+Cloudflare dashboard point the public hostname (this install: `garnet.brjlabs.com`) at
 `http://<nas-ip>:30080`.
 
 Sign-in needs Google or an emailed code, and the login page shows no member
@@ -138,6 +138,39 @@ iPad) they aren't, so both keep working. Sign-in steps are rate-limited per
 network (Cloudflare's `CF-Connecting-IP`), pages refuse to be framed, and
 archived HTML bills are shown sandboxed. A Cloudflare Access policy in front
 of the hostname remains an optional extra gate.
+
+### Changing the public address
+
+This install moved from `home-utilities.brjlabs.com` to `garnet.brjlabs.com` on
+2026-10-01. To change it again, keep the old hostname working until the
+end, in this order:
+
+1. Cloudflare → Zero Trust → Networks → Tunnels → the tunnel → **Public
+   hostnames**: add the new hostname → `http://<nas-ip>:30080`. Leave the old
+   one in place.
+2. TrueNAS → Apps → the app → Edit: `APP_URL` = the new address. If
+   `EMAIL_FROM` is set there, change its display name too (e.g.
+   `Garnet <no-reply@mail.brjlabs.com>`). Save (the app restarts).
+3. Google Cloud → Google Auth Platform → Clients → the web client: add
+   `<new address>/api/auth/google/callback` to the redirect URIs.
+4. Cloudflare → Workers → the bills Worker → Settings → Variables:
+   `APP_INBOUND_URL` = `<new address>/api/inbound/email`, then deploy.
+5. Check: `curl <new address>/api/health`, forward a bill to a household
+   address, and Status → Bills addresses shows it arrived.
+6. Only now send the old hostname to the new one: Cloudflare → Rules →
+   Redirect Rules → a single redirect, hostname equals the old one →
+   `concat("https://<new hostname>", http.request.uri.path)`, 301, query
+   string kept. Do this after step 4: a redirected POST turns into a GET, so
+   a Worker still posting to the old address would fail (it then sends the
+   mail to `FALLBACK_TO`). Keep the old tunnel hostname so the rule has
+   something to answer on.
+7. Remove the old redirect URI from Google once nobody uses the old address.
+
+Sign-ins belong to a hostname, so everyone signs in once more on the new
+address (their PIN is unchanged), and home-screen icons need adding again
+from it. The wall iPad on `http://<nas-ip>:30080` is unaffected. Bills
+addresses (`{alias}@brjlabs.com`) don't change, so households keep
+forwarding as before.
 
 ## 8. Accounts and sign-in
 
@@ -150,11 +183,11 @@ Add these to the app (**Edit → Container Configuration → Environment Variabl
 
 | Variable                                    | Value                                                                                                                                                                        |
 | ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `APP_URL`                                   | the public address, e.g. `https://home.brjlabs.com`                                                                                                                          |
+| `APP_URL`                                   | the public address; this install `https://garnet.brjlabs.com`                                                                                                                |
 | `DEVELOPER_EMAILS`                          | your email (comma-separate several). Developers get Software update, adding service types and the install-wide Status, and can link a household that existed before accounts |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google Cloud → Google Auth Platform → Clients (Web application). Redirect URI: `<APP_URL>/api/auth/google/callback`. Leave empty to hide the Google button                   |
 | `RESEND_API_KEY`                            | Resend API key with sending access to your verified domain                                                                                                                   |
-| `EMAIL_FROM`                                | e.g. `Home Utilities <no-reply@mail.brjlabs.com>`                                                                                                                            |
+| `EMAIL_FROM`                                | e.g. `Garnet <no-reply@mail.brjlabs.com>`                                                                                                                                    |
 | `EMAIL_LOG_ONLY`                            | `true` writes emails to the app log instead of sending (only for trying things out)                                                                                          |
 | `AI_MONTHLY_LIMIT`                          | AI bill reads per household per month (default 60). Beyond it, new documents wait in the review queue until next month                                                       |
 
@@ -202,7 +235,7 @@ Steps:
 2. Cloudflare → `brjlabs.com` → **Email → Email Routing**: enable it (Cloudflare adds the MX/SPF records). For the subdomain style, add the subdomain under Settings.
 3. **Destination addresses**: add and verify your own email (used as `FALLBACK_TO`, and `FORWARD_OTHER_TO` for the apex style).
 4. **Email Workers → Create**: start from any template, replace the code with `deploy/email-worker/worker.js`, **Deploy**.
-5. The Worker's **Settings → Variables and Secrets**: `APP_INBOUND_URL` = `https://home-utilities.brjlabs.com/api/inbound/email`, `INBOUND_EMAIL_SECRET` (type **Secret**) = the value from step 1, `FALLBACK_TO` = your verified email, and for the apex style `FORWARD_OTHER_TO` = your verified email.
+5. The Worker's **Settings → Variables and Secrets**: `APP_INBOUND_URL` = `https://garnet.brjlabs.com/api/inbound/email`, `INBOUND_EMAIL_SECRET` (type **Secret**) = the value from step 1, `FALLBACK_TO` = your verified email, and for the apex style `FORWARD_OTHER_TO` = your verified email.
 6. **Routing rules**: the catch-all (apex style) or the `bills@` custom address (subdomain style) → action **Send to a Worker** → this Worker.
 7. On TrueNAS add `BILLS_ADDRESS_TEMPLATE` and `INBOUND_EMAIL_SECRET` (same value) to the app and save.
 8. Send a test: forward any bill to the address shown in Settings. It appears under Bills (or in the review queue) within a minute.

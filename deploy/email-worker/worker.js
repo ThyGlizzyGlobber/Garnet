@@ -1,5 +1,5 @@
 /**
- * Cloudflare Email Worker for Home Utilities household bills addresses.
+ * Cloudflare Email Worker for Garnet household bills addresses.
  *
  * Email Routing hands every message for the bills addresses to this Worker.
  * It signs the recipient and the raw message together and posts them to the
@@ -41,7 +41,7 @@ const worker = {
     }
     // App unreachable, rate-limited or misconfigured: keep the bill somewhere.
     if (env.FALLBACK_TO) return message.forward(env.FALLBACK_TO);
-    throw new Error(`Home Utilities answered ${res.status}`);
+    throw new Error(`Garnet answered ${res.status}`);
   },
 };
 

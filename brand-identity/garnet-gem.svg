@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Garnet · by BRJ Labs — the gem mark, Pyrope facets (BRAND.md §1). 1000 × 1000, transparent. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1000" viewBox="0 0 1000 1000">
+  <title>Garnet</title>
+  <g id="Garnet">
+    <polygon id="01-top-left-crown" points="500,40 269,271 500,229" fill="#E04440" stroke="#E04440" stroke-width="2" stroke-linejoin="round"/>
+    <polygon id="02-left-upper" points="269,271 40,500 231,500" fill="#DF3433" stroke="#DF3433" stroke-width="2" stroke-linejoin="round"/>
+    <polygon id="03-left-star" points="269,271 231,500 500,229" fill="#CB1C22" stroke="#CB1C22" stroke-width="2" stroke-linejoin="round"/>
+    <polygon id="04-top-right-crown" points="500,40 731,271 500,229" fill="#8F111E" stroke="#8F111E" stroke-width="2" stroke-linejoin="round"/>
+    <polygon id="05-right-upper" points="731,271 960,500 769,500" fill="#7F0F1C" stroke="#7F0F1C" stroke-width="2" stroke-linejoin="round"/>
+    <polygon id="06-right-star" points="731,271 769,500 500,229" fill="#BF1921" stroke="#BF1921" stroke-width="2" stroke-linejoin="round"/>
+    <polygon id="07-bottom-right" points="500,960 731,729 500,769" fill="#660C19" stroke="#660C19" stroke-width="2" stroke-linejoin="round"/>
+    <polygon id="08-right-lower" points="731,729 960,500 769,500" fill="#770E1C" stroke="#770E1C" stroke-width="2" stroke-linejoin="round"/>
+    <polygon id="09-lower-right-star" points="731,729 769,500 500,769" fill="#C00A15" stroke="#C00A15" stroke-width="2" stroke-linejoin="round"/>
+    <polygon id="10-bottom-left" points="500,960 269,729 500,769" fill="#DE2526" stroke="#DE2526" stroke-width="2" stroke-linejoin="round"/>
+    <polygon id="11-left-lower" points="269,729 40,500 231,500" fill="#DF3433" stroke="#DF3433" stroke-width="2" stroke-linejoin="round"/>
+    <polygon id="12-lower-left-star" points="269,729 231,500 500,769" fill="#BF1921" stroke="#BF1921" stroke-width="2" stroke-linejoin="round"/>
+    <polygon id="13-table-highlight" points="231,500 500,229 500,500" fill="#E8988E" stroke="#E8988E" stroke-width="2" stroke-linejoin="round"/>
+    <polygon id="14-table-right" points="500,229 769,500 500,500" fill="#A0131F" stroke="#A0131F" stroke-width="2" stroke-linejoin="round"/>
+    <polygon id="15-table-sparkle" points="769,500 500,769 500,500" fill="#DC0B12" stroke="#DC0B12" stroke-width="2" stroke-linejoin="round"/>
+    <polygon id="16-table-shadow" points="500,769 231,500 500,500" fill="#8F111E" stroke="#8F111E" stroke-width="2" stroke-linejoin="round"/>
+  </g>
+</svg>

@@ -1,8 +1,8 @@
 {
   "app": {
-    "name": "Home Utilities",
-    "description": "Household utilities dashboard",
-    "shortName": "Utilities"
+    "name": "Garnet",
+    "description": "Household bills, fairly shared",
+    "shortName": "Garnet"
   },
   "nav": {
     "home": "Home",

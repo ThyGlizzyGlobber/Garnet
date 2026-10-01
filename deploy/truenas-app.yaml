@@ -30,7 +30,7 @@ services:
       APP_URL: '<https://your-public-address>'
       DEVELOPER_EMAILS: '<your email>'
       RESEND_API_KEY: '<re_...>'
-      EMAIL_FROM: 'Home Utilities <bills@your-domain>'
+      EMAIL_FROM: 'Garnet <bills@your-domain>'
       GOOGLE_CLIENT_ID: ''
       GOOGLE_CLIENT_SECRET: ''
       # Household bills addresses (DEPLOY.md §9); leave empty to turn them off.
