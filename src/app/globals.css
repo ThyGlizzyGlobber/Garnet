@@ -107,6 +107,10 @@
 
   --g-blur: 30px;
   --g-sat: 150%;
+  /* Cards are clear glass, like the preset previews: the scene's colour shows
+     through, softened only a little (owner, 2026-10-01: "too frosted"). */
+  --g-card-blur: 8px;
+  --g-card-sat: 165%;
   --ring-w: 7;
   /* instruments: glow strength and tick marks (Frost Glass: a soft glow, no ticks) */
   --glow-k: 0.35;
@@ -138,7 +142,7 @@
   --vig: rgba(31, 29, 24, 0.12);
 
   --g-bg: rgba(250, 251, 253, 0.32);
-  --g-bg-strong: rgba(250, 251, 253, 0.58);
+  --g-bg-strong: color-mix(in srgb, var(--p-bg) 62%, rgba(255, 255, 255, 0.3));
   --g-bright: 1.05;
   --g-rim: rgba(255, 255, 255, 0.34);
   --g-hi: rgba(255, 255, 255, 0.85);
@@ -146,6 +150,8 @@
   --g-spec: rgba(255, 255, 255, 0.92);
   --g-shadow: 0 28px 56px -30px rgba(20, 40, 60, 0.36), 0 2px 8px -4px rgba(20, 40, 60, 0.1);
   --g-solid: #f7f8fa;
+  /* Solid glass for reduced transparency: the preset's page colour, lifted. */
+  --g-tint: color-mix(in srgb, var(--p-bg) 55%, white);
   --ctl-bg: rgba(255, 255, 255, 0.42);
   --ctl-rim: rgba(255, 255, 255, 0.7);
   --nav-on-bg: rgba(255, 255, 255, 0.78);
@@ -233,15 +239,16 @@
   --grain: 0.09;
   --vig: rgba(0, 0, 0, 0.42);
 
-  --g-bg: rgba(255, 255, 255, 0.055);
-  --g-bg-strong: rgba(30, 36, 46, 0.56);
+  --g-bg: rgba(255, 255, 255, 0.07);
+  --g-bg-strong: color-mix(in srgb, var(--p-bg) 72%, transparent);
   --g-bright: 0.96;
-  --g-rim: rgba(255, 255, 255, 0.1);
+  --g-rim: rgba(255, 255, 255, 0.13);
   --g-hi: rgba(255, 255, 255, 0.22);
   --g-lens: rgba(255, 255, 255, 0.06);
   --g-spec: rgba(255, 255, 255, 0.45);
   --g-shadow: 0 30px 60px -28px rgba(0, 0, 0, 0.7), 0 2px 8px -4px rgba(0, 0, 0, 0.3);
   --g-solid: #262b34;
+  --g-tint: color-mix(in srgb, var(--p-bg) 88%, white);
   --ctl-bg: rgba(255, 255, 255, 0.09);
   --ctl-rim: rgba(255, 255, 255, 0.16);
   --nav-on-bg: rgba(255, 255, 255, 0.15);
@@ -325,15 +332,16 @@
     --grain: 0.09;
     --vig: rgba(0, 0, 0, 0.42);
 
-    --g-bg: rgba(255, 255, 255, 0.055);
-    --g-bg-strong: rgba(30, 36, 46, 0.56);
+    --g-bg: rgba(255, 255, 255, 0.07);
+    --g-bg-strong: color-mix(in srgb, var(--p-bg) 72%, transparent);
     --g-bright: 0.96;
-    --g-rim: rgba(255, 255, 255, 0.1);
+    --g-rim: rgba(255, 255, 255, 0.13);
     --g-hi: rgba(255, 255, 255, 0.22);
     --g-lens: rgba(255, 255, 255, 0.06);
     --g-spec: rgba(255, 255, 255, 0.45);
     --g-shadow: 0 30px 60px -28px rgba(0, 0, 0, 0.7), 0 2px 8px -4px rgba(0, 0, 0, 0.3);
     --g-solid: #262b34;
+    --g-tint: color-mix(in srgb, var(--p-bg) 88%, white);
     --ctl-bg: rgba(255, 255, 255, 0.09);
     --ctl-rim: rgba(255, 255, 255, 0.16);
     --nav-on-bg: rgba(255, 255, 255, 0.15);
@@ -766,6 +774,15 @@
   .glass-nav {
     background: var(--g-bg-strong);
   }
+  /* A card: clear glass, a crisp rim, no milky inner glow. */
+  .glass {
+    -webkit-backdrop-filter: blur(var(--g-card-blur)) saturate(var(--g-card-sat));
+    backdrop-filter: blur(var(--g-card-blur)) saturate(var(--g-card-sat));
+    box-shadow:
+      inset 0 0 0 1px var(--g-rim),
+      inset 0 1px 0 var(--g-hi),
+      var(--g-shadow);
+  }
   .glass::before,
   .glass-strong::before,
   .window::before,
@@ -986,13 +1003,14 @@
     }
   }
 
-  /* Reduced transparency: the glass turns nearly opaque and stops blurring. */
+  /* Reduced transparency (a setting on the device): the glass turns solid and
+     stops blurring, in the preset's own colour so it still matches. */
   @media (prefers-reduced-transparency: reduce) {
     .glass,
     .glass-strong,
     .window,
     .glass-nav {
-      background: color-mix(in srgb, var(--g-solid) 94%, transparent);
+      background: var(--g-tint);
       -webkit-backdrop-filter: none;
       backdrop-filter: none;
     }

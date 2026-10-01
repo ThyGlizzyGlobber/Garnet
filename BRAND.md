@@ -182,33 +182,40 @@ the old colours, not the old type.
 Clear glass over the scene: more of the colour shows through than before, with
 a soft specular rim catching light from the top-left.
 
-| Token                          | Light                                             | Dark                        |
-| ------------------------------ | ------------------------------------------------- | --------------------------- |
-| `--g-bg`                       | `rgba(250,251,253,.32)`                           | `rgba(255,255,255,.055)`    |
-| `--g-bg-strong`                | `rgba(250,251,253,.58)`                           | `rgba(30,36,46,.56)`        |
-| blur · saturate · brightness   | 30 px · 150 % · 1.05                              | 30 px · 150 % · 0.96        |
-| `--g-lens` (inner glow, 18 px) | white 20 %                                        | white 6 %                   |
-| `--g-hi` (1 px top highlight)  | white 85 %                                        | white 22 %                  |
-| `--g-spec` (rim, top-left)     | white 92 %                                        | white 45 %                  |
-| `--g-shadow`                   | `0 28px 56px -30px` + `0 2px 8px -4px`, blue-grey | the same, black 70 % / 30 % |
-| `--g-solid`                    | `#f7f8fa`                                         | `#262b34`                   |
-| `--ctl-bg` · `--ctl-rim`       | white 42 % · 70 %                                 | white 9 % · 16 %            |
+| Token                             | Light                                             | Dark                               |
+| --------------------------------- | ------------------------------------------------- | ---------------------------------- |
+| `--g-bg`                          | `rgba(250,251,253,.32)`                           | `rgba(255,255,255,.07)`            |
+| `--g-bg-strong`                   | preset page colour 62 % over white 30 %           | preset page colour 72 %            |
+| card blur · saturate              | 8 px · 165 % (`--g-card-blur`, `--g-card-sat`)    | the same                           |
+| strong blur · saturate · bright   | 30 px · 150 % · 1.05                              | 30 px · 150 % · 0.96               |
+| `--g-rim` (1 px card ring)        | white 34 %                                        | white 13 %                         |
+| `--g-lens` (inner glow, 18 px)    | white 20 %                                        | white 6 %                          |
+| `--g-hi` (1 px top highlight)     | white 85 %                                        | white 22 %                         |
+| `--g-spec` (rim, top-left)        | white 92 %                                        | white 45 %                         |
+| `--g-shadow`                      | `0 28px 56px -30px` + `0 2px 8px -4px`, blue-grey | the same, black 70 % / 30 %        |
+| `--g-solid`                       | `#f7f8fa`                                         | `#262b34`                          |
+| `--g-tint` (reduced transparency) | preset page colour 55 % with white                | preset page colour 88 % with white |
+| `--ctl-bg` · `--ctl-rim`          | white 42 % · 70 %                                 | white 9 % · 16 %                   |
 
 The recipe (Tailwind components layer, so utilities on the same element win):
 
-- **`.glass`**, a card: `--g-bg`, backdrop blur/saturate/brightness,
-  `inset 0 0 18px lens, inset 0 1px 0 hi, shadow`, and a `::before` that draws
-  a 1 px gradient rim (spec → 14 % → clear at 52 % → 8 % → spec at 55 %),
+- **`.glass`**, a card: clear glass like the preset previews (owner,
+  2026-10-01): `--g-bg` with a light 8 px blur and 165 % saturation, so the
+  scene's colour shows through; `inset 0 0 0 1px rim, inset 0 1px 0 hi,
+shadow` (no inner lens glow, which read as frost), and a `::before` that
+  draws a 1 px gradient rim (spec → 14 % → clear at 52 % → 8 % → spec at 55 %),
   masked to the border.
-- **`.glass-strong`**: the same on `--g-bg-strong`, for anything that floats
-  over content: the nav, sheets, menus.
+- **`.glass-strong`**: `--g-bg-strong` (the preset's own page colour, so the
+  nav is violet in Violet, not slate), 30 px blur and the inner lens glow, for
+  anything that floats over content: the nav, sheets, menus.
 - **`.glass-ctl`**: a small capsule sitting on glass (buttons, search,
   segmented controls): `--ctl-bg` with a 1 px `--ctl-rim` and the top
   highlight. No blur of its own.
 
 Layers: **scene → glass → controls**. Never glass on glass on glass, and keep
 a screen to about ten blurred surfaces (older iPads). Under
-`prefers-reduced-transparency` the glass turns nearly opaque (`--g-solid`) and
+`prefers-reduced-transparency` (macOS: Accessibility → Display → Reduce
+transparency) the glass turns solid in the preset's colour (`--g-tint`) and
 stops blurring. Chart tooltips use `--tip-bg`, never glass.
 
 ## 6. Shape and spacing
