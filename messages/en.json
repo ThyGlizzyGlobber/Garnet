@@ -96,7 +96,7 @@
   },
   "login": {
     "title": "Sign in",
-    "subtitle": "Use the account your invite was sent to, or any email to start a household.",
+    "subtitle": "Continue with Google, or we’ll email you a code.",
     "google": "Continue with Google",
     "or": "or",
     "email": "Email address",
@@ -108,20 +108,22 @@
       "lockedOut": "Too many wrong PINs, so this device was signed out. Sign in again to continue.",
       "email": "Enter a valid email address.",
       "rateLimited": "A code was sent a moment ago. Wait a minute before asking for another.",
-      "emailFailed": "The code email couldn't be sent: {reason}",
+      "emailFailed": "The code email couldn’t be sent just now. Try again in a moment.",
       "tooMany": "Too many attempts from your network. Wait a while and try again."
     },
     "demo": {
       "title": "Try the demo household",
-      "body": "Fictional data for showing the app. Pick a person; the PIN is on the demo sheet.",
+      "body": "Fictional data to look around. Pick a person; the PIN is 1234.",
       "who": "Member",
       "pin": "PIN",
       "submit": "Open demo",
       "wrong": "Wrong PIN. Try again."
     },
-    "subtitleInvite": "Use the account your invite was sent to.",
+    "subtitleInvite": "Use the email your invite was sent to.",
     "inviteSide": "Join {household}.",
-    "newHere": "New here? Your household’s admin sends you an invite. Or sign in with your email to start a household."
+    "newHere": "First time here? Signing in creates your account.",
+    "newHereInvite": "First time here? Signing in creates your account and joins you up.",
+    "sending": "Sending…"
   },
   "bills": {
     "title": "Bills",
@@ -1360,6 +1362,16 @@
     "households": {
       "title": "Households",
       "line": "{demo, select, yes {Demo · } other {}}{people, plural, one {# person} other {# people}}"
+    },
+    "accounts": {
+      "title": "Accounts",
+      "count": "{count, plural, one {# account} other {# accounts}}",
+      "google": "Google",
+      "code": "Emailed code",
+      "noHousehold": "No household yet",
+      "line": "{method} · {households} · signed in {last}",
+      "never": "never",
+      "hint": "Everyone who has signed in, newest first, and the household each has joined."
     }
   },
   "code": {
@@ -1375,7 +1387,11 @@
       "too-many-attempts": "Too many wrong tries. Send a new code.",
       "noEmail": "Start again with your email address."
     },
-    "notGot": "Didn’t get it?"
+    "notGot": "Didn’t get it?",
+    "checking": "Checking…",
+    "resent": "A new code is on its way. The old one no longer works.",
+    "resendWait": "A code was sent a moment ago. Give it a minute before asking for another.",
+    "resendFailed": "The code email couldn’t be sent just now. Try again in a moment."
   },
   "welcome": {
     "title": "Hey, {name}.",
@@ -1401,15 +1417,16 @@
       "cta": "Link",
       "wrong": "Wrong PIN."
     },
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "titleNoName": "Welcome."
   },
   "pin": {
     "setTitle": "Choose a PIN",
-    "setBody": "Four to eight digits to unlock this device. Nobody else ever sees it, admins included.",
+    "setBody": "Four to eight digits. It unlocks this device after a while away; nobody else ever sees it, admins included.",
     "pin": "PIN",
     "pinConfirm": "Confirm PIN",
     "pinHint": "4–8 digits.",
-    "mismatch": "PINs do not match",
+    "mismatch": "Those didn’t match. Choose your PIN again.",
     "invalid": "PIN must be 4–8 digits",
     "save": "Save PIN",
     "unlockTitle": "Hey, {name}.",
@@ -1427,7 +1444,13 @@
     "forgot": "Forgot it?",
     "signInAgain": "Sign in again",
     "setSide": "Nearly there, {name}.",
-    "setSideBody": "Your PIN unlocks the app on devices where you’ve already signed in. Only you know it."
+    "setSideBody": "Your PIN unlocks the app on devices where you’ve already signed in. Only you know it.",
+    "againTitle": "Enter it again",
+    "againBody": "Just to be sure.",
+    "continue": "Continue",
+    "startOver": "Start over",
+    "saving": "Saving…",
+    "checking": "Checking…"
   },
   "invite": {
     "title": "{inviter} invited you to {household}",

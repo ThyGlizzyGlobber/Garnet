@@ -37,6 +37,7 @@ export default async function LoginPage({
   const googleHref = `/api/auth/google/start${next ? `?next=${encodeURIComponent(next)}` : ''}`;
   return (
     <AuthShell
+      demoLink={false}
       side={
         invite ? (
           <AuthSide title={t('inviteSide', { household: invite.household.name })}>
@@ -57,7 +58,7 @@ export default async function LoginPage({
         </>
       )}
       <EmailForm action={sendCodeAction} next={next ?? ''} />
-      <p className="muted small">{t('newHere')}</p>
+      <p className="muted small t-center">{invite ? t('newHereInvite') : t('newHere')}</p>
       {demo && (
         <details id="demo" className="demo-box">
           <summary>{t('demo.title')}</summary>

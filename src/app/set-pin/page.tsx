@@ -17,10 +17,6 @@ export default async function SetPinPage() {
         <AuthSide title={t('setSide', { name: state.member.name })}>{t('setSideBody')}</AuthSide>
       }
     >
-      <div className="pin-head">
-        <h2>{t('setTitle')}</h2>
-        <p className="muted">{t('setBody')}</p>
-      </div>
       <NewPinForm action={setPinAction} />
     </AuthShell>
   );

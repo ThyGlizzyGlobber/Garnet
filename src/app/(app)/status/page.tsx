@@ -199,6 +199,27 @@ export default async function StatusPage() {
             ],
           ],
         )}
+        {card(
+          'user',
+          t('accounts.title'),
+          <Chip tone="neutral">{t('accounts.count', { count: install.accounts.length })}</Chip>,
+          [
+            ...install.accounts.map(
+              (a) =>
+                [
+                  a.name ? `${a.name} · ${a.email}` : a.email,
+                  t('accounts.line', {
+                    method: t(`accounts.${a.method}`),
+                    households: a.households.length
+                      ? a.households.map((x) => `${x.name} (${x.member})`).join(', ')
+                      : t('accounts.noHousehold'),
+                    last: a.lastSignInAt ? dateTime(a.lastSignInAt) : t('accounts.never'),
+                  }),
+                ] as [string, ReactNode],
+            ),
+            ['', t('accounts.hint')],
+          ],
+        )}
       </div>
     </div>
   );

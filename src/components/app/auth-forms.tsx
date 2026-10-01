@@ -19,7 +19,7 @@ export function EmailForm({ action, next }: { action: FormAction; next: string }
             <Input name="email" type="email" autoComplete="email" inputMode="email" required />
           </Field>
           <Button type="submit" className="wide" disabled={pending}>
-            {pending ? '…' : t('sendCode')}
+            {pending ? t('sending') : t('sendCode')}
           </Button>
         </>
       )}
@@ -27,21 +27,21 @@ export function EmailForm({ action, next }: { action: FormAction; next: string }
   );
 }
 
-/** The six boxes for the emailed code. */
+/** The six boxes for the emailed code; the form goes as the last digit lands. */
 export function CodeForm({ action }: { action: FormAction }) {
   const t = useTranslations('code');
   return (
     <ActionForm action={action} submitLabel={t('submit')} hideSubmit className="auth-form">
       {(errors, pending) => (
         <>
-          <CodeBoxes label={t('code')} />
+          <CodeBoxes label={t('code')} pending={pending} error={errors.code} />
           {errors.code && (
             <p role="alert" className="fld-h bad-text">
               {errors.code}
             </p>
           )}
           <Button type="submit" className="wide" disabled={pending}>
-            {pending ? '…' : t('submit')}
+            {pending ? t('checking') : t('submit')}
           </Button>
         </>
       )}
@@ -61,6 +61,7 @@ export function PinForm({
   submitLabel: string;
   hidden?: Record<string, string>;
 }) {
+  const tp = useTranslations('pin');
   return (
     <ActionForm action={action} submitLabel={submitLabel} hideSubmit className="auth-form">
       {(errors, pending) => (
@@ -75,7 +76,7 @@ export function PinForm({
             </p>
           )}
           <Button type="submit" className="wide" disabled={pending}>
-            {pending ? '…' : submitLabel}
+            {pending ? tp('checking') : submitLabel}
           </Button>
         </>
       )}
@@ -98,8 +99,8 @@ function PinInput({ name, autoFocus }: { name: string; autoFocus?: boolean }) {
 }
 
 /**
- * A new PIN and its confirmation: the keypad for the first PIN (set-pin),
- * or plain fields with the current PIN first (Change PIN in Settings).
+ * A new PIN and its confirmation: the keypad twice for the first PIN
+ * (set-pin), or plain fields with the current PIN first (Change PIN in Settings).
  */
 export function NewPinForm({
   action,
@@ -109,53 +110,133 @@ export function NewPinForm({
   withCurrent?: boolean;
 }) {
   const t = useTranslations('pin');
+  if (!withCurrent) return <FirstPinForm action={action} />;
   return (
-    <ActionForm
-      action={action}
-      submitLabel={withCurrent ? t('change') : t('save')}
-      hideSubmit={!withCurrent}
-      className={withCurrent ? undefined : 'auth-form'}
-    >
-      {(errors, pending) =>
-        withCurrent ? (
-          <>
-            <Field label={t('current')} error={errors.current}>
-              <PinInput name="current" />
-            </Field>
-            <Field label={t('newPin')} hint={t('pinHint')} error={errors.pin}>
-              <Input
-                name="pin"
-                type="password"
-                inputMode="numeric"
-                pattern="\d{4,8}"
-                autoComplete="new-password"
-                required
-              />
-            </Field>
-            <Field label={t('pinConfirm')} error={errors.pinConfirm}>
-              <PinInput name="pinConfirm" />
-            </Field>
-          </>
-        ) : (
-          <>
-            <PinEntry name="pin" label={t('pin')} />
-            {errors.pin && (
-              <p role="alert" className="fld-h bad-text t-center">
-                {errors.pin}
-              </p>
-            )}
-            <Field label={t('pinConfirm')} hint={t('pinHint')} error={errors.pinConfirm}>
-              <PinInput name="pinConfirm" />
-            </Field>
-            <Button type="submit" className="wide" disabled={pending}>
-              {pending ? '…' : t('save')}
-            </Button>
-          </>
-        )
-      }
+    <ActionForm action={action} submitLabel={t('change')}>
+      {(errors) => (
+        <>
+          <Field label={t('current')} error={errors.current}>
+            <PinInput name="current" />
+          </Field>
+          <Field label={t('newPin')} hint={t('pinHint')} error={errors.pin}>
+            <Input
+              name="pin"
+              type="password"
+              inputMode="numeric"
+              pattern="\d{4,8}"
+              autoComplete="new-password"
+              required
+            />
+          </Field>
+          <Field label={t('pinConfirm')} error={errors.pinConfirm}>
+            <PinInput name="pinConfirm" />
+          </Field>
+        </>
+      )}
     </ActionForm>
   );
 }
+
+/**
+ * Choosing a PIN on the keypad, as a phone does it: enter it, Continue, enter
+ * it again. The second entry is checked as soon as it is as long as the first:
+ * a match sends the form, a mismatch says so and starts over.
+ */
+function FirstPinForm({ action }: { action: FormAction }) {
+  const t = useTranslations('pin');
+  const [first, setFirst] = useState('');
+  const [again, setAgain] = useState(false);
+  const [mismatch, setMismatch] = useState(false);
+  const ready = PIN_RANGE.test(first);
+  return (
+    <ActionForm
+      id="pin-form"
+      action={action}
+      submitLabel={t('save')}
+      hideSubmit
+      className="auth-form"
+    >
+      {(errors, pending) => (
+        <>
+          <div className="pin-head">
+            <h2>{again ? t('againTitle') : t('setTitle')}</h2>
+            <p className="muted">{again ? t('againBody') : t('setBody')}</p>
+          </div>
+          {again ? (
+            <>
+              <input type="hidden" name="pin" value={first} />
+              <PinEntry
+                key="again"
+                name="pinConfirm"
+                label={t('pinConfirm')}
+                onChange={(v) => {
+                  if (v.length < first.length) return;
+                  if (v === first)
+                    setTimeout(
+                      () =>
+                        (
+                          document.getElementById('pin-form') as HTMLFormElement | null
+                        )?.requestSubmit(),
+                      50,
+                    );
+                  else {
+                    setMismatch(true);
+                    setAgain(false);
+                    setFirst('');
+                  }
+                }}
+              />
+            </>
+          ) : (
+            <PinEntry key="first" name="pinDraft" label={t('pin')} onChange={setFirst} />
+          )}
+          {(mismatch || errors.pin || errors.pinConfirm) && (
+            <p role="alert" className="fld-h bad-text t-center">
+              {errors.pin ?? errors.pinConfirm ?? t('mismatch')}
+            </p>
+          )}
+          {again ? (
+            <>
+              <Button type="submit" className="wide" disabled={pending}>
+                {pending ? t('saving') : t('save')}
+              </Button>
+              <p className="muted small t-center">
+                <button
+                  type="button"
+                  className="link"
+                  onClick={() => {
+                    setAgain(false);
+                    setFirst('');
+                    setMismatch(false);
+                  }}
+                >
+                  {t('startOver')}
+                </button>
+              </p>
+            </>
+          ) : (
+            <>
+              <Button
+                type="button"
+                className="wide"
+                disabled={!ready}
+                onClick={() => {
+                  setMismatch(false);
+                  setAgain(true);
+                }}
+              >
+                {t('continue')}
+              </Button>
+              <p className="muted small t-center">{t('pinHint')}</p>
+            </>
+          )}
+        </>
+      )}
+    </ActionForm>
+  );
+}
+
+const PIN_RANGE = /^\d{4,8}$/;
 
 /** The invite code and Join, on one row. */
 export function JoinCodeForm({ action }: { action: FormAction }) {

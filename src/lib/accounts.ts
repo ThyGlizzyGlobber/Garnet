@@ -1,4 +1,4 @@
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, desc, eq, isNull } from 'drizzle-orm';
 import { getDb, type Db } from '@/db/client';
 import { account, household, member, type Account, type Member } from '@/db/schema';
 import { normaliseEmail } from '@/lib/auth/tokens';
@@ -62,6 +62,59 @@ export function signInAccount(
   };
   db.insert(account).values(row).run();
   return row;
+}
+
+/**
+ * The name a person gave (Google's, or one typed later), or null when it was
+ * only ever made up from their email. Screens greet by name or not at all;
+ * nobody should be called "bejaysmith11".
+ */
+export function accountGivenName(a: Pick<Account, 'name' | 'email'>): string | null {
+  const name = a.name.trim();
+  if (!name || name.toLowerCase() === a.email.split('@')[0]!.toLowerCase()) return null;
+  return name;
+}
+
+/** How an account signs in: Google once it has used it, otherwise an emailed code. */
+export function signInMethod(a: Pick<Account, 'googleSub'>): 'google' | 'code' {
+  return a.googleSub ? 'google' : 'code';
+}
+
+export interface AccountRecord {
+  id: string;
+  email: string;
+  name: string | null;
+  method: 'google' | 'code';
+  createdAt: string;
+  lastSignInAt: string | null;
+  /** The households this account has joined, and the name it goes by in each. */
+  households: { id: string; name: string; member: string }[];
+}
+
+/** Every account on the install, newest first, with the households each belongs to. */
+export function listAccounts(db: Db = getDb()): AccountRecord[] {
+  const rows = db.select().from(account).orderBy(desc(account.createdAt)).all();
+  const links = db
+    .select({
+      accountId: member.accountId,
+      memberName: member.name,
+      hid: household.id,
+      hname: household.name,
+    })
+    .from(member)
+    .innerJoin(household, eq(member.householdId, household.id))
+    .all();
+  return rows.map((a) => ({
+    id: a.id,
+    email: a.email,
+    name: accountGivenName(a),
+    method: signInMethod(a),
+    createdAt: a.createdAt,
+    lastSignInAt: a.lastSignInAt,
+    households: links
+      .filter((l) => l.accountId === a.id)
+      .map((l) => ({ id: l.hid, name: l.hname, member: l.memberName })),
+  }));
 }
 
 /** Members linked to an account, oldest first. The alpha UI uses the first one. */

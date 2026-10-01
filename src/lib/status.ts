@@ -4,6 +4,7 @@ import { bill } from '@/db/schema';
 import { allExtractors } from '@/ingest/extractors';
 import { householdBoundSince } from '@/ingest/inbound';
 import { getEnv, isInboundEmailConfigured, isLlmConfigured } from '@/lib/env';
+import { listAccounts } from '@/lib/accounts';
 import { regionalCounts, regionalEnabled } from '@/lib/regional';
 import { documentCounts, ingestionStats } from '@/lib/review';
 import { aiAllowance } from '@/lib/usage';
@@ -60,6 +61,8 @@ export function statusView(
       minHouseholds: env.REGIONAL_MIN_HOUSEHOLDS,
       ...regionalCounts(db),
     },
+    /** Everyone who has signed in, newest first (the record of sign-ups). */
+    accounts: listAccounts(db),
     extractors: allExtractors.map((ex) => {
       const llm = ex.name.startsWith('llm');
       return {

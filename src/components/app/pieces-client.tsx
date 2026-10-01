@@ -22,6 +22,7 @@ export function PinEntry({
   submitOnFull = false,
   autoFocus = true,
   onFull,
+  onChange,
 }: {
   name: string;
   digits?: number;
@@ -29,6 +30,7 @@ export function PinEntry({
   submitOnFull?: boolean;
   autoFocus?: boolean;
   onFull?: () => void;
+  onChange?: (value: string) => void;
 }) {
   const t = useTranslations('pinPad');
   const [value, setValue] = useState('');
@@ -36,6 +38,7 @@ export function PinEntry({
   const set = (v: string) => {
     const next = v.replace(/\D/g, '').slice(0, 8);
     setValue(next);
+    onChange?.(next);
     if (next.length === digits) {
       onFull?.();
       if (submitOnFull) setTimeout(() => input.current?.form?.requestSubmit(), 50);
@@ -85,22 +88,53 @@ export function PinEntry({
   );
 }
 
-/** The six-digit sign-in code as boxes over one input. */
-export function CodeBoxes({ name = 'code', label }: { name?: string; label: string }) {
+/**
+ * The six-digit sign-in code as boxes over one input. Submits its form as the
+ * sixth digit lands (typed, pasted or filled in from the email), and clears
+ * when the form comes back with an error so the next try starts empty.
+ */
+export function CodeBoxes({
+  name = 'code',
+  label,
+  pending = false,
+  error,
+}: {
+  name?: string;
+  label: string;
+  pending?: boolean;
+  error?: string;
+}) {
   const [value, setValue] = useState('');
+  const input = useRef<HTMLInputElement>(null);
+  const set = (v: string) => {
+    const next = v.replace(/\D/g, '').slice(0, 6);
+    setValue(next);
+    if (next.length === 6) setTimeout(() => input.current?.form?.requestSubmit(), 50);
+  };
+  // When the form comes back (pending → not) with an error, start empty.
+  const [wasPending, setWasPending] = useState(false);
+  if (pending !== wasPending) {
+    setWasPending(pending);
+    if (!pending && error) setValue('');
+  }
+  useEffect(() => {
+    if (!pending && error) input.current?.focus();
+  }, [pending, error]);
   return (
-    <div className="code-in">
+    <div className="code-in" onClick={() => input.current?.focus()}>
       <input
+        ref={input}
         name={name}
         inputMode="numeric"
         autoComplete="one-time-code"
         pattern="\d{6}"
         maxLength={6}
         value={value}
-        onChange={(e) => setValue(e.target.value.replace(/\D/g, '').slice(0, 6))}
+        onChange={(e) => set(e.target.value)}
         aria-label={label}
         autoFocus
         required
+        disabled={pending}
       />
       {Array.from({ length: 6 }, (_, i) => (
         <span

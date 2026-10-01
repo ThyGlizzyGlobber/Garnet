@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { AuthShell, AuthSide } from '@/components/app/auth-shell';
-import { membershipsFor } from '@/lib/accounts';
+import { accountGivenName, membershipsFor } from '@/lib/accounts';
 import { requireAccount } from '@/lib/auth/session';
 import { getEnv } from '@/lib/env';
 import { addDays, todayIn } from '@/lib/dates';
@@ -24,7 +24,7 @@ export default async function SetupPage() {
           timezone: env.DEFAULT_TIMEZONE,
           fiscalYearStartMonth: env.DEFAULT_FISCAL_YEAR_START_MONTH,
           activeFrom: addDays(todayIn(env.DEFAULT_TIMEZONE), -365),
-          ownerName: account.name,
+          ownerName: accountGivenName(account) ?? '',
         }}
         timezones={Intl.supportedValuesOf('timeZone')}
         withData={countriesWithData()}

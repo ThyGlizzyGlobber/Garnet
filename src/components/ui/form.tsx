@@ -22,6 +22,7 @@ export function ActionForm({
   className,
   footer,
   hideSubmit,
+  id,
 }: {
   action: FormAction;
   submitLabel: string;
@@ -30,10 +31,11 @@ export function ActionForm({
   footer?: ReactNode;
   /** Render your own submit button inside children (e.g. a paged wizard). */
   hideSubmit?: boolean;
+  id?: string;
 }) {
   const [state, formAction, pending] = useActionState<ActionState, FormData>(action, {});
   return (
-    <form action={formAction} className={className ?? 'flex flex-col gap-4'}>
+    <form id={id} action={formAction} className={className ?? 'flex flex-col gap-4'}>
       {state.error && (
         <p
           role="alert"

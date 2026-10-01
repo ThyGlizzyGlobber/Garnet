@@ -50,17 +50,7 @@ export async function sendCodeAction(_prev: ActionState, fd: FormData): Promise<
   await rememberNext(str(fd, 'next'));
   const issued = issueLoginCode(email);
   if (!issued.ok) return { error: t('rateLimited') };
-  const te = await getTranslations('email.code');
-  const app = (await getTranslations('app'))('name');
-  const sent = await sendEmail(
-    composeEmail({
-      to: email,
-      subject: te('subject', { code: issued.code }),
-      blocks: [{ p: te('intro', { app }) }, { code: issued.code }],
-      footer: te('expiry'),
-    }),
-  );
-  if (!sent.sent) return { error: t('emailFailed', { reason: sent.reason }) };
+  if (!(await sendCodeEmail(email, issued.code))) return { error: t('emailFailed') };
   const session = await getSession();
   session.pendingEmail = email;
   await session.save();
@@ -82,14 +72,30 @@ export async function verifyCodeAction(_prev: ActionState, fd: FormData): Promis
   redirect(await afterSignIn());
 }
 
-/** Send a fresh code to the pending address. */
+/** Send a fresh code to the pending address, and say on the code page whether it went. */
 export async function resendCodeAction(): Promise<void> {
   const session = await getSession();
   const email = session.pendingEmail;
   if (!email) redirect('/login');
-  const fd = new FormData();
-  fd.set('email', email);
-  await sendCodeAction({}, fd);
+  if (!ipAllowed('sendCode', await clientIp())) redirect('/login/code?resent=wait');
+  const issued = issueLoginCode(email);
+  if (!issued.ok) redirect('/login/code?resent=wait');
+  const sent = await sendCodeEmail(email, issued.code);
+  redirect(sent ? '/login/code?resent=sent' : '/login/code?resent=failed');
+}
+
+async function sendCodeEmail(email: string, code: string): Promise<boolean> {
+  const te = await getTranslations('email.code');
+  const app = (await getTranslations('app'))('name');
+  const sent = await sendEmail(
+    composeEmail({
+      to: email,
+      subject: te('subject', { code }),
+      blocks: [{ p: te('intro', { app }) }, { code }],
+      footer: te('expiry'),
+    }),
+  );
+  return sent.sent;
 }
 
 /** Where to go once signed in: a pending invite first, then the remembered page. */

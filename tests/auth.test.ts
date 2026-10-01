@@ -5,10 +5,13 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { openDb, type Db } from '@/db/client';
 import { runMigrations } from '@/db/migrate';
 import {
+  accountGivenName,
   isOperator,
   linkMember,
+  listAccounts,
   membershipsFor,
   signInAccount,
+  signInMethod,
   unclaimedOwners,
 } from '@/lib/accounts';
 import { CODE_MAX_ATTEMPTS, CODE_TTL_MS, issueLoginCode, verifyLoginCode } from '@/lib/auth/codes';
@@ -79,6 +82,32 @@ describe('accounts', () => {
     );
     // Found by subject even if Google reports a changed address.
     expect(signInAccount({ email: 'renamed@example.com', googleSub: 'sub-1' }, db).id).toBe(a.id);
+  });
+
+  it('greet by a real name only, never by the email prefix', () => {
+    const byCode = signInAccount({ email: 'jo.bloggs@example.com' }, db);
+    expect(byCode.name).toBe('jo.bloggs');
+    expect(accountGivenName(byCode)).toBeNull();
+    expect(signInMethod(byCode)).toBe('code');
+    const byGoogle = signInAccount(
+      { email: 'pat@example.com', name: 'Pat Lee', googleSub: 'sub-pat' },
+      db,
+    );
+    expect(accountGivenName(byGoogle)).toBe('Pat Lee');
+    expect(signInMethod(byGoogle)).toBe('google');
+    expect(accountGivenName({ name: '  ', email: 'x@example.com' })).toBeNull();
+  });
+
+  it('are all listed for the operator, newest first, with their households', () => {
+    const hh = household('Listed House');
+    const a = signInAccount({ email: 'listed@example.com' }, db);
+    const m = createMember(hh.id, { name: 'Lis', activeFrom: '2026-01-01' }, db);
+    linkMember(m.id, a.id, a.email, db);
+    const all = listAccounts(db);
+    expect(all[0]!.email).toBe('listed@example.com');
+    expect(all[0]!.households).toEqual([{ id: hh.id, name: 'Listed House', member: 'Lis' }]);
+    expect(all.find((x) => x.email === 'jo.bloggs@example.com')!.households).toEqual([]);
+    expect(new Set(all.map((x) => x.method))).toEqual(new Set(['code', 'google']));
   });
 
   it('are operators only when listed in OPERATOR_EMAILS', () => {

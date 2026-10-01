@@ -14,6 +14,7 @@ export async function AuthShell({
   side,
   wide = false,
   foot = true,
+  demoLink = true,
   children,
 }: {
   /** The left-hand copy; the product's pitch when left out. */
@@ -21,6 +22,8 @@ export async function AuthShell({
   wide?: boolean;
   /** The Privacy · demo footer. */
   foot?: boolean;
+  /** The demo link in the footer (off on the sign-in page, which has the demo box itself). */
+  demoLink?: boolean;
   children: ReactNode;
 }) {
   const t = await getTranslations('outside');
@@ -58,8 +61,12 @@ export async function AuthShell({
           {foot && (
             <p className="auth-foot muted small">
               <Link href="/privacy">{t('privacy')}</Link>
-              {' · '}
-              <Link href="/login#demo">{t('demo')}</Link>
+              {demoLink && (
+                <>
+                  {' · '}
+                  <Link href="/login#demo">{t('demo')}</Link>
+                </>
+              )}
             </p>
           )}
         </div>
