@@ -216,7 +216,11 @@ Layers: **scene → glass → controls**. Never glass on glass on glass, and kee
 a screen to about ten blurred surfaces (older iPads). Under
 `prefers-reduced-transparency` (macOS: Accessibility → Display → Reduce
 transparency) the glass turns solid in the preset's colour (`--g-tint`) and
-stops blurring. Chart tooltips use `--tip-bg`, never glass.
+stops blurring. Each person can choose in Settings → Appearance → Reduce
+Transparency: Glass (always clear), Frosted (always solid) or Automatic
+(follow the device); stored as `member.glass` (clear · solid · auto) and set as
+`data-glass` on `<html>`. Changing colours, light or dark, or the glass fades
+the page (a 0.45 s view transition), never a jump cut. Chart tooltips use `--tip-bg`, never glass.
 
 ## 6. Shape and spacing
 

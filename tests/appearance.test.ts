@@ -83,16 +83,30 @@ describe('colour presets in globals.css', () => {
 
 describe('parseAppearance', () => {
   it('reads what formatAppearance wrote', () => {
-    const a = { preset: 'ruby', theme: 'dark' } as const;
+    const a = { preset: 'ruby', theme: 'dark', glass: 'clear' } as const;
     expect(parseAppearance(formatAppearance(a))).toEqual(a);
   });
 
   it('falls back to Harbour and automatic for anything it can’t read', () => {
     expect(parseAppearance(undefined)).toEqual(DEFAULT_APPEARANCE);
     expect(parseAppearance('')).toEqual(DEFAULT_APPEARANCE);
-    expect(parseAppearance('neon.dark')).toEqual({ preset: 'harbour', theme: 'dark' });
-    expect(parseAppearance('violet.dusk')).toEqual({ preset: 'violet', theme: 'auto' });
-    expect(DEFAULT_APPEARANCE).toEqual({ preset: 'harbour', theme: 'auto' });
+    expect(parseAppearance('neon.dark')).toEqual({
+      preset: 'harbour',
+      theme: 'dark',
+      glass: 'auto',
+    });
+    expect(parseAppearance('violet.dusk.frosty')).toEqual({
+      preset: 'violet',
+      theme: 'auto',
+      glass: 'auto',
+    });
+    // A cookie from before the glass choice still reads.
+    expect(parseAppearance('ruby.light')).toEqual({
+      preset: 'ruby',
+      theme: 'light',
+      glass: 'auto',
+    });
+    expect(DEFAULT_APPEARANCE).toEqual({ preset: 'harbour', theme: 'auto', glass: 'auto' });
   });
 });
 
@@ -180,7 +194,7 @@ describe('a member’s appearance', () => {
           name: 'Casey',
           activeFrom: '2026-01-01',
           colour: '#1baf7a',
-          appearance: { preset: 'ruby', theme: 'dark' },
+          appearance: { preset: 'ruby', theme: 'dark', glass: 'auto' },
         },
         location: null,
         shareRegional: true,

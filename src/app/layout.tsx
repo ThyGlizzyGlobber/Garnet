@@ -50,13 +50,14 @@ export async function generateViewport(): Promise<Viewport> {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const locale = await getLocale();
   const messages = await getMessages();
-  const { preset, theme } = await getAppearance();
+  const { preset, theme, glass } = await getAppearance();
   return (
     <html
       lang={locale}
       className={`${display.variable} ${body.variable} ${mono.variable}`}
       data-palette={preset}
       data-theme={theme === 'auto' ? undefined : theme}
+      data-glass={glass === 'auto' ? undefined : glass}
     >
       <body>
         <Scene />

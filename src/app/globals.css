@@ -1003,17 +1003,21 @@
     }
   }
 
-  /* Reduced transparency (a setting on the device): the glass turns solid and
-     stops blurring, in the preset's own colour so it still matches. */
+  /* Solid glass: the glass turns solid in the preset's own colour and stops
+     blurring, so it still matches. Each person chooses Clear, Solid or
+     Automatic (Settings → Appearance, data-glass on <html>); Automatic follows
+     the device's Reduce transparency setting. */
   @media (prefers-reduced-transparency: reduce) {
-    .glass,
-    .glass-strong,
-    .window,
-    .glass-nav {
+    :root:not([data-glass='clear']) :is(.glass, .glass-strong, .window, .glass-nav) {
       background: var(--g-tint);
       -webkit-backdrop-filter: none;
       backdrop-filter: none;
     }
+  }
+  :root[data-glass='solid'] :is(.glass, .glass-strong, .window, .glass-nav) {
+    background: var(--g-tint);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
   }
 }
 
@@ -1036,4 +1040,11 @@
   to {
     transform: translate(-12%, -8%) scale(1.1);
   }
+}
+
+/* Changing colours (Settings → Appearance) fades the page into the new look. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.45s;
+  animation-timing-function: ease;
 }

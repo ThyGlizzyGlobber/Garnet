@@ -15,7 +15,7 @@ const APPEARANCE_COOKIE = 'hud_appearance';
 export const getAppearance = cache(async (): Promise<Appearance> => {
   const s = await authState();
   if (s.kind === 'ok' || s.kind === 'locked' || s.kind === 'needs-pin')
-    return { preset: s.member.appearancePreset, theme: s.member.theme };
+    return { preset: s.member.appearancePreset, theme: s.member.theme, glass: s.member.glass };
   return parseAppearance((await cookies()).get(APPEARANCE_COOKIE)?.value);
 });
 

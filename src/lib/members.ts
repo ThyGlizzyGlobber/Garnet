@@ -1,7 +1,7 @@
 import { and, asc, count, eq } from 'drizzle-orm';
 import { getDb, type Db } from '@/db/client';
 import { asset, member, service, share, sourceDocument, type Member } from '@/db/schema';
-import { DEFAULT_APPEARANCE, type Preset, type Theme } from '@/lib/appearance';
+import { DEFAULT_APPEARANCE, type Glass, type Preset, type Theme } from '@/lib/appearance';
 import { ulid } from '@/lib/ids';
 import { DEFAULT_COLOUR } from '@/lib/palette';
 import { isAdmin } from '@/lib/roles';
@@ -59,6 +59,7 @@ export interface MemberInput {
   paymentDetails?: { label: string; value: string }[];
   appearancePreset?: Preset;
   theme?: Theme;
+  glass?: Glass;
 }
 
 export function createMember(householdId: string, input: MemberInput, db: Db = getDb()): Member {
@@ -83,6 +84,7 @@ export function createMember(householdId: string, input: MemberInput, db: Db = g
     paymentDetails: input.paymentDetails ?? [],
     appearancePreset: input.appearancePreset ?? DEFAULT_APPEARANCE.preset,
     theme: input.theme ?? DEFAULT_APPEARANCE.theme,
+    glass: input.glass ?? DEFAULT_APPEARANCE.glass,
     createdAt: now,
     updatedAt: now,
   };

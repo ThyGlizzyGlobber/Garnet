@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { logout } from '@/app/login/actions';
+import { AppearanceFade } from '@/components/app/appearance-fade';
 import { PresetCards } from '@/components/app/preset-cards';
 import { Button, Card, LinkButton } from '@/components/ui';
 import { AddressCard, Kv, PageTitle, SectionHead } from '@/components/ui/blocks';
@@ -88,28 +89,49 @@ export default async function SettingsPage() {
         <Card className="set-appear" id="appearance">
           <SectionHead title={ta('title')} right={<span className="muted">{ta('justYou')}</span>} />
           <p className="muted set-lede">{ta('body', { household: hh.name })}</p>
-          <form action={saveAppearanceAction}>
-            <PresetCards current={me.appearancePreset} />
-          </form>
-          <div className="set-row">
-            <span>
-              <b>{ta('lightOrDark')}</b>
-              <span className="muted small">{ta('lightOrDarkBody')}</span>
-            </span>
+          <AppearanceFade>
             <form action={saveAppearanceAction}>
-              <Segmented
-                small
-                name="theme"
-                value={me.theme}
-                label={ta('lightOrDark')}
-                items={[
-                  { value: 'light', label: ta('themes.light'), icon: 'sun' },
-                  { value: 'dark', label: ta('themes.dark'), icon: 'moon' },
-                  { value: 'auto', label: ta('themes.auto'), icon: 'devices' },
-                ]}
-              />
+              <PresetCards current={me.appearancePreset} />
             </form>
-          </div>
+            <div className="set-row">
+              <span>
+                <b>{ta('lightOrDark')}</b>
+                <span className="muted small">{ta('lightOrDarkBody')}</span>
+              </span>
+              <form action={saveAppearanceAction}>
+                <Segmented
+                  small
+                  name="theme"
+                  value={me.theme}
+                  label={ta('lightOrDark')}
+                  items={[
+                    { value: 'light', label: ta('themes.light'), icon: 'sun' },
+                    { value: 'dark', label: ta('themes.dark'), icon: 'moon' },
+                    { value: 'auto', label: ta('themes.auto'), icon: 'devices' },
+                  ]}
+                />
+              </form>
+            </div>
+            <div className="set-row">
+              <span>
+                <b>{ta('glass')}</b>
+                <span className="muted small">{ta('glassBody')}</span>
+              </span>
+              <form action={saveAppearanceAction}>
+                <Segmented
+                  small
+                  name="glass"
+                  value={me.glass}
+                  label={ta('glass')}
+                  items={[
+                    { value: 'clear', label: ta('glassModes.clear'), icon: 'layers' },
+                    { value: 'solid', label: ta('glassModes.solid'), icon: 'grid' },
+                    { value: 'auto', label: ta('glassModes.auto'), icon: 'devices' },
+                  ]}
+                />
+              </form>
+            </div>
+          </AppearanceFade>
         </Card>
 
         <div className="set-col">

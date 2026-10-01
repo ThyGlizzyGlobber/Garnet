@@ -67,6 +67,7 @@ export async function completeSetup(_prev: ActionState, fd: FormData): Promise<A
   const appearance = {
     preset: isPreset(preset) ? preset : DEFAULT_APPEARANCE.preset,
     theme: isTheme(theme) ? theme : DEFAULT_APPEARANCE.theme,
+    glass: DEFAULT_APPEARANCE.glass,
   };
   let ownerId: string;
   try {

@@ -9,7 +9,7 @@ import { replaceAlias } from '@/lib/bills-address';
 import { getHousehold, updateHousehold } from '@/lib/households';
 import { redirect } from 'next/navigation';
 import { exitDemo } from '@/lib/demo';
-import { isPreset, isTheme } from '@/lib/appearance';
+import { isGlass, isPreset, isTheme } from '@/lib/appearance';
 import { rememberAppearance } from '@/lib/auth/appearance';
 import { updateMember } from '@/lib/members';
 import { cancelUpdateRequest, checkForUpdate, requestUpdate } from '@/lib/updates';
@@ -62,11 +62,17 @@ export async function saveAppearanceAction(fd: FormData): Promise<void> {
   const me = await requireMember();
   const preset = str(fd, 'preset');
   const theme = str(fd, 'theme');
+  const glass = str(fd, 'glass');
   const next = {
     preset: isPreset(preset) ? preset : me.appearancePreset,
     theme: isTheme(theme) ? theme : me.theme,
+    glass: isGlass(glass) ? glass : me.glass,
   };
-  updateMember(me.householdId, me.id, { appearancePreset: next.preset, theme: next.theme });
+  updateMember(me.householdId, me.id, {
+    appearancePreset: next.preset,
+    theme: next.theme,
+    glass: next.glass,
+  });
   await rememberAppearance(next);
   revalidatePath('/', 'layout');
 }

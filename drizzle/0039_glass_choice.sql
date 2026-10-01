@@ -1,0 +1,1 @@
+ALTER TABLE `member` ADD `glass` text DEFAULT 'auto' NOT NULL;

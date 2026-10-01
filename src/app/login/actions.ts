@@ -159,7 +159,11 @@ export async function logout(): Promise<void> {
   // The sign-in page keeps this person's colours on this device.
   const s = await authState();
   if (s.kind === 'ok')
-    await rememberAppearance({ preset: s.member.appearancePreset, theme: s.member.theme });
+    await rememberAppearance({
+      preset: s.member.appearancePreset,
+      theme: s.member.theme,
+      glass: s.member.glass,
+    });
   await signOut();
   redirect('/login');
 }

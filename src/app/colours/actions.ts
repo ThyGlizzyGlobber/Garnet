@@ -16,6 +16,7 @@ export async function saveColoursAction(fd: FormData): Promise<void> {
   const next = {
     preset: isPreset(preset) ? preset : DEFAULT_APPEARANCE.preset,
     theme: isTheme(theme) ? theme : DEFAULT_APPEARANCE.theme,
+    glass: DEFAULT_APPEARANCE.glass,
   };
   updateMember(s.member.householdId, s.member.id, {
     appearancePreset: next.preset,

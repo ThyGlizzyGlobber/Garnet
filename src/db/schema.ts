@@ -110,6 +110,8 @@ const householdId = () =>
 export const APPEARANCE_PRESETS = ['mist', 'harbour', 'ruby', 'cobalt', 'violet'] as const;
 /** Light, dark, or auto (follow the device). */
 export const THEMES = ['auto', 'light', 'dark'] as const;
+/** Glass cards: clear, solid, or auto (follow the device's Reduce transparency). */
+export const GLASS_MODES = ['auto', 'clear', 'solid'] as const;
 
 export const member = sqliteTable(
   'member',
@@ -147,6 +149,7 @@ export const member = sqliteTable(
       .notNull()
       .default('harbour'),
     theme: text('theme', { enum: THEMES }).notNull().default('auto'),
+    glass: text('glass', { enum: GLASS_MODES }).notNull().default('auto'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
