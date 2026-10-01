@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
-import { Icon } from '@/components/app/icons';
+import { GarnetMark } from '@/components/app/garnet-mark';
 import { getEnv } from '@/lib/env';
 import { PRIVACY_NOTICE_VERSION } from '@/lib/regional';
 
@@ -22,9 +22,7 @@ export default async function PrivacyPage() {
     <main className="outside">
       <div className="public">
         <Link href="/" className="auth-brand">
-          <span className="mark">
-            <Icon name="home" width={18} height={18} />
-          </span>
+          <GarnetMark />
           <b>{ta('name')}</b>
         </Link>
         <header className="d3-title">

@@ -64,6 +64,12 @@ describe('the one colour scheme in globals.css', () => {
     expect(Object.fromEntries(auto[0]!.tokens)).toEqual(Object.fromEntries(dark[0]!.tokens));
   });
 
+  it('is Garnet, and the only scheme', () => {
+    expect(SCHEME).toBe('garnet');
+    const palettes = new Set([...css.matchAll(/\[data-palette='([\w-]+)'\]/g)].map((m) => m[1]));
+    expect([...palettes]).toEqual(['garnet']);
+  });
+
   it('theme-color matches the page colour', () => {
     const blocks = blocksFor(SCHEME);
     const light = blocks.find((b) => !b.selector.includes('dark') && !b.selector.includes(':not'));

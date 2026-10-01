@@ -1495,6 +1495,11 @@ input.inp-plain[type='color'] {
   color: inherit;
   text-decoration: none;
 }
+/* The Garnet mark beside the product's name (sign-in, privacy). */
+.mark-gem {
+  flex: none;
+  filter: drop-shadow(0 6px 10px rgba(168, 20, 31, 0.28));
+}
 .auth-big {
   font-size: 50px;
   line-height: 1.02;

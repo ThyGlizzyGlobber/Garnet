@@ -1,5 +1,5 @@
 /**
- * The colour scene behind everything: the person's preset as a soft ground,
+ * The colour scene behind everything: the Garnet scheme as a soft ground,
  * four slow-drifting colour blobs, film grain and a vignette (globals.css).
  */
 export function Scene() {

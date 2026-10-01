@@ -11,10 +11,9 @@
   brand-identity/inspiration/redesign-studio/ (direction 6).
 
   Three kinds of token, all on <html>:
-  - Colour presets (--p-*): five of them, each with a light and a dark set,
-    chosen per person. The root layout sets data-palette (mist, harbour, ruby,
-    cobalt, violet) and data-theme (light or dark; absent = follow the device).
-    Any element can carry its own data-palette (the preset previews do).
+  - The colour scheme (--p-*): Garnet, with a light and a dark set. The root
+    layout sets data-palette="garnet" and data-theme (light or dark; absent =
+    follow the device).
   - Mode tokens: status colours, neutrals and the glass, light and dark.
   - Shape and type: one set, the Frost Glass pack.
 
@@ -107,7 +106,7 @@
 
   --g-blur: 30px;
   --g-sat: 150%;
-  /* Cards are clear glass, like the preset previews: the scene's colour shows
+  /* Cards are clear glass, so the scene's colour shows
      through, softened only a little (owner, 2026-10-01: "too frosted"). */
   --g-card-blur: 8px;
   --g-card-sat: 135%;
@@ -132,40 +131,35 @@
   color-scheme: light;
   --ok: #4a6079;
   --warn: #8a5a00;
-  --bad: #a43b32;
-  --line: rgba(24, 22, 30, 0.1);
-  --line-2: rgba(24, 22, 30, 0.16);
-  --inset: rgba(24, 22, 30, 0.05);
-  --inset-2: rgba(24, 22, 30, 0.08);
-  --track: rgba(24, 22, 30, 0.09);
-  --hatch: rgba(24, 22, 30, 0.3);
-  --tip-bg: #fbfaf7;
+  --bad: #a8141f;
+  --line: rgba(28, 28, 28, 0.1);
+  --line-2: rgba(28, 28, 28, 0.16);
+  --inset: rgba(28, 28, 28, 0.05);
+  --inset-2: rgba(28, 28, 28, 0.08);
+  --track: rgba(28, 28, 28, 0.09);
+  --hatch: rgba(28, 28, 28, 0.3);
+  --tip-bg: #fafafa;
   --paper: #fdfcf9;
   --paper-ink: #25231f;
   --grain: 0.06;
-  --vig: rgba(31, 29, 24, 0.12);
+  --vig: rgba(28, 28, 28, 0.12);
 
-  --g-bg: rgba(250, 251, 253, 0.32);
+  --g-bg: rgba(250, 250, 250, 0.32);
   --g-bg-strong: color-mix(in srgb, var(--p-bg) 62%, rgba(255, 255, 255, 0.3));
   --g-bright: 1.05;
   --g-rim: rgba(255, 255, 255, 0.34);
   --g-hi: rgba(255, 255, 255, 0.85);
   --g-lens: rgba(255, 255, 255, 0.2);
   --g-spec: rgba(255, 255, 255, 0.92);
-  --g-shadow: 0 28px 56px -30px rgba(20, 40, 60, 0.36), 0 2px 8px -4px rgba(20, 40, 60, 0.1);
-  --g-solid: #f7f8fa;
-  /* Solid glass for reduced transparency: the preset's page colour, lifted. */
+  --g-shadow: 0 28px 56px -30px rgba(0, 0, 0, 0.3), 0 2px 8px -4px rgba(0, 0, 0, 0.08);
+  --g-solid: #f7f7f7;
+  /* Solid glass for reduced transparency: the scheme's page colour, lifted. */
   --g-tint: color-mix(in srgb, var(--p-bg) 55%, white);
   --ctl-bg: rgba(255, 255, 255, 0.42);
   --ctl-rim: rgba(255, 255, 255, 0.7);
   --nav-on-bg: rgba(255, 255, 255, 0.78);
   --nav-on-ic: var(--p-accent);
   --seg-on: rgba(255, 255, 255, 0.88);
-
-  /* the little card inside a preset preview */
-  --pp-bg: rgba(255, 255, 255, 0.5);
-  --pp-rim: rgba(255, 255, 255, 0.7);
-  --pp-shadow: rgba(0, 0, 0, 0.3);
 
   /* service discs: the service colour mixed into a pale base */
   --disc-base: rgba(255, 255, 255, 0.55);
@@ -230,20 +224,20 @@
   color-scheme: dark;
   --ok: #93aac1;
   --warn: #e8c47c;
-  --bad: #eca49d;
+  --bad: #ea868b;
   --line: rgba(255, 255, 255, 0.11);
   --line-2: rgba(255, 255, 255, 0.18);
   --inset: rgba(255, 255, 255, 0.06);
   --inset-2: rgba(255, 255, 255, 0.1);
   --track: rgba(255, 255, 255, 0.11);
   --hatch: rgba(255, 255, 255, 0.32);
-  --tip-bg: #1f232b;
+  --tip-bg: #242424;
   --paper: #f3f1ec;
   --paper-ink: #23211d;
   --grain: 0.09;
   --vig: rgba(0, 0, 0, 0.42);
 
-  /* Dark cards are smoked glass: a tint of the preset's page colour, dimmed a
+  /* Dark cards are smoked glass: a tint of the scheme's page colour, dimmed a
      little, so coloured lines and figures on them stay easy to read. */
   --g-bg: color-mix(in srgb, var(--p-bg) 30%, transparent);
   --g-card-sat: 125%;
@@ -257,17 +251,13 @@
   --g-lens: rgba(255, 255, 255, 0.06);
   --g-spec: rgba(255, 255, 255, 0.45);
   --g-shadow: 0 30px 60px -28px rgba(0, 0, 0, 0.7), 0 2px 8px -4px rgba(0, 0, 0, 0.3);
-  --g-solid: #262b34;
+  --g-solid: #262626;
   --g-tint: color-mix(in srgb, var(--p-bg) 88%, white);
   --ctl-bg: rgba(255, 255, 255, 0.09);
   --ctl-rim: rgba(255, 255, 255, 0.16);
   --nav-on-bg: rgba(255, 255, 255, 0.15);
   --nav-on-ic: var(--p-fg);
   --seg-on: rgba(255, 255, 255, 0.18);
-
-  --pp-bg: rgba(255, 255, 255, 0.08);
-  --pp-rim: rgba(255, 255, 255, 0.14);
-  --pp-shadow: rgba(0, 0, 0, 0.5);
 
   --disc-base: rgba(255, 255, 255, 0.05);
   --disc-mix: 26%;
@@ -329,14 +319,14 @@
     color-scheme: dark;
     --ok: #93aac1;
     --warn: #e8c47c;
-    --bad: #eca49d;
+    --bad: #ea868b;
     --line: rgba(255, 255, 255, 0.11);
     --line-2: rgba(255, 255, 255, 0.18);
     --inset: rgba(255, 255, 255, 0.06);
     --inset-2: rgba(255, 255, 255, 0.1);
     --track: rgba(255, 255, 255, 0.11);
     --hatch: rgba(255, 255, 255, 0.32);
-    --tip-bg: #1f232b;
+    --tip-bg: #242424;
     --paper: #f3f1ec;
     --paper-ink: #23211d;
     --grain: 0.09;
@@ -354,17 +344,13 @@
     --g-lens: rgba(255, 255, 255, 0.06);
     --g-spec: rgba(255, 255, 255, 0.45);
     --g-shadow: 0 30px 60px -28px rgba(0, 0, 0, 0.7), 0 2px 8px -4px rgba(0, 0, 0, 0.3);
-    --g-solid: #262b34;
+    --g-solid: #262626;
     --g-tint: color-mix(in srgb, var(--p-bg) 88%, white);
     --ctl-bg: rgba(255, 255, 255, 0.09);
     --ctl-rim: rgba(255, 255, 255, 0.16);
     --nav-on-bg: rgba(255, 255, 255, 0.15);
     --nav-on-ic: var(--p-fg);
     --seg-on: rgba(255, 255, 255, 0.18);
-
-    --pp-bg: rgba(255, 255, 255, 0.08);
-    --pp-rim: rgba(255, 255, 255, 0.14);
-    --pp-shadow: rgba(0, 0, 0, 0.5);
 
     --disc-base: rgba(255, 255, 255, 0.05);
     --disc-mix: 26%;
@@ -425,244 +411,56 @@
 }
 
 /*
-  ---- Colour presets ----
-  Generated from the studio's js/palettes.js (the five marked app: true).
-  PRESET_BG in src/lib/appearance.ts repeats each --p-bg for the browser's
-  theme-color; tests/appearance.test.ts keeps the two in step.
+  ---- The colour scheme: Garnet (BRAND.md §2) ----
+  Neutral grey ground, Graphite for buttons and links (--p-accent), and
+  Pyrope red only for the brand and for warnings (--bad, and a faint glow in
+  the scene). SCHEME_BG in src/lib/appearance.ts repeats --p-bg for the
+  browser's theme-color; tests/appearance.test.ts keeps the two in step.
 */
-/* Ink & Mist: Today’s colours. Slate, mist and sand. */
-[data-palette='mist'] {
-  --p-bg: #e9e4dc;
-  --p-ground: linear-gradient(160deg, #f1ece4 0%, #e9e4dc 55%, #ece6dd 100%);
-  --p-blob1: rgba(255, 190, 140, 0.75);
-  --p-blob2: rgba(150, 175, 200, 0.8);
-  --p-blob3: rgba(190, 170, 210, 0.6);
-  --p-blob4: rgba(160, 200, 190, 0.55);
-  --p-accent: #5b6f82;
-  --p-accent2: #a77b5b;
+[data-palette='garnet'] {
+  --p-bg: #f5f5f5;
+  --p-ground: linear-gradient(160deg, #fafafa 0%, #f5f5f5 55%, #efefef 100%);
+  --p-blob1: rgba(168, 20, 31, 0.16);
+  --p-blob2: rgba(184, 184, 184, 0.55);
+  --p-blob3: rgba(214, 214, 214, 0.7);
+  --p-blob4: rgba(117, 117, 117, 0.22);
+  --p-accent: #3a3a3a;
+  --p-accent2: #5c5c5c;
   --p-on-accent: #ffffff;
-  --p-fg: #1f1d18;
-  --p-fg2: #5c584f;
-  --p-fg3: #878277;
+  --p-fg: #1c1c1c;
+  --p-fg2: #5c5c5c;
+  --p-fg3: #757575;
 }
-[data-theme='dark'][data-palette='mist'],
-[data-theme='dark'] [data-palette='mist'] {
-  --p-bg: #12151b;
-  --p-ground: linear-gradient(160deg, #1b2130 0%, #12151b 55%, #171b24 100%);
-  --p-blob1: rgba(224, 160, 110, 0.55);
-  --p-blob2: rgba(80, 120, 170, 0.6);
-  --p-blob3: rgba(120, 90, 160, 0.5);
-  --p-blob4: rgba(40, 120, 120, 0.45);
-  --p-accent: #b9c7d6;
-  --p-accent2: #e0b48c;
-  --p-on-accent: #171b22;
-  --p-fg: #f1ede6;
-  --p-fg2: rgba(241, 237, 230, 0.7);
-  --p-fg3: rgba(241, 237, 230, 0.5);
+[data-theme='dark'][data-palette='garnet'],
+[data-theme='dark'] [data-palette='garnet'] {
+  --p-bg: #1c1c1c;
+  --p-ground: linear-gradient(160deg, #242424 0%, #1c1c1c 55%, #181818 100%);
+  --p-blob1: rgba(168, 20, 31, 0.34);
+  --p-blob2: rgba(92, 92, 92, 0.45);
+  --p-blob3: rgba(58, 58, 58, 0.6);
+  --p-blob4: rgba(129, 14, 24, 0.22);
+  --p-accent: #d6d6d6;
+  --p-accent2: #b8b8b8;
+  --p-on-accent: #1c1c1c;
+  --p-fg: #f5f5f5;
+  --p-fg2: rgba(245, 245, 245, 0.7);
+  --p-fg3: rgba(245, 245, 245, 0.5);
 }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light'])[data-palette='mist'],
-  :root:not([data-theme='light']) [data-palette='mist'] {
-    --p-bg: #12151b;
-    --p-ground: linear-gradient(160deg, #1b2130 0%, #12151b 55%, #171b24 100%);
-    --p-blob1: rgba(224, 160, 110, 0.55);
-    --p-blob2: rgba(80, 120, 170, 0.6);
-    --p-blob3: rgba(120, 90, 160, 0.5);
-    --p-blob4: rgba(40, 120, 120, 0.45);
-    --p-accent: #b9c7d6;
-    --p-accent2: #e0b48c;
-    --p-on-accent: #171b22;
-    --p-fg: #f1ede6;
-    --p-fg2: rgba(241, 237, 230, 0.7);
-    --p-fg3: rgba(241, 237, 230, 0.5);
-  }
-}
-/* Harbour: Deep blue, sea glass and sand. */
-[data-palette='harbour'] {
-  --p-bg: #e3e8ec;
-  --p-ground: linear-gradient(160deg, #edf1f4 0%, #e3e8ec 55%, #e6ebee 100%);
-  --p-blob1: rgba(120, 170, 215, 0.75);
-  --p-blob2: rgba(110, 200, 210, 0.6);
-  --p-blob3: rgba(236, 205, 160, 0.65);
-  --p-blob4: rgba(150, 160, 220, 0.55);
-  --p-accent: #2f5f86;
-  --p-accent2: #b0814a;
-  --p-on-accent: #ffffff;
-  --p-fg: #15202a;
-  --p-fg2: #4b5965;
-  --p-fg3: #7a8792;
-}
-[data-theme='dark'][data-palette='harbour'],
-[data-theme='dark'] [data-palette='harbour'] {
-  --p-bg: #0d141c;
-  --p-ground: linear-gradient(160deg, #13202e 0%, #0d141c 55%, #101a24 100%);
-  --p-blob1: rgba(50, 110, 180, 0.6);
-  --p-blob2: rgba(30, 140, 150, 0.5);
-  --p-blob3: rgba(200, 150, 90, 0.42);
-  --p-blob4: rgba(80, 90, 170, 0.5);
-  --p-accent: #9cc4e6;
-  --p-accent2: #e3be8a;
-  --p-on-accent: #0d1822;
-  --p-fg: #eef3f7;
-  --p-fg2: rgba(238, 243, 247, 0.7);
-  --p-fg3: rgba(238, 243, 247, 0.5);
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light'])[data-palette='harbour'],
-  :root:not([data-theme='light']) [data-palette='harbour'] {
-    --p-bg: #0d141c;
-    --p-ground: linear-gradient(160deg, #13202e 0%, #0d141c 55%, #101a24 100%);
-    --p-blob1: rgba(50, 110, 180, 0.6);
-    --p-blob2: rgba(30, 140, 150, 0.5);
-    --p-blob3: rgba(200, 150, 90, 0.42);
-    --p-blob4: rgba(80, 90, 170, 0.5);
-    --p-accent: #9cc4e6;
-    --p-accent2: #e3be8a;
-    --p-on-accent: #0d1822;
-    --p-fg: #eef3f7;
-    --p-fg2: rgba(238, 243, 247, 0.7);
-    --p-fg3: rgba(238, 243, 247, 0.5);
-  }
-}
-/* Ruby: Warm reds with a touch of raspberry. */
-[data-palette='ruby'] {
-  --p-bg: #f0e4e3;
-  --p-ground: linear-gradient(160deg, #f6ecea 0%, #f0e4e3 55%, #f2e7e5 100%);
-  --p-blob1: rgba(232, 110, 110, 0.55);
-  --p-blob2: rgba(245, 170, 160, 0.6);
-  --p-blob3: rgba(200, 90, 120, 0.42);
-  --p-blob4: rgba(240, 212, 202, 0.7);
-  --p-accent: #a8283a;
-  --p-accent2: #8e3b62;
-  --p-on-accent: #ffffff;
-  --p-fg: #2a1414;
-  --p-fg2: #6b4c4b;
-  --p-fg3: #987977;
-}
-[data-theme='dark'][data-palette='ruby'],
-[data-theme='dark'] [data-palette='ruby'] {
-  --p-bg: #170c0e;
-  --p-ground: linear-gradient(160deg, #2a1216 0%, #170c0e 55%, #1e0f12 100%);
-  --p-blob1: rgba(200, 50, 60, 0.5);
-  --p-blob2: rgba(230, 110, 100, 0.36);
-  --p-blob3: rgba(150, 40, 90, 0.45);
-  --p-blob4: rgba(90, 40, 50, 0.5);
-  --p-accent: #f28b8b;
-  --p-accent2: #e79ab8;
-  --p-on-accent: #2b0c0f;
-  --p-fg: #f8ecec;
-  --p-fg2: rgba(248, 236, 236, 0.7);
-  --p-fg3: rgba(248, 236, 236, 0.5);
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light'])[data-palette='ruby'],
-  :root:not([data-theme='light']) [data-palette='ruby'] {
-    --p-bg: #170c0e;
-    --p-ground: linear-gradient(160deg, #2a1216 0%, #170c0e 55%, #1e0f12 100%);
-    --p-blob1: rgba(200, 50, 60, 0.5);
-    --p-blob2: rgba(230, 110, 100, 0.36);
-    --p-blob3: rgba(150, 40, 90, 0.45);
-    --p-blob4: rgba(90, 40, 50, 0.5);
-    --p-accent: #f28b8b;
-    --p-accent2: #e79ab8;
-    --p-on-accent: #2b0c0f;
-    --p-fg: #f8ecec;
-    --p-fg2: rgba(248, 236, 236, 0.7);
-    --p-fg3: rgba(248, 236, 236, 0.5);
-  }
-}
-/* Cobalt: Clear blues, bright and simple. */
-[data-palette='cobalt'] {
-  --p-bg: #e4e9f3;
-  --p-ground: linear-gradient(160deg, #edf1f8 0%, #e4e9f3 55%, #e8ecf5 100%);
-  --p-blob1: rgba(90, 140, 235, 0.55);
-  --p-blob2: rgba(150, 195, 250, 0.6);
-  --p-blob3: rgba(70, 110, 200, 0.4);
-  --p-blob4: rgba(210, 225, 245, 0.7);
-  --p-accent: #2356c2;
-  --p-accent2: #2f86cf;
-  --p-on-accent: #ffffff;
-  --p-fg: #121a2c;
-  --p-fg2: #48536e;
-  --p-fg3: #78829a;
-}
-[data-theme='dark'][data-palette='cobalt'],
-[data-theme='dark'] [data-palette='cobalt'] {
-  --p-bg: #080d1a;
-  --p-ground: linear-gradient(160deg, #0f1a33 0%, #080d1a 55%, #0b1326 100%);
-  --p-blob1: rgba(50, 100, 230, 0.5);
-  --p-blob2: rgba(90, 160, 255, 0.35);
-  --p-blob3: rgba(30, 60, 160, 0.55);
-  --p-blob4: rgba(60, 80, 140, 0.4);
-  --p-accent: #8fb2ff;
-  --p-accent2: #7fd0ff;
-  --p-on-accent: #0a1530;
-  --p-fg: #eef2fc;
-  --p-fg2: rgba(238, 242, 252, 0.7);
-  --p-fg3: rgba(238, 242, 252, 0.5);
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light'])[data-palette='cobalt'],
-  :root:not([data-theme='light']) [data-palette='cobalt'] {
-    --p-bg: #080d1a;
-    --p-ground: linear-gradient(160deg, #0f1a33 0%, #080d1a 55%, #0b1326 100%);
-    --p-blob1: rgba(50, 100, 230, 0.5);
-    --p-blob2: rgba(90, 160, 255, 0.35);
-    --p-blob3: rgba(30, 60, 160, 0.55);
-    --p-blob4: rgba(60, 80, 140, 0.4);
-    --p-accent: #8fb2ff;
-    --p-accent2: #7fd0ff;
-    --p-on-accent: #0a1530;
-    --p-fg: #eef2fc;
-    --p-fg2: rgba(238, 242, 252, 0.7);
-    --p-fg3: rgba(238, 242, 252, 0.5);
-  }
-}
-/* Violet: Soft purples, calm and cool. */
-[data-palette='violet'] {
-  --p-bg: #ebe5f3;
-  --p-ground: linear-gradient(160deg, #f2edf8 0%, #ebe5f3 55%, #eee8f5 100%);
-  --p-blob1: rgba(150, 110, 230, 0.5);
-  --p-blob2: rgba(200, 170, 245, 0.6);
-  --p-blob3: rgba(120, 80, 190, 0.4);
-  --p-blob4: rgba(230, 215, 248, 0.7);
-  --p-accent: #6a3fc2;
-  --p-accent2: #9450c4;
-  --p-on-accent: #ffffff;
-  --p-fg: #1c1430;
-  --p-fg2: #564b6c;
-  --p-fg3: #857b9a;
-}
-[data-theme='dark'][data-palette='violet'],
-[data-theme='dark'] [data-palette='violet'] {
-  --p-bg: #0f0a1a;
-  --p-ground: linear-gradient(160deg, #1e1433 0%, #0f0a1a 55%, #160f26 100%);
-  --p-blob1: rgba(130, 80, 230, 0.5);
-  --p-blob2: rgba(180, 120, 255, 0.35);
-  --p-blob3: rgba(90, 50, 180, 0.55);
-  --p-blob4: rgba(100, 70, 150, 0.45);
-  --p-accent: #c3a8ff;
-  --p-accent2: #e0a3ff;
-  --p-on-accent: #1a0f33;
-  --p-fg: #f2eefb;
-  --p-fg2: rgba(242, 238, 251, 0.7);
-  --p-fg3: rgba(242, 238, 251, 0.5);
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light'])[data-palette='violet'],
-  :root:not([data-theme='light']) [data-palette='violet'] {
-    --p-bg: #0f0a1a;
-    --p-ground: linear-gradient(160deg, #1e1433 0%, #0f0a1a 55%, #160f26 100%);
-    --p-blob1: rgba(130, 80, 230, 0.5);
-    --p-blob2: rgba(180, 120, 255, 0.35);
-    --p-blob3: rgba(90, 50, 180, 0.55);
-    --p-blob4: rgba(100, 70, 150, 0.45);
-    --p-accent: #c3a8ff;
-    --p-accent2: #e0a3ff;
-    --p-on-accent: #1a0f33;
-    --p-fg: #f2eefb;
-    --p-fg2: rgba(242, 238, 251, 0.7);
-    --p-fg3: rgba(242, 238, 251, 0.5);
+  :root:not([data-theme='light'])[data-palette='garnet'],
+  :root:not([data-theme='light']) [data-palette='garnet'] {
+    --p-bg: #1c1c1c;
+    --p-ground: linear-gradient(160deg, #242424 0%, #1c1c1c 55%, #181818 100%);
+    --p-blob1: rgba(168, 20, 31, 0.34);
+    --p-blob2: rgba(92, 92, 92, 0.45);
+    --p-blob3: rgba(58, 58, 58, 0.6);
+    --p-blob4: rgba(129, 14, 24, 0.22);
+    --p-accent: #d6d6d6;
+    --p-accent2: #b8b8b8;
+    --p-on-accent: #1c1c1c;
+    --p-fg: #f5f5f5;
+    --p-fg2: rgba(245, 245, 245, 0.7);
+    --p-fg3: rgba(245, 245, 245, 0.5);
   }
 }
 @layer base {
@@ -701,7 +499,7 @@
   element win (glass + bg-accent-soft tints a tile; fixed beats relative).
 */
 @layer components {
-  /* ---- The scene: the preset's ground, four drifting colour blobs, grain, vignette ---- */
+  /* ---- The scene: the scheme's ground, four drifting colour blobs, grain, vignette ---- */
   .scene {
     position: fixed;
     inset: 0;
@@ -847,180 +645,17 @@
   .hatch {
     background: repeating-linear-gradient(135deg, var(--hatch) 0 4px, transparent 4px 9px);
   }
-  /*
-    ---- Colour preset cards (Settings → Appearance, the setup wizard, joining) ----
-    Each preview carries its own data-palette, so the mini scene inside is
-    drawn from that preset's tokens in the current light or dark.
-  */
-  .presets {
-    display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 12px;
-  }
-  .preset {
-    position: relative;
-    display: grid;
-    align-content: start;
-    gap: 10px;
-    padding: 8px;
-    border: 0;
-    border-radius: calc(var(--r-inner) + 6px);
-    background: var(--inset);
-    box-shadow: inset 0 0 0 1px var(--line);
-    color: var(--p-fg);
-    text-align: left;
-    cursor: pointer;
-    transition:
-      transform 0.2s,
-      box-shadow 0.2s;
-  }
-  .preset:hover {
-    transform: translateY(-2px);
-  }
-  .preset:focus-visible {
-    outline: 2px solid var(--p-accent);
-    outline-offset: 2px;
-  }
-  .preset[aria-pressed='true'],
-  .preset:has(input:checked) {
-    box-shadow:
-      inset 0 0 0 2px var(--p-accent),
-      0 12px 26px -16px var(--p-accent);
-  }
-  .preset-prev {
-    position: relative;
-    display: block;
-    aspect-ratio: 4 / 3;
-    border-radius: var(--r-inner);
-    overflow: hidden;
-    background: var(--p-ground);
-  }
-  .preset-prev > i {
-    position: absolute;
-    border-radius: 50%;
-    aspect-ratio: 1;
-  }
-  .preset-prev .pp-b1 {
-    width: 95%;
-    left: -30%;
-    top: -45%;
-    background: radial-gradient(closest-side, var(--p-blob1), transparent);
-  }
-  .preset-prev .pp-b2 {
-    width: 90%;
-    right: -35%;
-    top: -10%;
-    background: radial-gradient(closest-side, var(--p-blob2), transparent);
-  }
-  .preset-prev .pp-b3 {
-    width: 100%;
-    left: 5%;
-    bottom: -60%;
-    background: radial-gradient(closest-side, var(--p-blob3), transparent);
-  }
-  .pp-card {
-    position: absolute;
-    left: 12%;
-    right: 12%;
-    top: 30%;
-    bottom: 14%;
-    display: grid;
-    grid-template-columns: auto 1fr;
-    grid-template-rows: 1fr auto;
-    gap: 6px 8px;
-    padding: 9px;
-    border-radius: 10px;
-    background: var(--pp-bg);
-    box-shadow:
-      inset 0 0 0 1px var(--pp-rim),
-      0 8px 18px -10px var(--pp-shadow);
-  }
-  .pp-ring {
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    background: conic-gradient(
-      var(--p-accent) 0 62%,
-      color-mix(in srgb, var(--p-fg) 14%, transparent) 0
-    );
-    -webkit-mask: radial-gradient(circle, transparent 52%, #000 54%);
-    mask: radial-gradient(circle, transparent 52%, #000 54%);
-  }
-  .pp-lines {
-    display: grid;
-    gap: 4px;
-    align-content: center;
-  }
-  .pp-lines i {
-    display: block;
-    height: 4px;
-    border-radius: 3px;
-    background: color-mix(in srgb, var(--p-fg) 55%, transparent);
-  }
-  .pp-lines i + i {
-    width: 60%;
-    background: color-mix(in srgb, var(--p-fg) 25%, transparent);
-  }
-  .pp-btn {
-    grid-column: 1 / -1;
-    justify-self: start;
-    width: 55%;
-    height: 9px;
-    border-radius: 99px;
-    background: linear-gradient(90deg, var(--p-accent), var(--p-accent2));
-  }
-  .preset-t {
-    display: grid;
-    gap: 1px;
-    padding: 0 4px 4px;
-  }
-  .preset-t b {
-    font-family: var(--f-display);
-    font-weight: var(--fw-display);
-    letter-spacing: var(--ls-display);
-    font-size: 15px;
-  }
-  .preset-t span {
-    font-size: 12px;
-    color: var(--p-fg2);
-    line-height: 1.35;
-  }
-  .preset-check {
-    position: absolute;
-    top: 14px;
-    right: 14px;
-    display: none;
-    place-items: center;
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    background: var(--p-accent);
-    color: var(--p-on-accent);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
-  }
-  .preset[aria-pressed='true'] .preset-check,
-  .preset:has(input:checked) .preset-check {
-    display: grid;
-  }
-  @media (max-width: 639px) {
-    .presets {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 10px;
-    }
-  }
-
   /* The scene holds still for people who ask for less motion. */
   @media (prefers-reduced-motion: reduce) {
     .scene i {
       animation: none;
     }
-    .lift:hover,
-    .preset:hover {
+    .lift:hover {
       transform: none;
     }
   }
 
-  /* Solid glass: the glass turns solid in the preset's own colour and stops
+  /* Solid glass: the glass turns solid in the scheme's own colour and stops
      blurring, so it still matches. Each person chooses Clear, Solid or
      Automatic (Settings → Appearance, data-glass on <html>); Automatic follows
      the device's Reduce transparency setting. */

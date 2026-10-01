@@ -8,12 +8,11 @@ import { GLASS_MODES, THEMES } from '@/db/schema';
  * household; a cookie remembers the last choice in a browser for the pages
  * before sign-in.
  *
- * There is one colour scheme for now (SCOPE-accounts.md D3): the owner
- * scrapped the five presets until the brand colours are settled. The preset
- * tokens stay in globals.css keyed on data-palette, so changing the scheme is
- * this one constant.
+ * There is one colour scheme, Garnet (BRAND.md §2; owner, 2026-10-02): neutral
+ * grey, Graphite buttons, Pyrope red for the brand and warnings. Its tokens
+ * live in globals.css keyed on data-palette.
  */
-export const SCHEME = 'ruby';
+export const SCHEME = 'garnet';
 export type Theme = (typeof THEMES)[number];
 export type Glass = (typeof GLASS_MODES)[number];
 export interface Appearance {
@@ -31,7 +30,7 @@ export const isGlass = (v: unknown): v is Glass => (GLASS_MODES as readonly unkn
  * The scheme's page colour (its --p-bg in globals.css), for the browser's
  * theme-color. tests/appearance.test.ts keeps it in step with the CSS.
  */
-export const SCHEME_BG = { light: '#f0e4e3', dark: '#170c0e' };
+export const SCHEME_BG = { light: '#f5f5f5', dark: '#1c1c1c' };
 
 /**
  * The cookie's form, e.g. "dark.clear". Cookies written before the presets

@@ -95,60 +95,58 @@ Empty states say what will appear and offer the one action that fills it.
 
 ## 2. Colour
 
-### Presets
+### The Garnet scheme
 
-Each person picks one of five presets, in light, dark or automatic (follows the
-device). The choice is saved on their member record, so it follows them to
-every device; a cookie remembers the last choice in a browser for the pages
-before sign-in. Everyone starts on **Harbour**, automatic. The choice is made
-in the setup wizard, when joining by invite, and in Settings → Appearance.
+There is one colour scheme, **Garnet** (owner, 2026-10-02; it replaces the five
+presets, which were scrapped on 2026-10-01 with Ruby as a stand-in). People
+still choose light, dark or automatic (follows the device), saved on their
+account, with a cookie for the pages before sign-in. The roles, from §1:
+neutral grey for the page, **Graphite** for buttons, links and the active state,
+**Pyrope** red only for the brand mark and for warnings.
 
-| Preset     | Blurb                                      | Light bg · accent · accent 2  | Dark bg · accent · accent 2   |
-| ---------- | ------------------------------------------ | ----------------------------- | ----------------------------- |
-| Ink & Mist | The original colours. Slate, mist and sand | `#e9e4dc` `#5b6f82` `#a77b5b` | `#12151b` `#b9c7d6` `#e0b48c` |
-| Harbour    | Deep blue, sea glass and sand              | `#e3e8ec` `#2f5f86` `#b0814a` | `#0d141c` `#9cc4e6` `#e3be8a` |
-| Ruby       | Warm reds with a touch of raspberry        | `#f0e4e3` `#a8283a` `#8e3b62` | `#170c0e` `#f28b8b` `#e79ab8` |
-| Cobalt     | Clear blues, bright and simple             | `#e4e9f3` `#2356c2` `#2f86cf` | `#080d1a` `#8fb2ff` `#7fd0ff` |
-| Violet     | Soft purples, calm and cool                | `#ebe5f3` `#6a3fc2` `#9450c4` | `#0f0a1a` `#c3a8ff` `#e0a3ff` |
+| Token                            | Light                         | Dark                       | Use                                           |
+| -------------------------------- | ----------------------------- | -------------------------- | --------------------------------------------- |
+| `--p-bg`                         | `#f5f5f5`                     | `#1c1c1c`                  | page colour; also the browser's `theme-color` |
+| `--p-ground`                     | `#fafafa` → `#efefef`         | `#242424` → `#181818`      | the scene's base, a 160° gradient             |
+| `--p-blob1`                      | Pyrope at 16%                 | Pyrope at 34%              | the one warm glow in the scene                |
+| `--p-blob2` … `--p-blob4`        | greys                         | greys, a little Pyrope 700 | the scene's other blobs                       |
+| `--p-accent`                     | `#3a3a3a` (Graphite)          | `#d6d6d6`                  | main buttons, the active state, rings, links  |
+| `--p-accent2`                    | `#5c5c5c`                     | `#b8b8b8`                  | gradient partner for rings, arcs and progress |
+| `--p-on-accent`                  | `#ffffff`                     | `#1c1c1c`                  | text and icons on the accent                  |
+| `--p-fg` · `--p-fg2` · `--p-fg3` | `#1c1c1c` `#5c5c5c` `#757575` | `#f5f5f5` at 100/70/50%    | text: primary, secondary, tertiary            |
 
-Every preset sets the same twelve tokens, keyed on `data-palette` and
-`data-theme` on `<html>` (set by the root layout before first paint):
+The tokens are keyed on `data-palette="garnet"` and `data-theme` on `<html>`
+(set by the root layout before first paint); `SCHEME` and `SCHEME_BG` in
+`src/lib/appearance.ts` name it, and `tests/appearance.test.ts` checks it is
+complete in both themes, is the only scheme, and matches `SCHEME_BG`.
 
-| Token                            | Use                                                   |
-| -------------------------------- | ----------------------------------------------------- |
-| `--p-bg`                         | page colour; also the browser's `theme-color`         |
-| `--p-ground`                     | the scene's base: a 160° gradient of three near tones |
-| `--p-blob1` … `--p-blob4`        | the scene's four colour blobs                         |
-| `--p-accent`                     | primary buttons, the active state, rings              |
-| `--p-accent2`                    | gradient partner for rings, arcs and progress         |
-| `--p-on-accent`                  | text and icons on the accent                          |
-| `--p-fg` · `--p-fg2` · `--p-fg3` | text: primary, secondary, tertiary                    |
-
-Any element may carry its own `data-palette` (the preset previews do), and
-everything inside it follows. The full values are in `globals.css`, generated
-from the studio's `js/palettes.js`; `tests/appearance.test.ts` checks every
-preset is complete in both themes and that `PRESET_BG` matches.
+The mark is `GarnetMark` (`src/components/app/garnet-mark.tsx`): sign-in and
+privacy show it beside the name. The app icon (`public/icon.svg`,
+`icon-192.png`, `icon-512.png`) is the stone on `#1c1c1c`, inside the
+maskable safe zone. Households keep their own house mark in the nav and on
+the wall.
 
 In Tailwind: `bg`, `fg`, `fg-2`, `fg-3`, `accent`, `accent-2`, `on-accent`.
 
-### Status and neutrals (the same in every preset)
+### Status and neutrals
 
-Status keeps its meaning whatever the decor. Nothing green as an accent (the
+Status keeps its meaning whatever the decor. Overdue is Pyrope, the brand red:
+red only ever means Garnet or "needs attention". Nothing green as an accent (the
 owner's call); paid and settled use slate.
 
 | Token                     | Light               | Dark                | Use                                         |
 | ------------------------- | ------------------- | ------------------- | ------------------------------------------- |
 | `--ok`                    | `#4a6079`           | `#93aac1`           | paid, settled                               |
 | `--warn`                  | `#8a5a00`           | `#e8c47c`           | due soon, unusual, needs a look             |
-| `--bad`                   | `#a43b32`           | `#eca49d`           | overdue, couldn't be analysed               |
+| `--bad`                   | `#a8141f` (Pyrope)  | `#ea868b` (300)     | overdue, couldn't be analysed               |
 | `--line` / `--line-2`     | ink 10 % / 16 %     | white 11 % / 18 %   | dividers, outlines                          |
-| `--inset` / `--inset-2`   | ink 5 % / 8 %       | white 6 % / 10 %    | wells, rows, the preset cards               |
+| `--inset` / `--inset-2`   | ink 5 % / 8 %       | white 6 % / 10 %    | wells, rows                                 |
 | `--track`                 | ink 9 %             | white 11 %          | ring and bar tracks                         |
 | `--hatch`                 | ink 30 %            | white 32 %          | estimated / not yet billed (forecast pills) |
-| `--tip-bg`                | `#fbfaf7`           | `#1f232b`           | chart tooltips (opaque, never glass)        |
+| `--tip-bg`                | `#fafafa`           | `#242424`           | chart tooltips (opaque, never glass)        |
 | `--paper` · `--paper-ink` | `#fdfcf9` `#25231f` | `#f3f1ec` `#23211d` | the bill document preview                   |
 
-Ink is `rgb(24 22 30)`. In Tailwind: `ok`, `warn`, `bad`, `line`, `line-2`,
+Ink is `rgb(28 28 28)`, the neutral 900. In Tailwind: `ok`, `warn`, `bad`, `line`, `line-2`,
 `inset`, `inset-2`, `track`, `solid` (the opaque glass colour), `tip`.
 
 Status always comes with a word, never colour alone: a chip is a word with a

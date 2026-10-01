@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
+import { GarnetMark } from './garnet-mark';
 import { Icon } from './icons';
 import { ForgetOfflinePages } from './pwa';
 
@@ -34,9 +35,7 @@ export async function AuthShell({
       <div className={wide ? 'auth wide' : 'auth'}>
         <div className="auth-side">
           <Link href="/" className="auth-brand">
-            <span className="mark">
-              <Icon name="home" width={18} height={18} />
-            </span>
+            <GarnetMark />
             <b>{ta('name')}</b>
           </Link>
           {side ?? (
