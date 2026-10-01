@@ -200,8 +200,11 @@ a soft specular rim catching light from the top-left.
 The recipe (Tailwind components layer, so utilities on the same element win):
 
 - **`.glass`**, a card: clear glass like the preset previews (owner,
-  2026-10-01): `--g-bg` with a light 8 px blur and 165 % saturation, so the
-  scene's colour shows through; `inset 0 0 0 1px rim, inset 0 1px 0 hi,
+  2026-10-01): `--g-bg` with a light 8 px blur and a mild saturation, so the
+  scene's colour shows through; in dark it is smoked glass (a 30 % tint of the
+  preset's page colour, dimmed to 0.88) over a scene lifted to 1.25, so
+  coloured lines and figures on a card stay easy to read while the glow still
+  shows; `inset 0 0 0 1px rim, inset 0 1px 0 hi,
 shadow` (no inner lens glow, which read as frost), and a `::before` that
   draws a 1 px gradient rim (spec → 14 % → clear at 52 % → 8 % → spec at 55 %),
   masked to the border.
