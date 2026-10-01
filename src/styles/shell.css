@@ -213,7 +213,6 @@
   width: var(--nav-wv);
   padding: calc(var(--safe-t) + 16px) 14px calc(var(--safe-b) + 12px);
   border-radius: 0;
-  box-shadow: inset -1px 0 0 var(--line);
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -221,6 +220,53 @@
 /* A full-height panel has no floating card's lit rim. */
 .nav.column::before {
   display: none;
+}
+/*
+  The side menu is solid graphite in both themes (owner, 2026-10-02), not
+  glass. It sets its own dark tokens, so everything in it, the household and
+  account menus included, reads light on dark without rules of its own.
+*/
+/* Outranks the solid-glass rules for Reduce transparency (globals.css), which
+   would otherwise paint it light grey. */
+:root .app > .nav.column {
+  background: var(--side-bg);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: none;
+}
+.nav.column {
+  color-scheme: dark;
+  color: #f5f5f5;
+  --p-fg: #f5f5f5;
+  --p-fg2: rgba(245, 245, 245, 0.66);
+  --p-fg3: rgba(245, 245, 245, 0.45);
+  --p-accent: #d6d6d6;
+  --p-accent2: #b8b8b8;
+  --p-on-accent: #1c1c1c;
+  --line: rgba(255, 255, 255, 0.1);
+  --line-2: rgba(255, 255, 255, 0.16);
+  --inset: rgba(255, 255, 255, 0.07);
+  --inset-2: rgba(255, 255, 255, 0.1);
+  --ctl-rim: rgba(255, 255, 255, 0.14);
+  --g-hi: rgba(255, 255, 255, 0.08);
+  --nav-on-bg: rgba(255, 255, 255, 0.13);
+  --nav-on-fg: #ffffff;
+  --nav-on-ic: #ffffff;
+  --tip-bg: #2e2e2e;
+  --bad: #ea868b;
+}
+/* The household's mark: a light tile on the graphite. */
+.nav.column .mark {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  box-shadow: none;
+}
+.nav.column .nav-i[aria-current='page'] {
+  box-shadow: none;
+}
+/* Counts stay solid Pyrope with white figures (the lighter red is for text on graphite). */
+.nav.column .badge {
+  background: #a8141f;
 }
 .nav.column .nav-items {
   gap: 2px;
@@ -376,6 +422,7 @@
     align-items: stretch;
   }
   .nav.column .nc-bt,
+  .nav.column .nc-brand > .sw-chev,
   .nav.column .nc-svcs,
   .nav.column .nc-me > .ic {
     display: none;
@@ -534,6 +581,21 @@
 .sw {
   position: relative;
   min-width: 0;
+}
+/* In the column the household's name spans the menu's width, the arrow at its edge. */
+.sw-column .nc-brand {
+  width: 100%;
+}
+.sw-column .nc-brand .nc-bt {
+  flex: 1;
+}
+.sw-column .nc-brand > .sw-chev {
+  flex: none;
+  margin: 0 2px 0 0;
+}
+.sw-column .nc-brand:hover > .sw-chev,
+.sw-column .nc-brand[aria-expanded='true'] > .sw-chev {
+  color: var(--p-fg);
 }
 .sw-menu,
 .am-menu {

@@ -320,9 +320,11 @@ The studio's `.ring` is `.gauge` here (Tailwind owns `ring`):
 
 ## 9. Layout and navigation
 
-- **Desktop (≥ 1200 px): the nav column.** A strong-glass panel down the
-  whole left edge, 292 px wide, square, with a hairline on its right (owner,
-  2026-10-02: full height, not a floating card, and wider): the household at
+- **Desktop (≥ 1200 px): the nav column.** A solid graphite panel down the
+  whole left edge (`--side-bg`: `#242424` light, `#121212` dark), 292 px wide,
+  square (owner, 2026-10-02: full height, not a floating card, wider, and
+  solid like the reference). It carries its own dark tokens, so its text,
+  dropdowns and menus read light on graphite in both themes: the household at
   the top, then Home · Services · Bills · Money · Inbox (42 px items, radius
   14), then the services list with this month's amount beside each, and you
   at the foot.

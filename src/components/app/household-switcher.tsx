@@ -81,10 +81,12 @@ export function HouseholdSwitcher({
         <span className={column ? 'nc-bt' : 'brand-t'}>
           <b>
             {title}
-            <Icon name="chevron-down" width={14} height={14} className="sw-chev" />
+            {!column && <Icon name="chevron-down" width={14} height={14} className="sw-chev" />}
           </b>
           <span>{sub}</span>
         </span>
+        {/* In the column the arrow sits at the far edge, the name taking the width. */}
+        {column && <Icon name="chevron-down" width={16} height={16} className="sw-chev" />}
       </button>
       {open && (
         <div className="sw-menu" role="menu" aria-label={labels.title}>

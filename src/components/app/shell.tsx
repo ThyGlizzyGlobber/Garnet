@@ -27,8 +27,8 @@ export interface ShellLabels {
   nav: { home: string; services: string; bills: string; money: string; inbox: string };
   settings: string;
   search: string;
-  /** "Just you", for a household of one. */
-  justYou: string;
+  /** Under the household's name: "3 Members" (owner's wording). */
+  people: (count: number) => string;
   admin: string;
   member: string;
   /** Role names by roleKey (Admin, Owner/Landlord, Tenant…). */
@@ -115,10 +115,7 @@ export function AppShell({
   const myRole =
     labels.roles[roleKey(view.me.role, view.household.type)] ??
     (view.me.admin ? labels.admin : labels.member);
-  const who =
-    view.household.members.length <= 1
-      ? labels.justYou
-      : new Intl.ListFormat(locale, { type: 'conjunction' }).format(view.household.members);
+  const who = labels.people(view.household.members.length);
   const am = labels.accountMenu;
   const menuGroups: AccountMenuItem[][] = [
     [

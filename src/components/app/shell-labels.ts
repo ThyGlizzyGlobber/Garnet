@@ -19,7 +19,7 @@ export async function shellLabels(householdName: string): Promise<ShellLabels> {
     },
     settings: t('settings'),
     search: t('search'),
-    justYou: t('justYou'),
+    people: (count) => t('people', { count }),
     admin: t('admin'),
     member: t('member'),
     roles: {

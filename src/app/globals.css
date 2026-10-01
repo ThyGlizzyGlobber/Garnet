@@ -153,6 +153,8 @@
   --g-spec: rgba(255, 255, 255, 0.92);
   --g-shadow: 0 28px 56px -30px rgba(0, 0, 0, 0.3), 0 2px 8px -4px rgba(0, 0, 0, 0.08);
   --g-solid: #f7f7f7;
+  /* The side menu: solid graphite (owner, 2026-10-02), darker than the page in dark mode. */
+  --side-bg: #242424;
   /* Solid glass for reduced transparency: the scheme's page colour, lifted. */
   --g-tint: color-mix(in srgb, var(--p-bg) 55%, white);
   --ctl-bg: rgba(255, 255, 255, 0.42);
@@ -252,6 +254,7 @@
   --g-spec: rgba(255, 255, 255, 0.45);
   --g-shadow: 0 30px 60px -28px rgba(0, 0, 0, 0.7), 0 2px 8px -4px rgba(0, 0, 0, 0.3);
   --g-solid: #262626;
+  --side-bg: #121212;
   --g-tint: color-mix(in srgb, var(--p-bg) 88%, white);
   --ctl-bg: rgba(255, 255, 255, 0.09);
   --ctl-rim: rgba(255, 255, 255, 0.16);
@@ -345,6 +348,7 @@
     --g-spec: rgba(255, 255, 255, 0.45);
     --g-shadow: 0 30px 60px -28px rgba(0, 0, 0, 0.7), 0 2px 8px -4px rgba(0, 0, 0, 0.3);
     --g-solid: #262626;
+    --side-bg: #121212;
     --g-tint: color-mix(in srgb, var(--p-bg) 88%, white);
     --ctl-bg: rgba(255, 255, 255, 0.09);
     --ctl-rim: rgba(255, 255, 255, 0.16);

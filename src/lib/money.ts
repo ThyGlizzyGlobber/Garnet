@@ -51,6 +51,8 @@ export interface MoneyView {
   people: MoneyPerson[];
   /** Whom the viewer owes, by name, largest first (for the hero's sentence). */
   creditors: { member: Member; minor: number }[];
+  /** The viewer's own shares this financial year that they had to pay back, and how many are paid. */
+  yourShares: { total: number; paid: number };
   fyLabel: string;
 }
 
@@ -149,6 +151,7 @@ export function moneyView(
     between,
     people,
     creditors,
+    yourShares: fyShares.get(viewerId) ?? { total: 0, paid: 0 },
     fyLabel: fy.label,
   };
 }

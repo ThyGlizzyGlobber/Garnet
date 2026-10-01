@@ -16,7 +16,7 @@
     "wall": "Wall display",
     "addBill": "Add bill",
     "search": "Search bills, services, amounts",
-    "justYou": "Just you",
+    "people": "{count, plural, one {# Member} other {# Members}}",
     "admin": "Admin",
     "member": "Member",
     "servicesHead": "Services",
