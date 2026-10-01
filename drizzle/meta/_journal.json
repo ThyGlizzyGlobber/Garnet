@@ -302,6 +302,13 @@
       "when": 1790835554606,
       "tag": "0042_allowance",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "6",
+      "when": 1790859219776,
+      "tag": "0043_early_access",
+      "breakpoints": true
     }
   ]
 }

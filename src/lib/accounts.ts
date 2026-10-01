@@ -1,6 +1,7 @@
 import { and, desc, eq, isNull } from 'drizzle-orm';
 import { getDb, type Db } from '@/db/client';
 import { account, household, member, type Account, type Member } from '@/db/schema';
+import { markAllowedUsed } from '@/lib/access';
 import { normaliseEmail } from '@/lib/auth/tokens';
 import { operatorEmails } from '@/lib/env';
 import { ulid } from '@/lib/ids';
@@ -65,6 +66,7 @@ export function signInAccount(
     updatedAt: now,
   };
   db.insert(account).values(row).run();
+  markAllowedUsed(email, db);
   return row;
 }
 

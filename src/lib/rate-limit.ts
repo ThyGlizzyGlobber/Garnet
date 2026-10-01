@@ -31,6 +31,7 @@ export const IP_LIMITS = {
   claim: { limit: 10, windowMs: 3_600_000 },
   unlock: { limit: 30, windowMs: 3_600_000 },
   googleStart: { limit: 30, windowMs: 3_600_000 },
+  requestAccess: { limit: 10, windowMs: 3_600_000 },
 } as const;
 
 export function ipAllowed(kind: keyof typeof IP_LIMITS, ip: string, now = Date.now()): boolean {

@@ -4,6 +4,7 @@ import { runMigrations } from '@/db/migrate';
 import { purgeEmailEnvelopes, purgeOrphanedBillDocuments } from '@/ingest/archive';
 import { adoptSetUpBy } from '@/ingest/set-up-by';
 import { ANOMALY_RULE_VERSION, refreshAllAnomalies } from '@/lib/bills';
+import { seedAllowedFromAccounts } from '@/lib/access';
 import { adoptLegacyDemoFlag } from '@/lib/demo';
 import { getEnv } from '@/lib/env';
 import { ensureDataDirs } from '@/lib/paths';
@@ -51,6 +52,13 @@ export async function prepareInstall(): Promise<void> {
   // The IMAP poller was removed: its progress file has nothing left to track.
   runOnce('2026-09-29 remove mailbox poller state', () =>
     fs.rmSync(path.join(ensureDataDirs().config, 'imap-state.json'), { force: true }),
+  );
+
+  // Early access is on from the first build with it: everyone already here is on the list.
+  log(
+    'access',
+    runOnce('2026-10-01 early access list from accounts', () => seedAllowedFromAccounts()),
+    'listed {n} address(es) that already had an account',
   );
 
   if (env.DEMO_MODE) {

@@ -6,6 +6,7 @@ import { getTranslations } from 'next-intl/server';
 import type { ActionState } from '@/components/ui/form';
 import { str } from '@/lib/actions';
 import { setAccountPin, signInAccount } from '@/lib/accounts';
+import { maySignUp, requestAccess } from '@/lib/access';
 import { rememberAppearance } from '@/lib/auth/appearance';
 import { issueLoginCode, verifyLoginCode } from '@/lib/auth/codes';
 import { recordPinFailure, resetPinFailures } from '@/lib/auth/devices';
@@ -47,6 +48,8 @@ export async function sendCodeAction(_prev: ActionState, fd: FormData): Promise<
   const email = normaliseEmail(str(fd, 'email'));
   if (!EMAIL_PATTERN.test(email)) return { fieldErrors: { email: t('email') } };
   if (!ipAllowed('sendCode', await clientIp())) return { error: t('tooMany') };
+  // Early access (SCOPE-console.md §4): no code goes to an address that can't sign up.
+  if (!maySignUp(email)) redirect(`/login/request?email=${encodeURIComponent(email)}`);
   await rememberNext(str(fd, 'next'));
   const issued = issueLoginCode(email);
   if (!issued.ok) return { error: t('rateLimited') };
@@ -168,4 +171,17 @@ export async function logout(): Promise<void> {
     await rememberAppearance({ theme: s.account.theme, glass: s.account.glass });
   await signOut();
   redirect('/login');
+}
+
+/** A stranger asking to be let in while early access is on (one open request per address). */
+export async function requestAccessAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
+  const t = await getTranslations('login');
+  const email = normaliseEmail(str(fd, 'email'));
+  const name = str(fd, 'name').trim();
+  if (!EMAIL_PATTERN.test(email)) return { fieldErrors: { email: t('errors.email') } };
+  if (!name) return { fieldErrors: { name: t('request.name') } };
+  if (!ipAllowed('requestAccess', await clientIp())) return { error: t('errors.tooMany') };
+  if (maySignUp(email)) redirect(`/login?email=${encodeURIComponent(email)}`);
+  requestAccess({ name, email, message: str(fd, 'message').slice(0, 500) || null });
+  redirect(`/login/request?email=${encodeURIComponent(email)}&sent=${encodeURIComponent(name)}`);
 }

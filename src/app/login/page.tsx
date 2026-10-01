@@ -23,9 +23,9 @@ const REASONS: Record<string, string> = {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string; reason?: string }>;
+  searchParams: Promise<{ next?: string; reason?: string; email?: string }>;
 }) {
-  const { next: rawNext, reason } = await searchParams;
+  const { next: rawNext, reason, email } = await searchParams;
   const next = safeNext(rawNext) ?? undefined;
   const state = await authState();
   if (state.kind !== 'anonymous') redirect(pathFor(state, next) ?? next ?? '/');
@@ -57,7 +57,7 @@ export default async function LoginPage({
           <Or>{t('or')}</Or>
         </>
       )}
-      <EmailForm action={sendCodeAction} next={next ?? ''} />
+      <EmailForm action={sendCodeAction} next={next ?? ''} email={email ?? ''} />
       <p className="muted small t-center">{invite ? t('newHereInvite') : t('newHere')}</p>
       {demo && (
         <details id="demo" className="demo-box">

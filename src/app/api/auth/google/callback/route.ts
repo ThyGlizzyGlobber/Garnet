@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { unsealData } from 'iron-session';
 import { afterSignIn } from '@/app/login/actions';
 import { signInAccount } from '@/lib/accounts';
+import { maySignUp } from '@/lib/access';
 import { completeSignIn, type GoogleAttempt } from '@/lib/auth/google';
 import { startSession } from '@/lib/auth/session';
 import { appUrl, getEnv } from '@/lib/env';
@@ -28,6 +29,10 @@ export async function GET(req: Request) {
       { code: url.searchParams.get('code') ?? '', state: url.searchParams.get('state') ?? '' },
       attempt,
     );
+    if (!maySignUp(identity.email))
+      return NextResponse.redirect(
+        `${appUrl()}/login/request?email=${encodeURIComponent(identity.email)}`,
+      );
     const account = signInAccount({
       email: identity.email,
       name: identity.name,

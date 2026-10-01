@@ -876,3 +876,41 @@ export const homeLayout = sqliteTable(
   (t) => [uniqueIndex('home_layout_member_device_kind').on(t.memberId, t.device, t.kind)],
 );
 export type HomeLayout = typeof homeLayout.$inferSelect;
+
+/**
+ * Early access (SCOPE-console.md §4): while it is on, only these addresses
+ * and invited people may create an account. Single emails, lower-cased.
+ */
+export const allowedSignup = sqliteTable('allowed_signup', {
+  email: text('email').primaryKey(),
+  note: text('note'),
+  addedByAccountId: text('added_by_account_id'),
+  addedAt: text('added_at').notNull(),
+  /** When an account was first created with this address. */
+  usedAt: text('used_at'),
+});
+
+/** Someone asking to be let in from the sign-in page; decided from the console. */
+export const accessRequest = sqliteTable(
+  'access_request',
+  {
+    id: text('id').primaryKey(),
+    name: text('name').notNull(),
+    email: text('email').notNull(),
+    message: text('message'),
+    createdAt: text('created_at').notNull(),
+    decidedAt: text('decided_at'),
+    decidedByAccountId: text('decided_by_account_id'),
+    outcome: text('outcome', { enum: ['approved', 'declined'] }),
+  },
+  (t) => [index('access_request_email_idx').on(t.email)],
+);
+
+/** Install-wide settings changed from the console (early access on/off, and later more). */
+export const installSetting = sqliteTable('install_setting', {
+  key: text('key').primaryKey(),
+  value: text('value').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});
+export type AllowedSignup = typeof allowedSignup.$inferSelect;
+export type AccessRequest = typeof accessRequest.$inferSelect;

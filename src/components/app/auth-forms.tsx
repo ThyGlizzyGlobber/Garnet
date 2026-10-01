@@ -8,7 +8,15 @@ import { cx } from '@/components/ui/cx';
 import { CodeBoxes, PinEntry } from './pieces-client';
 
 /** Email → one-time code. */
-export function EmailForm({ action, next }: { action: FormAction; next: string }) {
+export function EmailForm({
+  action,
+  next,
+  email = '',
+}: {
+  action: FormAction;
+  next: string;
+  email?: string;
+}) {
   const t = useTranslations('login');
   return (
     <ActionForm action={action} submitLabel={t('sendCode')} hideSubmit className="auth-form">
@@ -16,7 +24,14 @@ export function EmailForm({ action, next }: { action: FormAction; next: string }
         <>
           <input type="hidden" name="next" value={next} />
           <Field label={t('email')} error={errors.email}>
-            <Input name="email" type="email" autoComplete="email" inputMode="email" required />
+            <Input
+              name="email"
+              type="email"
+              autoComplete="email"
+              inputMode="email"
+              defaultValue={email}
+              required
+            />
           </Field>
           <Button type="submit" className="wide" disabled={pending}>
             {pending ? t('sending') : t('sendCode')}
@@ -306,6 +321,29 @@ export function DemoForm({
           </Field>
           <Button type="submit" variant="secondary" className="wide" disabled={pending}>
             {pending ? '…' : t('submit')}
+          </Button>
+        </>
+      )}
+    </ActionForm>
+  );
+}
+
+/** Asking to be let in while early access is on: a name and a line, the email already known. */
+export function RequestAccessForm({ action, email }: { action: FormAction; email: string }) {
+  const t = useTranslations('login.request');
+  return (
+    <ActionForm action={action} submitLabel={t('submit')} hideSubmit className="auth-form">
+      {(errors, pending) => (
+        <>
+          <input type="hidden" name="email" value={email} />
+          <Field label={t('name')} error={errors.name}>
+            <Input name="name" autoComplete="name" maxLength={60} required />
+          </Field>
+          <Field label={t('message')} hint={t('messageHint')} optional>
+            <Input name="message" maxLength={500} />
+          </Field>
+          <Button type="submit" className="wide" disabled={pending}>
+            {pending ? t('sending') : t('submit')}
           </Button>
         </>
       )}

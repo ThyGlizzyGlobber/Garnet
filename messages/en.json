@@ -128,7 +128,8 @@
       "email": "Enter a valid email address.",
       "rateLimited": "A code was sent a moment ago. Wait a minute before asking for another.",
       "emailFailed": "The code email couldn’t be sent just now. Try again in a moment.",
-      "tooMany": "Too many attempts from your network. Wait a while and try again."
+      "tooMany": "Too many attempts from your network. Wait a while and try again.",
+      "notAllowed": "That email can’t sign up yet."
     },
     "demo": {
       "title": "Try the demo household",
@@ -142,7 +143,26 @@
     "inviteSide": "Join {household}.",
     "newHere": "First time here? Signing in creates your account.",
     "newHereInvite": "First time here? Signing in creates your account and joins you up.",
-    "sending": "Sending…"
+    "sending": "Sending…",
+    "inviteOnly": {
+      "title": "Garnet is invitation-only for now",
+      "body": "<b>{email}</b> isn’t on the list yet. If someone in a household invited you, use the link or code from their invite. Otherwise ask to be let in and we’ll email you when you are.",
+      "cta": "Request access",
+      "back": "Use a different email"
+    },
+    "request": {
+      "title": "Request access",
+      "body": "Tell us who you are. We’ll email <b>{email}</b> when you’re in.",
+      "name": "Your name",
+      "message": "A line about you",
+      "messageHint": "Optional. Who told you about it, or what you’d use it for.",
+      "submit": "Send the request",
+      "sending": "Sending…",
+      "sentTitle": "Thanks, {name}.",
+      "sentBody": "We’ve got your request for <b>{email}</b>. You’ll get an email when you’re in; there’s nothing else to do.",
+      "alreadyIn": "That address can already sign in.",
+      "backToSignIn": "Back to sign in"
+    }
   },
   "bills": {
     "title": "Bills",
@@ -1525,6 +1545,11 @@
       "button": "Accept the invitation",
       "codeLine": "Or open {url} and enter this code:",
       "expiry": "The invitation works for 7 days."
+    },
+    "accessApproved": {
+      "subject": "You’re in: sign in to {app}",
+      "intro": "Hi {name}, your request to join {app} is approved. Sign in with this email address and you’re away.",
+      "button": "Sign in"
     }
   },
   "billsAddress": {
