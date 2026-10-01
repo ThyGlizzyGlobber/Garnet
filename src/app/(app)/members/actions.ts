@@ -27,6 +27,7 @@ import { createInvite, revokeInvites } from '@/lib/invites';
 import { createMember, deleteMember, getMember, setMemberRole, updateMember } from '@/lib/members';
 import { rateLimit } from '@/lib/rate-limit';
 import { ADMIN_ROLE, isAdmin } from '@/lib/roles';
+import { defaultRole, isRole, roleFor } from '@/lib/household-types';
 
 /** Invitation emails a household may send per hour (the link and code still work beyond it). */
 const INVITE_EMAILS_PER_HOUR = 10;
@@ -108,8 +109,11 @@ export async function createMemberAction(_prev: ActionState, fd: FormData): Prom
   const v = parsed.data;
   let id: string;
   try {
+    const hh = getHousehold(me.householdId)!;
+    const asked = str(fd, 'role');
     id = createMember(me.householdId, {
       name: v.name,
+      role: isRole(asked) && asked !== ADMIN_ROLE ? roleFor(hh.type, asked) : defaultRole(hh.type),
       email: v.email || null,
       splitWeight: v.splitWeight,
       activeFrom: v.activeFrom,
@@ -138,7 +142,12 @@ export async function updateMemberAction(_prev: ActionState, fd: FormData): Prom
   if (!parsed.success) return zodToState(parsed.error);
   const v = parsed.data;
   const admin = isAdmin(me);
+  const hh = getHousehold(me.householdId)!;
+  const asked = str(fd, 'role');
   try {
+    // Housemate roles change here; admin comes and goes through the role card.
+    if (admin && !isAdmin(target) && isRole(asked) && asked !== ADMIN_ROLE)
+      setMemberRole(me.householdId, id, roleFor(hh.type, asked));
     updateMember(me.householdId, id, {
       name: v.name,
       colour: v.colour,
@@ -161,8 +170,9 @@ export async function updateMemberAction(_prev: ActionState, fd: FormData): Prom
 export async function setMemberRoleAction(fd: FormData): Promise<void> {
   const me = await requireOwner();
   const id = str(fd, 'id');
-  const role = str(fd, 'role');
-  if (role !== ADMIN_ROLE && role !== 'member') redirect('/members');
+  const hh = getHousehold(me.householdId)!;
+  const asked = str(fd, 'role');
+  const role = isRole(asked) ? roleFor(hh.type, asked) : defaultRole(hh.type);
   try {
     setMemberRole(me.householdId, id, role);
   } catch {
@@ -170,7 +180,7 @@ export async function setMemberRoleAction(fd: FormData): Promise<void> {
   }
   revalidatePath('/members');
   // Stepping down yourself: you can no longer edit others.
-  redirect(id === me.id && role === 'member' ? '/members' : `/members/${id}/edit`);
+  redirect(id === me.id && role !== ADMIN_ROLE ? '/members' : `/members/${id}/edit`);
 }
 
 export async function deleteMemberAction(fd: FormData): Promise<void> {

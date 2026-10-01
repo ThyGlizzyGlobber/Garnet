@@ -18,6 +18,11 @@ import {
  *    scoped to the signed-in member's household (src/lib/*)
  */
 
+/** What kind of household (SCOPE-accounts.md §7). */
+export const HOUSEHOLD_TYPES = ['own_home', 'investment_property', 'share_house'] as const;
+/** Who someone is in a household; `owner` is the admin role. */
+export const MEMBER_ROLES = ['owner', 'member', 'family', 'tenant', 'boarder'] as const;
+
 export const household = sqliteTable(
   'household',
   {
@@ -37,6 +42,12 @@ export const household = sqliteTable(
     splitMode: text('split_mode', { enum: ['shared', 'single'] })
       .notNull()
       .default('shared'),
+    /**
+     * What kind of household (SCOPE-accounts.md §7): an own home, an investment
+     * property or a share house; null until an admin says (asked once on Home).
+     * Decides which roles people can have and whether bills are split.
+     */
+    type: text('type', { enum: HOUSEHOLD_TYPES }),
     /** Template for payment references, e.g. "{service} {period} {member}". */
     paymentReferenceTemplate: text('payment_reference_template')
       .notNull()
@@ -133,9 +144,12 @@ export const member = sqliteTable(
     name: text('name').notNull(),
     /** Demo households only: their pick-a-name sign-in checks this. Real accounts keep the PIN on the account. */
     pinHash: text('pin_hash'),
-    role: text('role', { enum: ['owner', 'member'] })
-      .notNull()
-      .default('member'),
+    /**
+     * owner = an admin (shown as Admin, or Owner/Landlord in an investment
+     * property); member = the generic housemate; family, tenant and boarder are
+     * the housemate roles of a typed household. Only owner changes what someone may do.
+     */
+    role: text('role', { enum: MEMBER_ROLES }).notNull().default('member'),
     /** Relative weight used when a service's split mode is "weighted". */
     splitWeight: real('split_weight').notNull().default(1),
     /** YYYY-MM-DD. Shares pro-rate by days active within a billing period. */
@@ -237,6 +251,8 @@ export const service = sqliteTable(
      */
     seasonal: integer('seasonal', { mode: 'boolean' }).notNull().default(false),
     splitMode: text('split_mode', { enum: SPLIT_MODES }).notNull().default('equal'),
+    /** Members who pay no share of this service (boarders by default, D14): JSON array of member ids. */
+    notSplitWith: text('not_split_with', { mode: 'json' }).$type<string[]>().notNull().default([]),
     /** Member who pays the provider; their own share is auto-marked paid. */
     payerMemberId: text('payer_member_id').references(() => member.id, { onDelete: 'set null' }),
     /**

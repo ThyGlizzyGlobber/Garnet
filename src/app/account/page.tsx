@@ -13,6 +13,7 @@ import { Chip } from '@/components/ui/chip';
 import { Avatars } from '@/components/ui/colour';
 import { Segmented } from '@/components/ui/controls';
 import { accountView, type HouseholdTile } from '@/lib/account';
+import { roleKey, typeIcon } from '@/lib/household-types';
 import { getAppearance } from '@/lib/auth/appearance';
 import { authState, pathFor } from '@/lib/auth/session';
 import { getEnv } from '@/lib/env';
@@ -43,6 +44,7 @@ export default async function AccountPage({
   const ta = await getTranslations('appearance');
   const tn = await getTranslations('nav');
   const ts = await getTranslations('settings.account');
+  const tr = await getTranslations('roles');
   const look = await getAppearance();
   const env = getEnv();
   const money = (minor: number, currency: string, locale: string) =>
@@ -65,7 +67,7 @@ export default async function AccountPage({
         <SectionHead title={t('households')} />
         <div className="hh-grid">
           {view.tiles.map((h) => (
-            <Tile key={h.memberId} h={h} demo={demo} money={money} t={t} />
+            <Tile key={h.memberId} h={h} demo={demo} money={money} t={t} tr={tr} />
           ))}
           {!demo && (
             <>
@@ -185,11 +187,13 @@ function Tile({
   demo,
   money,
   t,
+  tr,
 }: {
   h: HouseholdTile;
   demo: boolean;
   money: (minor: number, currency: string, locale: string) => string;
   t: Awaited<ReturnType<typeof getTranslations<'account'>>>;
+  tr: Awaited<ReturnType<typeof getTranslations<'roles'>>>;
 }) {
   const dots = [
     h.overdue > 0 && t('tile.overdue', { count: h.overdue }),
@@ -206,6 +210,9 @@ function Tile({
         >
           <span className="hh-head">
             <span className="hh-name">
+              <span className="hh-ic">
+                <Icon name={typeIcon(h.type)} width={15} height={15} />
+              </span>
               {h.primary && (
                 <i className="hh-prim" title={t('tile.primary')}>
                   <Icon name="home" width={12} height={12} />
@@ -213,7 +220,7 @@ function Tile({
               )}
               <b>{h.name}</b>
             </span>
-            <Chip tone="neutral">{h.admin ? t('tile.admin') : t('tile.member')}</Chip>
+            <Chip tone="neutral">{tr(roleKey(h.role, h.type))}</Chip>
           </span>
           <span className="hh-fig">
             {h.split && h.oweMinor > 0 ? (

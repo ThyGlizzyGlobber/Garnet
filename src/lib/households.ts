@@ -1,6 +1,7 @@
 import { asc, eq } from 'drizzle-orm';
 import { getDb, type Db } from '@/db/client';
 import { household, type Household } from '@/db/schema';
+import type { HouseholdType } from '@/lib/household-types';
 import { ulid } from '@/lib/ids';
 
 export function getHousehold(id: string, db: Db = getDb()): Household | null {
@@ -29,6 +30,8 @@ export interface HouseholdInput {
   fiscalYearStartMonth: number;
   weekStartsOn?: number;
   splitMode: 'shared' | 'single';
+  /** What kind of household (SCOPE-accounts.md §7); null until an admin says. */
+  type?: HouseholdType | null;
   paymentReferenceTemplate?: string;
   isDemo?: boolean;
   /** Share anonymised figures with area comparisons (default on). */
@@ -48,6 +51,7 @@ export function createHousehold(input: HouseholdInput, db: Db = getDb()): Househ
     fiscalYearStartMonth: input.fiscalYearStartMonth,
     weekStartsOn: input.weekStartsOn ?? 1,
     splitMode: input.splitMode,
+    type: input.type ?? null,
     paymentReferenceTemplate: input.paymentReferenceTemplate ?? '{service} {period} {member}',
     isDemo: input.isDemo ?? false,
     billsAlias: null,

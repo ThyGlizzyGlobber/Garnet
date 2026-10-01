@@ -166,6 +166,7 @@ export default async function SettingsPage() {
                 fiscalYearStartMonth: hh.fiscalYearStartMonth,
                 weekStartsOn: hh.weekStartsOn,
                 splitMode: hh.splitMode,
+                type: hh.type,
                 paymentReferenceTemplate: hh.paymentReferenceTemplate,
                 membersCanExport: hh.membersCanExport,
               }}

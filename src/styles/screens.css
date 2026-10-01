@@ -3088,3 +3088,61 @@ input.inp-plain[type='color'] {
     white-space: normal;
   }
 }
+
+/* household types: the wizard's cards, the one-time question, the icons */
+.type-cards {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.rcard-ic,
+.sw-ic,
+.hh-ic {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  color: var(--p-accent);
+  background: color-mix(in srgb, var(--p-accent) 14%, transparent);
+  flex: none;
+}
+.hh-ic {
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+}
+.rcard .rcard-ic {
+  margin-bottom: 6px;
+}
+.type-ask {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.type-ask-acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.type-ask-acts form {
+  display: contents;
+}
+.se-in {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+.se-in input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--p-accent);
+}
+.se-row.se-out .av {
+  opacity: 0.45;
+}
+@media (max-width: 639px) {
+  .type-cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

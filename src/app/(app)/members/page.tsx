@@ -12,6 +12,7 @@ import { joinStatus, latestInvites } from '@/lib/invites';
 import { isActiveOn, listMembers } from '@/lib/members';
 import { colourCss } from '@/lib/palette';
 import { isAdmin } from '@/lib/roles';
+import { roleKey } from '@/lib/household-types';
 import { memberLedger } from '@/lib/stats';
 
 /**
@@ -25,6 +26,7 @@ export default async function MembersPage() {
   const members = listMembers(hh.id);
   const invites = latestInvites(hh.id);
   const admin = isAdmin(me);
+  const tr = await getTranslations('roles');
   const shared = hh.splitMode === 'shared';
   const solo = members.length <= 1;
 
@@ -81,7 +83,7 @@ export default async function MembersPage() {
               )}
               <div className="mcard-chips">
                 <Chip tone={isAdmin(m) ? 'info' : 'neutral'} icon={isAdmin(m) ? 'shield' : 'user'}>
-                  {isAdmin(m) ? t('owner') : t('memberRole')}
+                  {tr(roleKey(m.role, hh.type))}
                 </Chip>
                 {status === 'pending' && admin && (
                   <Chip tone="warn" icon="mail">

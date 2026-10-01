@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { useState, type ReactNode } from 'react';
-import { Avatar } from '@/components/ui/colour';
 import { cx } from '@/components/ui/cx';
 import { Sheet } from '@/components/ui/sheet';
 import { Icon } from './icons';
@@ -13,8 +12,10 @@ export interface SwitcherRow {
   name: string;
   primary: boolean;
   current: boolean;
-  /** "Admin" / "Member". */
+  /** The role's name: "Admin", "Tenant"… */
   role: string;
+  /** The household type's icon. */
+  icon: string;
   /** What you owe there ("$215"), or null when nothing. */
   figure: string | null;
   /** Something waiting or overdue there. */
@@ -93,7 +94,9 @@ export function HouseholdSwitcher({
                 className={cx('sw-row', r.current && 'on')}
                 aria-current={r.current ? 'true' : undefined}
               >
-                <Avatar name={r.name} colour="#8a6d78" size="sm" />
+                <span className="sw-ic">
+                  <Icon name={r.icon} width={16} height={16} />
+                </span>
                 <span className="sw-t">
                   <b>
                     {r.name}

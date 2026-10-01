@@ -47,7 +47,8 @@
       "fiscalYearStartMonth": "Financial year starts in",
       "ownerName": "Your name",
       "activeFrom": "Living here since",
-      "colour": "Your colour"
+      "colour": "Your colour",
+      "type": "What kind of household?"
     },
     "placeholders": {
       "householdName": "Smith Household"
@@ -57,7 +58,8 @@
       "splitMode": "You can change this later in Settings.",
       "fiscalYearStartMonth": "Annual totals run from this month. July for an Australian financial year, January for a calendar year.",
       "activeFrom": "Bills before this date won’t include you. A rough date is fine.",
-      "colour": "For your avatar and your part of split bars."
+      "colour": "For your avatar and your part of split bars.",
+      "type": "You can change this later in Settings."
     },
     "splitModes": {
       "shared": {
@@ -646,7 +648,10 @@
       "newMembers": "Someone who moves in later isn’t included until an admin gives them a part.",
       "howPercent": "By percentage · {parts}",
       "howFixed": "Set amounts, the rest shared",
-      "howEven": "Evenly, by the days each person lived here"
+      "howEven": "Evenly, by the days each person lived here",
+      "inSplit": "In this split",
+      "notIn": "Not in this split",
+      "excludedHint": "Untick anyone who pays no part of this service (a boarder, say). They can still see its bills."
     },
     "unusual": "Unusual",
     "lede": "{count, plural, =0 {No services yet.} one {One service keeps} other {# services keep}} {household} running. Each line is a year of its bills, one block per bill; the thin line marks today.",
@@ -812,7 +817,10 @@
       "email": "Email",
       "emailHint": "We email them a link to join.",
       "details": "Details",
-      "colourHint": "Their avatar and their part of each split bar."
+      "colourHint": "Their avatar and their part of each split bar.",
+      "role": "Role",
+      "roleHint": "What they are here. Only admins add people, set splits and change settings.",
+      "roleBoarderHint": "A boarder pays no share until an admin puts them in a service’s split."
     },
     "status": {
       "joined": "Joined",
@@ -872,7 +880,9 @@
       "demote": "Remove admin",
       "demoteConfirm": "Make {name} a member again? They keep their bills and shares.",
       "stepDown": "Step down as admin",
-      "stepDownConfirm": "Stop being an admin? Another admin can make you one again."
+      "stepDownConfirm": "Stop being an admin? Another admin can make you one again.",
+      "toRole": "Make {role}",
+      "toRoleConfirm": "Make {name} a {role}? They keep their bills and shares."
     },
     "lede": "Who lives at {household} and what they can do.",
     "ledeSolo": "Just you so far. Invite housemates to share bills with them.",
@@ -911,13 +921,15 @@
       "timezone": "Timezone",
       "fiscalYearStartMonth": "Financial year starts in",
       "weekStartsOn": "Week starts on",
-      "membersCanExport": "Everyone can download the household's bills"
+      "membersCanExport": "Everyone can download the household's bills",
+      "type": "Kind of household"
     },
     "hints": {
       "splitMode": "Switching to single stops new bills being split. Existing shares are kept.",
       "paymentReferenceTemplate": "Placeholders: '{service}', '{period}', '{member}', '{ref}'. Trimmed to 18 characters.",
       "membersCanExport": "Lets every member download the zip of the household's bills and their files (Bills → Download everything), not just admins. Personal bills are only ever in their owner's download.",
-      "membersCanExportShort": "Otherwise only admins can"
+      "membersCanExportShort": "Otherwise only admins can",
+      "type": "Decides the roles people can have. Whether bills are split is set just below."
     },
     "splitModes": {
       "shared": "split between members",
@@ -1010,7 +1022,10 @@
       "noAddress": "No bills address yet: set BILLS_ADDRESS_TEMPLATE and the inbound secret."
     },
     "showDetails": "Household details",
-    "editDetails": "Edit household details"
+    "editDetails": "Edit household details",
+    "householdTypes": {
+      "none": "Not set"
+    }
   },
   "dashboard": {
     "greeting": "Hey, {name}.",
@@ -2806,5 +2821,32 @@
         "personal": "You have personal services or vehicles in {household}. Move or delete them first."
       }
     }
+  },
+  "roles": {
+    "owner": "Admin",
+    "landlord": "Owner/Landlord",
+    "member": "Member",
+    "family": "Family member",
+    "tenant": "Tenant",
+    "boarder": "Boarder"
+  },
+  "householdTypes": {
+    "own_home": {
+      "name": "Own home",
+      "blurb": "Your place. One household total; the family can see the bills."
+    },
+    "investment_property": {
+      "name": "Investment property",
+      "blurb": "A place you let out. You and the tenants, with the bills kept apart."
+    },
+    "share_house": {
+      "name": "Share house",
+      "blurb": "Housemates splitting the bills between them."
+    },
+    "ask": {
+      "title": "What kind of household is {household}?",
+      "body": "It decides who can be what here, and whether bills are split. You can change it in Settings."
+    },
+    "yourRole": "You’ll be the {role}."
   }
 }

@@ -26,7 +26,7 @@ export default async function AccountLayout({ children }: { children: ReactNode 
   const account = state.account ?? null;
   const name = me?.name ?? (account ? (accountGivenName(account) ?? account.email) : '');
   const view: ShellView = {
-    household: { name: ta('name'), members: [] },
+    household: { name: ta('name'), members: [], type: null },
     households: householdTiles(me, account),
     currency: 'AUD',
     split: false,
@@ -34,7 +34,7 @@ export default async function AccountLayout({ children }: { children: ReactNode 
     mine: [],
     inboxCount: 0,
     address: null,
-    me: { name, colour: me?.colour ?? DEFAULT_COLOUR, admin: false },
+    me: { name, colour: me?.colour ?? DEFAULT_COLOUR, admin: false, role: 'member' },
   };
   return (
     <AppShell

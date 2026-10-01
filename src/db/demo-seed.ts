@@ -55,6 +55,7 @@ export async function seedDemo(db: Db = getDb()) {
       timezone: 'Australia/Melbourne',
       fiscalYearStartMonth: 7,
       splitMode: 'shared',
+      type: 'share_house',
       isDemo: true,
     },
     db,
@@ -79,6 +80,7 @@ export async function seedDemo(db: Db = getDb()) {
     {
       name: 'Jordan',
       pinHash: pin,
+      role: 'tenant',
       activeFrom: '2025-02-01',
       colour: '#1baf7a',
       paymentDetails: [{ label: 'PayID', value: '0400 000 000' }],
@@ -90,6 +92,7 @@ export async function seedDemo(db: Db = getDb()) {
     {
       name: 'Sam',
       pinHash: pin,
+      role: 'tenant',
       activeFrom: '2026-08-01',
       colour: '#e87ba4',
       paymentDetails: [{ label: 'BSB / account', value: '000-000 · 1234 5678' }],
@@ -787,7 +790,10 @@ function seedOtherHouseholds(alex: Member, pin: string, db: Db) {
   const paidIf = (due: string) => (due < TODAY ? at(addDays(due, -1)) : null);
 
   // Maple Street: Chris and Jo's own home. Alex sees it; nothing is split.
-  const maple = createHousehold({ ...region, name: 'Maple Street', splitMode: 'single' }, db);
+  const maple = createHousehold(
+    { ...region, name: 'Maple Street', splitMode: 'single', type: 'own_home' },
+    db,
+  );
   const chris = createMember(
     maple.id,
     { name: 'Chris', pinHash: pin, role: 'owner', activeFrom: '2024-01-01', colour: '#1baf7a' },
@@ -802,6 +808,7 @@ function seedOtherHouseholds(alex: Member, pin: string, db: Db) {
     maple.id,
     {
       name: 'Alex',
+      role: 'family',
       activeFrom: '2024-01-01',
       colour: '#2a78d6',
       accountId: acct.id,
@@ -902,7 +909,10 @@ function seedOtherHouseholds(alex: Member, pin: string, db: Db) {
   );
 
   // Unit 4, Bay Street: the flat Alex lets to Priya and Tom.
-  const bay = createHousehold({ ...region, name: 'Unit 4, Bay Street', splitMode: 'shared' }, db);
+  const bay = createHousehold(
+    { ...region, name: 'Unit 4, Bay Street', splitMode: 'shared', type: 'investment_property' },
+    db,
+  );
   const landlord = createMember(
     bay.id,
     {
@@ -917,12 +927,12 @@ function seedOtherHouseholds(alex: Member, pin: string, db: Db) {
   );
   const priya = createMember(
     bay.id,
-    { name: 'Priya', pinHash: pin, activeFrom: '2025-07-01', colour: '#8e5bd1' },
+    { name: 'Priya', pinHash: pin, role: 'tenant', activeFrom: '2025-07-01', colour: '#8e5bd1' },
     db,
   );
   createMember(
     bay.id,
-    { name: 'Tom', pinHash: pin, activeFrom: '2025-07-01', colour: '#d1555b' },
+    { name: 'Tom', pinHash: pin, role: 'tenant', activeFrom: '2025-07-01', colour: '#d1555b' },
     db,
   );
   const bayWater = createService(

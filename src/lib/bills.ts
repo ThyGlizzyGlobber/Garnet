@@ -23,7 +23,7 @@ import { ulid } from '@/lib/ids';
 import { getHousehold } from '@/lib/households';
 import { listMembers } from '@/lib/members';
 import { getService, splitSettings, type ServiceWithType } from '@/lib/services';
-import { computeShares, renderPaymentReference } from '@/lib/splits';
+import { computeShares, membersInSplit, renderPaymentReference } from '@/lib/splits';
 import { anomalyNote, detectAnomaly } from '@/lib/anomaly';
 import { assetKindOf } from '@/lib/service-categories';
 
@@ -330,7 +330,7 @@ function insertShares(
 ) {
   // A personal service's bills belong to its owner alone: nothing to split.
   if (svc.ownerMemberId) return;
-  const members = listMembers(householdId, tx);
+  const members = membersInSplit(listMembers(householdId, tx), svc);
   const byId = new Map(members.map((m) => [m.id, m]));
   const settings = splitSettings(householdId, svc, tx);
   const parts = instalments.length

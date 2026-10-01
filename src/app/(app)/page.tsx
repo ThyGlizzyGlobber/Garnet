@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { HomeGrid } from '@/components/home/home-grid';
-import { LinkButton } from '@/components/ui';
+import { Button, LinkButton } from '@/components/ui';
 import { InlineAction } from '@/components/ui/form';
 import { pageContext } from '@/lib/context';
 import { homeData } from '@/lib/home-data';
@@ -9,7 +9,9 @@ import { layoutsFor } from '@/lib/home-layout';
 import { latestRegionalChoice, regionalEnabled } from '@/lib/regional';
 import { isAdmin } from '@/lib/roles';
 import { weatherCodeKey } from '@/lib/weather-codes';
-import { acknowledgeSharingAction } from './settings/actions';
+import { acknowledgeSharingAction, setHouseholdTypeAction } from './settings/actions';
+import { HOUSEHOLD_TYPES } from '@/db/schema';
+import { typeIcon } from '@/lib/household-types';
 
 /**
  * Home: a greeting, then the widget grid (BRAND.md §9). Every number comes
@@ -21,6 +23,7 @@ export default async function HomePage() {
   const t = await getTranslations('home');
   const tsh = await getTranslations('sharing');
   const tw = await getTranslations('weather');
+  const tt = await getTranslations('householdTypes');
   const data = homeData(hh, me, today);
   const layouts = layoutsFor(hh.id, me.id, 'home', {
     split: data.split,
@@ -61,6 +64,24 @@ export default async function HomePage() {
           </p>
         </div>
       </div>
+      {isAdmin(me) && !hh.type && (
+        <div className="glass p-4 text-sm type-ask">
+          <div className="min-w-0">
+            <b>{tt('ask.title', { household: hh.name })}</b>{' '}
+            <span className="text-fg-2">{tt('ask.body')}</span>
+          </div>
+          <div className="type-ask-acts">
+            {HOUSEHOLD_TYPES.map((k) => (
+              <form key={k} action={setHouseholdTypeAction}>
+                <input type="hidden" name="type" value={k} />
+                <Button type="submit" variant="secondary" size="sm" icon={typeIcon(k)}>
+                  {tt(`${k}.name`)}
+                </Button>
+              </form>
+            ))}
+          </div>
+        </div>
+      )}
       {sharingNotice && (
         <div className="glass flex flex-wrap items-center gap-3 p-4 text-sm">
           <span className="min-w-0 flex-1">

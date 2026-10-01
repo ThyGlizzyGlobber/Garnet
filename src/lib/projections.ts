@@ -15,7 +15,7 @@ import { listMembers } from '@/lib/members';
 import { addMonths, monthBounds } from '@/lib/periods';
 import { areaMonthCostPerDay } from '@/lib/regional';
 import { listServices, splitSettings, type ServiceWithType } from '@/lib/services';
-import { computeShares } from '@/lib/splits';
+import { computeShares, membersInSplit } from '@/lib/splits';
 import { normalMonthCostPerDay } from '@/lib/weather-model';
 
 /**
@@ -135,7 +135,7 @@ export function projectMonth(
         periodStart: e.periodStart,
         periodEnd: e.periodEnd,
         splitMode: svc.splitMode,
-        members,
+        members: membersInSplit(members, svc),
         ...splitSettings(householdId, svc, db),
         referenceAmountMinor: own[0]?.amountMinor,
         payerMemberId: svc.payerMemberId,

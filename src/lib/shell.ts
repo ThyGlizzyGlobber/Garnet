@@ -1,5 +1,6 @@
 import type { Household, Member } from '@/db/schema';
 import { householdTiles, type HouseholdTile } from '@/lib/account';
+import type { HouseholdType } from '@/lib/household-types';
 import { getDb, type Db } from '@/db/client';
 import { listAssets } from '@/lib/assets';
 import { listBills } from '@/lib/bills';
@@ -48,7 +49,7 @@ export type ShellEntry =
     };
 
 export interface ShellView {
-  household: { name: string; members: string[] };
+  household: { name: string; members: string[]; type: HouseholdType | null };
   /** Every household this person belongs to, for the switcher (SCOPE-accounts.md §3b). */
   households: HouseholdTile[];
   /** The household's currency, for the nav's figures. */
@@ -59,7 +60,7 @@ export interface ShellView {
   inboxCount: number;
   /** The household's bills address, for the Add bill sheet. */
   address: string | null;
-  me: { name: string; colour: string; admin: boolean };
+  me: { name: string; colour: string; admin: boolean; role: string };
 }
 
 export function shellView(hh: Household, me: Member, today: string, db: Db = getDb()): ShellView {
@@ -91,7 +92,11 @@ export function shellView(hh: Household, me: Member, today: string, db: Db = get
     vehicles(me.id),
   );
   return {
-    household: { name: hh.name, members: listActiveMembers(hh.id, today, db).map((m) => m.name) },
+    household: {
+      name: hh.name,
+      members: listActiveMembers(hh.id, today, db).map((m) => m.name),
+      type: hh.type,
+    },
     households: householdTiles(me, null, db),
     currency: hh.currency,
     split: hh.splitMode === 'shared',
@@ -99,7 +104,7 @@ export function shellView(hh: Household, me: Member, today: string, db: Db = get
     mine,
     inboxCount: documentCounts(hh.id, { viewer: me.id }, db).needs_review,
     address: billsAddress(hh, db),
-    me: { name: me.name, colour: me.colour, admin: isAdmin(me) },
+    me: { name: me.name, colour: me.colour, admin: isAdmin(me), role: me.role },
   };
 }
 

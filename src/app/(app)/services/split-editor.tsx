@@ -32,6 +32,8 @@ export interface SplitEditorProps {
   /** Earlier bills a new split can still apply to (nobody has paid a share). */
   resplitCount: number;
   payerMemberId: string;
+  /** Members who pay no share of this service (D14). */
+  excluded: string[];
 }
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -66,6 +68,8 @@ export function SplitEditor(p: SplitEditorProps) {
   );
   const [amounts, setAmounts] = useState<Record<string, string>>(p.amounts);
   const [resplit, setResplit] = useState(true);
+  const [out, setOut] = useState<Set<string>>(() => new Set(p.excluded));
+  const inSplit = p.members.filter((m) => !out.has(m.id));
   const money = (minor: number) => formatMoney(minor, p.currency, p.locale);
   const sign =
     new Intl.NumberFormat(p.locale, { style: 'currency', currency: p.currency })
@@ -77,9 +81,13 @@ export function SplitEditor(p: SplitEditorProps) {
     (m) => m === 'equal' || m === 'percent' || m === 'fixed' || m === p.initialMode,
   );
 
-  const pctTotal = round2(ids.reduce((s, id) => s + (Number(percents[id]) || 0), 0));
+  const pctTotal = round2(
+    ids.filter((id) => !out.has(id)).reduce((s, id) => s + (Number(percents[id]) || 0), 0),
+  );
   const pctOk = !splitProblem('percent', {
-    percents: Object.fromEntries(ids.map((id) => [id, Number(percents[id]) || 0])),
+    percents: Object.fromEntries(
+      ids.filter((id) => !out.has(id)).map((id) => [id, Number(percents[id]) || 0]),
+    ),
   });
   const fixed = Object.fromEntries(
     ids.flatMap((id) => {
@@ -90,7 +98,7 @@ export function SplitEditor(p: SplitEditorProps) {
     }),
   ) as Record<string, number>;
   const setTotal = Object.values(fixed).reduce((s, v) => s + v, 0);
-  const blanks = p.members.filter((m) => fixed[m.id] === undefined);
+  const blanks = p.members.filter((m) => !out.has(m.id) && fixed[m.id] === undefined);
 
   // What each would pay of the latest bill (everyone living there for all of it).
   const example = p.latestMinor ?? 0;
@@ -101,7 +109,7 @@ export function SplitEditor(p: SplitEditorProps) {
           periodStart: '2026-01-01',
           periodEnd: '2026-01-30',
           splitMode: mode as 'equal',
-          members: p.members.map((m) => ({
+          members: inSplit.map((m) => ({
             id: m.id,
             splitWeight: m.splitWeight,
             activeFrom: '2000-01-01',
@@ -144,15 +152,36 @@ export function SplitEditor(p: SplitEditorProps) {
           ))}
         </div>
       </div>
+      <input type="hidden" name="splitEditor" value="on" />
       <div className="se-list">
         {p.members.map((m) => (
-          <div key={m.id} className="se-row">
-            <Avatar name={m.name} colour={m.colour} />
+          <div key={m.id} className={cx('se-row', out.has(m.id) && 'se-out')}>
+            <label className="se-in" title={t('inSplit')}>
+              <input
+                type="checkbox"
+                name={`in_${m.id}`}
+                checked={!out.has(m.id)}
+                onChange={(e) => {
+                  const next = new Set(out);
+                  if (e.target.checked) next.delete(m.id);
+                  else next.add(m.id);
+                  setOut(next);
+                }}
+                aria-label={`${m.name}: ${t('inSplit')}`}
+              />
+              <Avatar name={m.name} colour={m.colour} />
+            </label>
             <span className="se-n">
               <b>{m.name}</b>
-              {m.note && <span className="muted small">{m.note}</span>}
+              {out.has(m.id) ? (
+                <span className="muted small">{t('notIn')}</span>
+              ) : (
+                m.note && <span className="muted small">{m.note}</span>
+              )}
             </span>
-            {mode === 'percent' || mode === 'fixed' ? (
+            {out.has(m.id) ? (
+              <span />
+            ) : mode === 'percent' || mode === 'fixed' ? (
               <span className="inp narrow">
                 {mode === 'fixed' && <i className="inp-a">{sign}</i>}
                 <input
@@ -206,7 +235,7 @@ export function SplitEditor(p: SplitEditorProps) {
             : t('fixedAll', { total: money(setTotal) })
           : t(`hints.${mode}`)}
         {mode === 'percent' && ` ${t('newMembers')}`}
-        {example > 0 && ` ${t('preview', { amount: money(example) })}.`}
+        {example > 0 && ` ${t('preview', { amount: money(example) })}.`} {t('excludedHint')}
       </p>
       {p.resplitCount > 0 && (
         <label className="check">

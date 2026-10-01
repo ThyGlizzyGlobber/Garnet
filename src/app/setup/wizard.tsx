@@ -9,11 +9,14 @@ import { Stepper } from '@/components/app/pieces';
 import { SwatchPick } from '@/components/app/pieces-client';
 import { PALETTE } from '@/lib/palette';
 import { completeSetup } from './actions';
+import { Icon } from '@/components/app/icons';
+import { HOUSEHOLD_TYPES } from '@/db/schema';
+import { roleKey, typeIcon, type HouseholdType } from '@/lib/household-types';
 
 const STEPS = ['household', 'where', 'you'] as const;
 type Step = (typeof STEPS)[number];
 const FIELDS: Record<Step, string[]> = {
-  household: ['householdName', 'splitMode'],
+  household: ['householdName', 'type'],
   where: ['currency', 'locale', 'timezone', 'fiscalYearStartMonth', 'country', 'postalCode'],
   you: ['ownerName', 'activeFrom', 'colour'],
 };
@@ -46,8 +49,10 @@ export function SetupWizard({
 }) {
   const t = useTranslations('setup');
   const tShare = useTranslations('sharing');
+  const tt = useTranslations('householdTypes');
+  const tr = useTranslations('roles');
   const [step, setStep] = useState<Step>('household');
-  const [splitMode, setSplitMode] = useState<'shared' | 'single'>('shared');
+  const [type, setType] = useState<HouseholdType>('share_house');
   const [region, setRegion] = useState({
     currency: defaults.currency,
     timezone: defaults.timezone,
@@ -103,23 +108,28 @@ export function SetupWizard({
               />
             </Field>
             <fieldset className="fld">
-              <legend className="fld-l">{t('fields.splitMode')}</legend>
-              <div className="radio-cards">
-                {(['shared', 'single'] as const).map((mode) => (
-                  <label key={mode} className={splitMode === mode ? 'rcard on' : 'rcard'}>
+              <legend className="fld-l">{t('fields.type')}</legend>
+              <div className="radio-cards type-cards">
+                {HOUSEHOLD_TYPES.map((k) => (
+                  <label key={k} className={type === k ? 'rcard on' : 'rcard'}>
                     <input
                       type="radio"
-                      name="splitMode"
-                      value={mode}
-                      checked={splitMode === mode}
-                      onChange={() => setSplitMode(mode)}
+                      name="type"
+                      value={k}
+                      checked={type === k}
+                      onChange={() => setType(k)}
                     />
-                    <b>{t(`splitModes.${mode}.label`)}</b>
-                    <span className="muted small">{t(`splitModes.${mode}.body`)}</span>
+                    <span className="rcard-ic">
+                      <Icon name={typeIcon(k)} width={18} height={18} />
+                    </span>
+                    <b>{tt(`${k}.name`)}</b>
+                    <span className="muted small">{tt(`${k}.blurb`)}</span>
                   </label>
                 ))}
               </div>
-              <span className="fld-h">{t('hints.splitMode')}</span>
+              <span className="fld-h">
+                {tt('yourRole', { role: tr(roleKey('owner', type)) })} {t('hints.type')}
+              </span>
             </fieldset>
           </div>
 

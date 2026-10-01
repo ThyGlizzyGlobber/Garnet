@@ -3,7 +3,8 @@ import { getDb, type Db } from '@/db/client';
 import { asset, bill, member, service, share, sourceDocument, type Member } from '@/db/schema';
 import { ulid } from '@/lib/ids';
 import { DEFAULT_COLOUR } from '@/lib/palette';
-import { isAdmin } from '@/lib/roles';
+import { paysNoShareByDefault, type Role } from '@/lib/household-types';
+import { ADMIN_ROLE, isAdmin } from '@/lib/roles';
 
 export function listMembers(householdId: string, db: Db = getDb()): Member[] {
   return db
@@ -50,7 +51,7 @@ export interface MemberInput {
   pinHash?: string | null;
   accountId?: string | null;
   email?: string | null;
-  role?: 'owner' | 'member';
+  role?: Role;
   splitWeight?: number;
   activeFrom: string;
   activeTo?: string | null;
@@ -84,7 +85,18 @@ export function createMember(householdId: string, input: MemberInput, db: Db = g
     updatedAt: now,
   };
   db.insert(member).values(row).run();
+  if (paysNoShareByDefault(row.role)) leaveOutOfSplits(householdId, row.id, db);
   return row;
+}
+
+/** A boarder pays no share until an admin puts them in a service's split (D14). */
+function leaveOutOfSplits(householdId: string, memberId: string, db: Db) {
+  for (const svc of db.select().from(service).where(eq(service.householdId, householdId)).all())
+    if (!svc.notSplitWith.includes(memberId))
+      db.update(service)
+        .set({ notSplitWith: [...svc.notSplitWith, memberId] })
+        .where(eq(service.id, svc.id))
+        .run();
 }
 
 export function updateMember(
@@ -133,14 +145,16 @@ export function isLastAdmin(householdId: string, m: Member, db: Db = getDb()): b
 export function setMemberRole(
   householdId: string,
   id: string,
-  role: 'owner' | 'member',
+  role: Role,
   db: Db = getDb(),
 ): Member {
   const m = getMember(householdId, id, db);
   if (!m) throw new Error('Member not found');
   if (m.role === role) return m;
-  if (role === 'member' && isLastAdmin(householdId, m, db))
+  if (role !== ADMIN_ROLE && isLastAdmin(householdId, m, db))
     throw new Error('A household needs at least one admin');
+  if (paysNoShareByDefault(role) && !paysNoShareByDefault(m.role))
+    leaveOutOfSplits(householdId, id, db);
   db.update(member)
     .set({ role, updatedAt: new Date().toISOString() })
     .where(and(eq(member.householdId, householdId), eq(member.id, id)))

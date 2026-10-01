@@ -3,7 +3,7 @@
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 import { SwatchPick } from '@/components/app/pieces-client';
-import { Button, Card, Field, Input, LinkButton } from '@/components/ui';
+import { Button, Card, Field, Input, LinkButton, Select } from '@/components/ui';
 import { SectionHead } from '@/components/ui/blocks';
 import { ActionForm, type FormAction } from '@/components/ui/form';
 
@@ -18,6 +18,7 @@ export interface MemberFormValues {
   email: string;
   /** Joined members sign in with their account; their email isn't edited here. */
   joined: boolean;
+  role: string;
 }
 
 /**
@@ -30,6 +31,7 @@ export function MemberForm({
   initial,
   sharedHousehold,
   canEditResidency = true,
+  roles = [],
   submitLabel,
   cancelHref,
   side,
@@ -39,6 +41,8 @@ export function MemberForm({
   sharedHousehold: boolean;
   /** Move-in, move-out and split weight decide shares, so only admins change them. */
   canEditResidency?: boolean;
+  /** The housemate roles this household's type allows (admins pick; empty hides the field). */
+  roles?: { value: string; label: string }[];
   submitLabel: string;
   cancelHref: string;
   side?: ReactNode;
@@ -64,6 +68,19 @@ export function MemberForm({
                   <span className="fld-h">{t('colourHint')}</span>
                 </div>
               </div>
+              {roles.length > 0 ? (
+                <Field label={t('role')} hint={t('roleHint')}>
+                  <Select name="role" defaultValue={initial.role}>
+                    {roles.map((r) => (
+                      <option key={r.value} value={r.value}>
+                        {r.label}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+              ) : (
+                <input type="hidden" name="role" value={initial.role} />
+              )}
               {!initial.joined && (
                 <Field label={t('email')} error={errors.email} hint={t('emailHint')} optional>
                   <Input

@@ -7,7 +7,7 @@ import { getHousehold } from '@/lib/households';
 import { listMembers } from '@/lib/members';
 import { getCustomSplits, getFixedAmounts, type ServiceWithType } from '@/lib/services';
 import { resplittableBills } from '@/lib/bills';
-import { computeShares } from '@/lib/splits';
+import { computeShares, membersInSplit } from '@/lib/splits';
 
 /** One person's part of a service, as set, and what it came to on the latest bill. */
 export interface SplitPart {
@@ -41,13 +41,14 @@ export interface SplitView {
  */
 export function splitView(
   householdId: string,
-  svc: Pick<ServiceWithType, 'id' | 'splitMode' | 'payerMemberId'>,
+  svc: Pick<ServiceWithType, 'id' | 'splitMode' | 'payerMemberId' | 'notSplitWith'>,
   db: Db = getDb(),
 ): SplitView {
   const hh = getHousehold(householdId, db)!;
   const today = todayIn(hh.timezone);
-  const members = listMembers(householdId, db).filter(
-    (m) => m.activeTo === null || m.activeTo >= today,
+  const members = membersInSplit(
+    listMembers(householdId, db).filter((m) => m.activeTo === null || m.activeTo >= today),
+    svc,
   );
   const latest = db
     .select({ amountMinor: bill.amountMinor })

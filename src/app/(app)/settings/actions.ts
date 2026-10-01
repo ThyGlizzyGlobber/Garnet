@@ -10,6 +10,8 @@ import { getHousehold, updateHousehold } from '@/lib/households';
 import { redirect } from 'next/navigation';
 import { exitDemo } from '@/lib/demo';
 import { isGlass, isTheme } from '@/lib/appearance';
+import { HOUSEHOLD_TYPES } from '@/db/schema';
+import { isHouseholdType } from '@/lib/household-types';
 import { getAppearance, rememberAppearance } from '@/lib/auth/appearance';
 import { setAccountAppearance } from '@/lib/accounts';
 import { cancelUpdateRequest, checkForUpdate, requestUpdate } from '@/lib/updates';
@@ -27,6 +29,7 @@ const schema = z.object({
   fiscalYearStartMonth: z.coerce.number().int().min(1).max(12),
   weekStartsOn: z.coerce.number().int().min(0).max(6),
   splitMode: z.enum(['shared', 'single']),
+  type: z.enum(HOUSEHOLD_TYPES).nullable(),
   paymentReferenceTemplate: z.string().min(1, 'required').max(60),
   membersCanExport: z.boolean(),
 });
@@ -41,6 +44,7 @@ export async function updateSettingsAction(_prev: ActionState, fd: FormData): Pr
     fiscalYearStartMonth: str(fd, 'fiscalYearStartMonth'),
     weekStartsOn: str(fd, 'weekStartsOn'),
     splitMode: str(fd, 'splitMode'),
+    type: str(fd, 'type') || null,
     paymentReferenceTemplate: str(fd, 'paymentReferenceTemplate'),
     membersCanExport: fd.get('membersCanExport') === 'on',
   });
@@ -168,4 +172,14 @@ export async function acknowledgeSharingAction(): Promise<void> {
   if (getHousehold(me.householdId)?.shareRegional)
     setRegionalSharing(me.householdId, true, 'acknowledged', me.id);
   revalidatePath('/');
+}
+
+/** Admin, once: what kind of household this is (SCOPE-accounts.md §7); the Home banner asks until it's set. */
+export async function setHouseholdTypeAction(fd: FormData): Promise<void> {
+  const me = await requireOwner();
+  const type = str(fd, 'type');
+  if (!isHouseholdType(type)) redirect('/');
+  updateHousehold(me.householdId, { type });
+  revalidatePath('/', 'layout');
+  redirect('/');
 }

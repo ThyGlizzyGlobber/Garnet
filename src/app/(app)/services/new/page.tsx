@@ -5,6 +5,7 @@ import { BackLink } from '@/components/ui/controls';
 import { CADENCES, SPLIT_MODES } from '@/db/schema';
 import { pageContext } from '@/lib/context';
 import { listMembers } from '@/lib/members';
+import { paysNoShareByDefault } from '@/lib/household-types';
 import { listServices, listServiceTypes, SEASONAL_TYPES } from '@/lib/services';
 import { listUnits } from '@/lib/units';
 import { todayIn } from '@/lib/dates';
@@ -70,6 +71,7 @@ export default async function NewServicePage({
           locale: hh.locale,
           latestMinor: null,
           resplitCount: 0,
+          excluded: current.filter((m) => paysNoShareByDefault(m.role)).map((m) => m.id),
           percents: {},
           amounts: {},
           summary: current.map((m) => ({ name: m.name, colour: m.colour, part: ts('parts.even') })),

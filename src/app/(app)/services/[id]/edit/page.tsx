@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { hasHousemates } from '@/lib/members';
+import { hasHousemates, listMembers } from '@/lib/members';
 import { mayChangeOwner } from '@/lib/ownership';
 import { visibleTo } from '@/lib/scope';
 import { getTranslations } from 'next-intl/server';
@@ -18,7 +18,7 @@ import { isAdmin } from '@/lib/roles';
 
 export default async function EditServicePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { hh, me } = await pageContext();
+  const { hh, me, today } = await pageContext();
   const t = await getTranslations('services');
   const ts = await getTranslations('services.split');
   const s = getService(hh.id, id);
@@ -44,18 +44,21 @@ export default async function EditServicePage({ params }: { params: Promise<{ id
           provider: x.provider,
         }))}
         units={listUnits()}
-        members={view.parts.map(({ member: m }) => ({
-          id: m.id,
-          name: m.name,
-          colour: m.colour,
-          splitWeight: m.splitWeight,
-        }))}
+        members={listMembers(hh.id)
+          .filter((m) => m.activeTo === null || m.activeTo >= today)
+          .map((m) => ({
+            id: m.id,
+            name: m.name,
+            colour: m.colour,
+            splitWeight: m.splitWeight,
+          }))}
         split={{
           canEdit: isAdmin(me),
           currency: hh.currency,
           locale: hh.locale,
           latestMinor: view.latestMinor,
           resplitCount: view.resplitCount,
+          excluded: s.notSplitWith,
           percents: view.percents,
           amounts: view.amounts,
           summary: view.parts.map((p) => ({

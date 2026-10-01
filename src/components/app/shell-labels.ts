@@ -7,6 +7,7 @@ export async function shellLabels(householdName: string): Promise<ShellLabels> {
   const ta = await getTranslations('app');
   const tm = await getTranslations('main');
   const ts = await getTranslations('switcher');
+  const tr = await getTranslations('roles');
   return {
     nav: {
       home: t('home'),
@@ -20,6 +21,14 @@ export async function shellLabels(householdName: string): Promise<ShellLabels> {
     justYou: t('justYou'),
     admin: t('admin'),
     member: t('member'),
+    roles: {
+      owner: tr('owner'),
+      landlord: tr('landlord'),
+      member: tr('member'),
+      family: tr('family'),
+      tenant: tr('tenant'),
+      boarder: tr('boarder'),
+    },
     servicesHead: t('servicesHead'),
     essentials: t('essentials'),
     everythingElse: t('everythingElse'),

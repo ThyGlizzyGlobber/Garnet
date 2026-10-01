@@ -159,7 +159,8 @@ export async function requireAccount(): Promise<Account> {
   const s = await authState();
   if (s.kind === 'ok' && s.account) return s.account;
   if (s.kind === 'no-household' || s.kind === 'needs-pin') return s.account;
-  redirect(pathFor(s)!);
+  // A demo person has no account: back to their household.
+  redirect(pathFor(s) ?? '/');
 }
 
 // ─── Writes (server actions and route handlers only) ─────────────────────────

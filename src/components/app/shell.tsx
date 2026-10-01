@@ -11,6 +11,7 @@ import { NavSection } from './nav-section';
 import { OfflineBar } from './offline-bar';
 import { NavItems, SectionName, type NavItem } from './nav-items';
 import { HouseholdSwitcher, type SwitcherLabels, type SwitcherRow } from './household-switcher';
+import { roleKey, typeIcon } from '@/lib/household-types';
 
 /**
  * The app's frame (BRAND.md §9): the scene behind, a floating nav column
@@ -27,6 +28,8 @@ export interface ShellLabels {
   justYou: string;
   admin: string;
   member: string;
+  /** Role names by roleKey (Admin, Owner/Landlord, Tenant…). */
+  roles: Record<string, string>;
   servicesHead: string;
   /** The nav's two service sections: the everyday bills, and the rest. */
   essentials: string;
@@ -91,12 +94,17 @@ export function AppShell({
     name: h.name,
     primary: h.primary,
     current: h.current,
-    role: h.admin ? labels.admin : labels.member,
+    role: labels.roles[roleKey(h.role, h.type)] ?? (h.admin ? labels.admin : labels.member),
+    icon: typeIcon(h.type),
     figure: h.oweMinor > 0 ? money(h.oweMinor, h.currency, h.locale) : null,
     attention: h.waiting > 0 || h.overdue > 0,
   }));
   const meHref = account ? '/account#account' : '/settings';
   const brandTitle = account ? labels.product : view.household.name;
+  const brandIcon = account ? 'grid' : typeIcon(view.household.type);
+  const myRole =
+    labels.roles[roleKey(view.me.role, view.household.type)] ??
+    (view.me.admin ? labels.admin : labels.member);
   const who =
     view.household.members.length <= 1
       ? labels.justYou
@@ -148,7 +156,7 @@ export function AppShell({
       <nav className="nav glass-strong vertical column" aria-label="Main">
         <HouseholdSwitcher
           place="column"
-          icon={account ? 'grid' : 'home'}
+          icon={brandIcon}
           title={brandTitle}
           sub={account ? labels.yourHouseholds : who}
           rows={rows}
@@ -205,11 +213,7 @@ export function AppShell({
           <Avatar name={view.me.name} colour={view.me.colour} />
           <span className="nc-bt">
             <b>{view.me.name}</b>
-            <span>
-              {account
-                ? labels.account
-                : `${view.me.admin ? labels.admin : labels.member} · ${labels.settings}`}
-            </span>
+            <span>{account ? labels.account : `${myRole} · ${labels.settings}`}</span>
           </span>
           <Icon name="sliders" width={18} height={18} />
         </Link>
@@ -219,7 +223,7 @@ export function AppShell({
         <div className="tb-l">
           <HouseholdSwitcher
             place="topbar"
-            icon={account ? 'grid' : 'home'}
+            icon={brandIcon}
             title={brandTitle}
             sub={<SectionName items={items} fallback={labels.product} />}
             rows={rows}

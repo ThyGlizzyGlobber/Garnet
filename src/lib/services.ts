@@ -9,9 +9,10 @@ import {
   type ServiceType,
   type SplitMode,
 } from '@/db/schema';
+import { paysNoShareByDefault } from '@/lib/household-types';
 import { ulid } from '@/lib/ids';
 import { DEFAULT_COLOUR, PALETTE } from '@/lib/palette';
-import { getMember } from '@/lib/members';
+import { getMember, listMembers } from '@/lib/members';
 import { ownerCondition, type Scope } from '@/lib/scope';
 import {
   CATEGORY_COLOURS,
@@ -169,6 +170,8 @@ export interface ServiceInput {
   recurring?: boolean;
   /** memberId → percentage or ratio; replaces the service's splits when provided. */
   customSplits?: Record<string, number>;
+  /** Members who pay no share of it (D14). New services leave boarders out unless told otherwise. */
+  notSplitWith?: string[];
   /** memberId → amount per bill (minor units); replaces the service's splits when provided. */
   fixedAmounts?: Record<string, number>;
   /** Personal to this member (only they see it; not split). Set on create; see setServiceOwner. */
@@ -227,6 +230,11 @@ export function createService(
       notes: rest.notes ?? null,
       trustedSenders: rest.trustedSenders ?? [],
       autoPay: rest.autoPay ?? false,
+      notSplitWith:
+        rest.notSplitWith ??
+        listMembers(householdId, db)
+          .filter((m) => paysNoShareByDefault(m.role))
+          .map((m) => m.id),
       recurringSince: repeats ? now : null,
       createdAt: now,
       updatedAt: now,

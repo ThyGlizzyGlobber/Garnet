@@ -1,4 +1,5 @@
 import type { Account, Household, Member } from '@/db/schema';
+import type { HouseholdType } from '@/lib/household-types';
 import { getDb, type Db } from '@/db/client';
 import { accountGivenName, membershipsFor, signInMethod } from '@/lib/accounts';
 import { billDue } from '@/lib/bill-status';
@@ -29,6 +30,9 @@ export interface HouseholdTile {
   /** The household this request is in. */
   current: boolean;
   admin: boolean;
+  /** The member's role and the household's type, for the role's name and the type's icon. */
+  role: string;
+  type: HouseholdType | null;
   people: { name: string; colour: string }[];
   currency: string;
   locale: string;
@@ -78,6 +82,8 @@ function householdTile(
     primary: m.isPrimary,
     current,
     admin: isAdmin(m),
+    role: m.role,
+    type: hh.type,
     people: listMembers(hh.id, db)
       .filter((p) => isActiveOn(p, today))
       .map((p) => ({ name: p.name, colour: p.colour })),

@@ -6,6 +6,8 @@ import { Button, Field, Input, Select } from '@/components/ui';
 import { Toggle } from '@/components/ui/controls';
 import type { ActionState } from '@/components/ui/form';
 import { updateSettingsAction } from './actions';
+import { HOUSEHOLD_TYPES } from '@/db/schema';
+import type { HouseholdType } from '@/lib/household-types';
 
 /** The household's own settings (admins change them; members read them), inside the Household card. */
 export function SettingsForm({
@@ -23,6 +25,7 @@ export function SettingsForm({
     fiscalYearStartMonth: number;
     weekStartsOn: number;
     splitMode: 'shared' | 'single';
+    type: HouseholdType | null;
     paymentReferenceTemplate: string;
     membersCanExport: boolean;
   };
@@ -32,6 +35,7 @@ export function SettingsForm({
   readOnly: boolean;
 }) {
   const t = useTranslations('settings');
+  const tt = useTranslations('householdTypes');
   const [state, action, pending] = useActionState<ActionState, FormData>(updateSettingsAction, {});
   const e = state.fieldErrors ?? {};
   return (
@@ -71,6 +75,16 @@ export function SettingsForm({
           <div className="mt-3 grid gap-3">
             <Field label={t('fields.name')} error={e.name}>
               <Input name="name" defaultValue={initial.name} required />
+            </Field>
+            <Field label={t('fields.type')} hint={t('hints.type')}>
+              <Select name="type" defaultValue={initial.type ?? ''}>
+                <option value="">{t('householdTypes.none')}</option>
+                {HOUSEHOLD_TYPES.map((k) => (
+                  <option key={k} value={k}>
+                    {tt(`${k}.name`)}
+                  </option>
+                ))}
+              </Select>
             </Field>
             <Field label={t('fields.splitMode')} hint={t('hints.splitMode')}>
               <Select name="splitMode" defaultValue={initial.splitMode}>

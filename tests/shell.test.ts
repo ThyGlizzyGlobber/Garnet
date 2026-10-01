@@ -91,7 +91,11 @@ describe('shellView', () => {
     );
 
     const v = shellView(hh, jordan, '2026-09-29', db);
-    expect(v.household).toEqual({ name: 'Riverside House', members: ['Alex', 'Jordan'] });
+    expect(v.household).toEqual({
+      name: 'Riverside House',
+      members: ['Alex', 'Jordan'],
+      type: null,
+    });
     expect(v.split).toBe(true);
     expect(v.services.map((s) => [s.name, s.minor])).toEqual([['Electricity', 92_000]]);
     // An everyday bill: listed under Essentials.
@@ -104,7 +108,7 @@ describe('shellView', () => {
     ]);
     expect(mine.minor).toBe(91_250);
     expect(v.inboxCount).toBe(0);
-    expect(v.me).toEqual({ name: 'Jordan', colour: jordan.colour, admin: false });
+    expect(v.me).toEqual({ name: 'Jordan', colour: jordan.colour, admin: false, role: 'member' });
 
     // Alex doesn't see Jordan's rego; a household that doesn't split loses Money.
     expect(shellView(hh, alex, '2026-09-29', db).mine).toEqual([]);

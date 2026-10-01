@@ -288,6 +288,13 @@
       "when": 1790833678652,
       "tag": "0040_account_pin_and_appearance",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "6",
+      "when": 1790835011630,
+      "tag": "0041_household_type_roles_splits",
+      "breakpoints": true
     }
   ]
 }

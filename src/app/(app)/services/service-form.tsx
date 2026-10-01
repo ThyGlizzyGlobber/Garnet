@@ -22,6 +22,8 @@ export interface ServiceFormSplit {
   locale: string;
   latestMinor: number | null;
   resplitCount: number;
+  /** Members who pay no share of it (D14). */
+  excluded: string[];
   percents: Record<string, number>;
   amounts: Record<string, string>;
   /** Read-only lines for members who can't change it ("Jordan · 40%"). */
@@ -353,6 +355,7 @@ export function ServiceForm({
                       locale={split.locale}
                       latestMinor={split.latestMinor}
                       resplitCount={split.resplitCount}
+                      excluded={split.excluded}
                       payerMemberId={initial.payerMemberId}
                     />
                   ) : (

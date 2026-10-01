@@ -31,6 +31,20 @@ interface SplitMember {
   activeTo: string | null;
 }
 
+/**
+ * The members a service is split among: everyone but those the admin left
+ * out of it (boarders by default, SCOPE-accounts.md D14). The one rule for
+ * real shares, the split card, the editor's preview and set-aside estimates.
+ */
+export function membersInSplit<M extends { id: string }>(
+  members: M[],
+  svc: { notSplitWith: string[] },
+): M[] {
+  if (!svc.notSplitWith.length) return members;
+  const out = new Set(svc.notSplitWith);
+  return members.filter((m) => !out.has(m.id));
+}
+
 export interface SplitInput {
   amountMinor: number;
   periodStart: string;

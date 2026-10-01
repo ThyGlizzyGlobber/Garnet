@@ -110,12 +110,18 @@ async function read(
         state: { error: te('amountNeeded') },
       };
   }
+  // Who pays no share of it (D14): the editor's "In this split" boxes, when it was shown.
+  const notSplitWith =
+    fd.get('splitEditor') === 'on'
+      ? members.filter((m) => fd.get(`in_${m.id}`) !== 'on').map((m) => m.id)
+      : undefined;
   return {
     ok: true,
     input: {
       typeSlug: v.typeSlug,
       name: v.name,
       provider: v.provider,
+      ...(notSplitWith ? { notSplitWith } : {}),
       accountRef: v.accountRef || null,
       cadence: v.cadence,
       usageUnit: v.usageUnit || null,
@@ -145,6 +151,7 @@ function splitFields(input: ServiceInput): Partial<ServiceInput> {
     payerMemberId: input.payerMemberId,
     customSplits: input.customSplits,
     fixedAmounts: input.fixedAmounts,
+    notSplitWith: input.notSplitWith,
   };
 }
 
@@ -162,6 +169,7 @@ function splitKey(householdId: string, id: string): string {
     s.payerMemberId,
     getCustomSplits(householdId, id),
     getFixedAmounts(householdId, id),
+    s.notSplitWith,
   ]);
 }
 

@@ -8,6 +8,8 @@ import { errorText, str, zodToState } from '@/lib/actions';
 import { isIsoDate } from '@/lib/dates';
 import { hasPostcodeData, lookupPostcode } from '@/lib/location';
 import { setUpHousehold } from '@/lib/setup';
+import { HOUSEHOLD_TYPES } from '@/db/schema';
+import { splitModeFor } from '@/lib/household-types';
 
 const schema = z
   .object({
@@ -16,7 +18,7 @@ const schema = z
     locale: z.string().min(2, 'required'),
     timezone: z.string().min(1, 'required'),
     fiscalYearStartMonth: z.coerce.number().int().min(1).max(12),
-    splitMode: z.enum(['shared', 'single']),
+    type: z.enum(HOUSEHOLD_TYPES),
     ownerName: z.string().min(1, 'yourName').max(40),
     activeFrom: z.string().refine(isIsoDate, 'validDate'),
     colour: z.string().regex(/^#[0-9a-fA-F]{6}$/, 'required'),
@@ -34,7 +36,7 @@ export async function completeSetup(_prev: ActionState, fd: FormData): Promise<A
     locale: str(fd, 'locale'),
     timezone: str(fd, 'timezone'),
     fiscalYearStartMonth: str(fd, 'fiscalYearStartMonth'),
-    splitMode: str(fd, 'splitMode'),
+    type: str(fd, 'type'),
     ownerName: str(fd, 'ownerName'),
     activeFrom: str(fd, 'activeFrom'),
     colour: str(fd, 'colour'),
@@ -66,7 +68,8 @@ export async function completeSetup(_prev: ActionState, fd: FormData): Promise<A
         locale: v.locale,
         timezone: v.timezone,
         fiscalYearStartMonth: v.fiscalYearStartMonth,
-        splitMode: v.splitMode,
+        type: v.type,
+        splitMode: splitModeFor(v.type),
       },
       owner: { name: v.ownerName, activeFrom: v.activeFrom, colour: v.colour },
       location: location.postalCode ? location : null,

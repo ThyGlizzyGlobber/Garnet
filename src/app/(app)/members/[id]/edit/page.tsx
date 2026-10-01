@@ -14,6 +14,7 @@ import { joinStatus, latestInvites } from '@/lib/invites';
 import { getMember, isLastAdmin } from '@/lib/members';
 import { colourCss } from '@/lib/palette';
 import { isAdmin } from '@/lib/roles';
+import { defaultRole, roleKey, rolesForType } from '@/lib/household-types';
 import {
   changePinAction,
   deleteMemberAction,
@@ -39,6 +40,10 @@ export default async function EditMemberPage({ params }: { params: Promise<{ id:
   const m = getMember(hh.id, id);
   if (!m) notFound();
   const admin = isAdmin(me);
+  const tr = await getTranslations('roles');
+  const roles = rolesForType(hh.type)
+    .filter((r) => r !== 'owner')
+    .map((r) => ({ value: r, label: tr(roleKey(r, hh.type)) }));
   const self = me.id === m.id;
   if (!admin && !self) redirect('/members');
   // A household always keeps one admin: the last one can't step down.
@@ -65,7 +70,7 @@ export default async function EditMemberPage({ params }: { params: Promise<{ id:
             !lastAdmin && (
               <InlineAction
                 action={setMemberRoleAction}
-                hidden={{ id: m.id, role: 'member' }}
+                hidden={{ id: m.id, role: defaultRole(hh.type) }}
                 label={self ? t('role.stepDown') : t('role.demote')}
                 variant="secondary"
                 confirm={
@@ -144,7 +149,7 @@ export default async function EditMemberPage({ params }: { params: Promise<{ id:
       >
         <Avatar name={m.name} colour={m.colour} size="lg" />
         <div>
-          <div className="eyebrow">{isAdmin(m) ? t('owner') : t('memberRole')}</div>
+          <div className="eyebrow">{tr(roleKey(m.role, hh.type))}</div>
           <h1>{m.name}</h1>
           <span className="muted">{signsIn}</span>
         </div>
@@ -153,6 +158,7 @@ export default async function EditMemberPage({ params }: { params: Promise<{ id:
         action={updateMemberAction}
         sharedHousehold={hh.splitMode === 'shared'}
         canEditResidency={admin}
+        roles={admin && !isAdmin(m) && roles.length > 1 ? roles : []}
         submitLabel={t('form.save')}
         cancelHref="/members"
         side={side}
@@ -166,6 +172,7 @@ export default async function EditMemberPage({ params }: { params: Promise<{ id:
           paymentDetails: m.paymentDetails,
           email: m.email ?? '',
           joined: !!m.accountId,
+          role: m.role,
         }}
       />
     </div>
