@@ -148,15 +148,15 @@ five wrong PINs sign that browser out.
 
 Add these to the app (**Edit → Container Configuration → Environment Variables**):
 
-| Variable                                    | Value                                                                                                                                                                       |
-| ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `APP_URL`                                   | the public address, e.g. `https://home.brjlabs.com`                                                                                                                         |
-| `DEVELOPER_EMAILS`                           | your email (comma-separate several). Developers get Software update, adding service types and the install-wide Status, and can link a household that existed before accounts |
-| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google Cloud → Google Auth Platform → Clients (Web application). Redirect URI: `<APP_URL>/api/auth/google/callback`. Leave empty to hide the Google button                  |
-| `RESEND_API_KEY`                            | Resend API key with sending access to your verified domain                                                                                                                  |
-| `EMAIL_FROM`                                | e.g. `Home Utilities <no-reply@mail.brjlabs.com>`                                                                                                                           |
-| `EMAIL_LOG_ONLY`                            | `true` writes emails to the app log instead of sending (only for trying things out)                                                                                         |
-| `AI_MONTHLY_LIMIT`                          | AI bill reads per household per month (default 60). Beyond it, new documents wait in the review queue until next month                                                      |
+| Variable                                    | Value                                                                                                                                                                        |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `APP_URL`                                   | the public address, e.g. `https://home.brjlabs.com`                                                                                                                          |
+| `DEVELOPER_EMAILS`                          | your email (comma-separate several). Developers get Software update, adding service types and the install-wide Status, and can link a household that existed before accounts |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google Cloud → Google Auth Platform → Clients (Web application). Redirect URI: `<APP_URL>/api/auth/google/callback`. Leave empty to hide the Google button                   |
+| `RESEND_API_KEY`                            | Resend API key with sending access to your verified domain                                                                                                                   |
+| `EMAIL_FROM`                                | e.g. `Home Utilities <no-reply@mail.brjlabs.com>`                                                                                                                            |
+| `EMAIL_LOG_ONLY`                            | `true` writes emails to the app log instead of sending (only for trying things out)                                                                                          |
+| `AI_MONTHLY_LIMIT`                          | AI bill reads per household per month (default 60). Beyond it, new documents wait in the review queue until next month                                                       |
 
 **First sign-in after upgrading from a version without accounts:** sign in with
 the email in `DEVELOPER_EMAILS`. The Welcome screen offers to link your existing
