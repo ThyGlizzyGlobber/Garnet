@@ -12,7 +12,8 @@ import {
 import { getEnv } from '@/lib/env';
 import { getHousehold } from '@/lib/households';
 import { getMemberForSession } from '@/lib/members';
-import { requestIsHttps, safeNext } from '@/lib/request';
+import { clientIp, requestIsHttps, safeNext } from '@/lib/request';
+import { audit, type AuditEntry } from '@/lib/audit';
 import { findDevice, forgetDevice, touchDevice, trustDevice } from './devices';
 import { isAdmin } from '@/lib/roles';
 
@@ -245,4 +246,20 @@ export async function consumeNext(): Promise<string> {
   delete session.next;
   await session.save();
   return safeNext(next) ?? '/';
+}
+
+/** Log what the signed-in developer just did (SCOPE-console.md C-D9), with their address and network. */
+export async function auditDeveloper(
+  action: string,
+  extra: Omit<AuditEntry, 'accountId' | 'email' | 'ip' | 'action'> = {},
+): Promise<void> {
+  const s = await authState();
+  if (s.kind === 'anonymous' || !s.account) return;
+  audit({
+    ...extra,
+    action,
+    accountId: s.account.id,
+    email: s.account.email,
+    ip: await clientIp(),
+  });
 }

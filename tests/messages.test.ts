@@ -59,7 +59,7 @@ describe('messages', () => {
     const banned =
       /\b(AI|A\.I\.|LLM|Anthropic|Claude|read by|read from|confidence|confident|smart|sparkles?|magic|extract(?:ed|ion|or|s)?|OCR|model)\b/i;
     // Operators only, and the one place the notice must name the service.
-    const allowed = /^(status\.|privacy\.services\.)/;
+    const allowed = /^(status\.|console\.|privacy\.services\.)/;
     const hits: string[] = [];
     const walk = (node: unknown, key: string) => {
       if (typeof node === 'string') {

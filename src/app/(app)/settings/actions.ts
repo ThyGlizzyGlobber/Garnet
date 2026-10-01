@@ -4,7 +4,13 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import type { ActionState } from '@/components/ui/form';
 import { errorText, fieldErrors, str, zodToState } from '@/lib/actions';
-import { authState, requireDeveloper, requireOwner, signOut } from '@/lib/auth/session';
+import {
+  auditDeveloper,
+  authState,
+  requireDeveloper,
+  requireOwner,
+  signOut,
+} from '@/lib/auth/session';
 import { replaceAlias } from '@/lib/bills-address';
 import { getHousehold, updateHousehold } from '@/lib/households';
 import { redirect } from 'next/navigation';
@@ -105,12 +111,14 @@ export async function exitDemoAction(): Promise<void> {
 export async function requestUpdateAction(): Promise<void> {
   const me = await requireDeveloper();
   requestUpdate(me.name);
+  await auditDeveloper('update.request');
   revalidatePath('/settings');
 }
 
 export async function cancelUpdateAction(): Promise<void> {
   await requireDeveloper();
   cancelUpdateRequest();
+  await auditDeveloper('update.cancel');
   revalidatePath('/settings');
 }
 

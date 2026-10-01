@@ -916,3 +916,24 @@ export const installSetting = sqliteTable('install_setting', {
 });
 export type AllowedSignup = typeof allowedSignup.$inferSelect;
 export type AccessRequest = typeof accessRequest.$inferSelect;
+
+/** What developers did on the install (SCOPE-console.md §3f): kept for good, never deleted from the app. */
+export const auditLog = sqliteTable(
+  'audit_log',
+  {
+    id: text('id').primaryKey(),
+    at: text('at').notNull(),
+    accountId: text('account_id'),
+    email: text('email'),
+    action: text('action').notNull(),
+    targetKind: text('target_kind'),
+    targetId: text('target_id'),
+    targetName: text('target_name'),
+    detail: text('detail', { mode: 'json' }).$type<
+      Record<string, string | number | boolean | null>
+    >(),
+    ip: text('ip'),
+  },
+  (t) => [index('audit_log_at_idx').on(t.at)],
+);
+export type AuditLog = typeof auditLog.$inferSelect;

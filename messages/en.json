@@ -3040,6 +3040,33 @@
       "originals": "Originals",
       "previews": "Previews",
       "free": "Free on the volume"
+    },
+    "audit": {
+      "lede": "Everything developers have done on the install, newest first. Kept for good; nothing here can be deleted from the app.",
+      "empty": "Nothing yet.",
+      "when": "When",
+      "who": "Who",
+      "what": "What",
+      "target": "On",
+      "detail": "Details",
+      "startup": "startup",
+      "actions": {
+        "early-access.on": "Turned early access on",
+        "early-access.off": "Turned early access off",
+        "allow.add": "Added to the list",
+        "allow.remove": "Removed from the list",
+        "request.approved": "Let a request in",
+        "request.declined": "Declined a request",
+        "household.cap": "Changed an AI cap",
+        "household.address-off": "Turned a bills address off",
+        "household.delete-demo": "Deleted a demo household",
+        "account.sign-out-all": "Signed an account out everywhere",
+        "account.delete": "Deleted an account",
+        "update.request": "Asked for a software update",
+        "update.cancel": "Cancelled a software update",
+        "service-type.add": "Added a service type"
+      },
+      "more": "Older"
     }
   }
 }

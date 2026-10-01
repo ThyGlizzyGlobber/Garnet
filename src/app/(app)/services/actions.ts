@@ -9,7 +9,7 @@ import { z } from 'zod';
 import { CADENCES, SPLIT_MODES, type SplitMode } from '@/db/schema';
 import type { ActionState } from '@/components/ui/form';
 import { errorText, optStr, str, zodToState } from '@/lib/actions';
-import { requireMember, requireDeveloper } from '@/lib/auth/session';
+import { auditDeveloper, requireDeveloper, requireMember } from '@/lib/auth/session';
 import { refreshAnomalies, resplitBills, setServiceOwner } from '@/lib/bills';
 import { parseMoneyToMinor } from '@/lib/format';
 import { getHousehold } from '@/lib/households';
@@ -246,6 +246,7 @@ export async function createServiceTypeAction(fd: FormData): Promise<void> {
   if (!label || (unit && !UNITS.has(unit))) return;
   try {
     createServiceType({ slug: label, label, defaultUnit: unit });
+    await auditDeveloper('service-type.add', { targetKind: 'service-type', targetName: label });
   } catch {
     // Already in the catalog.
   }
