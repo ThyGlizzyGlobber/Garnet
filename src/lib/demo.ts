@@ -1,8 +1,8 @@
 import fs from 'node:fs';
-import { eq } from 'drizzle-orm';
+import { eq, isNull, like, notInArray } from 'drizzle-orm';
 import path from 'node:path';
 import { getDb, type Db } from '@/db/client';
-import { household } from '@/db/schema';
+import { account, household, member } from '@/db/schema';
 import { deleteHousehold, getHousehold, listHouseholds } from '@/lib/households';
 import { ensureDataDirs } from '@/lib/paths';
 
@@ -35,10 +35,29 @@ export function adoptLegacyDemoFlag(db: Db = getDb()): void {
   fs.rmSync(flag, { force: true });
 }
 
-/** Delete the demo household and everything it owns, and remember that demo mode was left. */
+/** The demo person's account (the seed links Alex to every demo household through it). */
+export const DEMO_EMAIL_DOMAIN = 'riverside.example';
+
+/**
+ * Delete every demo household and everything they own, the seed's account
+ * with them, and remember that demo mode was left.
+ */
 export function exitDemo(householdId: string, db: Db = getDb()): void {
   if (!isDemoHousehold(householdId, db)) throw new Error('This is not the demo household');
-  deleteHousehold(householdId, db);
+  for (const hh of listHouseholds(db)) if (hh.isDemo) deleteHousehold(hh.id, db);
+  const linked = db
+    .select({ id: member.accountId })
+    .from(member)
+    .where(isNull(member.accountId))
+    .all()
+    .flatMap((r) => (r.id ? [r.id] : []));
+  db.delete(account)
+    .where(
+      linked.length
+        ? notInArray(account.id, linked)
+        : like(account.email, `%@${DEMO_EMAIL_DOMAIN}`),
+    )
+    .run();
   fs.writeFileSync(
     path.join(ensureDataDirs().config, OFF),
     JSON.stringify({ exitedAt: new Date().toISOString() }),

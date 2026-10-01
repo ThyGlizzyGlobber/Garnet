@@ -2818,3 +2818,273 @@ input.inp-plain[type='color'] {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* ---------- the Account Dashboard and the household switcher ---------- */
+.sw-btn {
+  cursor: pointer;
+}
+.sw-btn .sw-chev {
+  display: inline-block;
+  vertical-align: -2px;
+  margin-left: 4px;
+  color: var(--p-fg2);
+}
+.sw-list {
+  display: grid;
+  gap: 6px;
+}
+.sw-list form {
+  display: contents;
+}
+.sw-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: var(--r-inner);
+  background: var(--ctl-bg, var(--inset));
+  box-shadow: inset 0 0 0 1px var(--ctl-rim, var(--line));
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+}
+.sw-row:hover {
+  box-shadow: inset 0 0 0 1.5px var(--p-accent);
+}
+.sw-row.on {
+  box-shadow: inset 0 0 0 1.5px var(--p-accent);
+}
+.sw-t {
+  display: grid;
+  min-width: 0;
+}
+.sw-t b {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sw-prim,
+.hh-prim {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+  color: var(--p-accent);
+  background: color-mix(in srgb, var(--p-accent) 14%, transparent);
+}
+.sw-fig {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--f-num);
+  color: var(--p-fg2);
+}
+.sw-fig .ic {
+  color: var(--p-accent);
+}
+.sw-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--warn);
+  flex: none;
+}
+.sw-links {
+  display: grid;
+  gap: 2px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+.sw-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: var(--r-inner);
+  color: inherit;
+  text-decoration: none;
+  font-weight: 600;
+}
+.sw-link:hover {
+  background: var(--inset);
+}
+.sw-link .ic {
+  color: var(--p-accent);
+}
+
+.account .acct-section {
+  display: grid;
+  gap: 12px;
+}
+.hh-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: var(--gap);
+}
+.hh-tile {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  min-height: 190px;
+  position: relative;
+}
+.hh-tile.on {
+  box-shadow: inset 0 0 0 1.5px var(--p-accent);
+}
+.hh-open {
+  display: contents;
+}
+.hh-main {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  padding: 18px 18px 8px;
+  border: 0;
+  background: none;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+  border-radius: var(--r-card) var(--r-card) 0 0;
+}
+.hh-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+.hh-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-family: var(--f-display);
+  font-weight: var(--fw-display);
+  font-size: 17px;
+}
+.hh-name b {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hh-fig {
+  display: grid;
+  gap: 2px;
+}
+.hh-fig > b {
+  font-family: var(--f-num);
+  font-size: 30px;
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+}
+.hh-ok {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ok);
+  font-size: 22px !important;
+}
+.hh-foot {
+  display: grid;
+  gap: 3px;
+}
+.hh-dots {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--p-fg2);
+}
+.hh-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 18px 14px;
+}
+.hh-acts {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.hh-acts form {
+  display: contents;
+}
+.hh-leave {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+.link.small {
+  font-size: 12.5px;
+}
+.hh-add {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 6px;
+  padding: 20px;
+  text-align: center;
+  color: inherit;
+  text-decoration: none;
+  border: 1.5px dashed var(--line-2);
+  background: color-mix(in srgb, var(--g-bg) 50%, transparent);
+}
+.hh-add:hover {
+  border-color: var(--p-accent);
+}
+.hh-add-ic {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  color: var(--p-accent);
+  background: color-mix(in srgb, var(--p-accent) 14%, transparent);
+}
+.hh-add .join-form {
+  width: 100%;
+  margin-top: 6px;
+}
+.acct-card {
+  display: grid;
+  gap: 12px;
+  max-width: 720px;
+}
+@media (max-width: 639px) {
+  .hh-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .hh-tile {
+    min-height: 160px;
+  }
+  .hh-main {
+    padding: 14px 14px 6px;
+  }
+  .hh-fig > b {
+    font-size: 24px;
+  }
+  .hh-bottom {
+    padding: 6px 14px 12px;
+  }
+  .hh-add .join-form {
+    grid-column: 1 / -1;
+  }
+  .hh-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  .hh-name b {
+    white-space: normal;
+  }
+}

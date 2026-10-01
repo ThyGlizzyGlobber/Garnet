@@ -10,6 +10,7 @@ import { NavGroup } from './nav-group';
 import { NavSection } from './nav-section';
 import { OfflineBar } from './offline-bar';
 import { NavItems, SectionName, type NavItem } from './nav-items';
+import { HouseholdSwitcher, type SwitcherLabels, type SwitcherRow } from './household-switcher';
 
 /**
  * The app's frame (BRAND.md §9): the scene behind, a floating nav column
@@ -44,6 +45,12 @@ export interface ShellLabels {
   /** The product's name, under the household's on a phone's Home. */
   product: string;
   householdHome: string;
+  /** The Account Dashboard's nav (the account variant). */
+  households: string;
+  account: string;
+  /** "Your households", under the product's name in the account variant. */
+  yourHouseholds: string;
+  switcher: SwitcherLabels;
 }
 
 export function AppShell({
@@ -51,22 +58,45 @@ export function AppShell({
   labels,
   locale,
   money,
+  variant = 'household',
+  switchAction,
   children,
 }: {
   view: ShellView;
   labels: ShellLabels;
   locale: string;
   /** Formats minor units as whole money ("$2,300"). */
-  money: (minor: number) => string;
+  money: (minor: number, currency: string, locale: string) => string;
+  /** The household frame, or the Account Dashboard's (no household, no services). */
+  variant?: 'household' | 'account';
+  /** Opens the household whose member id is posted (the switcher). */
+  switchAction: (fd: FormData) => Promise<void>;
   children: ReactNode;
 }) {
-  const items: NavItem[] = [
-    { href: '/', label: labels.nav.home, icon: 'home' },
-    { href: '/services', label: labels.nav.services, icon: 'services' },
-    { href: '/bills', label: labels.nav.bills, icon: 'bills' },
-    ...(view.split ? [{ href: '/money', label: labels.nav.money, icon: 'money' }] : []),
-    { href: '/inbox', label: labels.nav.inbox, icon: 'inbox', badge: view.inboxCount },
-  ];
+  const account = variant === 'account';
+  const items: NavItem[] = account
+    ? [
+        { href: '/account', label: labels.households, icon: 'grid' },
+        { href: '/account#account', label: labels.account, icon: 'user' },
+      ]
+    : [
+        { href: '/', label: labels.nav.home, icon: 'home' },
+        { href: '/services', label: labels.nav.services, icon: 'services' },
+        { href: '/bills', label: labels.nav.bills, icon: 'bills' },
+        ...(view.split ? [{ href: '/money', label: labels.nav.money, icon: 'money' }] : []),
+        { href: '/inbox', label: labels.nav.inbox, icon: 'inbox', badge: view.inboxCount },
+      ];
+  const rows: SwitcherRow[] = view.households.map((h) => ({
+    memberId: h.memberId,
+    name: h.name,
+    primary: h.primary,
+    current: h.current,
+    role: h.admin ? labels.admin : labels.member,
+    figure: h.oweMinor > 0 ? money(h.oweMinor, h.currency, h.locale) : null,
+    attention: h.waiting > 0 || h.overdue > 0,
+  }));
+  const meHref = account ? '/account#account' : '/settings';
+  const brandTitle = account ? labels.product : view.household.name;
   const who =
     view.household.members.length <= 1
       ? labels.justYou
@@ -75,7 +105,7 @@ export function AppShell({
     <>
       <i aria-hidden="true" />
       <span>{s.name}</span>
-      <b>{money(s.minor)}</b>
+      <b>{money(s.minor, view.currency, locale)}</b>
     </>
   );
   const essentials = view.services.filter((s) => s.kind === 'service' && s.essential);
@@ -116,18 +146,18 @@ export function AppShell({
   return (
     <div className="app">
       <nav className="nav glass-strong vertical column" aria-label="Main">
-        <Link href="/" className="nc-brand" aria-label={labels.householdHome}>
-          <span className="mark">
-            <Icon name="home" width={17} height={17} />
-          </span>
-          <span className="nc-bt">
-            <b>{view.household.name}</b>
-            <span>{who}</span>
-          </span>
-        </Link>
+        <HouseholdSwitcher
+          place="column"
+          icon={account ? 'grid' : 'home'}
+          title={brandTitle}
+          sub={account ? labels.yourHouseholds : who}
+          rows={rows}
+          labels={labels.switcher}
+          action={switchAction}
+        />
         <NavItems items={items} />
         <div className="nc-svcs">
-          {view.services.length + view.mine.length > 0 ? (
+          {account ? null : view.services.length + view.mine.length > 0 ? (
             <>
               {/* The everyday bills first, then the main services and the rest;
                   each section folds away from its heading. */}
@@ -171,16 +201,14 @@ export function AppShell({
             </>
           )}
         </div>
-        <Link
-          href="/settings"
-          className="nc-me"
-          aria-label={`${view.me.name} · ${labels.settings}`}
-        >
+        <Link href={meHref} className="nc-me" aria-label={`${view.me.name} · ${labels.settings}`}>
           <Avatar name={view.me.name} colour={view.me.colour} />
           <span className="nc-bt">
             <b>{view.me.name}</b>
             <span>
-              {view.me.admin ? labels.admin : labels.member} · {labels.settings}
+              {account
+                ? labels.account
+                : `${view.me.admin ? labels.admin : labels.member} · ${labels.settings}`}
             </span>
           </span>
           <Icon name="sliders" width={18} height={18} />
@@ -189,24 +217,22 @@ export function AppShell({
 
       <header className="topbar">
         <div className="tb-l">
-          <Link href="/" className="brand" aria-label={labels.householdHome}>
-            <span className="mark">
-              <Icon name="home" width={17} height={17} />
-            </span>
-            <span className="brand-t">
-              <b>{view.household.name}</b>
-              <span>
-                <SectionName items={items} fallback={labels.product} />
-              </span>
-            </span>
-          </Link>
+          <HouseholdSwitcher
+            place="topbar"
+            icon={account ? 'grid' : 'home'}
+            title={brandTitle}
+            sub={<SectionName items={items} fallback={labels.product} />}
+            rows={rows}
+            labels={labels.switcher}
+            action={switchAction}
+          />
           {/* A page's way back lands here (TopBack). */}
           <span id="tb-back" className="tb-back" />
         </div>
         <div className="tb-r">
-          <IconButton icon="search" label={labels.search} href="/bills?find=1" />
-          <AddBillButton address={view.address} className="tb-add" />
-          <Link href="/settings" className="me tb-me" aria-label={labels.settings}>
+          {!account && <IconButton icon="search" label={labels.search} href="/bills?find=1" />}
+          {!account && <AddBillButton address={view.address} className="tb-add" />}
+          <Link href={meHref} className="me tb-me" aria-label={labels.settings}>
             <Avatar name={view.me.name} colour={view.me.colour} />
           </Link>
         </div>

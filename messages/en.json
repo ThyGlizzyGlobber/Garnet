@@ -30,7 +30,10 @@
     "essentials": "Essentials",
     "everythingElse": "Everything else",
     "showSection": "Show",
-    "hideSection": "Hide"
+    "hideSection": "Hide",
+    "households": "Households",
+    "accountShort": "Account",
+    "yourHouseholds": "Your households"
   },
   "setup": {
     "title": "Set up your household.",
@@ -991,7 +994,9 @@
       "pin": "PIN",
       "pinSet": "Set · asked again every {days, plural, one {day} other {# days}}",
       "pinNone": "Not set",
-      "changePin": "Change PIN"
+      "changePin": "Change PIN",
+      "open": "Your account",
+      "openSub": "Your households, how you sign in, your PIN, light or dark."
     },
     "emails": {
       "title": "Emails"
@@ -1395,7 +1400,7 @@
     "subtitle": "You’re signed in as <b>{email}</b>. What next?",
     "create": {
       "title": "Start a household",
-      "body": "Name it, pick your colours, then invite the people you live with.",
+      "body": "Name it, then invite the people you live with.",
       "cta": "Create a household"
     },
     "join": {
@@ -2756,5 +2761,50 @@
     "name": "Your name",
     "colour": "Your colour",
     "continue": "Continue"
+  },
+  "switcher": {
+    "title": "Your households",
+    "hint": "Switch between them, or see them all",
+    "primary": "Your home",
+    "all": "All households",
+    "start": "Start a household",
+    "join": "Join with a code",
+    "open": "Switch household"
+  },
+  "account": {
+    "title": "Hey, {name}.",
+    "titleNoName": "Your households.",
+    "ledeNone": "You’re not in a household yet. Start one, or join one with the code from your invite.",
+    "ledeOwe": "You owe {amount} across your households.",
+    "ledeClear": "Nothing owed anywhere. Nice.",
+    "households": "Your households",
+    "start": "Start a household",
+    "startSub": "Name it, then invite the people you live with.",
+    "join": "Join with a code",
+    "joinSub": "The code from your invite, or open the link in the email.",
+    "tile": {
+      "open": "Open {household}",
+      "primary": "Your home",
+      "admin": "Admin",
+      "member": "Member",
+      "youOwe": "you owe",
+      "allPaid": "All paid",
+      "nothingOwed": "nothing owed",
+      "month": "{amount} this month",
+      "overdue": "{count, plural, one {# overdue} other {# overdue}}",
+      "waiting": "{count, plural, one {# to confirm} other {# to confirm}}",
+      "makePrimary": "Make it home",
+      "leave": "Leave"
+    },
+    "leave": {
+      "confirm": "Leave {household}? Your past shares stay in its history; you’ll need a new invite to come back.",
+      "done": "You’ve left that household.",
+      "blocked": {
+        "lastAdmin": "You’re the only admin of {household}. Make someone else an admin first.",
+        "owes": "You still owe shares in {household}. Settle them first.",
+        "owed": "Housemates in {household} still owe you. Settle up first.",
+        "personal": "You have personal services or vehicles in {household}. Move or delete them first."
+      }
+    }
   }
 }

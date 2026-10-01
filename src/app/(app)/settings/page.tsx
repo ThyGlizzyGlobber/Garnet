@@ -1,12 +1,9 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { logout } from '@/app/login/actions';
-import { AppearanceFade } from '@/components/app/appearance-fade';
-import { getAppearance } from '@/lib/auth/appearance';
 import { Button, Card, LinkButton } from '@/components/ui';
 import { AddressCard, Kv, PageTitle, SectionHead } from '@/components/ui/blocks';
 import { Avatars } from '@/components/ui/colour';
-import { Segmented } from '@/components/ui/controls';
 import { InlineAction } from '@/components/ui/form';
 import { authState, viewerIsOperator } from '@/lib/auth/session';
 import { billsAddress } from '@/lib/bills-address';
@@ -30,7 +27,6 @@ import {
   readMissingMetricsAction,
   removeLocationAction,
   replaceBillsAddressAction,
-  saveAppearanceAction,
   saveSharingAction,
 } from './actions';
 import { LocationForm } from './location-form';
@@ -50,7 +46,6 @@ export default async function SettingsPage() {
   const address = billsAddress(hh);
   const env = getEnv();
   const t = await getTranslations('settings');
-  const ta = await getTranslations('appearance');
   const tn = await getTranslations('nav');
   const tl = await getTranslations('location');
   const ts = await getTranslations('sharing');
@@ -58,7 +53,6 @@ export default async function SettingsPage() {
   const tb = await getTranslations('billsAddress');
   const state = await authState();
   const account = state.kind === 'ok' ? state.account : null;
-  const look = await getAppearance();
   const members = listMembers(hh.id);
   const living = members.filter((m) => isActiveOn(m, today));
   const choice = latestRegionalChoice(hh.id);
@@ -87,91 +81,13 @@ export default async function SettingsPage() {
     <div className="scr settings">
       <PageTitle title={t('title')} lede={t('lede')} />
       <div className="set-grid">
-        <Card className="set-appear" id="appearance">
-          <SectionHead title={ta('title')} right={<span className="muted">{ta('justYou')}</span>} />
-          <p className="muted set-lede">{ta('body')}</p>
-          <AppearanceFade>
-            <div className="set-row">
-              <span>
-                <b>{ta('lightOrDark')}</b>
-                <span className="muted small">{ta('lightOrDarkBody')}</span>
-              </span>
-              <form action={saveAppearanceAction}>
-                <Segmented
-                  small
-                  name="theme"
-                  value={look.theme}
-                  label={ta('lightOrDark')}
-                  items={[
-                    { value: 'light', label: ta('themes.light'), icon: 'sun' },
-                    { value: 'dark', label: ta('themes.dark'), icon: 'moon' },
-                    { value: 'auto', label: ta('themes.auto'), icon: 'devices' },
-                  ]}
-                />
-              </form>
-            </div>
-            <div className="set-row">
-              <span>
-                <b>{ta('glass')}</b>
-                <span className="muted small">{ta('glassBody')}</span>
-              </span>
-              <form action={saveAppearanceAction}>
-                <Segmented
-                  small
-                  name="glass"
-                  value={look.glass}
-                  label={ta('glass')}
-                  items={[
-                    { value: 'clear', label: ta('glassModes.clear'), icon: 'layers' },
-                    { value: 'solid', label: ta('glassModes.solid'), icon: 'grid' },
-                    { value: 'auto', label: ta('glassModes.auto'), icon: 'devices' },
-                  ]}
-                />
-              </form>
-            </div>
-          </AppearanceFade>
-        </Card>
-
         <div className="set-col">
           <Card id="account">
             <SectionHead title={tn('account')} />
-            <Kv
-              rows={[
-                [t('account.name'), me.name],
-                [
-                  t('account.email'),
-                  account ? (
-                    <span key="e" className="mono">
-                      {account.email}
-                    </span>
-                  ) : (
-                    t('account.demo')
-                  ),
-                ],
-                [
-                  t('account.signsInWith'),
-                  account
-                    ? account.googleSub
-                      ? t('account.google')
-                      : t('account.code')
-                    : t('account.demoSignIn'),
-                ],
-                [
-                  t('account.pin'),
-                  (account ? account.pinHash : me.pinHash)
-                    ? t('account.pinSet', { days: env.AUTH_SESSION_DAYS })
-                    : t('account.pinNone'),
-                ],
-              ]}
-            />
+            <p className="muted set-lede">{t('account.openSub')}</p>
             <div className="set-acts">
-              <LinkButton
-                href={`/members/${me.id}/edit#pin`}
-                variant="secondary"
-                size="sm"
-                icon="lock"
-              >
-                {t('account.changePin')}
+              <LinkButton href="/account" variant="secondary" size="sm" icon="user">
+                {t('account.open')}
               </LinkButton>
               <LinkButton href="/wall" variant="secondary" size="sm" icon="desktop">
                 {tn('wall')}

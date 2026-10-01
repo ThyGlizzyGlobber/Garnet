@@ -1,12 +1,13 @@
 import { redirect } from 'next/navigation';
-import { getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
 import { AppShell } from '@/components/app/shell';
+import { shellLabels } from '@/components/app/shell-labels';
 import { authState, pathFor } from '@/lib/auth/session';
 import { todayIn } from '@/lib/dates';
 import { formatMoney } from '@/lib/format';
 import { getHousehold } from '@/lib/households';
 import { shellView } from '@/lib/shell';
+import { switchHouseholdAction } from '@/app/account/actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,47 +17,14 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   const me = state.member;
   const hh = getHousehold(me.householdId);
   if (!hh) redirect('/login');
-  const t = await getTranslations('nav');
-  const ta = await getTranslations('app');
-  const tm = await getTranslations('main');
   const view = shellView(hh, me, todayIn(hh.timezone));
   return (
     <AppShell
       view={view}
       locale={hh.locale}
-      money={(minor) => formatMoney(minor, hh.currency, hh.locale, { whole: true })}
-      labels={{
-        nav: {
-          home: t('home'),
-          services: t('services'),
-          bills: t('bills'),
-          money: t('money'),
-          inbox: t('inbox'),
-        },
-        settings: t('settings'),
-        search: t('search'),
-        justYou: t('justYou'),
-        admin: t('admin'),
-        member: t('member'),
-        servicesHead: t('servicesHead'),
-        essentials: t('essentials'),
-        everythingElse: t('everythingElse'),
-        showSection: t('showSection'),
-        hideSection: t('hideSection'),
-        thisMonth: t('thisMonth'),
-        justYours: t('justYours'),
-        noServices: t('noServices'),
-        showSubs: t('showSubs'),
-        hideSubs: t('hideSubs'),
-        main: {
-          vehicle: tm('main.vehicle'),
-          health: tm('main.health'),
-          lifestyle: tm('main.lifestyle'),
-          home: tm('main.home'),
-        },
-        product: ta('name'),
-        householdHome: t('householdHome', { household: hh.name }),
-      }}
+      money={(minor, currency, locale) => formatMoney(minor, currency, locale, { whole: true })}
+      labels={await shellLabels(hh.name)}
+      switchAction={switchHouseholdAction}
     >
       {children}
     </AppShell>

@@ -1,4 +1,5 @@
 import type { Household, Member } from '@/db/schema';
+import { householdTiles, type HouseholdTile } from '@/lib/account';
 import { getDb, type Db } from '@/db/client';
 import { listAssets } from '@/lib/assets';
 import { listBills } from '@/lib/bills';
@@ -48,6 +49,10 @@ export type ShellEntry =
 
 export interface ShellView {
   household: { name: string; members: string[] };
+  /** Every household this person belongs to, for the switcher (SCOPE-accounts.md §3b). */
+  households: HouseholdTile[];
+  /** The household's currency, for the nav's figures. */
+  currency: string;
   split: boolean;
   services: ShellEntry[];
   mine: ShellEntry[];
@@ -87,6 +92,8 @@ export function shellView(hh: Household, me: Member, today: string, db: Db = get
   );
   return {
     household: { name: hh.name, members: listActiveMembers(hh.id, today, db).map((m) => m.name) },
+    households: householdTiles(me, null, db),
+    currency: hh.currency,
     split: hh.splitMode === 'shared',
     services,
     mine,

@@ -8,13 +8,14 @@ import {
   setSharePaid,
   type BillInput,
 } from '@/lib/bills';
-import { bill, service } from '@/db/schema';
+import { bill, member, service } from '@/db/schema';
 import { createHousehold, isSetUp } from '@/lib/households';
 import { setHouseholdLocation } from '@/lib/location';
 import { createMember } from '@/lib/members';
 import { cancelService, createService } from '@/lib/services';
 import { createAsset } from '@/lib/assets';
-import { demoExited } from '@/lib/demo';
+import { DEMO_EMAIL_DOMAIN, demoExited } from '@/lib/demo';
+import { signInAccount } from '@/lib/accounts';
 import { eq } from 'drizzle-orm';
 import { sourceDocument, type Member, type Service } from '@/db/schema';
 import { archiveDocument } from '@/ingest/archive';
@@ -759,7 +760,234 @@ export async function seedDemo(db: Db = getDb()) {
     bills,
     db,
   );
+  seedOtherHouseholds(alex, pin, db);
   return { household: hh.name, members: 3 };
+}
+
+/**
+ * Alex's other households (SCOPE-accounts.md D10), so the switcher and the
+ * Account Dashboard have something to show: an account for Alex linking the
+ * three; their parents' home on Maple Street (one total, nothing split); and
+ * the flat Alex lets out on Bay Street, with two tenants. Household types and
+ * the landlord's allowance come with A3 and A4.
+ */
+function seedOtherHouseholds(alex: Member, pin: string, db: Db) {
+  const acct = signInAccount({ email: `alex@${DEMO_EMAIL_DOMAIN}`, name: 'Alex' }, db);
+  db.update(member)
+    .set({ accountId: acct.id, email: acct.email, isPrimary: true })
+    .where(eq(member.id, alex.id))
+    .run();
+  const region = {
+    currency: 'AUD',
+    locale: 'en-AU',
+    timezone: 'Australia/Melbourne',
+    fiscalYearStartMonth: 7,
+    isDemo: true,
+  } as const;
+  const paidIf = (due: string) => (due < TODAY ? at(addDays(due, -1)) : null);
+
+  // Maple Street: Chris and Jo's own home. Alex sees it; nothing is split.
+  const maple = createHousehold({ ...region, name: 'Maple Street', splitMode: 'single' }, db);
+  const chris = createMember(
+    maple.id,
+    { name: 'Chris', pinHash: pin, role: 'owner', activeFrom: '2024-01-01', colour: '#1baf7a' },
+    db,
+  );
+  createMember(
+    maple.id,
+    { name: 'Jo', pinHash: pin, role: 'owner', activeFrom: '2024-01-01', colour: '#e8a33d' },
+    db,
+  );
+  createMember(
+    maple.id,
+    {
+      name: 'Alex',
+      activeFrom: '2024-01-01',
+      colour: '#2a78d6',
+      accountId: acct.id,
+      email: acct.email,
+    },
+    db,
+  );
+  const maplePower = createService(
+    maple.id,
+    {
+      typeSlug: 'electricity',
+      name: 'Electricity',
+      provider: 'Northwind Energy',
+      cadence: 'quarterly',
+      usageUnit: 'kWh',
+      seasonal: true,
+      payerMemberId: chris.id,
+    },
+    db,
+  );
+  const mapleWater = createService(
+    maple.id,
+    {
+      typeSlug: 'water',
+      name: 'Water',
+      provider: 'Riverbend Water',
+      cadence: 'quarterly',
+      usageUnit: 'kL',
+      payerMemberId: chris.id,
+    },
+    db,
+  );
+  const mapleRates = createService(
+    maple.id,
+    {
+      typeSlug: 'council_rates',
+      name: 'Council rates',
+      provider: 'City of Riverside',
+      cadence: 'annual',
+      payerMemberId: chris.id,
+    },
+    db,
+  );
+  for (const [from, to, due, amount, usage] of [
+    ['2026-01-01', '2026-03-31', '2026-04-14', 41230, 1180],
+    ['2026-04-01', '2026-06-30', '2026-07-14', 52890, 1512],
+    ['2026-07-01', '2026-09-30', '2026-10-14', 56410, 1604],
+  ] as const)
+    createBill(
+      maple.id,
+      {
+        serviceId: maplePower.id,
+        amountMinor: amount,
+        periodStart: from,
+        periodEnd: to,
+        issueDate: addDays(due, -14),
+        dueDate: due,
+        usageQuantity: usage,
+        usageUnit: 'kWh',
+        source: 'manual',
+        externalRef: `NW-MAPLE-${from.slice(0, 7)}`,
+        paidToProviderAt: paidIf(due),
+      },
+      db,
+    );
+  for (const [from, to, due, amount] of [
+    ['2026-04-01', '2026-06-30', '2026-07-28', 28640],
+    ['2026-07-01', '2026-09-30', '2026-10-28', 27910],
+  ] as const)
+    createBill(
+      maple.id,
+      {
+        serviceId: mapleWater.id,
+        amountMinor: amount,
+        periodStart: from,
+        periodEnd: to,
+        issueDate: addDays(due, -21),
+        dueDate: due,
+        source: 'manual',
+        paidToProviderAt: paidIf(due),
+      },
+      db,
+    );
+  createBill(
+    maple.id,
+    {
+      serviceId: mapleRates.id,
+      amountMinor: 212400,
+      periodStart: '2026-07-01',
+      periodEnd: '2027-06-30',
+      issueDate: '2026-08-10',
+      dueDate: '2026-09-30',
+      source: 'manual',
+      externalRef: 'COR-MAPLE-2026',
+      paidToProviderAt: null,
+    },
+    db,
+  );
+
+  // Unit 4, Bay Street: the flat Alex lets to Priya and Tom.
+  const bay = createHousehold({ ...region, name: 'Unit 4, Bay Street', splitMode: 'shared' }, db);
+  const landlord = createMember(
+    bay.id,
+    {
+      name: 'Alex',
+      role: 'owner',
+      activeFrom: '2025-07-01',
+      colour: '#2a78d6',
+      accountId: acct.id,
+      email: acct.email,
+    },
+    db,
+  );
+  const priya = createMember(
+    bay.id,
+    { name: 'Priya', pinHash: pin, activeFrom: '2025-07-01', colour: '#8e5bd1' },
+    db,
+  );
+  createMember(
+    bay.id,
+    { name: 'Tom', pinHash: pin, activeFrom: '2025-07-01', colour: '#d1555b' },
+    db,
+  );
+  const bayWater = createService(
+    bay.id,
+    {
+      typeSlug: 'water',
+      name: 'Water',
+      provider: 'Riverbend Water',
+      cadence: 'quarterly',
+      usageUnit: 'kL',
+      payerMemberId: landlord.id,
+    },
+    db,
+  );
+  const bayPower = createService(
+    bay.id,
+    {
+      typeSlug: 'electricity',
+      name: 'Electricity',
+      provider: 'Northwind Energy',
+      cadence: 'quarterly',
+      usageUnit: 'kWh',
+      seasonal: true,
+      payerMemberId: priya.id,
+    },
+    db,
+  );
+  for (const [from, to, due, amount] of [
+    ['2026-04-01', '2026-06-30', '2026-07-21', 19870],
+    ['2026-07-01', '2026-09-30', '2026-10-21', 20140],
+  ] as const)
+    createBill(
+      bay.id,
+      {
+        serviceId: bayWater.id,
+        amountMinor: amount,
+        periodStart: from,
+        periodEnd: to,
+        issueDate: addDays(due, -21),
+        dueDate: due,
+        source: 'manual',
+        paidToProviderAt: paidIf(due),
+      },
+      db,
+    );
+  for (const [from, to, due, amount, usage] of [
+    ['2026-04-01', '2026-06-30', '2026-07-09', 31250, 902],
+    ['2026-07-01', '2026-09-30', '2026-10-09', 33480, 968],
+  ] as const)
+    createBill(
+      bay.id,
+      {
+        serviceId: bayPower.id,
+        amountMinor: amount,
+        periodStart: from,
+        periodEnd: to,
+        issueDate: addDays(due, -14),
+        dueDate: due,
+        usageQuantity: usage,
+        usageUnit: 'kWh',
+        source: 'manual',
+        paidToProviderAt: paidIf(due),
+      },
+      db,
+    );
 }
 
 /**
