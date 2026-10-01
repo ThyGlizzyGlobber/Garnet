@@ -5,6 +5,8 @@ import { purgeEmailEnvelopes, purgeOrphanedBillDocuments } from '@/ingest/archiv
 import { adoptSetUpBy } from '@/ingest/set-up-by';
 import { ANOMALY_RULE_VERSION, refreshAllAnomalies } from '@/lib/bills';
 import { seedAllowedFromAccounts } from '@/lib/access';
+import { sealExistingFiles } from '@/ingest/seal';
+import { anyHouseholdKeyed, dataKeyConfigured } from '@/lib/crypto';
 import { uncapDeveloperHouseholds } from '@/lib/console';
 import { adoptLegacyDemoFlag } from '@/lib/demo';
 import { getEnv } from '@/lib/env';
@@ -19,6 +21,12 @@ import { runOnce } from '@/lib/upgrades';
 export async function prepareInstall(): Promise<void> {
   const env = getEnv();
   runMigrations(env.DATA_DIR);
+  // Bill files encrypted at rest (SCOPE-console.md §5b): once any household has a
+  // key, the master key must be there to open them; with it, older files get sealed.
+  if (anyHouseholdKeyed() && !dataKeyConfigured())
+    throw new Error(
+      'DATA_KEY is not set, but households have encrypted files. Set it before starting.',
+    );
 
   const log = (tag: string, n: number | null, what: string) => {
     if (n) console.log(`[${tag}] ${what.replace('{n}', String(n))}`);
@@ -71,6 +79,11 @@ export async function prepareInstall(): Promise<void> {
     runOnce('2026-10-01 early access list from accounts', () => seedAllowedFromAccounts()),
     'listed {n} address(es) that already had an account',
   );
+
+  if (dataKeyConfigured()) {
+    const n = sealExistingFiles();
+    if (n) console.log(`[files] sealed ${n} file(s) at rest`);
+  }
 
   if (env.DEMO_MODE) {
     const { seedDemo } = await import('@/db/demo-seed');

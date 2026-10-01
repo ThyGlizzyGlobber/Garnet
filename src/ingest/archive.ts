@@ -6,6 +6,7 @@ import { getDb, type Db } from '@/db/client';
 import { bill, sourceDocument, type SourceDocument } from '@/db/schema';
 import { deleteBill } from '@/lib/bills';
 import { ulid } from '@/lib/ids';
+import { openFor, sealFor } from '@/lib/crypto';
 import { dataPaths, ensureDataDirs } from '@/lib/paths';
 
 export interface ArchiveInput {
@@ -74,7 +75,8 @@ export function archiveDocument(
   const paths = ensureDataDirs();
   const abs = path.join(paths.inbox, rel);
   fs.mkdirSync(path.dirname(abs), { recursive: true });
-  fs.writeFileSync(abs, input.buffer, { flag: 'wx' });
+  // Sealed with the household's key when the install has one (src/lib/crypto.ts).
+  fs.writeFileSync(abs, sealFor(householdId, input.buffer, db), { flag: 'wx' });
 
   const row: SourceDocument = {
     id,
@@ -104,8 +106,30 @@ export function documentPath(doc: Pick<SourceDocument, 'path'>): string {
   return path.join(dataPaths().inbox, doc.path);
 }
 
-export function readDocument(doc: Pick<SourceDocument, 'path'>): Buffer {
-  return fs.readFileSync(documentPath(doc));
+/** A document's bytes as they were received (opened with the household's key when sealed). */
+export function readDocument(
+  doc: Pick<SourceDocument, 'householdId' | 'path'>,
+  db: Db = getDb(),
+): Buffer {
+  return openFor(doc.householdId, fs.readFileSync(documentPath(doc)), db);
+}
+
+/** Replace a stored file's bytes atomically, sealed for the household when the install has a key. */
+export function writeStoredFile(
+  householdId: string,
+  abs: string,
+  plain: Buffer,
+  db: Db = getDb(),
+): void {
+  fs.mkdirSync(path.dirname(abs), { recursive: true });
+  const tmp = `${abs}.${process.pid}.tmp`;
+  fs.writeFileSync(tmp, sealFor(householdId, plain, db));
+  fs.renameSync(tmp, abs);
+}
+
+/** A stored file's bytes (a preview, an original), opened with the household's key when sealed. */
+export function readStoredFile(householdId: string, abs: string, db: Db = getDb()): Buffer {
+  return openFor(householdId, fs.readFileSync(abs), db);
 }
 
 export function getDocument(

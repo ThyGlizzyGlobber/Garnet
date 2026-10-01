@@ -1,0 +1,1 @@
+ALTER TABLE `household` ADD `data_key` text;

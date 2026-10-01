@@ -3,7 +3,7 @@ import path from 'node:path';
 import { and, eq } from 'drizzle-orm';
 import { getDb, type Db } from '@/db/client';
 import { sourceDocument, type SourceDocument } from '@/db/schema';
-import { documentPath, getDocument, originalPath } from './archive';
+import { documentPath, getDocument, originalPath, readDocument, writeStoredFile } from './archive';
 import { isImageFile, isPdfFile } from './scan';
 
 /**
@@ -63,7 +63,7 @@ export async function rotateDocument(
   if (!doc || !canRotate(doc)) return false;
   if (Array.isArray(turns) && !turns.length) return false;
   const file = documentPath(doc);
-  const data = fs.readFileSync(file);
+  const data = readDocument(doc, db);
   let turned: Buffer;
   if (isPdfFile(doc.mimeType, doc.path, doc.originalFilename)) turned = await turnPdf(data, turns);
   else {
@@ -74,14 +74,9 @@ export async function rotateDocument(
   }
   // Keep the file exactly as it arrived, once, before it's first changed.
   const original = originalPath(doc);
-  if (!fs.existsSync(original)) {
-    fs.mkdirSync(path.dirname(original), { recursive: true });
-    fs.copyFileSync(file, original);
-  }
+  if (!fs.existsSync(original)) writeStoredFile(householdId, original, data, db);
   // Replace atomically: a half-written file is never left in its place.
-  const tmp = `${file}.turning`;
-  fs.writeFileSync(tmp, turned);
-  fs.renameSync(tmp, file);
+  writeStoredFile(householdId, file, turned, db);
   // sha256 stays the original's, so the same file sent again is still recognised.
   db.update(sourceDocument)
     .set({ sizeBytes: turned.length })

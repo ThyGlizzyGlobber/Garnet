@@ -60,6 +60,7 @@ export function createHousehold(input: HouseholdInput, db: Db = getDb()): Househ
     allowanceMinor: input.allowanceMinor ?? null,
     allowancePeriod: input.allowancePeriod ?? 'month',
     aiCap: null,
+    dataKey: null,
     paymentReferenceTemplate: input.paymentReferenceTemplate ?? '{service} {period} {member}',
     isDemo: input.isDemo ?? false,
     billsAlias: null,

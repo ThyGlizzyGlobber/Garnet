@@ -3039,7 +3039,10 @@
       "files": "Bill files",
       "originals": "Originals",
       "previews": "Previews",
-      "free": "Free on the volume"
+      "free": "Free on the volume",
+      "encrypted": "Encrypted at rest",
+      "encryptedOn": "On · a key per household, wrapped by DATA_KEY",
+      "encryptedOff": "Off · set DATA_KEY to seal bill files"
     },
     "audit": {
       "lede": "Everything developers have done on the install, newest first. Kept for good; nothing here can be deleted from the app.",

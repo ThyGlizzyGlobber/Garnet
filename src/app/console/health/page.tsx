@@ -5,6 +5,7 @@ import { Chip } from '@/components/ui/chip';
 import { Disc } from '@/components/ui/colour';
 import { authState } from '@/lib/auth/session';
 import { storage } from '@/lib/console';
+import { dataKeyConfigured } from '@/lib/crypto';
 import { formatDateTime } from '@/lib/format';
 import { getHousehold } from '@/lib/households';
 import { getEnv, isEmailConfigured, isLlmConfigured } from '@/lib/env';
@@ -218,6 +219,7 @@ export default async function ConsoleHealthPage() {
             [tc('originals'), mb(disk.originalsBytes)],
             [tc('previews'), mb(disk.previewsBytes)],
             [tc('free'), disk.freeBytes === null ? '—' : mb(disk.freeBytes)],
+            [tc('encrypted'), dataKeyConfigured() ? tc('encryptedOn') : tc('encryptedOff')],
           ],
         )}
         {card(

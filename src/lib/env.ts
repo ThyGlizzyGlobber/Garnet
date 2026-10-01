@@ -22,6 +22,8 @@ const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(3000),
 
   AUTH_SECRET: z.string().min(32, 'AUTH_SECRET must be at least 32 characters'),
+  /** 32 random bytes, base64: bill files are encrypted at rest per household with keys wrapped by it (SCOPE-console.md §5b). */
+  DATA_KEY: z.string().optional(),
   /** How long a PIN unlock (or a fresh sign-in) lasts before the PIN is asked again. */
   AUTH_SESSION_DAYS: z.coerce.number().positive().default(7),
   /** How long a browser stays trusted after a full sign-in (Google or emailed code). */

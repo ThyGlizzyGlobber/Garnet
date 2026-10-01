@@ -64,6 +64,8 @@ export const household = sqliteTable(
       .default('month'),
     /** AI reads a month for this household (SCOPE-console.md C-D4): null = the install's limit, 0 = no cap. */
     aiCap: integer('ai_cap'),
+    /** The household's file key, wrapped with DATA_KEY (src/lib/crypto.ts); null while files are plain. */
+    dataKey: text('data_key'),
     /** Template for payment references, e.g. "{service} {period} {member}". */
     paymentReferenceTemplate: text('payment_reference_template')
       .notNull()

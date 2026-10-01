@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { SourceDocument } from '@/db/schema';
 import { dataPaths } from '@/lib/paths';
-import { documentPath, readDocument } from './archive';
+import { documentPath, readDocument, readStoredFile, writeStoredFile } from './archive';
 import { isPdfFile } from './scan';
 
 /**
@@ -26,14 +26,14 @@ const drawing = new Map<string, Promise<Buffer | null>>();
  * PDF or can't be drawn.
  */
 export async function documentPreview(
-  doc: Pick<SourceDocument, 'id' | 'path' | 'mimeType'>,
+  doc: Pick<SourceDocument, 'id' | 'householdId' | 'path' | 'mimeType'>,
 ): Promise<Buffer | null> {
   if (!isPdfFile(doc.mimeType, doc.path)) return null;
   const out = previewPath(doc);
   try {
     const src = fs.statSync(documentPath(doc));
     const have = fs.statSync(out);
-    if (have.mtimeMs >= src.mtimeMs && have.size > 0) return fs.readFileSync(out);
+    if (have.mtimeMs >= src.mtimeMs && have.size > 0) return readStoredFile(doc.householdId, out);
   } catch {
     // Not drawn yet.
   }
@@ -45,7 +45,10 @@ export async function documentPreview(
   return p;
 }
 
-async function draw(doc: Pick<SourceDocument, 'id' | 'path'>, out: string): Promise<Buffer | null> {
+async function draw(
+  doc: Pick<SourceDocument, 'id' | 'householdId' | 'path'>,
+  out: string,
+): Promise<Buffer | null> {
   try {
     const { PDFParse } = await import('pdf-parse');
     const parser = new PDFParse({ data: new Uint8Array(readDocument(doc)) });
@@ -59,10 +62,7 @@ async function draw(doc: Pick<SourceDocument, 'id' | 'path'>, out: string): Prom
       const page = shot.pages[0];
       if (!page?.data?.length) return null;
       const png = Buffer.from(page.data);
-      fs.mkdirSync(path.dirname(out), { recursive: true });
-      const tmp = `${out}.${process.pid}.tmp`;
-      fs.writeFileSync(tmp, png);
-      fs.renameSync(tmp, out);
+      writeStoredFile(doc.householdId, out, png);
       return png;
     } finally {
       await parser.destroy();
