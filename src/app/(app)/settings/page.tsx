@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { logout } from '@/app/login/actions';
 import { AppearanceFade } from '@/components/app/appearance-fade';
-import { PresetCards } from '@/components/app/preset-cards';
+import { getAppearance } from '@/lib/auth/appearance';
 import { Button, Card, LinkButton } from '@/components/ui';
 import { AddressCard, Kv, PageTitle, SectionHead } from '@/components/ui/blocks';
 import { Avatars } from '@/components/ui/colour';
@@ -58,6 +58,7 @@ export default async function SettingsPage() {
   const tb = await getTranslations('billsAddress');
   const state = await authState();
   const account = state.kind === 'ok' ? state.account : null;
+  const look = await getAppearance();
   const members = listMembers(hh.id);
   const living = members.filter((m) => isActiveOn(m, today));
   const choice = latestRegionalChoice(hh.id);
@@ -88,11 +89,8 @@ export default async function SettingsPage() {
       <div className="set-grid">
         <Card className="set-appear" id="appearance">
           <SectionHead title={ta('title')} right={<span className="muted">{ta('justYou')}</span>} />
-          <p className="muted set-lede">{ta('body', { household: hh.name })}</p>
+          <p className="muted set-lede">{ta('body')}</p>
           <AppearanceFade>
-            <form action={saveAppearanceAction}>
-              <PresetCards current={me.appearancePreset} />
-            </form>
             <div className="set-row">
               <span>
                 <b>{ta('lightOrDark')}</b>
@@ -102,7 +100,7 @@ export default async function SettingsPage() {
                 <Segmented
                   small
                   name="theme"
-                  value={me.theme}
+                  value={look.theme}
                   label={ta('lightOrDark')}
                   items={[
                     { value: 'light', label: ta('themes.light'), icon: 'sun' },
@@ -121,7 +119,7 @@ export default async function SettingsPage() {
                 <Segmented
                   small
                   name="glass"
-                  value={me.glass}
+                  value={look.glass}
                   label={ta('glass')}
                   items={[
                     { value: 'clear', label: ta('glassModes.clear'), icon: 'layers' },
@@ -160,7 +158,7 @@ export default async function SettingsPage() {
                 ],
                 [
                   t('account.pin'),
-                  me.pinHash
+                  (account ? account.pinHash : me.pinHash)
                     ? t('account.pinSet', { days: env.AUTH_SESSION_DAYS })
                     : t('account.pinNone'),
                 ],

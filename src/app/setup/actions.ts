@@ -3,10 +3,7 @@
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import type { ActionState } from '@/components/ui/form';
-import { membershipsFor } from '@/lib/accounts';
-import { rememberAppearance } from '@/lib/auth/appearance';
-import { requireAccount, setActiveMember } from '@/lib/auth/session';
-import { DEFAULT_APPEARANCE, isPreset, isTheme } from '@/lib/appearance';
+import { markUnlocked, requireAccount, setActiveMember } from '@/lib/auth/session';
 import { errorText, str, zodToState } from '@/lib/actions';
 import { isIsoDate } from '@/lib/dates';
 import { hasPostcodeData, lookupPostcode } from '@/lib/location';
@@ -31,7 +28,6 @@ const schema = z
 
 export async function completeSetup(_prev: ActionState, fd: FormData): Promise<ActionState> {
   const account = await requireAccount();
-  if (membershipsFor(account.id).length) redirect('/');
   const parsed = schema.safeParse({
     householdName: str(fd, 'householdName'),
     currency: str(fd, 'currency'),
@@ -61,14 +57,6 @@ export async function completeSetup(_prev: ActionState, fd: FormData): Promise<A
         postalCode: (await errorText())('unknownPostcode', { postcode: location.postalCode }),
       },
     };
-  // The colours are theirs alone (§4a): a preset and light/dark, Harbour and automatic unless chosen.
-  const preset = str(fd, 'preset');
-  const theme = str(fd, 'theme');
-  const appearance = {
-    preset: isPreset(preset) ? preset : DEFAULT_APPEARANCE.preset,
-    theme: isTheme(theme) ? theme : DEFAULT_APPEARANCE.theme,
-    glass: DEFAULT_APPEARANCE.glass,
-  };
   let ownerId: string;
   try {
     ownerId = setUpHousehold(account, {
@@ -80,7 +68,7 @@ export async function completeSetup(_prev: ActionState, fd: FormData): Promise<A
         fiscalYearStartMonth: v.fiscalYearStartMonth,
         splitMode: v.splitMode,
       },
-      owner: { name: v.ownerName, activeFrom: v.activeFrom, colour: v.colour, appearance },
+      owner: { name: v.ownerName, activeFrom: v.activeFrom, colour: v.colour },
       location: location.postalCode ? location : null,
       shareRegional: fd.get('shareRegional') === 'on',
     }).ownerId;
@@ -88,6 +76,7 @@ export async function completeSetup(_prev: ActionState, fd: FormData): Promise<A
     return { error: (e as Error).message };
   }
   await setActiveMember(ownerId);
-  await rememberAppearance(appearance);
-  redirect('/set-pin');
+  if (!account.pinHash) redirect('/set-pin');
+  await markUnlocked(ownerId);
+  redirect('/');
 }

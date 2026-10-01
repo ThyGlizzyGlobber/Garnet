@@ -4,14 +4,20 @@ import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import type { ActionState } from '@/components/ui/form';
 import { str } from '@/lib/actions';
-import { isOperator, linkMember, membershipsFor, unclaimedOwners } from '@/lib/accounts';
+import {
+  isOperator,
+  linkMember,
+  membershipsFor,
+  setAccountPin,
+  unclaimedOwners,
+} from '@/lib/accounts';
 import { verifyPin } from '@/lib/auth/pin';
 import { getSession, markUnlocked, requireAccount, setActiveMember } from '@/lib/auth/session';
 import { acceptInvite, findInviteByCode, findInviteByToken } from '@/lib/invites';
 import { ipAllowed, rateLimit } from '@/lib/rate-limit';
 import { clientIp } from '@/lib/request';
 
-/** Join with the short code from an invitation; then their colours and PIN (§6a). */
+/** Join with the short code from an invitation; then their name and colour there, and a PIN if the account has none. */
 export async function joinWithCodeAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
   const account = await requireAccount();
   const t = await getTranslations('welcome.join');
@@ -26,7 +32,7 @@ export async function joinWithCodeAction(_prev: ActionState, fd: FormData): Prom
     return { error: (e as Error).message };
   }
   await setActiveMember(memberId);
-  redirect('/colours');
+  redirect('/joined');
 }
 
 /** Accept an invitation link while signed in. */
@@ -37,7 +43,7 @@ export async function acceptInviteAction(fd: FormData): Promise<void> {
   if (!found) redirect(`/invite/${encodeURIComponent(token)}`);
   const m = acceptInvite(found.invite.id, account.id, account.email);
   await setActiveMember(m.id);
-  redirect('/colours');
+  redirect('/joined');
 }
 
 /** Not signed in yet: remember the invite, then sign in. */
@@ -68,6 +74,7 @@ export async function claimOwnerAction(_prev: ActionState, fd: FormData): Promis
     return { fieldErrors: { pin: t('wrong') } };
   }
   linkMember(target.id, account.id, account.email);
+  if (!account.pinHash) setAccountPin(account.id, target.pinHash);
   await markUnlocked(target.id);
   redirect('/');
 }

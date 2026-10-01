@@ -99,7 +99,7 @@ export function findInviteByCode(typed: string, db: Db = getDb(), now = Date.now
   );
 }
 
-/** Link the account to the invited member. The alpha keeps one household per account. */
+/** Link the account to the invited member. The first household an account joins becomes its primary. */
 export function acceptInvite(
   inviteId: string,
   accountId: string,
@@ -110,11 +110,10 @@ export function acceptInvite(
   return db.transaction((tx) => {
     const found = open(tx.select().from(invite).where(eq(invite.id, inviteId)).get(), tx, now);
     if (!found) throw new Error('This invitation has expired or was already used');
-    if (membershipsFor(accountId, tx).length)
-      throw new Error(
-        'You already belong to a household. Joining a second one is not supported yet.',
-      );
+    const first = membershipsFor(accountId, tx).length === 0;
     linkMember(found.member.id, accountId, found.member.email ?? accountEmail, tx);
+    if (first)
+      tx.update(member).set({ isPrimary: true }).where(eq(member.id, found.member.id)).run();
     tx.update(invite)
       .set({ acceptedAt: new Date(now).toISOString(), acceptedByAccountId: accountId })
       .where(eq(invite.id, inviteId))

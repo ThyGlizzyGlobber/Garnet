@@ -56,6 +56,10 @@ export function signInAccount(
     email,
     name: input.name?.trim() || email.split('@')[0]!,
     googleSub: input.googleSub ?? null,
+    pinHash: null,
+    theme: 'auto',
+    glass: 'auto',
+    lastMemberId: null,
     lastSignInAt: now,
     createdAt: now,
     updatedAt: now,
@@ -117,7 +121,7 @@ export function listAccounts(db: Db = getDb()): AccountRecord[] {
   }));
 }
 
-/** Members linked to an account, oldest first. The alpha UI uses the first one. */
+/** Members linked to an account, oldest first: one per household they belong to. */
 export function membershipsFor(accountId: string, db: Db = getDb()): Member[] {
   return db
     .select()
@@ -125,6 +129,52 @@ export function membershipsFor(accountId: string, db: Db = getDb()): Member[] {
     .where(eq(member.accountId, accountId))
     .orderBy(member.createdAt)
     .all();
+}
+
+/**
+ * Which household to open (SCOPE-accounts.md D7): the one asked for when it is
+ * theirs, else their primary household, else the one they were last in, else
+ * the first they joined.
+ */
+export function pickMember(
+  memberships: Member[],
+  wanted: string | undefined,
+  lastMemberId: string | null,
+): Member | null {
+  return (
+    memberships.find((m) => m.id === wanted) ??
+    memberships.find((m) => m.isPrimary) ??
+    memberships.find((m) => m.id === lastMemberId) ??
+    memberships[0] ??
+    null
+  );
+}
+
+function touchAccount(accountId: string, patch: Partial<Account>, db: Db): void {
+  db.update(account)
+    .set({ ...patch, updatedAt: new Date().toISOString() })
+    .where(eq(account.id, accountId))
+    .run();
+}
+
+/** The account's PIN (D2): one for the person, unlocking every household. */
+export function setAccountPin(accountId: string, pinHash: string, db: Db = getDb()): void {
+  touchAccount(accountId, { pinHash }, db);
+}
+
+/** Light/dark and glass follow the person (D3). */
+export function setAccountAppearance(
+  accountId: string,
+  a: Pick<Account, 'theme' | 'glass'>,
+  db: Db = getDb(),
+): void {
+  touchAccount(accountId, a, db);
+}
+
+/** Where they were last, for the next device (D6). Ignores a member that isn't theirs. */
+export function rememberLastMember(accountId: string, memberId: string, db: Db = getDb()): void {
+  if (!membershipsFor(accountId, db).some((m) => m.id === memberId)) return;
+  touchAccount(accountId, { lastMemberId: memberId }, db);
 }
 
 /**

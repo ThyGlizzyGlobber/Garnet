@@ -1,7 +1,6 @@
-import { and, asc, count, eq } from 'drizzle-orm';
+import { and, asc, count, eq, isNull, ne } from 'drizzle-orm';
 import { getDb, type Db } from '@/db/client';
-import { asset, member, service, share, sourceDocument, type Member } from '@/db/schema';
-import { DEFAULT_APPEARANCE, type Glass, type Preset, type Theme } from '@/lib/appearance';
+import { asset, bill, member, service, share, sourceDocument, type Member } from '@/db/schema';
 import { ulid } from '@/lib/ids';
 import { DEFAULT_COLOUR } from '@/lib/palette';
 import { isAdmin } from '@/lib/roles';
@@ -57,9 +56,7 @@ export interface MemberInput {
   activeTo?: string | null;
   colour?: string;
   paymentDetails?: { label: string; value: string }[];
-  appearancePreset?: Preset;
-  theme?: Theme;
-  glass?: Glass;
+  isPrimary?: boolean;
 }
 
 export function createMember(householdId: string, input: MemberInput, db: Db = getDb()): Member {
@@ -82,9 +79,7 @@ export function createMember(householdId: string, input: MemberInput, db: Db = g
     notifyReminders: true,
     notifyProblems: true,
     paymentDetails: input.paymentDetails ?? [],
-    appearancePreset: input.appearancePreset ?? DEFAULT_APPEARANCE.preset,
-    theme: input.theme ?? DEFAULT_APPEARANCE.theme,
-    glass: input.glass ?? DEFAULT_APPEARANCE.glass,
+    isPrimary: input.isPrimary ?? false,
     createdAt: now,
     updatedAt: now,
   };
@@ -174,5 +169,67 @@ export function deleteMember(householdId: string, id: string, db: Db = getDb()):
   db.update(sourceDocument).set({ memberId: null }).where(eq(sourceDocument.memberId, id)).run();
   db.delete(member)
     .where(and(eq(member.householdId, householdId), eq(member.id, id)))
+    .run();
+}
+
+/**
+ * The account's home of residence (SCOPE-accounts.md D7): one of its
+ * memberships is primary; it opens first and leads the switcher.
+ */
+export function makePrimary(accountId: string, memberId: string, db: Db = getDb()): void {
+  const mine = db.select().from(member).where(eq(member.accountId, accountId)).all();
+  if (!mine.some((m) => m.id === memberId)) throw new Error('Member not found');
+  const now = new Date().toISOString();
+  db.update(member)
+    .set({ isPrimary: false, updatedAt: now })
+    .where(and(eq(member.accountId, accountId), eq(member.isPrimary, true)))
+    .run();
+  db.update(member).set({ isPrimary: true, updatedAt: now }).where(eq(member.id, memberId)).run();
+}
+
+/**
+ * Why a member can't leave a household yet (§3d), or null when they can: the
+ * last admin stays, shares must be settled both ways, and their own services
+ * and vehicles must be moved or deleted first. The row and its shares stay for
+ * the household's history; leaving sets the move-out day and unlinks the account.
+ */
+export function leaveBlocker(
+  householdId: string,
+  m: Member,
+  db: Db = getDb(),
+): 'lastAdmin' | 'owes' | 'owed' | 'personal' | null {
+  if (isLastAdmin(householdId, m, db)) return 'lastAdmin';
+  const unpaid = (cond: ReturnType<typeof eq>) =>
+    (db
+      .select({ n: count() })
+      .from(share)
+      .innerJoin(bill, eq(share.billId, bill.id))
+      .innerJoin(service, eq(bill.serviceId, service.id))
+      .where(and(eq(share.householdId, householdId), isNull(share.paidAt), cond))
+      .get()?.n ?? 0) > 0;
+  if (unpaid(eq(share.memberId, m.id))) return 'owes';
+  if (unpaid(and(eq(service.payerMemberId, m.id), ne(share.memberId, m.id))!)) return 'owed';
+  const own = db.select({ n: count() }).from(service).where(eq(service.ownerMemberId, m.id)).get();
+  const things = db.select({ n: count() }).from(asset).where(eq(asset.ownerMemberId, m.id)).get();
+  if ((own?.n ?? 0) > 0 || (things?.n ?? 0) > 0) return 'personal';
+  return null;
+}
+
+export function leaveHousehold(
+  householdId: string,
+  m: Member,
+  today: string,
+  db: Db = getDb(),
+): void {
+  const why = leaveBlocker(householdId, m, db);
+  if (why) throw new Error(`Cannot leave: ${why}`);
+  db.update(member)
+    .set({
+      accountId: null,
+      isPrimary: false,
+      activeTo: m.activeTo && m.activeTo < today ? m.activeTo : today,
+      updatedAt: new Date().toISOString(),
+    })
+    .where(and(eq(member.householdId, householdId), eq(member.id, m.id)))
     .run();
 }

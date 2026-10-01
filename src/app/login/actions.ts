@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import type { ActionState } from '@/components/ui/form';
 import { str } from '@/lib/actions';
-import { signInAccount } from '@/lib/accounts';
+import { setAccountPin, signInAccount } from '@/lib/accounts';
 import { rememberAppearance } from '@/lib/auth/appearance';
 import { issueLoginCode, verifyLoginCode } from '@/lib/auth/codes';
 import { recordPinFailure, resetPinFailures } from '@/lib/auth/devices';
@@ -24,7 +24,7 @@ import {
 import { EMAIL_PATTERN, normaliseEmail } from '@/lib/auth/tokens';
 import { composeEmail, sendEmail } from '@/lib/email';
 import { getHousehold } from '@/lib/households';
-import { getMemberForSession, updateMember } from '@/lib/members';
+import { getMemberForSession } from '@/lib/members';
 import { ipAllowed } from '@/lib/rate-limit';
 import { clientIp, safeNext } from '@/lib/request';
 
@@ -134,7 +134,7 @@ export async function unlockAction(_prev: ActionState, fd: FormData): Promise<Ac
   if (!deviceId) redirect('/login');
   if (!ipAllowed('unlock', await clientIp()))
     return { error: (await getTranslations('login.errors'))('tooMany') };
-  if (!s.member.pinHash || !(await verifyPin(str(fd, 'pin'), s.member.pinHash))) {
+  if (!s.account.pinHash || !(await verifyPin(str(fd, 'pin'), s.account.pinHash))) {
     await new Promise((r) => setTimeout(r, 400));
     const failure = recordPinFailure(deviceId);
     if (failure.forgotten) {
@@ -144,11 +144,11 @@ export async function unlockAction(_prev: ActionState, fd: FormData): Promise<Ac
     return { error: t('wrong', { left: failure.remaining }) };
   }
   resetPinFailures(deviceId);
-  await markUnlocked(s.member.id);
+  await markUnlocked(s.member?.id);
   redirect(await consumeNext());
 }
 
-/** First PIN after joining or creating a household. */
+/** The account's first PIN, after joining or creating its first household (one PIN for every household, D2). */
 export async function setPinAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
   const s = await authState();
   if (s.kind !== 'needs-pin') redirect('/');
@@ -156,20 +156,16 @@ export async function setPinAction(_prev: ActionState, fd: FormData): Promise<Ac
   const pin = str(fd, 'pin');
   if (!PIN_PATTERN.test(pin)) return { fieldErrors: { pin: t('invalid') } };
   if (pin !== str(fd, 'pinConfirm')) return { fieldErrors: { pinConfirm: t('mismatch') } };
-  updateMember(s.member.householdId, s.member.id, { pinHash: await hashPin(pin) });
+  setAccountPin(s.account.id, await hashPin(pin));
   await markUnlocked(s.member.id);
   redirect(await consumeNext());
 }
 
 export async function logout(): Promise<void> {
-  // The sign-in page keeps this person's colours on this device.
+  // The sign-in page keeps this person's light/dark and glass on this device.
   const s = await authState();
-  if (s.kind === 'ok')
-    await rememberAppearance({
-      preset: s.member.appearancePreset,
-      theme: s.member.theme,
-      glass: s.member.glass,
-    });
+  if (s.kind === 'ok' && s.account)
+    await rememberAppearance({ theme: s.account.theme, glass: s.account.glass });
   await signOut();
   redirect('/login');
 }

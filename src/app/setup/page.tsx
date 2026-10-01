@@ -1,4 +1,3 @@
-import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { AuthShell, AuthSide } from '@/components/app/auth-shell';
 import { accountGivenName, membershipsFor } from '@/lib/accounts';
@@ -12,11 +11,18 @@ export const dynamic = 'force-dynamic';
 
 export default async function SetupPage() {
   const account = await requireAccount();
-  if (membershipsFor(account.id).length) redirect('/');
+  const another = membershipsFor(account.id).length > 0;
   const env = getEnv();
   const t = await getTranslations('setup');
   return (
-    <AuthShell wide side={<AuthSide title={t('title')}>{t('side')}</AuthSide>}>
+    <AuthShell
+      wide
+      side={
+        <AuthSide title={another ? t('titleAnother') : t('title')}>
+          {another ? t('sideAnother') : t('side')}
+        </AuthSide>
+      }
+    >
       <SetupWizard
         defaults={{
           currency: env.DEFAULT_CURRENCY,

@@ -7,6 +7,7 @@ import { Avatar } from '@/components/ui/colour';
 import { BackLink } from '@/components/ui/controls';
 import { InlineAction } from '@/components/ui/form';
 import { getAccount } from '@/lib/accounts';
+import { authState } from '@/lib/auth/session';
 import { countDevices } from '@/lib/auth/devices';
 import { pageContext } from '@/lib/context';
 import { joinStatus, latestInvites } from '@/lib/invites';
@@ -31,6 +32,8 @@ import { MemberForm } from '../../member-form';
 export default async function EditMemberPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { hh, me } = await pageContext();
+  const state = await authState();
+  const hasPin = state.kind === 'ok' && !!state.account?.pinHash;
   const t = await getTranslations('members');
   const tp = await getTranslations('pin');
   const m = getMember(hh.id, id);
@@ -111,7 +114,7 @@ export default async function EditMemberPage({ params }: { params: Promise<{ id:
           />
         )}
       </Card>
-      {self && me.pinHash && (
+      {self && hasPin && (
         <Card id="pin">
           <SectionHead title={tp('changeTitle')} />
           <NewPinForm action={changePinAction} withCurrent />

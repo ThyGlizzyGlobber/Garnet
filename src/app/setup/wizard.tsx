@@ -3,30 +3,26 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Button, Field, Input, Select } from '@/components/ui';
-import { Segmented } from '@/components/ui/controls';
 import { ActionForm } from '@/components/ui/form';
 import { LocationField } from '@/components/app/location-field';
 import { Stepper } from '@/components/app/pieces';
 import { SwatchPick } from '@/components/app/pieces-client';
-import { PresetCards } from '@/components/app/preset-cards';
-import { DEFAULT_APPEARANCE, type Theme } from '@/lib/appearance';
 import { PALETTE } from '@/lib/palette';
 import { completeSetup } from './actions';
 
-const STEPS = ['household', 'where', 'you', 'colours'] as const;
+const STEPS = ['household', 'where', 'you'] as const;
 type Step = (typeof STEPS)[number];
 const FIELDS: Record<Step, string[]> = {
   household: ['householdName', 'splitMode'],
   where: ['currency', 'locale', 'timezone', 'fiscalYearStartMonth', 'country', 'postalCode'],
   you: ['ownerName', 'activeFrom', 'colour'],
-  colours: ['preset', 'theme'],
 };
 
 /**
- * The setup wizard (§6a): Household → Where → You → Colours, one form with
+ * The setup wizard: Household → Where → You, one form with
  * only the current step visible. Continue runs the browser's own validation
  * for that step, and the server's field errors jump back to the step that
- * owns them. The PIN comes after, on its own screen.
+ * owns them. The account's PIN comes after, on its own screen, the first time.
  */
 export function SetupWizard({
   defaults,
@@ -49,7 +45,6 @@ export function SetupWizard({
   country: string;
 }) {
   const t = useTranslations('setup');
-  const ta = useTranslations('appearance');
   const tShare = useTranslations('sharing');
   const [step, setStep] = useState<Step>('household');
   const [splitMode, setSplitMode] = useState<'shared' | 'single'>('shared');
@@ -58,7 +53,6 @@ export function SetupWizard({
     timezone: defaults.timezone,
     fy: defaults.fiscalYearStartMonth,
   });
-  const [theme, setTheme] = useState<Theme>(DEFAULT_APPEARANCE.theme);
   const pages = useRef<Partial<Record<Step, HTMLDivElement | null>>>({});
   const index = STEPS.indexOf(step);
   const months = Array.from({ length: 12 }, (_, i) =>
@@ -236,30 +230,6 @@ export function SetupWizard({
                 required
               />
             </Field>
-          </div>
-
-          <div {...page('colours')}>
-            <h2>{t('colours.title')}</h2>
-            <p className="muted">{t('colours.body')}</p>
-            <PresetCards current={DEFAULT_APPEARANCE.preset} radio />
-            <div className="set-row">
-              <span>
-                <b>{ta('lightOrDark')}</b>
-                <span className="muted small">{ta('lightOrDarkBody')}</span>
-              </span>
-              <input type="hidden" name="theme" value={theme} />
-              <Segmented
-                small
-                value={theme}
-                label={ta('lightOrDark')}
-                onChange={(v) => setTheme(v as Theme)}
-                items={[
-                  { value: 'light', label: ta('themes.light'), icon: 'sun' },
-                  { value: 'dark', label: ta('themes.dark'), icon: 'moon' },
-                  { value: 'auto', label: ta('themes.auto'), icon: 'devices' },
-                ]}
-              />
-            </div>
           </div>
 
           <div className="form-acts spread">

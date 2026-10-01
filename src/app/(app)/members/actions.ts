@@ -7,6 +7,7 @@ import type { ActionState } from '@/components/ui/form';
 import { errorText, fieldErrors, str, zodToState } from '@/lib/actions';
 import { DEFAULT_COLOUR } from '@/lib/palette';
 import { getTranslations } from 'next-intl/server';
+import { setAccountPin } from '@/lib/accounts';
 import { hashPin, PIN_PATTERN, verifyPin } from '@/lib/auth/pin';
 import { forgetOtherDevices, recordPinFailure, resetPinFailures } from '@/lib/auth/devices';
 import {
@@ -203,14 +204,14 @@ export async function inviteMemberAction(_prev: ActionState, fd: FormData): Prom
 
 /**
  * Admin: stop someone signing in to this household. Their member row, bills and
- * shares stay; their PIN is cleared so a later invite starts fresh.
+ * shares stay; a later invite links them afresh.
  */
 export async function removeAccessAction(fd: FormData): Promise<void> {
   const me = await requireOwner();
   const target = getMember(me.householdId, str(fd, 'id'));
   if (!target || target.id === me.id || isAdmin(target)) redirect('/members');
   revokeInvites(me.householdId, target.id);
-  updateMember(me.householdId, target.id, { accountId: null, pinHash: null });
+  updateMember(me.householdId, target.id, { accountId: null, isPrimary: false });
   revalidatePath('/members');
   redirect(`/members/${target.id}/edit`);
 }
@@ -220,11 +221,11 @@ export async function removeAccessAction(fd: FormData): Promise<void> {
  * browser like wrong unlocks do, so an unlocked device can't be used to guess it.
  */
 export async function changePinAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
-  const me = await requireMember();
   const t = await getTranslations('pin');
   const s = await authState();
-  const deviceId = s.kind === 'ok' && s.account ? await currentDeviceId(s.account.id) : null;
-  if (!me.pinHash || !(await verifyPin(str(fd, 'current'), me.pinHash))) {
+  if (s.kind !== 'ok' || !s.account) redirect('/');
+  const deviceId = await currentDeviceId(s.account.id);
+  if (!s.account.pinHash || !(await verifyPin(str(fd, 'current'), s.account.pinHash))) {
     await new Promise((r) => setTimeout(r, 400));
     if (deviceId && recordPinFailure(deviceId).forgotten) {
       await dropDeviceCookie();
@@ -236,7 +237,7 @@ export async function changePinAction(_prev: ActionState, fd: FormData): Promise
   const pin = str(fd, 'pin');
   if (!PIN_PATTERN.test(pin)) return { fieldErrors: { pin: t('invalid') } };
   if (pin !== str(fd, 'pinConfirm')) return { fieldErrors: { pinConfirm: t('mismatch') } };
-  updateMember(me.householdId, me.id, { pinHash: await hashPin(pin) });
+  setAccountPin(s.account.id, await hashPin(pin));
   return { ok: true };
 }
 

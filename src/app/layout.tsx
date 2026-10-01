@@ -6,7 +6,7 @@ import { RegisterServiceWorker } from '@/components/app/pwa';
 import { Scene } from '@/components/app/scene';
 import { ChartHover } from '@/components/charts/hover';
 import { ToastProvider } from '@/components/ui/toast';
-import { themeColor } from '@/lib/appearance';
+import { SCHEME, themeColor } from '@/lib/appearance';
 import { getAppearance } from '@/lib/auth/appearance';
 import './globals.css';
 
@@ -50,12 +50,12 @@ export async function generateViewport(): Promise<Viewport> {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const locale = await getLocale();
   const messages = await getMessages();
-  const { preset, theme, glass } = await getAppearance();
+  const { theme, glass } = await getAppearance();
   return (
     <html
       lang={locale}
       className={`${display.variable} ${body.variable} ${mono.variable}`}
-      data-palette={preset}
+      data-palette={SCHEME}
       data-theme={theme === 'auto' ? undefined : theme}
       data-glass={glass === 'auto' ? undefined : glass}
     >

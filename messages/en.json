@@ -68,12 +68,11 @@
     },
     "next": "Continue",
     "back": "Back",
-    "side": "Four short steps. Then forward your first bill and invite your housemates.",
+    "side": "Three short steps. Then forward your first bill and invite your housemates.",
     "steps": {
       "household": "Household",
       "where": "Where",
-      "you": "You",
-      "colours": "Colours"
+      "you": "You"
     },
     "household": {
       "title": "Your household",
@@ -89,10 +88,8 @@
       "title": "About you",
       "body": "You’ll be the household’s first admin."
     },
-    "colours": {
-      "title": "Pick your colours",
-      "body": "Only you see your choice. Everyone in the house picks their own, and you can change it any time in Settings."
-    }
+    "titleAnother": "Start another household.",
+    "sideAnother": "It gets its own bills address, people and settings. Your PIN and your look stay the same."
   },
   "login": {
     "title": "Sign in",
@@ -836,7 +833,7 @@
       "cta": "Invite",
       "notInDemo": "demo households don't send email",
       "tooMany": "too many invitations sent in the last hour",
-      "lede": "They choose their own colours and PIN when they join.",
+      "lede": "They pick their name and colour when they join.",
       "orShare": "or share a code",
       "copyCode": "Copy code",
       "copyLink": "Copy link",
@@ -877,10 +874,10 @@
     "lede": "Who lives at {household} and what they can do.",
     "ledeSolo": "Just you so far. Invite housemates to share bills with them.",
     "inviteSomeone": "Invite someone",
-    "newLede": "They choose their own colours and PIN when they join.",
+    "newLede": "They pick their name and colour when they join.",
     "memberRole": "Member",
     "resendInvite": "Resend invite",
-    "footAdmins": "Admins add people, set splits and change household settings. Everyone chooses their own colours and PIN.",
+    "footAdmins": "Admins add people, set splits and change household settings. Everyone picks their own name and colour.",
     "signsIn": {
       "google": "Signs in with Google",
       "code": "Signs in with an email code",
@@ -1450,7 +1447,10 @@
     "continue": "Continue",
     "startOver": "Start over",
     "saving": "Saving…",
-    "checking": "Checking…"
+    "checking": "Checking…",
+    "unlockSideNoHousehold": "Welcome back.",
+    "unlockTitleNoName": "Hey there.",
+    "notYouNoName": "Not you?"
   },
   "invite": {
     "title": "{inviter} invited you to {household}",
@@ -1963,7 +1963,7 @@
   "appearance": {
     "title": "Appearance",
     "justYou": "Just for you",
-    "body": "Pick the colours you like. Only you see your choice; everyone in {household} picks their own.",
+    "body": "How the app looks for you, on every device and in every household.",
     "lightOrDark": "Light or dark",
     "lightOrDarkBody": "Automatic follows your phone or computer.",
     "themes": {
@@ -1977,28 +1977,6 @@
       "clear": "Glass",
       "solid": "Frosted",
       "auto": "Automatic"
-    },
-    "presets": {
-      "mist": {
-        "name": "Ink & Mist",
-        "blurb": "The original colours. Slate, mist and sand."
-      },
-      "harbour": {
-        "name": "Harbour",
-        "blurb": "Deep blue, sea glass and sand."
-      },
-      "ruby": {
-        "name": "Ruby",
-        "blurb": "Warm reds with a touch of raspberry."
-      },
-      "cobalt": {
-        "name": "Cobalt",
-        "blurb": "Clear blues, bright and simple."
-      },
-      "violet": {
-        "name": "Violet",
-        "blurb": "Soft purples, calm and cool."
-      }
     }
   },
   "ui": {
@@ -2475,7 +2453,7 @@
       "firstBillSub": "From your own inbox to {address}. Its service sets itself up.",
       "firstBillSubNoAddress": "Upload a PDF or photo, or enter one by hand.",
       "invite": "Invite your housemates",
-      "inviteSub": "They choose their own colours and PIN when they join.",
+      "inviteSub": "They pick their name and colour when they join.",
       "postcode": "Postcode added",
       "postcodeDone": "Weather and season notes are on.",
       "postcodeSub": "Add it for weather and season notes.",
@@ -2582,22 +2560,6 @@
   },
   "pinPad": {
     "delete": "Delete a digit"
-  },
-  "join": {
-    "side": "You’re invited.",
-    "sideBody": "You’re nearly part of {household}.",
-    "steps": {
-      "invite": "Invite",
-      "signIn": "Sign in",
-      "colours": "Colours",
-      "pin": "PIN"
-    },
-    "colours": {
-      "title": "Pick your colours",
-      "body": "Just for you. {names} keep theirs, and you can change yours any time in Settings.",
-      "bodyAlone": "Just for you. You can change them any time in Settings.",
-      "continue": "Continue"
-    }
   },
   "addBill": {
     "cta": "Add bill",
@@ -2784,5 +2746,15 @@
       "overYear": "Over a year",
       "aheadLine": "About {amount} to pay over the next 12 months."
     }
+  },
+  "joined": {
+    "side": "You’re in.",
+    "sideBody": "You’ve joined {household}. One thing before you look around.",
+    "title": "How you appear in {household}",
+    "body": "Your name and colour here. {names} already picked theirs.",
+    "bodyAlone": "Your name and colour here. You can change them any time.",
+    "name": "Your name",
+    "colour": "Your colour",
+    "continue": "Continue"
   }
 }

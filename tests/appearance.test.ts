@@ -4,22 +4,19 @@ import path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { openDb, type Db } from '@/db/client';
 import { runMigrations } from '@/db/migrate';
-import { APPEARANCE_PRESETS } from '@/db/schema';
 import {
   DEFAULT_APPEARANCE,
   formatAppearance,
   parseAppearance,
-  PRESET_BG,
+  SCHEME,
+  SCHEME_BG,
   themeColor,
 } from '@/lib/appearance';
-import { signInAccount } from '@/lib/accounts';
-import { createHousehold } from '@/lib/households';
-import { createMember, getMember, updateMember } from '@/lib/members';
+import { getAccount, setAccountAppearance, signInAccount } from '@/lib/accounts';
 import { setUpHousehold } from '@/lib/setup';
 
 const root = path.resolve(import.meta.dirname, '..');
 const css = fs.readFileSync(path.join(root, 'src/app/globals.css'), 'utf8');
-const messages = JSON.parse(fs.readFileSync(path.join(root, 'messages/en.json'), 'utf8'));
 
 /** Every declaration block whose selector list mentions this preset, keyed by selector text. */
 function blocksFor(preset: string): { selector: string; tokens: Map<string, string> }[] {
@@ -38,7 +35,7 @@ function blocksFor(preset: string): { selector: string; tokens: Map<string, stri
   return out;
 }
 
-describe('colour presets in globals.css', () => {
+describe('the one colour scheme in globals.css', () => {
   const tokenNames = [
     '--p-bg',
     '--p-ground',
@@ -54,8 +51,8 @@ describe('colour presets in globals.css', () => {
     '--p-fg3',
   ];
 
-  it.each(APPEARANCE_PRESETS)('%s has a light set and both dark sets, each complete', (p) => {
-    const blocks = blocksFor(p);
+  it('has a light set and both dark sets, each complete', () => {
+    const blocks = blocksFor(SCHEME);
     const light = blocks.filter(
       (b) => !b.selector.includes('dark') && !b.selector.includes(':not'),
     );
@@ -67,64 +64,43 @@ describe('colour presets in globals.css', () => {
     expect(Object.fromEntries(auto[0]!.tokens)).toEqual(Object.fromEntries(dark[0]!.tokens));
   });
 
-  it.each(APPEARANCE_PRESETS)('%s: theme-color matches the page colour', (p) => {
-    const blocks = blocksFor(p);
+  it('theme-color matches the page colour', () => {
+    const blocks = blocksFor(SCHEME);
     const light = blocks.find((b) => !b.selector.includes('dark') && !b.selector.includes(':not'));
     const dark = blocks.find((b) => b.selector.includes("[data-theme='dark']"));
-    expect(light!.tokens.get('--p-bg')).toBe(PRESET_BG[p].light);
-    expect(dark!.tokens.get('--p-bg')).toBe(PRESET_BG[p].dark);
-  });
-
-  it.each(APPEARANCE_PRESETS)('%s has a name and a line in the messages', (p) => {
-    expect(messages.appearance.presets[p].name).toBeTruthy();
-    expect(messages.appearance.presets[p].blurb).toBeTruthy();
+    expect(light!.tokens.get('--p-bg')).toBe(SCHEME_BG.light);
+    expect(dark!.tokens.get('--p-bg')).toBe(SCHEME_BG.dark);
   });
 });
 
-describe('parseAppearance', () => {
-  it('reads what formatAppearance wrote', () => {
-    const a = { preset: 'ruby', theme: 'dark', glass: 'clear' } as const;
-    expect(parseAppearance(formatAppearance(a))).toEqual(a);
-  });
-
-  it('falls back to Harbour and automatic for anything it can’t read', () => {
+describe('the appearance cookie', () => {
+  it('round-trips and falls back to the default', () => {
+    expect(formatAppearance({ theme: 'dark', glass: 'clear' })).toBe('dark.clear');
+    expect(parseAppearance('dark.clear')).toEqual({ theme: 'dark', glass: 'clear' });
+    expect(parseAppearance('dusk.frosty')).toEqual({ theme: 'auto', glass: 'auto' });
     expect(parseAppearance(undefined)).toEqual(DEFAULT_APPEARANCE);
-    expect(parseAppearance('')).toEqual(DEFAULT_APPEARANCE);
-    expect(parseAppearance('neon.dark')).toEqual({
-      preset: 'harbour',
-      theme: 'dark',
-      glass: 'auto',
-    });
-    expect(parseAppearance('violet.dusk.frosty')).toEqual({
-      preset: 'violet',
-      theme: 'auto',
-      glass: 'auto',
-    });
-    // A cookie from before the glass choice still reads.
-    expect(parseAppearance('ruby.light')).toEqual({
-      preset: 'ruby',
-      theme: 'light',
-      glass: 'auto',
-    });
-    expect(DEFAULT_APPEARANCE).toEqual({ preset: 'harbour', theme: 'auto', glass: 'auto' });
+    // Cookies from the preset days read "preset.theme.glass"; the preset is ignored.
+    expect(parseAppearance('violet.light.solid')).toEqual({ theme: 'light', glass: 'solid' });
+    expect(parseAppearance('ruby.dark')).toEqual({ theme: 'dark', glass: 'auto' });
+    expect(DEFAULT_APPEARANCE).toEqual({ theme: 'auto', glass: 'auto' });
   });
 });
 
 describe('themeColor', () => {
   it('gives one colour when light or dark is chosen', () => {
-    expect(themeColor({ preset: 'cobalt', theme: 'light' })).toBe('#e4e9f3');
-    expect(themeColor({ preset: 'cobalt', theme: 'dark' })).toBe('#080d1a');
+    expect(themeColor({ theme: 'light' })).toBe(SCHEME_BG.light);
+    expect(themeColor({ theme: 'dark' })).toBe(SCHEME_BG.dark);
   });
 
   it('gives both, by device setting, when automatic', () => {
-    expect(themeColor({ preset: 'mist', theme: 'auto' })).toEqual([
-      { media: '(prefers-color-scheme: light)', color: '#e9e4dc' },
-      { media: '(prefers-color-scheme: dark)', color: '#12151b' },
+    expect(themeColor({ theme: 'auto' })).toEqual([
+      { media: '(prefers-color-scheme: light)', color: SCHEME_BG.light },
+      { media: '(prefers-color-scheme: dark)', color: SCHEME_BG.dark },
     ]);
   });
 });
 
-describe('a member’s appearance', () => {
+describe('an account’s appearance', () => {
   let dir: string;
   let db: Db;
   let close: () => void;
@@ -142,44 +118,13 @@ describe('a member’s appearance', () => {
     fs.rmSync(dir, { recursive: true, force: true });
   });
 
-  it('starts on Harbour, automatic, and keeps what the person picks', () => {
-    const hh = createHousehold(
-      {
-        name: 'Riverside House',
-        currency: 'AUD',
-        locale: 'en-AU',
-        timezone: 'Australia/Melbourne',
-        fiscalYearStartMonth: 7,
-        splitMode: 'shared',
-      },
-      db,
-    );
-    const alex = createMember(hh.id, { name: 'Alex', activeFrom: '2026-01-01' }, db);
-    expect([alex.appearancePreset, alex.theme]).toEqual(['harbour', 'auto']);
-    expect(getMember(hh.id, alex.id, db)).toMatchObject({
-      appearancePreset: 'harbour',
-      theme: 'auto',
-    });
-
-    updateMember(hh.id, alex.id, { appearancePreset: 'violet', theme: 'dark' }, db);
-    expect(getMember(hh.id, alex.id, db)).toMatchObject({
-      appearancePreset: 'violet',
-      theme: 'dark',
-    });
-
-    const sam = createMember(
-      hh.id,
-      { name: 'Sam', activeFrom: '2026-01-01', appearancePreset: 'ruby', theme: 'light' },
-      db,
-    );
-    expect(getMember(hh.id, sam.id, db)).toMatchObject({
-      appearancePreset: 'ruby',
-      theme: 'light',
-    });
-  });
-  it('the setup wizard keeps the first admin’s own colour and their colours for the app (§4a)', () => {
+  it('starts automatic and keeps what the person picks, on the account not the household', () => {
     const account = signInAccount({ email: 'casey@example.com', name: 'Casey' }, db);
-    const { householdId, ownerId } = setUpHousehold(
+    expect([account.theme, account.glass]).toEqual(['auto', 'auto']);
+    setAccountAppearance(account.id, { theme: 'dark', glass: 'solid' }, db);
+    expect(getAccount(account.id, db)).toMatchObject({ theme: 'dark', glass: 'solid' });
+
+    const { ownerId } = setUpHousehold(
       account,
       {
         household: {
@@ -190,22 +135,14 @@ describe('a member’s appearance', () => {
           fiscalYearStartMonth: 7,
           splitMode: 'shared',
         },
-        owner: {
-          name: 'Casey',
-          activeFrom: '2026-01-01',
-          colour: '#1baf7a',
-          appearance: { preset: 'ruby', theme: 'dark', glass: 'auto' },
-        },
+        owner: { name: 'Casey', activeFrom: '2026-01-01', colour: '#1baf7a' },
         location: null,
         shareRegional: true,
       },
       db,
     );
-    expect(getMember(householdId, ownerId, db)).toMatchObject({
-      colour: '#1baf7a',
-      appearancePreset: 'ruby',
-      theme: 'dark',
-      accountId: account.id,
-    });
+    expect(ownerId).toBeTruthy();
+    // Starting a household changes nothing about how the app looks for them.
+    expect(getAccount(account.id, db)).toMatchObject({ theme: 'dark', glass: 'solid' });
   });
 });

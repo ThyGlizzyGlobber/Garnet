@@ -77,6 +77,11 @@ export const household = sqliteTable(
   (t) => [uniqueIndex('household_bills_alias_unique').on(t.billsAlias)],
 );
 
+/** Light, dark, or auto (follow the device). */
+export const THEMES = ['auto', 'light', 'dark'] as const;
+/** Glass cards: clear, solid, or auto (follow the device's Reduce transparency). */
+export const GLASS_MODES = ['auto', 'clear', 'solid'] as const;
+
 /**
  * A person who can sign in (Google or an emailed one-time code). Accounts are
  * install-wide; a member row links an account into a household.
@@ -90,6 +95,16 @@ export const account = sqliteTable(
     name: text('name').notNull(),
     /** Google's stable subject id, once the account has signed in with Google. */
     googleSub: text('google_sub'),
+    /**
+     * The person's PIN, set once, unlocking a trusted device for every household
+     * they belong to (SCOPE-accounts.md D2). Nobody else can set or see it.
+     */
+    pinHash: text('pin_hash'),
+    /** Light, dark or automatic, and the glass, following the person to every device (D3). */
+    theme: text('theme', { enum: THEMES }).notNull().default('auto'),
+    glass: text('glass', { enum: GLASS_MODES }).notNull().default('auto'),
+    /** The household they were last in, so a new device starts somewhere sensible (D6). */
+    lastMemberId: text('last_member_id'),
     lastSignInAt: text('last_sign_in_at'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
@@ -106,13 +121,6 @@ const householdId = () =>
     .notNull()
     .references(() => household.id, { onDelete: 'cascade' });
 
-/** Colour presets anyone can pick for themselves (BRAND.md §2); the tokens are in globals.css. */
-export const APPEARANCE_PRESETS = ['mist', 'harbour', 'ruby', 'cobalt', 'violet'] as const;
-/** Light, dark, or auto (follow the device). */
-export const THEMES = ['auto', 'light', 'dark'] as const;
-/** Glass cards: clear, solid, or auto (follow the device's Reduce transparency). */
-export const GLASS_MODES = ['auto', 'clear', 'solid'] as const;
-
 export const member = sqliteTable(
   'member',
   {
@@ -123,7 +131,7 @@ export const member = sqliteTable(
     /** Where the invite went. Contact only; sign-in identity lives on the account. */
     email: text('email'),
     name: text('name').notNull(),
-    /** Set by the member themselves after accepting; nobody else can set or see it. */
+    /** Demo households only: their pick-a-name sign-in checks this. Real accounts keep the PIN on the account. */
     pinHash: text('pin_hash'),
     role: text('role', { enum: ['owner', 'member'] })
       .notNull()
@@ -144,12 +152,8 @@ export const member = sqliteTable(
       .$type<{ label: string; value: string }[]>()
       .notNull()
       .default([]),
-    /** This person's colours, on every device they sign in on (src/lib/appearance.ts). */
-    appearancePreset: text('appearance_preset', { enum: APPEARANCE_PRESETS })
-      .notNull()
-      .default('harbour'),
-    theme: text('theme', { enum: THEMES }).notNull().default('auto'),
-    glass: text('glass', { enum: GLASS_MODES }).notNull().default('auto'),
+    /** The account's home of residence: first in the switcher, and where the app opens (D7). One per account. */
+    isPrimary: integer('is_primary', { mode: 'boolean' }).notNull().default(false),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },

@@ -34,7 +34,9 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
     member: found.member.name,
     inviter: found.invitedBy?.name ?? '',
   };
-  const already = account ? membershipsFor(account.id).length > 0 : false;
+  const already = account
+    ? membershipsFor(account.id).some((m) => m.householdId === found.household.id)
+    : false;
   // The people already there, so the card shows who they'll share with.
   const others = listMembers(found.household.id).filter(
     (m) => m.id !== found.member.id && m.accountId,

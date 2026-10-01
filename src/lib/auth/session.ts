@@ -2,7 +2,13 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { getIronSession, type SessionOptions } from 'iron-session';
 import type { Account, Member } from '@/db/schema';
-import { getAccount, isOperator, membershipsFor } from '@/lib/accounts';
+import {
+  getAccount,
+  isOperator,
+  membershipsFor,
+  pickMember,
+  rememberLastMember,
+} from '@/lib/accounts';
 import { getEnv } from '@/lib/env';
 import { getHousehold } from '@/lib/households';
 import { getMemberForSession } from '@/lib/members';
@@ -61,12 +67,12 @@ export async function getSession() {
 }
 
 export type AuthState =
-  | { kind: 'anonymous' }
-  /** Trusted device, unlock expired: ask for the PIN. */
-  | { kind: 'locked'; account: Account; member: Member }
+  | { kind: 'anonymous'; account?: undefined }
+  /** Trusted device, unlock expired: ask for the account's PIN. `member` is the household they were in, when known. */
+  | { kind: 'locked'; account: Account; member: Member | null }
   /** Signed in but not in a household yet: create or join one. */
   | { kind: 'no-household'; account: Account }
-  /** Signed in and joined, but no PIN chosen yet. */
+  /** Signed in and in a household, but the account has no PIN yet. */
   | { kind: 'needs-pin'; account: Account; member: Member }
   | { kind: 'ok'; account: Account | null; member: Member; demo: boolean };
 
@@ -85,13 +91,13 @@ export async function authState(now = Date.now()): Promise<AuthState> {
   const device = findDevice(jar.get(DEVICE_COOKIE)?.value, account.id, undefined, now);
   if (!device) return { kind: 'anonymous' };
   const memberships = membershipsFor(account.id);
-  const member = memberships.find((m) => m.id === session.memberId) ?? memberships[0];
+  const member = pickMember(memberships, session.memberId, account.lastMemberId);
   const unlocked =
     !!session.unlockedAt && now - session.unlockedAt < getEnv().AUTH_SESSION_DAYS * 86_400_000;
-  if (!member) return unlocked ? { kind: 'no-household', account } : { kind: 'anonymous' };
   if (!unlocked)
-    return member.pinHash ? { kind: 'locked', account, member } : { kind: 'anonymous' };
-  if (!member.pinHash) return { kind: 'needs-pin', account, member };
+    return account.pinHash ? { kind: 'locked', account, member } : { kind: 'anonymous' };
+  if (!member) return { kind: 'no-household', account };
+  if (!account.pinHash) return { kind: 'needs-pin', account, member };
   return { kind: 'ok', account, member, demo: false };
 }
 
@@ -189,13 +195,18 @@ export async function currentDeviceId(accountId: string): Promise<string | null>
 export async function markUnlocked(memberId?: string): Promise<void> {
   const session = await getSession();
   session.unlockedAt = Date.now();
-  if (memberId) session.memberId = memberId;
+  if (memberId) {
+    session.memberId = memberId;
+    if (session.accountId) rememberLastMember(session.accountId, memberId);
+  }
   await session.save();
 }
 
+/** Open this household on this device, and remember it for the next one (D6). */
 export async function setActiveMember(memberId: string): Promise<void> {
   const session = await getSession();
   session.memberId = memberId;
+  if (session.accountId) rememberLastMember(session.accountId, memberId);
   await session.save();
 }
 

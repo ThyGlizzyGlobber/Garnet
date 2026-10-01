@@ -4,14 +4,14 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import type { ActionState } from '@/components/ui/form';
 import { fieldErrors, str, zodToState } from '@/lib/actions';
-import { requireMember, requireOperator, requireOwner, signOut } from '@/lib/auth/session';
+import { authState, requireOperator, requireOwner, signOut } from '@/lib/auth/session';
 import { replaceAlias } from '@/lib/bills-address';
 import { getHousehold, updateHousehold } from '@/lib/households';
 import { redirect } from 'next/navigation';
 import { exitDemo } from '@/lib/demo';
-import { isGlass, isPreset, isTheme } from '@/lib/appearance';
-import { rememberAppearance } from '@/lib/auth/appearance';
-import { updateMember } from '@/lib/members';
+import { isGlass, isTheme } from '@/lib/appearance';
+import { getAppearance, rememberAppearance } from '@/lib/auth/appearance';
+import { setAccountAppearance } from '@/lib/accounts';
 import { cancelUpdateRequest, checkForUpdate, requestUpdate } from '@/lib/updates';
 import { readMissingMetrics } from '@/ingest/metrics';
 import { computeRegionalStats, regionalEnabled, setRegionalSharing } from '@/lib/regional';
@@ -55,24 +55,20 @@ export async function updateSettingsAction(_prev: ActionState, fd: FormData): Pr
 }
 
 /**
- * This person's colours (Settings → Appearance). Saved on the member, so every
- * device they sign in on follows; a field left out keeps its current value.
+ * Light/dark and glass (Settings → Appearance). Saved on the account, so every
+ * device and household follows; the demo keeps it in the browser only.
  */
 export async function saveAppearanceAction(fd: FormData): Promise<void> {
-  const me = await requireMember();
-  const preset = str(fd, 'preset');
+  const s = await authState();
+  if (s.kind !== 'ok') redirect('/');
+  const current = await getAppearance();
   const theme = str(fd, 'theme');
   const glass = str(fd, 'glass');
   const next = {
-    preset: isPreset(preset) ? preset : me.appearancePreset,
-    theme: isTheme(theme) ? theme : me.theme,
-    glass: isGlass(glass) ? glass : me.glass,
+    theme: isTheme(theme) ? theme : current.theme,
+    glass: isGlass(glass) ? glass : current.glass,
   };
-  updateMember(me.householdId, me.id, {
-    appearancePreset: next.preset,
-    theme: next.theme,
-    glass: next.glass,
-  });
+  if (s.account) setAccountAppearance(s.account.id, next);
   await rememberAppearance(next);
   revalidatePath('/', 'layout');
 }

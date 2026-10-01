@@ -6,10 +6,14 @@ import { openDb, type Db } from '@/db/client';
 import { runMigrations } from '@/db/migrate';
 import {
   accountGivenName,
+  getAccount,
   isOperator,
   linkMember,
   listAccounts,
   membershipsFor,
+  pickMember,
+  rememberLastMember,
+  setAccountPin,
   signInAccount,
   signInMethod,
   unclaimedOwners,
@@ -30,7 +34,7 @@ import {
   inviteState,
   latestInvites,
 } from '@/lib/invites';
-import { createMember, getMember } from '@/lib/members';
+import { createMember, getMember, leaveBlocker, leaveHousehold, makePrimary } from '@/lib/members';
 import { resetRateLimits } from '@/lib/rate-limit';
 
 let dir: string;
@@ -247,17 +251,36 @@ describe('invitations', () => {
     expect(findInviteByToken(second.token, db, now + INVITE_TTL_MS + 1)).toBeNull();
   });
 
-  it('are refused for an account that already belongs to a household', () => {
-    const hh = household('Busy House');
-    const a = createMember(hh.id, { name: 'A', activeFrom: '2026-01-01' }, db);
-    const b = createMember(hh.id, { name: 'B', activeFrom: '2026-01-01' }, db);
+  it('let one account join several households, the first joined being primary', () => {
+    const one = household('First House');
+    const two = household('Second House');
+    const a = createMember(one.id, { name: 'A', activeFrom: '2026-01-01' }, db);
+    const b = createMember(two.id, { name: 'B', activeFrom: '2026-01-01' }, db);
     const account = signInAccount({ email: 'busy@example.com' }, db);
+    acceptInvite(createInvite(one.id, a.id, {}, db).invite.id, account.id, account.email, db);
+    acceptInvite(createInvite(two.id, b.id, {}, db).invite.id, account.id, account.email, db);
+    const mine = membershipsFor(account.id, db);
+    expect(mine.map((m) => m.householdId)).toEqual([one.id, two.id]);
+    expect(mine.map((m) => m.isPrimary)).toEqual([true, false]);
+    // Which one opens: asked for, else primary, else last used, else the first joined.
+    expect(pickMember(mine, mine[1]!.id, null)?.id).toBe(mine[1]!.id);
+    expect(pickMember(mine, 'not-mine', null)?.id).toBe(mine[0]!.id);
+    makePrimary(account.id, mine[1]!.id, db);
+    const after = membershipsFor(account.id, db);
+    expect(after.map((m) => m.isPrimary)).toEqual([false, true]);
+    expect(pickMember(after, undefined, after[0]!.id)?.id).toBe(after[1]!.id);
+    const neither = after.map((m) => ({ ...m, isPrimary: false }));
+    expect(pickMember(neither, undefined, after[0]!.id)?.id).toBe(after[0]!.id);
+    expect(pickMember(neither, undefined, null)?.id).toBe(after[0]!.id);
+    expect(() => makePrimary(account.id, 'not-mine', db)).toThrow();
+  });
+
+  it('refuse the same member twice', () => {
+    const hh = household('Twice House');
+    const a = createMember(hh.id, { name: 'A', activeFrom: '2026-01-01' }, db);
+    const account = signInAccount({ email: 'twice@example.com' }, db);
     acceptInvite(createInvite(hh.id, a.id, {}, db).invite.id, account.id, account.email, db);
-    const second = createInvite(hh.id, b.id, {}, db);
-    expect(() => acceptInvite(second.invite.id, account.id, account.email, db)).toThrow(
-      /already belong/,
-    );
-    expect(findInviteByToken(second.token, db)).not.toBeNull();
+    expect(() => createInvite(hh.id, a.id, {}, db)).toThrow(/already joined/);
   });
 
   it('can only be created for a member of the same household', () => {
@@ -265,6 +288,58 @@ describe('invitations', () => {
     const two = household('Two');
     const outsider = createMember(two.id, { name: 'Out', activeFrom: '2026-01-01' }, db);
     expect(() => createInvite(one.id, outsider.id, {}, db)).toThrow(/not found/);
+  });
+});
+
+describe('the account', () => {
+  it('holds the PIN and remembers only its own households', () => {
+    const account = signInAccount({ email: 'pinned@example.com' }, db);
+    expect(account.pinHash).toBeNull();
+    setAccountPin(account.id, 'hash-1', db);
+    expect(getAccount(account.id, db)?.pinHash).toBe('hash-1');
+    const hh = household('Remember House');
+    const me = createMember(
+      hh.id,
+      { name: 'Me', activeFrom: '2026-01-01', accountId: account.id },
+      db,
+    );
+    const stranger = createMember(hh.id, { name: 'Stranger', activeFrom: '2026-01-01' }, db);
+    rememberLastMember(account.id, stranger.id, db);
+    expect(getAccount(account.id, db)?.lastMemberId).toBeNull();
+    rememberLastMember(account.id, me.id, db);
+    expect(getAccount(account.id, db)?.lastMemberId).toBe(me.id);
+  });
+});
+
+describe('leaving a household', () => {
+  it('needs shares settled, no personal things, and never the last admin', () => {
+    const hh = household('Leaving House');
+    const account = signInAccount({ email: 'leaver@example.com' }, db);
+    const admin = createMember(
+      hh.id,
+      {
+        name: 'Admin',
+        role: 'owner',
+        activeFrom: '2026-01-01',
+        accountId: account.id,
+        isPrimary: true,
+      },
+      db,
+    );
+    expect(leaveBlocker(hh.id, admin, db)).toBe('lastAdmin');
+    const other = signInAccount({ email: 'other-leaver@example.com' }, db);
+    const sam = createMember(
+      hh.id,
+      { name: 'Sam', activeFrom: '2026-01-01', accountId: other.id },
+      db,
+    );
+    expect(leaveBlocker(hh.id, sam, db)).toBeNull();
+    leaveHousehold(hh.id, sam, '2026-10-01', db);
+    const gone = getMember(hh.id, sam.id, db)!;
+    expect(gone.accountId).toBeNull();
+    expect(gone.activeTo).toBe('2026-10-01');
+    expect(membershipsFor(other.id, db)).toEqual([]);
+    expect(() => leaveHousehold(hh.id, admin, '2026-10-01', db)).toThrow(/lastAdmin/);
   });
 });
 
