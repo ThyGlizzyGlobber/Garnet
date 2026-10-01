@@ -1879,8 +1879,9 @@
     "who": {
       "title": "Who can see it",
       "points": [
-        "Only members of your household see your household's bills, shares and documents.",
-        "The developers who run this installation can reach the stored data to keep the app working, but doesn't browse households' bills."
+        "Only members of your household see your household’s bills, shares and documents.",
+        "The developers who run this installation see that your household exists, who is in it, how many bills it has and how much the bill analyser is used. They never see a bill, a provider or a figure from a bill through the app, and there is no way for them to open a household they are not a member of: the only way in is an invitation from its admin.",
+        "Bill files are encrypted on the server’s disk with a key for each household, so a copied disk or a backup is unreadable on its own. This is not end-to-end encryption: the server has to read each bill to analyse it and draw its pages, so whoever runs the server can reach the stored data to keep the app working. Every action a developer takes on the installation is logged and kept."
       ]
     },
     "area": {

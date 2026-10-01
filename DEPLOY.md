@@ -381,3 +381,44 @@ get the household's bills plus their own personal ones, and so does every
 member while "Everyone can download the household's bills" is on (Settings);
 otherwise members get just their own personal bills. Ledger → "Download
 statement" gives one member's shares for the financial year as a CSV.
+
+## 13. Bill files encrypted at rest
+
+From the console build (October 2026) the app seals every bill file, original
+scan and preview with a key per household, wrapped by one master key you hold
+(`SCOPE-console.md` §5b). The database itself stays readable to the app, so
+search and totals work; the dataset it lives on should be encrypted by TrueNAS
+(below).
+
+**Before installing that update**, add the master key to the app's environment
+in the Custom App form:
+
+```bash
+openssl rand -base64 32
+```
+
+| Variable   | Value                                      |
+| ---------- | ------------------------------------------ |
+| `DATA_KEY` | the output above (32 random bytes, base64) |
+
+**KEEP A COPY OF `DATA_KEY` SOMEWHERE SAFE, OUTSIDE THE NAS.** Without it the
+stored bill files cannot be opened and the app refuses to start once any
+household has files. A password manager entry is the right place.
+
+What happens on the first start with the key: every household gets its own file
+key (stored wrapped in the database), and files written before are sealed one
+by one. The updater's ZFS snapshot is the way back if anything goes wrong.
+Health → Storage in the console says whether files are encrypted.
+
+### Encrypting the dataset
+
+The database is covered by ZFS dataset encryption rather than by the app. On a
+fresh install, create the app's ixVolume on an encrypted dataset: in Datasets,
+make the parent dataset with Encryption on (a passphrase or a key kept by the
+NAS), then install the app under it. Snapshots and the updater work as before.
+For an existing install, create an encrypted dataset, stop the app, copy the
+data across (`zfs send | zfs receive` into the encrypted dataset, or rsync),
+point the app's storage at it and start again. Whoever has root on the NAS can
+still read everything while it is mounted: encryption protects a copied disk or
+a backup, not against the people who run the server, and the privacy page says
+so.
