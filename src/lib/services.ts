@@ -12,6 +12,7 @@ import {
 import { paysNoShareByDefault } from '@/lib/household-types';
 import { ulid } from '@/lib/ids';
 import { DEFAULT_COLOUR, PALETTE } from '@/lib/palette';
+import { getHousehold } from '@/lib/households';
 import { getMember, listMembers } from '@/lib/members';
 import { ownerCondition, type Scope } from '@/lib/scope';
 import {
@@ -233,7 +234,7 @@ export function createService(
       notSplitWith:
         rest.notSplitWith ??
         listMembers(householdId, db)
-          .filter((m) => paysNoShareByDefault(m.role))
+          .filter((m) => paysNoShareByDefault(m.role, getHousehold(householdId, db)?.type ?? null))
           .map((m) => m.id),
       recurringSince: repeats ? now : null,
       createdAt: now,

@@ -71,7 +71,7 @@ export default async function NewServicePage({
           locale: hh.locale,
           latestMinor: null,
           resplitCount: 0,
-          excluded: current.filter((m) => paysNoShareByDefault(m.role)).map((m) => m.id),
+          excluded: current.filter((m) => paysNoShareByDefault(m.role, hh.type)).map((m) => m.id),
           percents: {},
           amounts: {},
           summary: current.map((m) => ({ name: m.name, colour: m.colour, part: ts('parts.even') })),

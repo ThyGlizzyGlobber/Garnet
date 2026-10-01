@@ -1,7 +1,8 @@
 # Scope: accounts and many households ("the Account Dashboard")
 
 _Drafted 2026-10-01; the owner answered every question in §9 the same day and
-the decisions are recorded in §5. Nothing is built yet. The build order is §6.
+the decisions are recorded in §5. A1–A4 are built (see CLAUDE.md's decisions
+log for what each shipped). The build order is §6.
 The owner's mum's wizard notes are transcribed in §7 and carried as stages A3
 and A4._
 

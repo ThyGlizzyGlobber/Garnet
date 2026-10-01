@@ -1,6 +1,15 @@
 import { and, asc, count, eq, isNull, ne } from 'drizzle-orm';
 import { getDb, type Db } from '@/db/client';
-import { asset, bill, member, service, share, sourceDocument, type Member } from '@/db/schema';
+import {
+  asset,
+  bill,
+  household,
+  member,
+  service,
+  share,
+  sourceDocument,
+  type Member,
+} from '@/db/schema';
 import { ulid } from '@/lib/ids';
 import { DEFAULT_COLOUR } from '@/lib/palette';
 import { paysNoShareByDefault, type Role } from '@/lib/household-types';
@@ -85,11 +94,19 @@ export function createMember(householdId: string, input: MemberInput, db: Db = g
     updatedAt: now,
   };
   db.insert(member).values(row).run();
-  if (paysNoShareByDefault(row.role)) leaveOutOfSplits(householdId, row.id, db);
+  if (paysNoShareByDefault(row.role, householdType(householdId, db)))
+    leaveOutOfSplits(householdId, row.id, db);
   return row;
 }
 
-/** A boarder pays no share until an admin puts them in a service's split (D14). */
+function householdType(householdId: string, db: Db) {
+  return (
+    db.select({ type: household.type }).from(household).where(eq(household.id, householdId)).get()
+      ?.type ?? null
+  );
+}
+
+/** A boarder (or a landlord) pays no share until an admin puts them in a service's split (D14, D16). */
 function leaveOutOfSplits(householdId: string, memberId: string, db: Db) {
   for (const svc of db.select().from(service).where(eq(service.householdId, householdId)).all())
     if (!svc.notSplitWith.includes(memberId))
@@ -153,7 +170,8 @@ export function setMemberRole(
   if (m.role === role) return m;
   if (role !== ADMIN_ROLE && isLastAdmin(householdId, m, db))
     throw new Error('A household needs at least one admin');
-  if (paysNoShareByDefault(role) && !paysNoShareByDefault(m.role))
+  const type = householdType(householdId, db);
+  if (paysNoShareByDefault(role, type) && !paysNoShareByDefault(m.role, type))
     leaveOutOfSplits(householdId, id, db);
   db.update(member)
     .set({ role, updatedAt: new Date().toISOString() })

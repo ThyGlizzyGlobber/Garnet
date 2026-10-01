@@ -910,7 +910,15 @@ function seedOtherHouseholds(alex: Member, pin: string, db: Db) {
 
   // Unit 4, Bay Street: the flat Alex lets to Priya and Tom.
   const bay = createHousehold(
-    { ...region, name: 'Unit 4, Bay Street', splitMode: 'shared', type: 'investment_property' },
+    {
+      ...region,
+      name: 'Unit 4, Bay Street',
+      splitMode: 'shared',
+      type: 'investment_property',
+      address: '4/18 Bay Street, Riverside',
+      allowanceMinor: 20000,
+      allowancePeriod: 'month',
+    },
     db,
   );
   const landlord = createMember(
@@ -925,7 +933,7 @@ function seedOtherHouseholds(alex: Member, pin: string, db: Db) {
     },
     db,
   );
-  const priya = createMember(
+  createMember(
     bay.id,
     { name: 'Priya', pinHash: pin, role: 'tenant', activeFrom: '2025-07-01', colour: '#8e5bd1' },
     db,
@@ -956,7 +964,7 @@ function seedOtherHouseholds(alex: Member, pin: string, db: Db) {
       cadence: 'quarterly',
       usageUnit: 'kWh',
       seasonal: true,
-      payerMemberId: priya.id,
+      payerMemberId: landlord.id,
     },
     db,
   );

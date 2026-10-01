@@ -6,8 +6,8 @@ import { Button, Field, Input, Select } from '@/components/ui';
 import { Toggle } from '@/components/ui/controls';
 import type { ActionState } from '@/components/ui/form';
 import { updateSettingsAction } from './actions';
-import { HOUSEHOLD_TYPES } from '@/db/schema';
-import type { HouseholdType } from '@/lib/household-types';
+import { ALLOWANCE_PERIODS, HOUSEHOLD_TYPES } from '@/db/schema';
+import type { AllowancePeriod, HouseholdType } from '@/lib/household-types';
 
 /** The household's own settings (admins change them; members read them), inside the Household card. */
 export function SettingsForm({
@@ -26,6 +26,10 @@ export function SettingsForm({
     weekStartsOn: number;
     splitMode: 'shared' | 'single';
     type: HouseholdType | null;
+    address: string | null;
+    /** Major units as typed, '' for none. */
+    allowance: string;
+    allowancePeriod: AllowancePeriod;
     paymentReferenceTemplate: string;
     membersCanExport: boolean;
   };
@@ -36,6 +40,7 @@ export function SettingsForm({
 }) {
   const t = useTranslations('settings');
   const tt = useTranslations('householdTypes');
+  const tp = useTranslations('allowancePeriods');
   const [state, action, pending] = useActionState<ActionState, FormData>(updateSettingsAction, {});
   const e = state.fieldErrors ?? {};
   return (
@@ -86,6 +91,32 @@ export function SettingsForm({
                 ))}
               </Select>
             </Field>
+            {initial.type === 'investment_property' && (
+              <>
+                <Field label={t('fields.address')} optional>
+                  <Input name="address" defaultValue={initial.address ?? ''} maxLength={120} />
+                </Field>
+                <div className="fld-row">
+                  <Field label={t('fields.allowance')} hint={t('hints.allowance')} optional>
+                    <Input
+                      name="allowance"
+                      inputMode="decimal"
+                      defaultValue={initial.allowance}
+                      className="narrow"
+                    />
+                  </Field>
+                  <Field label={t('fields.allowancePeriod')}>
+                    <Select name="allowancePeriod" defaultValue={initial.allowancePeriod}>
+                      {ALLOWANCE_PERIODS.map((k) => (
+                        <option key={k} value={k}>
+                          {tp(k)}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+                </div>
+              </>
+            )}
             <Field label={t('fields.splitMode')} hint={t('hints.splitMode')}>
               <Select name="splitMode" defaultValue={initial.splitMode}>
                 <option value="shared">{t('splitModes.shared')}</option>

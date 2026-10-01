@@ -20,6 +20,8 @@ import {
 
 /** What kind of household (SCOPE-accounts.md §7). */
 export const HOUSEHOLD_TYPES = ['own_home', 'investment_property', 'share_house'] as const;
+/** How often a utilities allowance resets. */
+export const ALLOWANCE_PERIODS = ['month', 'quarter', 'year'] as const;
 /** Who someone is in a household; `owner` is the admin role. */
 export const MEMBER_ROLES = ['owner', 'member', 'family', 'tenant', 'boarder'] as const;
 
@@ -48,6 +50,18 @@ export const household = sqliteTable(
      * Decides which roles people can have and whether bills are split.
      */
     type: text('type', { enum: HOUSEHOLD_TYPES }),
+    /** An investment property's address, as the landlord typed it (optional; shown to everyone in it). */
+    address: text('address'),
+    /**
+     * A landlord's utilities allowance (SCOPE-accounts.md D17): utilities are
+     * included in the rent up to this much per period; the overage is owed by
+     * the tenants. Null = tenants pay their utilities directly (or not a let
+     * property). Bills in an allowance household create no shares.
+     */
+    allowanceMinor: integer('allowance_minor'),
+    allowancePeriod: text('allowance_period', { enum: ALLOWANCE_PERIODS })
+      .notNull()
+      .default('month'),
     /** Template for payment references, e.g. "{service} {period} {member}". */
     paymentReferenceTemplate: text('payment_reference_template')
       .notNull()

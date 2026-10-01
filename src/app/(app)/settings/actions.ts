@@ -3,14 +3,15 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import type { ActionState } from '@/components/ui/form';
-import { fieldErrors, str, zodToState } from '@/lib/actions';
+import { errorText, fieldErrors, str, zodToState } from '@/lib/actions';
 import { authState, requireOperator, requireOwner, signOut } from '@/lib/auth/session';
 import { replaceAlias } from '@/lib/bills-address';
 import { getHousehold, updateHousehold } from '@/lib/households';
 import { redirect } from 'next/navigation';
 import { exitDemo } from '@/lib/demo';
 import { isGlass, isTheme } from '@/lib/appearance';
-import { HOUSEHOLD_TYPES } from '@/db/schema';
+import { ALLOWANCE_PERIODS, HOUSEHOLD_TYPES } from '@/db/schema';
+import { parseMoneyToMinor } from '@/lib/format';
 import { isHouseholdType } from '@/lib/household-types';
 import { getAppearance, rememberAppearance } from '@/lib/auth/appearance';
 import { setAccountAppearance } from '@/lib/accounts';
@@ -30,6 +31,9 @@ const schema = z.object({
   weekStartsOn: z.coerce.number().int().min(0).max(6),
   splitMode: z.enum(['shared', 'single']),
   type: z.enum(HOUSEHOLD_TYPES).nullable(),
+  address: z.string().max(120),
+  allowance: z.string(),
+  allowancePeriod: z.enum(ALLOWANCE_PERIODS).catch('month'),
   paymentReferenceTemplate: z.string().min(1, 'required').max(60),
   membersCanExport: z.boolean(),
 });
@@ -45,12 +49,24 @@ export async function updateSettingsAction(_prev: ActionState, fd: FormData): Pr
     weekStartsOn: str(fd, 'weekStartsOn'),
     splitMode: str(fd, 'splitMode'),
     type: str(fd, 'type') || null,
+    address: str(fd, 'address'),
+    allowance: str(fd, 'allowance'),
+    allowancePeriod: str(fd, 'allowancePeriod') || 'month',
     paymentReferenceTemplate: str(fd, 'paymentReferenceTemplate'),
     membersCanExport: fd.get('membersCanExport') === 'on',
   });
   if (!parsed.success) return zodToState(parsed.error);
+  const { address, allowance, ...rest } = parsed.data;
+  const let_ = rest.type === 'investment_property';
+  const allowanceMinor = let_ && allowance ? parseMoneyToMinor(allowance, rest.currency) : null;
+  if (let_ && allowance && (allowanceMinor === null || allowanceMinor <= 0))
+    return { fieldErrors: { allowance: (await errorText())('allowanceAmount') } };
   try {
-    updateHousehold(me.householdId, parsed.data);
+    updateHousehold(me.householdId, {
+      ...rest,
+      address: let_ && address ? address : null,
+      allowanceMinor,
+    });
   } catch (e) {
     return { error: (e as Error).message };
   }

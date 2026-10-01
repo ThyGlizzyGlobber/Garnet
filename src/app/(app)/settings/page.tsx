@@ -8,6 +8,7 @@ import { InlineAction } from '@/components/ui/form';
 import { authState, viewerIsOperator } from '@/lib/auth/session';
 import { billsAddress } from '@/lib/bills-address';
 import { pageContext } from '@/lib/context';
+import { formatMinorPlain } from '@/lib/format';
 import { getEnv, isInboundEmailConfigured, isLlmConfigured } from '@/lib/env';
 import { catchUpCount, isReadingMetrics } from '@/ingest/metrics';
 import {
@@ -167,6 +168,12 @@ export default async function SettingsPage() {
                 weekStartsOn: hh.weekStartsOn,
                 splitMode: hh.splitMode,
                 type: hh.type,
+                address: hh.address,
+                allowance:
+                  hh.allowanceMinor !== null
+                    ? formatMinorPlain(hh.allowanceMinor, hh.currency)
+                    : '',
+                allowancePeriod: hh.allowancePeriod,
                 paymentReferenceTemplate: hh.paymentReferenceTemplate,
                 membersCanExport: hh.membersCanExport,
               }}

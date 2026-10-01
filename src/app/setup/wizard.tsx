@@ -10,13 +10,13 @@ import { SwatchPick } from '@/components/app/pieces-client';
 import { PALETTE } from '@/lib/palette';
 import { completeSetup } from './actions';
 import { Icon } from '@/components/app/icons';
-import { HOUSEHOLD_TYPES } from '@/db/schema';
+import { ALLOWANCE_PERIODS, HOUSEHOLD_TYPES } from '@/db/schema';
 import { roleKey, typeIcon, type HouseholdType } from '@/lib/household-types';
 
 const STEPS = ['household', 'where', 'you'] as const;
 type Step = (typeof STEPS)[number];
 const FIELDS: Record<Step, string[]> = {
-  household: ['householdName', 'type'],
+  household: ['householdName', 'type', 'address', 'utilities', 'allowance', 'allowancePeriod'],
   where: ['currency', 'locale', 'timezone', 'fiscalYearStartMonth', 'country', 'postalCode'],
   you: ['ownerName', 'activeFrom', 'colour'],
 };
@@ -51,8 +51,10 @@ export function SetupWizard({
   const tShare = useTranslations('sharing');
   const tt = useTranslations('householdTypes');
   const tr = useTranslations('roles');
+  const tp = useTranslations('allowancePeriods');
   const [step, setStep] = useState<Step>('household');
   const [type, setType] = useState<HouseholdType>('share_house');
+  const [utilities, setUtilities] = useState<'no' | 'yes'>('no');
   const [region, setRegion] = useState({
     currency: defaults.currency,
     timezone: defaults.timezone,
@@ -131,6 +133,53 @@ export function SetupWizard({
                 {tt('yourRole', { role: tr(roleKey('owner', type)) })} {t('hints.type')}
               </span>
             </fieldset>
+            {type === 'investment_property' && (
+              <>
+                <Field label={t('fields.address')} hint={t('hints.address')} optional>
+                  <Input name="address" autoComplete="street-address" maxLength={120} />
+                </Field>
+                <fieldset className="fld">
+                  <legend className="fld-l">{t('fields.utilities')}</legend>
+                  <div className="radio-cards">
+                    {(['no', 'yes'] as const).map((u) => (
+                      <label key={u} className={utilities === u ? 'rcard on' : 'rcard'}>
+                        <input
+                          type="radio"
+                          name="utilities"
+                          value={u}
+                          checked={utilities === u}
+                          onChange={() => setUtilities(u)}
+                        />
+                        <b>{t(`utilities.${u}.label`)}</b>
+                        <span className="muted small">{t(`utilities.${u}.body`)}</span>
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+                {utilities === 'yes' && (
+                  <div className="fld-row">
+                    <Field label={t('fields.allowance')} hint={t('hints.allowance')}>
+                      <Input
+                        name="allowance"
+                        inputMode="decimal"
+                        placeholder="200"
+                        className="narrow"
+                        required
+                      />
+                    </Field>
+                    <Field label={t('fields.allowancePeriod')}>
+                      <Select name="allowancePeriod" defaultValue="month">
+                        {ALLOWANCE_PERIODS.map((k) => (
+                          <option key={k} value={k}>
+                            {tp(k)}
+                          </option>
+                        ))}
+                      </Select>
+                    </Field>
+                  </div>
+                )}
+              </>
+            )}
           </div>
 
           <div {...page('where')}>

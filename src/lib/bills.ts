@@ -21,6 +21,7 @@ import { ownerCondition, type Scope } from '@/lib/scope';
 import { addDays, daysInclusive, todayIn, toUtcMs } from '@/lib/dates';
 import { ulid } from '@/lib/ids';
 import { getHousehold } from '@/lib/households';
+import { hasAllowance } from '@/lib/allowance';
 import { listMembers } from '@/lib/members';
 import { getService, splitSettings, type ServiceWithType } from '@/lib/services';
 import { computeShares, membersInSplit, renderPaymentReference } from '@/lib/splits';
@@ -330,6 +331,9 @@ function insertShares(
 ) {
   // A personal service's bills belong to its owner alone: nothing to split.
   if (svc.ownerMemberId) return;
+  // Under a utilities allowance the landlord covers the bills up to the cap;
+  // what is owed is worked out from the whole period (src/lib/allowance.ts).
+  if (hasAllowance(getHousehold(householdId, tx)!)) return;
   const members = membersInSplit(listMembers(householdId, tx), svc);
   const byId = new Map(members.map((m) => [m.id, m]));
   const settings = splitSettings(householdId, svc, tx);

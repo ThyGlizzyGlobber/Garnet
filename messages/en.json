@@ -33,7 +33,8 @@
     "hideSection": "Hide",
     "households": "Households",
     "accountShort": "Account",
-    "yourHouseholds": "Your households"
+    "yourHouseholds": "Your households",
+    "allowance": "Allowance"
   },
   "setup": {
     "title": "Set up your household.",
@@ -48,7 +49,11 @@
       "ownerName": "Your name",
       "activeFrom": "Living here since",
       "colour": "Your colour",
-      "type": "What kind of household?"
+      "type": "What kind of household?",
+      "address": "Property address",
+      "utilities": "Are utilities included in the rent?",
+      "allowance": "Allowance",
+      "allowancePeriod": "Per"
     },
     "placeholders": {
       "householdName": "Smith Household"
@@ -59,7 +64,9 @@
       "fiscalYearStartMonth": "Annual totals run from this month. July for an Australian financial year, January for a calendar year.",
       "activeFrom": "Bills before this date won’t include you. A rough date is fine.",
       "colour": "For your avatar and your part of split bars.",
-      "type": "You can change this later in Settings."
+      "type": "You can change this later in Settings.",
+      "address": "Optional. Shown to everyone in the property.",
+      "allowance": "Bills up to this much are covered by the rent. Anything over is owed by the tenants."
     },
     "splitModes": {
       "shared": {
@@ -94,7 +101,17 @@
       "body": "You’ll be the household’s first admin."
     },
     "titleAnother": "Start another household.",
-    "sideAnother": "It gets its own bills address, people and settings. Your PIN and your look stay the same."
+    "sideAnother": "It gets its own bills address, people and settings. Your PIN and your look stay the same.",
+    "utilities": {
+      "no": {
+        "label": "No, the tenants pay directly",
+        "body": "Their bills come to the property’s address or they forward them. You keep an eye on them, and your own costs stay yours."
+      },
+      "yes": {
+        "label": "Yes, up to a cap",
+        "body": "You pay the utilities. Set an allowance; once a period’s bills go over it, the overage is owed by the tenants."
+      }
+    }
   },
   "login": {
     "title": "Sign in",
@@ -922,14 +939,18 @@
       "fiscalYearStartMonth": "Financial year starts in",
       "weekStartsOn": "Week starts on",
       "membersCanExport": "Everyone can download the household's bills",
-      "type": "Kind of household"
+      "type": "Kind of household",
+      "address": "Property address",
+      "allowance": "Utilities allowance",
+      "allowancePeriod": "Per"
     },
     "hints": {
       "splitMode": "Switching to single stops new bills being split. Existing shares are kept.",
       "paymentReferenceTemplate": "Placeholders: '{service}', '{period}', '{member}', '{ref}'. Trimmed to 18 characters.",
       "membersCanExport": "Lets every member download the zip of the household's bills and their files (Bills → Download everything), not just admins. Personal bills are only ever in their owner's download.",
       "membersCanExportShort": "Otherwise only admins can",
-      "type": "Decides the roles people can have. Whether bills are split is set just below."
+      "type": "Decides the roles people can have. Whether bills are split is set just below.",
+      "allowance": "Leave empty when the tenants pay their utilities directly. With an amount, bills up to it are covered by the rent and the overage is owed by the tenants."
     },
     "splitModes": {
       "shared": "split between members",
@@ -1972,7 +1993,8 @@
     "assetNotFound": "That vehicle or policy wasn’t found",
     "assetNotAllowed": "Only an admin or whoever added it can change it",
     "chooseAsset": "Choose one",
-    "tooLong": "That’s too long"
+    "tooLong": "That’s too long",
+    "allowanceAmount": "Enter the allowance as an amount, like 200."
   },
   "common": {
     "copy": "Copy",
@@ -2848,5 +2870,37 @@
       "body": "It decides who can be what here, and whether bills are split. You can change it in Settings."
     },
     "yourRole": "You’ll be the {role}."
+  },
+  "allowancePeriods": {
+    "month": "month",
+    "quarter": "quarter",
+    "year": "year"
+  },
+  "allowance": {
+    "title": "Utilities allowance",
+    "lede": "Bills up to {cap} a {period} are covered by the rent. Anything over is owed by the tenants.",
+    "card": "Utilities allowance",
+    "used": "{used} of {cap} used",
+    "left": "{left} left this {period}",
+    "over": "{over} over the allowance",
+    "overOwed": "{over} over · owed by the tenants",
+    "period": "{label}",
+    "nothing": "No bills yet this {period}.",
+    "open": "See the allowance",
+    "logExpense": "Log an expense",
+    "logExpenseSub": "An ad-hoc cost, entered by hand. It counts against the allowance like a bill.",
+    "bills": "What counts this {period}",
+    "byHand": "entered by hand",
+    "owed": "Owed by the tenants",
+    "owedBody": "The overage, split evenly between the tenants living there.",
+    "nobodyOwes": "Nothing owed. The bills are within the allowance.",
+    "message": "Ready to send",
+    "messageBody": "Copy this into a text or an email to the tenants.",
+    "messageText": "Hi all, the utilities for {label} came to {used}, which is {over} over the {cap} allowance included in the rent. That works out to {each} each. Thanks!",
+    "history": "Earlier periods",
+    "historyLine": "{used} used · {over} over",
+    "historyWithin": "{used} used · within the allowance",
+    "tenantsSee": "Tenants see the running total and what is owed once the allowance is exceeded.",
+    "copy": "Copy the message"
   }
 }

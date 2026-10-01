@@ -1,4 +1,4 @@
-import { HOUSEHOLD_TYPES, MEMBER_ROLES } from '@/db/schema';
+import { ALLOWANCE_PERIODS, HOUSEHOLD_TYPES, MEMBER_ROLES } from '@/db/schema';
 
 /**
  * Household types and the roles each allows (SCOPE-accounts.md §7, from the
@@ -68,5 +68,12 @@ export function typeIcon(type: HouseholdType | null): string {
   }
 }
 
-/** Boarders pay a share of some services only (D14): new services leave them out until an admin puts them in. */
-export const paysNoShareByDefault = (role: string): boolean => role === 'boarder';
+/**
+ * Who pays no share of a service unless an admin puts them in: boarders (D14),
+ * and the landlord of a let property, whose tenants split the utilities
+ * between them (D16; the landlord's own costs are their personal services).
+ */
+export const paysNoShareByDefault = (role: string, type: HouseholdType | null): boolean =>
+  role === 'boarder' || (role === 'owner' && type === 'investment_property');
+
+export type AllowancePeriod = (typeof ALLOWANCE_PERIODS)[number];

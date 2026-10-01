@@ -3146,3 +3146,90 @@ input.inp-plain[type='color'] {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* the utilities allowance: Home's card and the page */
+.alw-card {
+  display: grid;
+  gap: 10px;
+}
+.alw-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.alw-head b {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.alw-fig {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.alw-fig > b {
+  font-family: var(--f-num);
+  font-size: 28px;
+  line-height: 1.05;
+}
+.alw-bar {
+  position: relative;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--inset-2);
+  overflow: hidden;
+}
+.alw-bar > i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 999px;
+  background: var(--p-accent);
+}
+.alw-bar.over > i {
+  background: var(--bad);
+}
+.alw-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.alw-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: var(--gap);
+  align-items: start;
+}
+.alw-grid > * {
+  min-width: 0;
+}
+.alw-owed {
+  display: grid;
+  gap: 8px;
+}
+.alw-owed-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.alw-owed-row b {
+  margin-left: auto;
+  font-family: var(--f-num);
+}
+.alw-msg {
+  padding: 12px 14px;
+  border-radius: var(--r-inner);
+  background: var(--inset);
+  box-shadow: inset 0 0 0 1px var(--line);
+  font-size: 14px;
+  white-space: pre-wrap;
+}
+@media (max-width: 899px) {
+  .alw-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

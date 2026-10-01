@@ -12,6 +12,8 @@ import { weatherCodeKey } from '@/lib/weather-codes';
 import { acknowledgeSharingAction, setHouseholdTypeAction } from './settings/actions';
 import { HOUSEHOLD_TYPES } from '@/db/schema';
 import { typeIcon } from '@/lib/household-types';
+import { allowanceView } from '@/lib/allowance';
+import { AllowanceCard } from '@/components/app/allowance-card';
 
 /**
  * Home: a greeting, then the widget grid (BRAND.md §9). Every number comes
@@ -24,6 +26,8 @@ export default async function HomePage() {
   const tsh = await getTranslations('sharing');
   const tw = await getTranslations('weather');
   const tt = await getTranslations('householdTypes');
+  const tp = await getTranslations('allowancePeriods');
+  const allowance = allowanceView(hh, today);
   const data = homeData(hh, me, today);
   const layouts = layoutsFor(hh.id, me.id, 'home', {
     split: data.split,
@@ -64,6 +68,9 @@ export default async function HomePage() {
           </p>
         </div>
       </div>
+      {allowance && (
+        <AllowanceCard view={allowance} locale={hh.locale} periodWord={tp(hh.allowancePeriod)} />
+      )}
       {isAdmin(me) && !hh.type && (
         <div className="glass p-4 text-sm type-ask">
           <div className="min-w-0">
