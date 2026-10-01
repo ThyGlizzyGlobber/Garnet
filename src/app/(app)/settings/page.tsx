@@ -5,7 +5,7 @@ import { Button, Card, LinkButton } from '@/components/ui';
 import { AddressCard, Kv, PageTitle, SectionHead } from '@/components/ui/blocks';
 import { Avatars } from '@/components/ui/colour';
 import { InlineAction } from '@/components/ui/form';
-import { authState, viewerIsOperator } from '@/lib/auth/session';
+import { authState, viewerIsDeveloper } from '@/lib/auth/session';
 import { billsAddress } from '@/lib/bills-address';
 import { pageContext } from '@/lib/context';
 import { formatMinorPlain } from '@/lib/format';
@@ -42,7 +42,7 @@ import { UpdateCard } from './update-card';
  */
 export default async function SettingsPage() {
   const { hh, me, today } = await pageContext();
-  const operator = await viewerIsOperator();
+  const operator = await viewerIsDeveloper();
   const admin = isAdmin(me);
   const address = billsAddress(hh);
   const env = getEnv();
@@ -304,7 +304,7 @@ export default async function SettingsPage() {
               <SectionHead
                 title={t('system.title')}
                 right={
-                  <Link href="/status" className="btn btn-plain btn-sm">
+                  <Link href="/console/health" className="btn btn-plain btn-sm">
                     {t('system.status')}
                   </Link>
                 }

@@ -13,12 +13,12 @@ import { weatherStatus } from '@/lib/weather';
 /**
  * Everything the status page shows. The household's own reading figures are
  * for every member; `install` (bills addresses, weather service, area figures, the
- * reader's model) describes the whole install, so only operators get it.
+ * reader's model) describes the whole install, so only developers get it.
  */
 export function statusView(
   householdId: string,
   memberId: string,
-  operator: boolean,
+  developer: boolean,
   db: Db = getDb(),
 ) {
   const env = getEnv();
@@ -40,7 +40,7 @@ export function statusView(
       .where(and(eq(bill.householdId, householdId), isNotNull(bill.weatherFilledAt)))
       .get()!.n,
   };
-  if (!operator) return { household, install: null };
+  if (!developer) return { household, install: null };
 
   const install = {
     billsAddresses: {

@@ -49,6 +49,7 @@ export async function shellLabels(householdName: string): Promise<ShellLabels> {
     householdHome: t('householdHome', { household: householdName }),
     households: t('households'),
     account: t('accountShort'),
+    console: t('console'),
     yourHouseholds: t('yourHouseholds'),
     switcher: {
       title: ts('title'),

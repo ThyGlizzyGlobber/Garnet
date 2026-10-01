@@ -32,14 +32,14 @@ beforeAll(() => {
   const opened = openDb(dir);
   db = opened.db;
   close = () => opened.sqlite.close();
-  process.env.OPERATOR_EMAILS = 'dev@example.com';
+  process.env.DEVELOPER_EMAILS = 'dev@example.com';
   resetEnvCache();
 });
 
 afterAll(() => {
   close();
   fs.rmSync(dir, { recursive: true, force: true });
-  delete process.env.OPERATOR_EMAILS;
+  delete process.env.DEVELOPER_EMAILS;
   resetEnvCache();
 });
 

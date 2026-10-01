@@ -86,3 +86,8 @@ export function forgetOtherDevices(accountId: string, keepId: string, db: Db = g
     .where(and(eq(device.accountId, accountId), ne(device.id, keepId)))
     .run().changes;
 }
+
+/** Sign an account out of every browser (the console's "sign out everywhere"). */
+export function forgetAllDevices(accountId: string, db: Db = getDb()): number {
+  return db.delete(device).where(eq(device.accountId, accountId)).run().changes;
+}

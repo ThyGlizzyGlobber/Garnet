@@ -1,0 +1,1 @@
+ALTER TABLE `household` ADD `ai_cap` integer;

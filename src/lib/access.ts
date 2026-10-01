@@ -10,7 +10,7 @@ import {
   type AllowedSignup,
 } from '@/db/schema';
 import { normaliseEmail } from '@/lib/auth/tokens';
-import { operatorEmails } from '@/lib/env';
+import { developerEmails } from '@/lib/env';
 import { ulid } from '@/lib/ids';
 
 /**
@@ -101,7 +101,7 @@ function hasAccount(email: string, db: Db): boolean {
  */
 export function maySignUp(rawEmail: string, db: Db = getDb()): boolean {
   const email = normaliseEmail(rawEmail);
-  if (hasAccount(email, db) || operatorEmails().includes(email) || isInvited(email, db))
+  if (hasAccount(email, db) || developerEmails().includes(email) || isInvited(email, db))
     return true;
   if (!earlyAccessOn(db)) return true;
   return isAllowed(email, db);
@@ -174,7 +174,7 @@ export function seedAllowedFromAccounts(db: Db = getDb()): number {
       .from(account)
       .all()
       .map((a) => a.email),
-    ...operatorEmails(),
+    ...developerEmails(),
   ];
   return allowEmails(emails, { accountId: null, note: 'already here' }, db);
 }

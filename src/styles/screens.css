@@ -3233,3 +3233,86 @@ input.inp-plain[type='color'] {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* ---------- the console (developers) ---------- */
+.con-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: -4px 0 4px;
+}
+.con-tab {
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: var(--inset);
+  box-shadow: inset 0 0 0 1px var(--line);
+  color: var(--p-fg2);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 13.5px;
+}
+.con-tab.on {
+  background: var(--p-accent);
+  color: var(--p-on-accent);
+  box-shadow: none;
+}
+.con-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--gap);
+}
+.con-stat {
+  display: grid;
+  gap: 4px;
+}
+.con-stat b {
+  font-family: var(--f-num);
+  font-size: 26px;
+  line-height: 1.05;
+}
+.con-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+.con-table th {
+  text-align: left;
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--p-fg3);
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--line);
+}
+.con-table td {
+  padding: 9px 8px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+.con-table tr:last-child td {
+  border-bottom: 0;
+}
+.con-table .num {
+  font-family: var(--f-num);
+  text-align: right;
+  white-space: nowrap;
+}
+.con-table .acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+}
+.con-table .acts form {
+  display: contents;
+}
+.con-scroll {
+  overflow-x: auto;
+}
+.con-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.con-inline input {
+  width: 72px;
+}

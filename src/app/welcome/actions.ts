@@ -5,7 +5,7 @@ import { getTranslations } from 'next-intl/server';
 import type { ActionState } from '@/components/ui/form';
 import { str } from '@/lib/actions';
 import {
-  isOperator,
+  isDeveloper,
   linkMember,
   membershipsFor,
   setAccountPin,
@@ -61,7 +61,7 @@ export async function signInForInviteAction(fd: FormData): Promise<void> {
 export async function claimOwnerAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
   const account = await requireAccount();
   const t = await getTranslations('welcome.claim');
-  if (!isOperator(account) || membershipsFor(account.id).length) redirect('/');
+  if (!isDeveloper(account) || membershipsFor(account.id).length) redirect('/');
   const target = unclaimedOwners().find((m) => m.id === str(fd, 'memberId'));
   if (
     !target?.pinHash ||

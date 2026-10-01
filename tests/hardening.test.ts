@@ -10,6 +10,7 @@ import { processDocument } from '@/ingest/pipeline';
 import { linkMember, signInAccount } from '@/lib/accounts';
 import { createMember } from '@/lib/members';
 import { countDevices, findDevice, forgetOtherDevices, trustDevice } from '@/lib/auth/devices';
+import { uncapDeveloperHouseholds } from '@/lib/console';
 import { resetEnvCache } from '@/lib/env';
 import { createHousehold } from '@/lib/households';
 import { IP_LIMITS, ipAllowed, resetRateLimits } from '@/lib/rate-limit';
@@ -153,9 +154,9 @@ describe('AI reading cap', () => {
     expect(usageCount(hh.id, AI_READ, db)).toBe(0);
   });
 
-  it('never caps a household the operator belongs to, and still counts its reads', () => {
+  it('gives the developers’ own households no cap (an explicit entry), and still counts their reads', () => {
     process.env.AI_MONTHLY_LIMIT = '0';
-    process.env.OPERATOR_EMAILS = 'Owner@Example.com';
+    process.env.DEVELOPER_EMAILS = 'Owner@Example.com';
     resetEnvCache();
     try {
       const mine = household('Operator home');
@@ -171,6 +172,7 @@ describe('AI reading cap', () => {
       };
       put(mine.id, 'owner@example.com');
       put(theirs.id, 'aunt@example.com');
+      expect(uncapDeveloperHouseholds(db)).toBe(1);
       recordUsage(mine.id, AI_READ, db);
       expect(aiAllowance(mine.id, db)).toEqual({
         used: 1,
@@ -179,7 +181,7 @@ describe('AI reading cap', () => {
       });
       expect(aiAllowance(theirs.id, db)).toEqual({ used: 0, limit: 0, left: 0 });
     } finally {
-      delete process.env.OPERATOR_EMAILS;
+      delete process.env.DEVELOPER_EMAILS;
       resetEnvCache();
     }
   });

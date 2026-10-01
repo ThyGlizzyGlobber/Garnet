@@ -3,7 +3,7 @@ import { getDb, type Db } from '@/db/client';
 import { account, household, member, type Account, type Member } from '@/db/schema';
 import { markAllowedUsed } from '@/lib/access';
 import { normaliseEmail } from '@/lib/auth/tokens';
-import { operatorEmails } from '@/lib/env';
+import { developerEmails } from '@/lib/env';
 import { ulid } from '@/lib/ids';
 
 export function getAccount(id: string, db: Db = getDb()): Account | null {
@@ -21,8 +21,8 @@ function getAccountByEmail(email: string, db: Db = getDb()): Account | null {
 }
 
 /** Operators run the install (software updates, mailbox polling). Set by OPERATOR_EMAILS. */
-export function isOperator(a: Pick<Account, 'email'> | null | undefined): boolean {
-  return !!a && operatorEmails().includes(a.email);
+export function isDeveloper(a: Pick<Account, 'email'> | null | undefined): boolean {
+  return !!a && developerEmails().includes(a.email);
 }
 
 /**
@@ -181,7 +181,7 @@ export function rememberLastMember(accountId: string, memberId: string, db: Db =
 
 /**
  * Owners of real (non-demo) households created before accounts existed. The
- * operator links one of these to their account once, confirming with its old PIN.
+ * developer links one of these to their account once, confirming with its old PIN.
  */
 export function unclaimedOwners(db: Db = getDb()): (Member & { householdName: string })[] {
   return db

@@ -61,6 +61,8 @@ export interface ShellView {
   /** The household's bills address, for the Add bill sheet. */
   address: string | null;
   me: { name: string; colour: string; admin: boolean; role: string };
+  /** A developer of the install sees the Console (SCOPE-console.md). */
+  developer: boolean;
 }
 
 export function shellView(hh: Household, me: Member, today: string, db: Db = getDb()): ShellView {
@@ -105,6 +107,7 @@ export function shellView(hh: Household, me: Member, today: string, db: Db = get
     inboxCount: documentCounts(hh.id, { viewer: me.id }, db).needs_review,
     address: billsAddress(hh, db),
     me: { name: me.name, colour: me.colour, admin: isAdmin(me), role: me.role },
+    developer: false,
   };
 }
 

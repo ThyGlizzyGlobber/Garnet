@@ -5,6 +5,7 @@ import { purgeEmailEnvelopes, purgeOrphanedBillDocuments } from '@/ingest/archiv
 import { adoptSetUpBy } from '@/ingest/set-up-by';
 import { ANOMALY_RULE_VERSION, refreshAllAnomalies } from '@/lib/bills';
 import { seedAllowedFromAccounts } from '@/lib/access';
+import { uncapDeveloperHouseholds } from '@/lib/console';
 import { adoptLegacyDemoFlag } from '@/lib/demo';
 import { getEnv } from '@/lib/env';
 import { ensureDataDirs } from '@/lib/paths';
@@ -54,6 +55,16 @@ export async function prepareInstall(): Promise<void> {
     fs.rmSync(path.join(ensureDataDirs().config, 'imap-state.json'), { force: true }),
   );
 
+  if (env.OPERATOR_EMAILS && !env.DEVELOPER_EMAILS)
+    console.warn(
+      '[env] OPERATOR_EMAILS is now DEVELOPER_EMAILS; the old name still works for this release.',
+    );
+  // The developers' own households used to be uncapped by rule; now it's an explicit entry (C-D4).
+  log(
+    'usage',
+    runOnce('2026-10-01 developers households no cap', () => uncapDeveloperHouseholds()),
+    'gave {n} household(s) of developers no AI cap',
+  );
   // Early access is on from the first build with it: everyone already here is on the list.
   log(
     'access',

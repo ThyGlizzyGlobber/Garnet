@@ -7,7 +7,7 @@ import { runMigrations } from '@/db/migrate';
 import {
   accountGivenName,
   getAccount,
-  isOperator,
+  isDeveloper,
   linkMember,
   listAccounts,
   membershipsFor,
@@ -114,14 +114,14 @@ describe('accounts', () => {
     expect(new Set(all.map((x) => x.method))).toEqual(new Set(['code', 'google']));
   });
 
-  it('are operators only when listed in OPERATOR_EMAILS', () => {
-    process.env.OPERATOR_EMAILS = 'Owner@Example.com, other@example.com';
+  it('are operators only when listed in DEVELOPER_EMAILS', () => {
+    process.env.DEVELOPER_EMAILS = 'Owner@Example.com, other@example.com';
     resetEnvCache();
-    expect(isOperator({ email: 'owner@example.com' })).toBe(true);
-    expect(isOperator({ email: 'someone@example.com' })).toBe(false);
-    delete process.env.OPERATOR_EMAILS;
+    expect(isDeveloper({ email: 'owner@example.com' })).toBe(true);
+    expect(isDeveloper({ email: 'someone@example.com' })).toBe(false);
+    delete process.env.DEVELOPER_EMAILS;
     resetEnvCache();
-    expect(isOperator({ email: 'owner@example.com' })).toBe(false);
+    expect(isDeveloper({ email: 'owner@example.com' })).toBe(false);
   });
 });
 

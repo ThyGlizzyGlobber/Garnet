@@ -4,7 +4,7 @@ import { getIronSession, type SessionOptions } from 'iron-session';
 import type { Account, Member } from '@/db/schema';
 import {
   getAccount,
-  isOperator,
+  isDeveloper,
   membershipsFor,
   pickMember,
   rememberLastMember,
@@ -138,17 +138,17 @@ export async function requireOwner(): Promise<Member> {
   return m;
 }
 
-/** Operator of the install: software updates, service types, install-wide status. */
-export async function requireOperator(): Promise<Member> {
+/** A developer of the install (DEVELOPER_EMAILS): the console, software updates, service types. */
+export async function requireDeveloper(): Promise<Member> {
   const s = await authState();
   if (s.kind !== 'ok') redirect(pathFor(s)!);
-  if (!isOperator(s.account)) redirect('/');
+  if (!isDeveloper(s.account)) redirect('/');
   return s.member;
 }
 
-export async function viewerIsOperator(): Promise<boolean> {
+export async function viewerIsDeveloper(): Promise<boolean> {
   const s = await authState();
-  return s.kind === 'ok' && isOperator(s.account);
+  return s.kind === 'ok' && isDeveloper(s.account);
 }
 
 /**

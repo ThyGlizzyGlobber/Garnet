@@ -125,3 +125,11 @@ export function verifyDelivery(
       : false;
   return safeEqual(signDeliveryV1(secret, String(ts), body), sig) ? 'v1' : false;
 }
+
+/** Turn a household's bills address off (abuse): mail to the old alias is refused from now on. */
+export function clearAlias(householdId: string, db: Db = getDb()): void {
+  db.update(household)
+    .set({ billsAlias: null, updatedAt: new Date().toISOString() })
+    .where(eq(household.id, householdId))
+    .run();
+}

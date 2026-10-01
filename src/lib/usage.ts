@@ -1,7 +1,7 @@
 import { and, eq, sql } from 'drizzle-orm';
 import { getDb, type Db } from '@/db/client';
-import { account, member, usage } from '@/db/schema';
-import { getEnv, operatorEmails } from '@/lib/env';
+import { household, usage } from '@/db/schema';
+import { getEnv } from '@/lib/env';
 
 export const AI_READ = 'ai_read';
 
@@ -47,20 +47,17 @@ export function recordUsage(
 }
 
 /**
- * The install's operator (OPERATOR_EMAILS) reads without a monthly cap in any
- * household they belong to: it's their own API key, and they test with a
- * year of bills at a time. Everyone else keeps AI_MONTHLY_LIMIT.
+ * A household's cap (SCOPE-console.md C-D4): null = the install's
+ * AI_MONTHLY_LIMIT, 0 = no cap, otherwise a number a month. Set from the
+ * console; a one-off step gave the developers' own households no cap.
  */
-function isUncapped(householdId: string, db: Db = getDb()): boolean {
-  const operators = operatorEmails();
-  if (!operators.length) return false;
-  return db
-    .select({ email: account.email })
-    .from(member)
-    .innerJoin(account, eq(member.accountId, account.id))
-    .where(eq(member.householdId, householdId))
-    .all()
-    .some((r) => operators.includes(r.email.toLowerCase()));
+function capFor(householdId: string, db: Db = getDb()): number | null {
+  const row = db
+    .select({ aiCap: household.aiCap })
+    .from(household)
+    .where(eq(household.id, householdId))
+    .get();
+  return row?.aiCap ?? null;
 }
 
 /** AI reads used and allowed this month for a household (limit null = no cap). */
@@ -70,7 +67,9 @@ export function aiAllowance(
   now = Date.now(),
 ): { used: number; limit: number | null; left: number } {
   const used = usageCount(householdId, AI_READ, db, now);
-  if (isUncapped(householdId, db)) return { used, limit: null, left: Number.POSITIVE_INFINITY };
-  const limit = getEnv().AI_MONTHLY_LIMIT;
+  const own = capFor(householdId, db);
+  // The household's own 0 means no cap; the install's limit of 0 means no reads.
+  if (own === 0) return { used, limit: null, left: Number.POSITIVE_INFINITY };
+  const limit = own ?? getEnv().AI_MONTHLY_LIMIT;
   return { used, limit, left: Math.max(0, limit - used) };
 }

@@ -9,7 +9,7 @@ import { z } from 'zod';
 import { CADENCES, SPLIT_MODES, type SplitMode } from '@/db/schema';
 import type { ActionState } from '@/components/ui/form';
 import { errorText, optStr, str, zodToState } from '@/lib/actions';
-import { requireMember, requireOperator } from '@/lib/auth/session';
+import { requireMember, requireDeveloper } from '@/lib/auth/session';
 import { refreshAnomalies, resplitBills, setServiceOwner } from '@/lib/bills';
 import { parseMoneyToMinor } from '@/lib/format';
 import { getHousehold } from '@/lib/households';
@@ -240,7 +240,7 @@ export async function updateServiceAction(_prev: ActionState, fd: FormData): Pro
  * add to it; "Other" plus the service's own name covers anything missing.
  */
 export async function createServiceTypeAction(fd: FormData): Promise<void> {
-  await requireOperator();
+  await requireDeveloper();
   const label = str(fd, 'label').slice(0, 40);
   const unit = optStr(fd, 'defaultUnit');
   if (!label || (unit && !UNITS.has(unit))) return;

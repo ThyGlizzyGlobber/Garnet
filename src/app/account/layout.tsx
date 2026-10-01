@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { AppShell } from '@/components/app/shell';
 import { shellLabels } from '@/components/app/shell-labels';
 import { householdTiles } from '@/lib/account';
-import { accountGivenName } from '@/lib/accounts';
+import { accountGivenName, isDeveloper } from '@/lib/accounts';
 import { authState, pathFor } from '@/lib/auth/session';
 import { formatMoney } from '@/lib/format';
 import { DEFAULT_COLOUR } from '@/lib/palette';
@@ -35,6 +35,7 @@ export default async function AccountLayout({ children }: { children: ReactNode 
     inboxCount: 0,
     address: null,
     me: { name, colour: me?.colour ?? DEFAULT_COLOUR, admin: false, role: 'member' },
+    developer: isDeveloper(account),
   };
   return (
     <AppShell

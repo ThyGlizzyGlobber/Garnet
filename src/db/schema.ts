@@ -62,6 +62,8 @@ export const household = sqliteTable(
     allowancePeriod: text('allowance_period', { enum: ALLOWANCE_PERIODS })
       .notNull()
       .default('month'),
+    /** AI reads a month for this household (SCOPE-console.md C-D4): null = the install's limit, 0 = no cap. */
+    aiCap: integer('ai_cap'),
     /** Template for payment references, e.g. "{service} {period} {member}". */
     paymentReferenceTemplate: text('payment_reference_template')
       .notNull()

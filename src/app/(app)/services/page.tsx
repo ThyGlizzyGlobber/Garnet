@@ -10,7 +10,7 @@ import { StatusChip } from '@/components/ui/chip';
 import { Disc } from '@/components/ui/colour';
 import { Segmented } from '@/components/ui/controls';
 import { CopyButton } from '@/components/ui/copy';
-import { viewerIsOperator } from '@/lib/auth/session';
+import { viewerIsDeveloper } from '@/lib/auth/session';
 import { billsAddress } from '@/lib/bills-address';
 import { pageContext } from '@/lib/context';
 import { colourCss } from '@/lib/palette';
@@ -54,7 +54,7 @@ export default async function ServicesPage({
   // Any month up to next month (?m=YYYY-MM); this month by default.
   const picked = /^\d{4}-\d{2}$/.test(m ?? '') && m! <= addMonths(thisMonth, 1) ? m! : thisMonth;
   const view = servicesMonth(hh, me.id, ctx.today, picked, scope);
-  const operator = await viewerIsOperator();
+  const operator = await viewerIsDeveloper();
   const address = billsAddress(hh);
   const count = listServices(hh.id, { viewer: me.id }).length;
   const href = (q: { m?: string | null; scope?: MonthScope }) => {

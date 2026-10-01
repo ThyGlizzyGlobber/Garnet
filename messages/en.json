@@ -34,7 +34,8 @@
     "households": "Households",
     "accountShort": "Account",
     "yourHouseholds": "Your households",
-    "allowance": "Allowance"
+    "allowance": "Allowance",
+    "console": "Console"
   },
   "setup": {
     "title": "Set up your household.",
@@ -1351,7 +1352,7 @@
       "needsKey": "Needs ANTHROPIC_API_KEY",
       "threshold": "Results below {pct}% confidence go to the review queue.",
       "aiUsage": "AI reads this month: {used} of {limit}. After that, new documents wait in the review queue until next month.",
-      "aiUsageUncapped": "AI reads this month: {used} (no monthly cap for the operator's household).",
+      "aiUsageUncapped": "AI reads this month: {used} (no cap for this household).",
       "thresholdLabel": "Confidence needed"
     },
     "weather": {
@@ -1388,7 +1389,7 @@
       "olderWorkerHint": "The email Worker still signs messages without the household's address. Paste deploy/email-worker/worker.js into the Worker in Cloudflare; from its first message on, the older signature is refused.",
       "worker": "Email Worker"
     },
-    "lede": "For the operator only. Nobody in a household sees this page.",
+    "lede": "For developers only. Nobody in a household sees this page.",
     "software": {
       "title": "Software",
       "installed": "Installed",
@@ -1879,7 +1880,7 @@
       "title": "Who can see it",
       "points": [
         "Only members of your household see your household's bills, shares and documents.",
-        "The operator who runs this installation can reach the stored data to keep the app working, but doesn't browse households' bills."
+        "The developers who run this installation can reach the stored data to keep the app working, but doesn't browse households' bills."
       ]
     },
     "area": {
@@ -1904,7 +1905,7 @@
     "where": {
       "title": "Where it's kept",
       "points": [
-        "On the operator's own server. Bill files are kept until the bill is deleted; deleting a bill deletes its file.",
+        "On the developers’ own server. Bill files are kept until the bill is deleted; deleting a bill deletes its file.",
         "Backups of the database are taken before each software update."
       ]
     },
@@ -1913,12 +1914,12 @@
       "points": [
         "Household admins can turn area comparisons off, remove the household's postcode, and delete bills.",
         "Each member controls which emails they get, from their own member page.",
-        "To see or correct what the app holds about you, or to have your household removed, ask your household admin or the operator."
+        "To see or correct what the app holds about you, or to have your household removed, ask your household admin or the developer."
       ]
     },
     "contact": {
       "title": "Contact",
-      "points": ["Questions about this notice go to the operator of this installation."]
+      "points": ["Questions about this notice go to the developers of this installation."]
     },
     "back": "Back to the app",
     "eyebrow": "Privacy · version {version}"
@@ -2927,5 +2928,118 @@
     "historyWithin": "{used} used · within the allowance",
     "tenantsSee": "Tenants see the running total and what is owed once the allowance is exceeded.",
     "copy": "Copy the message"
+  },
+  "console": {
+    "title": "Console",
+    "lede": "The install, for developers. Counts and facts, never anyone’s bills.",
+    "tabs": {
+      "overview": "Overview",
+      "households": "Households",
+      "accounts": "Accounts",
+      "access": "Access",
+      "health": "Health",
+      "audit": "Audit"
+    },
+    "overview": {
+      "households": "{count, plural, one {# household} other {# households}}",
+      "householdsSub": "{demo, plural, =0 {none demo} one {# demo} other {# demo}}",
+      "accounts": "{count, plural, one {# account} other {# accounts}}",
+      "accountsSub": "{week, plural, =0 {none this week} one {# this week} other {# this week}}",
+      "reads": "{count, plural, one {# analysis} other {# analyses}} this month",
+      "readsSub": "{limit} a household a month unless overridden",
+      "inbound": "{count, plural, one {# message} other {# messages}} this week",
+      "inboundSub": "to the bills addresses",
+      "waiting": "{count, plural, =0 {nothing waiting} one {# document waiting} other {# documents waiting}}",
+      "waitingSub": "across every household",
+      "software": "Software",
+      "requests": "{count, plural, =0 {no requests} one {# request} other {# requests}} to look at",
+      "requestsSub": "people asking to be let in"
+    },
+    "households": {
+      "lede": "Every household on the install. Counts and totals only.",
+      "name": "Household",
+      "type": "Kind",
+      "people": "People",
+      "created": "Created",
+      "active": "Last activity",
+      "bills": "Bills this month",
+      "reads": "Analyses",
+      "address": "Bills address",
+      "sharing": "Area figures",
+      "cap": "Cap",
+      "demo": "Demo",
+      "untyped": "Not set",
+      "addressOn": "On",
+      "addressOff": "Off",
+      "sharingOn": "On",
+      "sharingOff": "Off",
+      "capDefault": "Default ({limit})",
+      "capNone": "No cap",
+      "capN": "{n} a month",
+      "setCap": "Change the cap",
+      "capHint": "Blank for the install’s limit, 0 for no cap, or a number a month.",
+      "save": "Save",
+      "addressOffCta": "Turn the address off",
+      "addressOffConfirm": "Turn off the bills address for {household}? Mail to it is refused from now on; an admin can make a new one in Settings.",
+      "deleteDemo": "Delete the demo household",
+      "deleteDemoConfirm": "Delete {household} and everything in it? It is fictional; this can’t be undone.",
+      "open": "Open",
+      "notMember": "Not a member"
+    },
+    "accounts": {
+      "lede": "Everyone who has signed in. Email, how they sign in and where they belong; never a PIN.",
+      "email": "Email",
+      "name": "Name",
+      "signsIn": "Signs in with",
+      "households": "Households",
+      "created": "Created",
+      "last": "Last sign-in",
+      "devices": "Devices",
+      "none": "No household yet",
+      "never": "never",
+      "signOutAll": "Sign out everywhere",
+      "signOutAllConfirm": "Sign {email} out of every browser? They sign in again with Google or a code.",
+      "delete": "Delete account",
+      "deleteConfirm": "Delete the account {email}? Only possible while it belongs to no household.",
+      "list": "Add to the list",
+      "unlist": "Remove from the list",
+      "listed": "On the list"
+    },
+    "access": {
+      "lede": "Who may sign up while early access is on. Invites always work, whatever the list says.",
+      "switch": "Early access",
+      "switchOn": "On · invitation-only",
+      "switchOff": "Off · anyone can sign up",
+      "turnOn": "Turn on",
+      "turnOff": "Turn off",
+      "turnOffConfirm": "Open sign-up to anyone with an email address?",
+      "requests": "Requests",
+      "noRequests": "Nobody is waiting.",
+      "approve": "Let them in",
+      "decline": "Decline",
+      "approved": "Let in",
+      "declined": "Declined",
+      "list": "The list",
+      "add": "Add addresses",
+      "addHint": "One per line, or separated by commas.",
+      "note": "Note",
+      "noteHint": "Optional: who they are.",
+      "addCta": "Add",
+      "added": "{count, plural, =0 {Nothing new} one {# address added} other {# addresses added}}",
+      "email": "Email",
+      "addedBy": "Added",
+      "used": "Signed up",
+      "notUsed": "Not yet",
+      "remove": "Remove",
+      "empty": "Nobody on the list yet."
+    },
+    "health": {
+      "storage": "Storage",
+      "database": "Database",
+      "files": "Bill files",
+      "originals": "Originals",
+      "previews": "Previews",
+      "free": "Free on the volume"
+    }
   }
 }

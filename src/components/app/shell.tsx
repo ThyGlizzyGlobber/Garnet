@@ -51,6 +51,7 @@ export interface ShellLabels {
   /** The Account Dashboard's nav (the account variant). */
   households: string;
   account: string;
+  console: string;
   /** "Your households", under the product's name in the account variant. */
   yourHouseholds: string;
   switcher: SwitcherLabels;
@@ -81,6 +82,7 @@ export function AppShell({
     ? [
         { href: '/account', label: labels.households, icon: 'grid' },
         { href: '/account#account', label: labels.account, icon: 'user' },
+        ...(view.developer ? [{ href: '/console', label: labels.console, icon: 'sliders' }] : []),
       ]
     : [
         { href: '/', label: labels.nav.home, icon: 'home' },

@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import type { ActionState } from '@/components/ui/form';
 import { errorText, fieldErrors, str, zodToState } from '@/lib/actions';
-import { authState, requireOperator, requireOwner, signOut } from '@/lib/auth/session';
+import { authState, requireDeveloper, requireOwner, signOut } from '@/lib/auth/session';
 import { replaceAlias } from '@/lib/bills-address';
 import { getHousehold, updateHousehold } from '@/lib/households';
 import { redirect } from 'next/navigation';
@@ -103,20 +103,20 @@ export async function exitDemoAction(): Promise<void> {
 
 /** Owner only: queue an update for the NAS cron job to apply. */
 export async function requestUpdateAction(): Promise<void> {
-  const me = await requireOperator();
+  const me = await requireDeveloper();
   requestUpdate(me.name);
   revalidatePath('/settings');
 }
 
 export async function cancelUpdateAction(): Promise<void> {
-  await requireOperator();
+  await requireDeveloper();
   cancelUpdateRequest();
   revalidatePath('/settings');
 }
 
 /** Skip the short cache and ask GitHub again. */
 export async function recheckUpdateAction(): Promise<void> {
-  await requireOperator();
+  await requireDeveloper();
   await checkForUpdate({ fresh: true });
   revalidatePath('/settings');
 }

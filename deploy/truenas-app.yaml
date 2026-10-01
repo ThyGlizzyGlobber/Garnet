@@ -28,7 +28,7 @@ services:
       AUTH_DEVICE_DAYS: '180'
       # Sign-in (DEPLOY.md §8): without an email service nobody can sign in by code.
       APP_URL: '<https://your-public-address>'
-      OPERATOR_EMAILS: '<your email>'
+      DEVELOPER_EMAILS: '<your email>'
       RESEND_API_KEY: '<re_...>'
       EMAIL_FROM: 'Home Utilities <bills@your-domain>'
       GOOGLE_CLIENT_ID: ''

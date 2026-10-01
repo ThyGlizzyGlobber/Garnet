@@ -3,7 +3,7 @@ import { getTranslations } from 'next-intl/server';
 import { AuthHead, AuthShell } from '@/components/app/auth-shell';
 import { JoinCodeForm, PinForm } from '@/components/app/auth-forms';
 import { Choice } from '@/components/app/pieces';
-import { accountGivenName, isOperator, unclaimedOwners } from '@/lib/accounts';
+import { accountGivenName, isDeveloper, unclaimedOwners } from '@/lib/accounts';
 import { authState, pathFor } from '@/lib/auth/session';
 import { logout } from '../login/actions';
 import { claimOwnerAction, joinWithCodeAction } from './actions';
@@ -14,7 +14,7 @@ export default async function WelcomePage() {
   const state = await authState();
   if (state.kind !== 'no-household') redirect(pathFor(state) ?? '/');
   const t = await getTranslations('welcome');
-  const claimable = isOperator(state.account) ? unclaimedOwners() : [];
+  const claimable = isDeveloper(state.account) ? unclaimedOwners() : [];
   const name = accountGivenName(state.account);
   return (
     <AuthShell>

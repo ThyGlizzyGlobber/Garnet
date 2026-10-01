@@ -309,6 +309,13 @@
       "when": 1790859219776,
       "tag": "0043_early_access",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "6",
+      "when": 1790859596734,
+      "tag": "0044_ai_cap",
+      "breakpoints": true
     }
   ]
 }

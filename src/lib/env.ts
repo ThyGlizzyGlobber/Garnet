@@ -28,13 +28,15 @@ const envSchema = z.object({
   AUTH_DEVICE_DAYS: z.coerce.number().int().positive().default(180),
   /** Public base URL, e.g. https://home.example.com. Used in emails and the Google redirect. */
   APP_URL: z.string().url().optional(),
-  /** Comma-separated emails that get operator rights (software updates, service types). */
+  /** Comma-separated emails of the developers who run the install (the console, updates, service types). */
+  DEVELOPER_EMAILS: z.string().default(''),
+  /** The old name for DEVELOPER_EMAILS; read while it's still set, with a warning at startup. */
   OPERATOR_EMAILS: z.string().default(''),
 
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   RESEND_API_KEY: z.string().optional(),
-  EMAIL_FROM: z.string().default('Home Utilities <no-reply@localhost>'),
+  EMAIL_FROM: z.string().default('Garnet <no-reply@localhost>'),
   /** Write emails to the server log instead of sending (local testing, or before email is set up). */
   EMAIL_LOG_ONLY: boolish.default(false),
 
@@ -144,8 +146,9 @@ export function appUrl(env: Env = getEnv()): string {
   return (env.APP_URL ?? `http://localhost:${env.PORT}`).replace(/\/+$/, '');
 }
 
-export function operatorEmails(env: Env = getEnv()): string[] {
-  return env.OPERATOR_EMAILS.split(',')
+export function developerEmails(env: Env = getEnv()): string[] {
+  return (env.DEVELOPER_EMAILS || env.OPERATOR_EMAILS)
+    .split(',')
     .map((e) => e.trim().toLowerCase())
     .filter(Boolean);
 }
