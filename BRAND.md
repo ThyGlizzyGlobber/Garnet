@@ -328,13 +328,19 @@ The studio's `.ring` is `.gauge` here (Tailwind owns `ring`):
   household at the top, then Home · Services · Bills · Money · Members · Inbox
   (42 px items, radius 14), then the services with this month's amount
   beside each, and you at the foot.
-- **The services in the column** are arranged by each person: their own
-  groups first, then Other Services (in no group), then My Services (their
-  own; always last, never renamed, only reordered). The pencil beside
-  "Services" starts arranging: round Pyrope tick-boxes on each service, a
-  name field once some are ticked ("e.g. Essentials"), dragging with an iOS
-  blue drop line (`--drop-line`), and the pencil becomes a round Pyrope tick
-  that saves. The Services page shows the same groups in the same order.
+- **The services in the column** are arranged by each person, by dragging
+  (no edit mode), in two parts under bold titles: **Services** (the
+  household's) and, under a rule, **My Services** (their own). Each part is
+  laid out the same way: the person's groups, then the services in no group
+  (under "Other Services" once there are groups), then a dashed button, "New
+  Service Group" or "New Personal Group", that opens a name field. A service
+  or a whole group (by its heading) is dragged where an iOS-blue line shows
+  (`--drop-line`); a new group starts with a dashed "Drag services here"
+  space; a group renames on a double-click and has a × on hover that asks
+  "Are you sure? · I'm sure · Cancel" in the heading itself. A person's own
+  services stay in My Services. The services inside a main service
+  (Vehicles' vehicles, Donations' charities) drag into order the same way.
+  The Services page and each main service's page show the same order.
 - **Switches** are iOS green when on (`--toggle-on`: `#34c759` light,
   `#30d158` dark) and the pale track when off.
 - **The household switcher**: the household's name drops down a plain list of

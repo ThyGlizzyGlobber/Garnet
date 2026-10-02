@@ -15,7 +15,7 @@ import { billsAddress } from '@/lib/bills-address';
 import { pageContext } from '@/lib/context';
 import { colourCss } from '@/lib/palette';
 import { addMonths } from '@/lib/periods';
-import { arrange, orderMine } from '@/lib/nav-layout';
+import { arrange, arrangeMine } from '@/lib/nav-layout';
 import { getNavLayout } from '@/lib/nav-store';
 import { groupTypes, isEssential } from '@/lib/service-categories';
 import { listServiceTypes, listServices } from '@/lib/services';
@@ -224,11 +224,11 @@ export default async function ServicesPage({
     isEveryday,
   ).filter((sec) => sec.entries.length > 0);
   // My Services, the viewer's own, last.
-  const mine = orderMine(
+  const mine = arrangeMine(
     view.entries.filter((e) => e.mine),
     (e) => e.key,
     layout,
-  );
+  ).filter((sec) => sec.entries.length > 0);
   const c = view.counts;
   const right = (
     <>
@@ -331,12 +331,22 @@ export default async function ServicesPage({
               <div className="st-grid">{sec.entries.map(entry)}</div>
             </Fragment>
           ))}
-          {mine.length > 0 && (
-            <>
-              <SectionHead title={tm('myServices')} className={sections.length ? 'mt-2' : ''} />
-              <div className="st-grid">{mine.map(entry)}</div>
-            </>
-          )}
+          {/* My Services: the viewer's own groups, then their own in no group. */}
+          {mine.map((sec, i) => (
+            <Fragment key={sec.group?.id ?? 'mine'}>
+              <SectionHead
+                title={
+                  sec.group
+                    ? `${tm('myServices')} · ${sec.group.name}`
+                    : mine.length > 1
+                      ? `${tm('myServices')} · ${tm('otherServices')}`
+                      : tm('myServices')
+                }
+                className={sections.length || i ? 'mt-2' : ''}
+              />
+              <div className="st-grid">{sec.entries.map(entry)}</div>
+            </Fragment>
+          ))}
         </>
       )}
       {operator && (

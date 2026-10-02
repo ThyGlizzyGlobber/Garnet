@@ -155,8 +155,6 @@
   --g-solid: #f7f7f7;
   /* The side menu: graphite at 75% (owner, 2026-10-02: solid was jarring), darker in dark mode. */
   --side-bg: rgba(36, 36, 36, 0.75);
-  /* The same, solid: behind what stays pinned in the menu. */
-  --side-solid: #242424;
   /* A switch that's on: iOS green (owner, 2026-10-02); iOS's dark-mode green in dark. */
   --toggle-on: #34c759;
   /* Solid glass for reduced transparency: the scheme's page colour, lifted. */
@@ -268,7 +266,6 @@
   --g-shadow: 0 30px 60px -28px rgba(0, 0, 0, 0.7), 0 2px 8px -4px rgba(0, 0, 0, 0.3);
   --g-solid: #262626;
   --side-bg: rgba(18, 18, 18, 0.75);
-  --side-solid: #161616;
   --toggle-on: #30d158;
   --g-tint: color-mix(in srgb, var(--p-bg) 88%, white);
   --ctl-bg: rgba(255, 255, 255, 0.09);
@@ -373,7 +370,6 @@
     --g-shadow: 0 30px 60px -28px rgba(0, 0, 0, 0.7), 0 2px 8px -4px rgba(0, 0, 0, 0.3);
     --g-solid: #262626;
     --side-bg: rgba(18, 18, 18, 0.75);
-    --side-solid: #161616;
     --toggle-on: #30d158;
     --g-tint: color-mix(in srgb, var(--p-bg) 88%, white);
     --ctl-bg: rgba(255, 255, 255, 0.09);

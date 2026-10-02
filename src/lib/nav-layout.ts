@@ -13,8 +13,11 @@ import { isEssential, type GroupedCategory } from '@/lib/service-categories';
  * the person's own services are the same with an "m" in front ("mc:health").
  * Services in no group come after the groups, in their own order (under
  * "Other Services" once there are groups; with none, they are the whole list).
- * Last comes My Services, the person's own: always there, never renamed,
- * only its order theirs to change.
+ * Last comes My Services, the person's own, laid out the same way: their
+ * own groups, then their own services in no group (only their own services
+ * go in those groups, and none of the household's). Inside a main service, its services (or
+ * Vehicles' vehicles) keep the person's order too, by the main service's key;
+ * the main service's page shows them in it.
  * A service added later joins those; a key that no longer exists is skipped.
  * Pure, so the menu's editor can use it; storing is src/lib/nav-store.ts.
  */
@@ -29,8 +32,12 @@ export interface NavLayout {
   /** In no group: after the groups. */
   loose: string[];
   groups: NavGroup[];
-  /** My Services, the person's own, in their order: last. */
+  /** My Services, the person's own, in no group of theirs: after their own groups. */
   mine: string[];
+  /** The person's own groups inside My Services, first there. */
+  mineGroups: NavGroup[];
+  /** Inside a main service ("c:vehicle", "mt:donations"): its services' or vehicles' ids in order. */
+  children: Record<string, string[]>;
 }
 
 /** What a key stands for, as far as naming a group goes. */
@@ -58,13 +65,49 @@ export function navKey(
   return `${m}s:${g.services[0]!.id}`;
 }
 
-/** My Services in the person's order; any not placed yet last, in list order. */
-export function orderMine<E>(entries: E[], keyOf: (e: E) => string, layout: NavLayout | null): E[] {
-  const at = new Map((layout?.mine ?? []).map((k, i) => [k, i]));
-  return entries
-    .map((e, i) => ({ e, i, at: at.get(keyOf(e)) ?? Infinity }))
+/**
+ * A main service's services (or vehicles) in the person's order: the
+ * household's main service's order first, then their own's (a page shows
+ * both); any not placed yet last, in list order.
+ */
+export function orderChildren<T>(
+  items: T[],
+  idOf: (t: T) => string,
+  layout: NavLayout | null,
+  keys: string[],
+): T[] {
+  const ids = keys.flatMap((k) => layout?.children[k] ?? []);
+  const at = new Map(ids.map((id, i) => [id, i]));
+  return items
+    .map((t, i) => ({ t, i, at: at.get(idOf(t)) ?? Infinity }))
     .sort((a, b) => a.at - b.at || a.i - b.i)
-    .map((x) => x.e);
+    .map((x) => x.t);
+}
+
+/**
+ * My Services in the person's order, laid out like the household's: their
+ * own groups, then their own services in no group (any not placed yet among
+ * them, in list order).
+ */
+export function arrangeMine<E>(
+  entries: E[],
+  keyOf: (e: E) => string,
+  layout: NavLayout | null,
+): ArrangedSection<E>[] {
+  if (!layout) return [{ group: null, entries }];
+  const byKey = new Map(entries.map((e) => [keyOf(e), e]));
+  const placed = new Set<string>();
+  const pick = (keys: string[]) =>
+    keys.flatMap((k) => {
+      const e = byKey.get(k);
+      if (!e || placed.has(k)) return [];
+      placed.add(k);
+      return [e];
+    });
+  const groups = layout.mineGroups.map((g) => ({ group: g, entries: pick(g.items) }));
+  const loose = pick(layout.mine);
+  const rest = entries.filter((e) => !placed.has(keyOf(e)));
+  return [...groups, { group: null, entries: [...loose, ...rest] }];
 }
 
 /** Before anyone arranges anything: the everyday bills first, then the rest, in catalog order. */
@@ -118,7 +161,13 @@ export function parseNavLayout(raw: unknown): NavLayout | null {
     }
   }
   if (!v || typeof v !== 'object') return null;
-  const o = v as { loose?: unknown; groups?: unknown; mine?: unknown };
+  const o = v as {
+    loose?: unknown;
+    groups?: unknown;
+    mine?: unknown;
+    mineGroups?: unknown;
+    children?: unknown;
+  };
   // The household's lines, or (mine) the person's own.
   const keys = (x: unknown, mine = false): string[] =>
     Array.isArray(x)
@@ -131,20 +180,46 @@ export function parseNavLayout(raw: unknown): NavLayout | null {
   if (!Array.isArray(o.groups)) return null;
   const seen = new Set<string>();
   const unique = (ks: string[]) => ks.filter((k) => !seen.has(k) && (seen.add(k), true));
-  const groups = o.groups
-    .filter((g): g is Record<string, unknown> => !!g && typeof g === 'object')
-    .slice(0, MAX_GROUPS)
-    .map((g, i) => ({
-      id: typeof g.id === 'string' && /^[\w-]{1,32}$/.test(g.id) ? g.id : `g${i + 1}`,
-      name: typeof g.name === 'string' ? g.name.trim().slice(0, MAX_NAME) : '',
-      items: unique(keys(g.items)),
-    }));
+  // Group ids are unique across the household's groups and My Services' own.
   const ids = new Set<string>();
-  for (const g of groups) {
-    if (ids.has(g.id)) g.id = `${g.id}-${ids.size}`;
-    ids.add(g.id);
+  const groupsOf = (raw: unknown, mine: boolean): NavGroup[] =>
+    (Array.isArray(raw) ? raw : [])
+      .filter((g): g is Record<string, unknown> => !!g && typeof g === 'object')
+      .slice(0, MAX_GROUPS)
+      .map((g, i) => {
+        let id = typeof g.id === 'string' && /^[\w-]{1,32}$/.test(g.id) ? g.id : `g${i + 1}`;
+        if (ids.has(id)) id = `${id}-${ids.size}`;
+        ids.add(id);
+        return {
+          id,
+          name: typeof g.name === 'string' ? g.name.trim().slice(0, MAX_NAME) : '',
+          items: unique(keys(g.items, mine)),
+        };
+      });
+  const groups = groupsOf(o.groups, false);
+  const mineGroups = groupsOf(o.mineGroups, true);
+  return {
+    loose: unique(keys(o.loose)),
+    groups,
+    mine: unique(keys(o.mine, true)),
+    mineGroups,
+    children: parseChildren(o.children),
+  };
+}
+
+/** The orders inside main services: main-service keys to ids, checked. */
+function parseChildren(raw: unknown): Record<string, string[]> {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
+  const out: Record<string, string[]> = {};
+  for (const [k, v] of Object.entries(raw).slice(0, 40)) {
+    if (!/^m?[ct]:[\w-]{1,64}$/.test(k) || !Array.isArray(v)) continue;
+    out[k] = [
+      ...new Set(
+        v.filter((id): id is string => typeof id === 'string' && /^[\w-]{1,64}$/.test(id)),
+      ),
+    ].slice(0, 200);
   }
-  return { loose: unique(keys(o.loose)), groups, mine: unique(keys(o.mine, true)) };
+  return out;
 }
 
 const ENERGY = new Set(['electricity', 'gas']);
@@ -152,6 +227,37 @@ const UTILITIES = new Set(['electricity', 'gas', 'water', 'internet', 'phone']);
 const CONNECTED = new Set(['internet', 'phone']);
 const HOME = new Set(['rent', 'c:home']);
 const LEISURE = new Set(['subscriptions', 'c:lifestyle', 'donations']);
+const FITNESS = new Set(['c:health', 'c:lifestyle']);
+
+/** What a line is, for naming: "c:health" for a main service, else its type ("electricity"). */
+const kindOf = (l: NavLine) => (l.category ? `c:${l.category}` : (l.typeSlug ?? ''));
+
+/**
+ * The themes an example name is drawn from, most familiar first: the
+ * everyday bills, the home, health and fitness, subscriptions and giving,
+ * the car.
+ */
+const THEMES = [
+  new Set(['internet', 'electricity', 'gas', 'water', 'phone', 'rent']),
+  HOME,
+  FITNESS,
+  new Set(['subscriptions', 'donations']),
+  new Set(['c:vehicle']),
+];
+
+/**
+ * The example in a new-group field ("e.g. Health & Fitness"): named after
+ * the theme most of the services still in no group share, rather than all
+ * of them at once (a mix only ever made "Everything Else").
+ */
+export function exampleGroupName(lines: NavLine[]): string {
+  let best: NavLine[] = [];
+  for (const theme of THEMES) {
+    const fit = lines.filter((l) => theme.has(kindOf(l)));
+    if (fit.length > best.length) best = fit;
+  }
+  return suggestGroupName(best.length ? best : lines);
+}
 
 /**
  * A name to offer for a group, from what's in it: the everyday bills are
@@ -161,7 +267,7 @@ const LEISURE = new Set(['subscriptions', 'c:lifestyle', 'donations']);
  */
 export function suggestGroupName(lines: NavLine[]): string {
   if (!lines.length) return 'Household Bills';
-  const kinds = lines.map((l) => (l.category ? `c:${l.category}` : (l.typeSlug ?? '')));
+  const kinds = lines.map(kindOf);
   const within = (set: Set<string>) => kinds.every((k) => set.has(k));
   const has = (k: string) => kinds.includes(k);
   if (within(ENERGY)) return 'Energy';
@@ -172,6 +278,7 @@ export function suggestGroupName(lines: NavLine[]): string {
   if (within(HOME)) return 'Home';
   if (within(new Set(['c:vehicle']))) return 'Transport';
   if (within(new Set(['c:health']))) return 'Health';
+  if (within(FITNESS)) return has('c:health') ? 'Health & Fitness' : 'Fitness';
   if (within(new Set(['donations']))) return 'Giving';
   if (within(LEISURE)) return has('donations') ? 'Lifestyle & Giving' : 'Leisure';
   if (within(new Set(['c:health', 'c:vehicle', 'c:home']))) return 'Cover & Upkeep';

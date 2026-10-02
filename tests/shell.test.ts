@@ -8,7 +8,7 @@ import { createBill } from '@/lib/bills';
 import { createHousehold, updateHousehold } from '@/lib/households';
 import { createMember } from '@/lib/members';
 import { createService } from '@/lib/services';
-import { saveNavLayout } from '@/lib/nav-store';
+import { getNavLayout, saveNavChildren, saveNavLayout } from '@/lib/nav-store';
 import { shellView } from '@/lib/shell';
 
 /** The frame around every page: who's here, what each service costs this month, the viewer. */
@@ -104,14 +104,16 @@ describe('shellView', () => {
     expect(v.sections[0]!.entries.map((s) => [s.key.slice(0, 2), s.name, s.minor])).toEqual([
       ['s:', 'Electricity', 92_000],
     ]);
-    expect(v.mine.map((s) => [s.key, s.minor])).toEqual([['mc:vehicle', 91_250]]);
-    const vehicles = v.mine[0]!;
+    expect(v.mine).toHaveLength(1);
+    expect(v.mine[0]!.entries.map((s) => [s.key, s.minor])).toEqual([['mc:vehicle', 91_250]]);
+    const vehicles = v.mine[0]!.entries[0]!;
     expect(vehicles.kind === 'group' && vehicles.category).toBe('vehicle');
     // One line per kind of vehicle bill, with what's due this month.
     expect(vehicles.kind === 'group' && vehicles.children.map((c) => [c.name, c.minor])).toEqual([
       ['Vehicle Registration', 91_250],
     ]);
-    expect(v.lines.map((l) => l.key.slice(0, 2))).toEqual(['s:']);
+    // What each line is (for naming groups), the household's and the viewer's own.
+    expect(v.lines.map((l) => l.key)).toEqual([`s:${power.id}`, 'mc:vehicle']);
     expect(v.inboxCount).toBe(0);
     expect(v.me).toEqual({ name: 'Jordan', colour: jordan.colour, admin: false, role: 'member' });
 
@@ -161,6 +163,7 @@ describe('shellView', () => {
         loose: ['c:lifestyle', `s:${water.id}`],
         groups: [{ id: 'g1', name: '', items: [`s:${gas.id}`, `s:${power.id}`] }],
         mine: [],
+        mineGroups: [],
       },
       lines,
       db,
@@ -172,5 +175,19 @@ describe('shellView', () => {
     // A service added later joins the ones in no group, after the groups.
     svc('internet', 'Internet');
     expect(names()[1]).toEqual([null, ['c:lifestyle', 'Water', 'Internet']]);
+
+    // Inside a main service: Kim's order, kept when the groups are saved again.
+    const yoga = svc('gym', 'Yoga');
+    const gymId = shellView(hh, kim, '2026-09-29', db)
+      .sections.flatMap((x) => x.entries)
+      .find((e) => e.key === 'c:lifestyle');
+    expect(gymId?.kind === 'group' && gymId.children.map((c) => c.name)).toEqual(['Gym', 'Yoga']);
+    const gym = gymId?.kind === 'group' ? gymId.children[0]!.id : '';
+    saveNavChildren(kim.id, 'c:lifestyle', [yoga.id, gym], db);
+    saveNavLayout(kim.id, { ...getNavLayout(kim.id, db)!, groups: [] }, lines, db);
+    const after = shellView(hh, kim, '2026-09-29', db)
+      .sections.flatMap((x) => x.entries)
+      .find((e) => e.key === 'c:lifestyle');
+    expect(after?.kind === 'group' && after.children.map((c) => c.name)).toEqual(['Yoga', 'Gym']);
   });
 });

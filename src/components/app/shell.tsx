@@ -152,34 +152,44 @@ export function AppShell({
   );
   const nameOf = (s: ShellEntry) =>
     s.kind === 'group' && s.category ? (labels.main[s.category] ?? s.name) : s.name;
-  const anyServices = view.mine.length > 0 || view.sections.some((sec) => sec.entries.length > 0);
+  const anyServices = [...view.sections, ...view.mine].some((sec) => sec.entries.length > 0);
+  const asSections = (secs: ShellView['sections']) =>
+    secs.map((sec) => ({
+      id: sec.group?.id ?? null,
+      name: sec.group?.name ?? '',
+      keys: sec.entries.map((e) => e.key),
+    }));
   const row = (s: ShellEntry) =>
     s.kind === 'group' ? (
       <NavGroup
         key={s.key}
         href={s.href}
-        childHrefs={s.children.map((c) => c.href)}
-        label={s.category ? (labels.main[s.category] ?? s.name) : s.name}
+        groupKey={s.key}
+        label={nameOf(s)}
         showLabel={labels.showSubs}
         hideLabel={labels.hideSubs}
         colour={colourCss(s.colour)}
-        row={line(s.category ? { ...s, name: labels.main[s.category] ?? s.name } : s)}
-      >
-        {s.children.map((c) => (
-          <Link
-            key={c.id}
-            href={c.href}
-            className="nc-s nc-sub"
-            style={{ ['--svc' as string]: colourCss(c.colour) }}
-          >
-            {line(c)}
-          </Link>
-        ))}
-      </NavGroup>
+        row={line({ ...s, name: nameOf(s) })}
+        items={s.children.map((c) => ({
+          id: c.id,
+          href: c.href,
+          node: (
+            <Link
+              href={c.href}
+              draggable={false}
+              className="nc-s nc-sub"
+              style={{ ['--svc' as string]: colourCss(c.colour) }}
+            >
+              {line(c)}
+            </Link>
+          ),
+        }))}
+      />
     ) : (
       <Link
         key={s.id}
         href={s.href}
+        draggable={false}
         className="nc-s"
         style={{ ['--svc' as string]: colourCss(s.colour) }}
       >
@@ -205,18 +215,14 @@ export function AppShell({
               {/* The person's own groups in their order, then the services in
                   no group; the pencil arranges them in place. */}
               <NavServices
-                sections={view.sections.map((sec) => ({
-                  id: sec.group?.id ?? null,
-                  name: sec.group?.name ?? '',
-                  keys: sec.entries.map((e) => e.key),
-                }))}
-                mine={view.mine.map((e) => e.key)}
-                rows={[...view.sections.flatMap((sec) => sec.entries), ...view.mine].map((e) => ({
-                  key: e.key,
-                  name: nameOf(e),
-                  colour: colourCss(e.colour),
-                  node: row(e),
-                }))}
+                sections={asSections(view.sections)}
+                mine={asSections(view.mine)}
+                rows={[...view.sections, ...view.mine]
+                  .flatMap((sec) => sec.entries)
+                  .map((e) => ({
+                    key: e.key,
+                    node: row(e),
+                  }))}
                 lines={view.lines}
                 labels={{
                   head: labels.servicesHead,

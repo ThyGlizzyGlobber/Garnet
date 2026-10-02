@@ -1,7 +1,14 @@
 import { notFound, redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { pageContext } from '@/lib/context';
-import { serviceCardsView, subscriptionsView } from '@/lib/main-view';
+import {
+  serviceCardsView,
+  subscriptionsView,
+  type ServiceCardsView,
+  type SubscriptionsView,
+} from '@/lib/main-view';
+import { orderChildren } from '@/lib/nav-layout';
+import { getNavLayout } from '@/lib/nav-store';
 import { inMainCategory } from '@/lib/service-categories';
 import { listServiceTypes } from '@/lib/services';
 import { ServiceTilesPage, SubscriptionsPage } from '../../service-cards';
@@ -18,12 +25,25 @@ export default async function ServiceGroupPage({ params }: { params: Promise<{ t
   if (inMainCategory(type)) redirect(`/services/category/${type.category}`);
   const ctx = await pageContext();
   const t = await getTranslations('services');
+  // In the order the person gave them in the side menu.
+  const layout = getNavLayout(ctx.me.id);
+  const keys = [`t:${type.slug}`, `mt:${type.slug}`];
+  const inOrder = (v: ServiceCardsView): ServiceCardsView => ({
+    ...v,
+    cards: orderChildren(v.cards, (c) => c.service.id, layout, keys),
+    stopped: orderChildren(v.stopped, (c) => c.service.id, layout, keys),
+  });
+  const subscriptionsInOrder = (v: SubscriptionsView): SubscriptionsView => ({
+    ...v,
+    going: orderChildren(v.going, (l) => l.service.id, layout, keys),
+    cancelled: orderChildren(v.cancelled, (l) => l.service.id, layout, keys),
+  });
   if (type.slug === 'donations') {
     const tm = await getTranslations('main');
     return (
       <ServiceTilesPage
         ctx={ctx}
-        view={serviceCardsView(ctx.hh, ctx.me, { typeSlug: type.slug }, ctx.today)}
+        view={inOrder(serviceCardsView(ctx.hh, ctx.me, { typeSlug: type.slug }, ctx.today))}
         title={type.label}
         addHref={`/services/new?type=${encodeURIComponent(type.slug)}`}
         addLabel={tm('addCharity')}
@@ -40,7 +60,7 @@ export default async function ServiceGroupPage({ params }: { params: Promise<{ t
   return (
     <SubscriptionsPage
       ctx={ctx}
-      view={subscriptionsView(ctx.hh, ctx.me, ctx.today)}
+      view={subscriptionsInOrder(subscriptionsView(ctx.hh, ctx.me, ctx.today))}
       title={type.label}
       addHref={`/services/new?type=${encodeURIComponent(type.slug)}`}
       addLabel={tm('add')}

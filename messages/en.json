@@ -3079,17 +3079,18 @@
     }
   },
   "navEdit": {
-    "edit": "Arrange services",
-    "save": "Save the menu",
-    "editing": "Tick to group",
-    "hint": "Tick services to put them in a group, or drag them where you want them.",
+    "newGroup": "New Service Group",
+    "newMineGroup": "New Personal Group",
+    "newPlaceholder": "Group name, e.g. {name}",
+    "create": "Add",
     "groupName": "Group name",
-    "placeholder": "e.g. {name}",
-    "addGroup": "{count, plural, one {Group # service} other {Group # services}}",
-    "pick": "Put {name} in a group",
+    "renameHint": "Click to fold · double-click to rename",
     "remove": "Remove {name} (its services stay in the menu)",
     "dropHere": "Drag services here",
     "show": "Show",
-    "hide": "Hide"
+    "hide": "Hide",
+    "sure": "Are you sure?",
+    "imSure": "I'm sure",
+    "cancel": "Cancel"
   }
 }

@@ -256,8 +256,6 @@
   --bad: #ea868b;
   /* Where a dragged service lands: iOS blue. */
   --drop-line: #0a84ff;
-  /* Ticks while arranging: Garnet's Pyrope. */
-  --brand-tick: #a8141f;
 }
 /* The household's mark: a light tile on the graphite. */
 .nav.column .mark {
@@ -581,31 +579,12 @@
   }
 }
 
-/* The services' heading: "Services · this month" and the pencil that arranges them. */
+/* The services' heading: "Services · this month". */
 .nc-svcs .nc-head {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 6px;
-}
-.nc-edit {
-  display: grid;
-  place-items: center;
-  width: 24px;
-  height: 24px;
-  border: 0;
-  border-radius: 7px;
-  background: none;
-  color: var(--p-fg2);
-  cursor: pointer;
-}
-.nc-edit:hover {
-  background: var(--inset);
-  color: var(--p-fg);
-}
-.nc-edit:focus-visible {
-  outline: 2px solid var(--p-accent);
-  outline-offset: 1px;
 }
 .nc-loose {
   display: flex;
@@ -613,42 +592,58 @@
   gap: 1px;
 }
 
-/* ---------- arranging the services in place (NavServices) ---------- */
+/* ---------- arranging the services by dragging (NavServices, NavGroup) ---------- */
 .nc-svcs-in {
   display: flex;
   flex-direction: column;
   gap: 1px;
 }
-/* The pencil becomes a round Pyrope tick while the menu is being arranged. */
-.nc-edit.is-on {
-  border-radius: 50%;
-  background: var(--brand-tick);
-  color: #ffffff;
+.nc-dnd {
+  position: relative;
 }
-.nc-edit.is-on:hover {
-  background: var(--brand-tick);
-  filter: brightness(1.15);
+.nc-dnd[draggable='true'] {
+  cursor: grab;
 }
-.nc-svcs-in[data-editing] .nc-top {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  padding-bottom: 2px;
-  background: var(--side-solid);
+.nc-dnd[draggable='true']:active {
+  cursor: grabbing;
 }
-.nc-newg {
+.nc-gh {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 30px;
+  border-radius: 8px;
+}
+.nc-gh[draggable='true'] {
+  cursor: grab;
+}
+/* A group's ×: shown when the pointer is over its heading (or it has focus). */
+.nc-gh-act {
+  display: flex;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.nc-gh:hover .nc-gh-act,
+.nc-gh:focus-within .nc-gh-act {
+  opacity: 1;
+}
+.nc-gh-b {
   display: grid;
-  gap: 8px;
-  margin: 2px 4px 8px;
-  padding: 10px;
-  border-radius: 12px;
-  background: var(--inset);
-}
-.nc-newg p {
-  margin: 0;
-  font-size: 12px;
-  line-height: 1.4;
+  place-items: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  margin-right: 4px;
+  border: 0;
+  border-radius: 7px;
+  background: none;
   color: var(--p-fg2);
+  cursor: pointer;
+}
+.nc-gh-b:hover {
+  background: var(--inset);
+  color: var(--p-fg);
 }
 .nc-gname {
   width: 100%;
@@ -672,8 +667,52 @@
   outline: 2px solid var(--p-accent);
   outline-offset: 0;
 }
+.nc-gh .nc-gname {
+  margin: 2px 4px;
+}
+/* "New group": a dashed button closing the household's list, not a heading. */
+.nc-newg {
+  margin: 8px 4px 4px;
+}
+.nc-newg-b {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  height: 34px;
+  border: 1px dashed var(--line-2);
+  border-radius: 10px;
+  background: none;
+  color: var(--p-fg2);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.nc-newg-b:hover {
+  border-style: solid;
+  background: var(--inset);
+  color: var(--p-fg);
+}
+/* My Services: the person's own under a title like Services', set apart by a rule. */
+.nc-mine {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid var(--line);
+}
+.nc-newg-f {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 .nc-btn {
+  flex: none;
   height: 30px;
+  padding: 0 12px;
   border: 0;
   border-radius: 9px;
   background: var(--p-accent);
@@ -682,84 +721,6 @@
   font-size: 12.5px;
   font-weight: 700;
   cursor: pointer;
-}
-.nc-btn:disabled {
-  opacity: 0.4;
-  cursor: default;
-}
-.nc-gh {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  min-height: 30px;
-}
-.nc-svcs-in[data-editing] .nc-gh {
-  padding: 4px 4px 4px 0;
-}
-.nc-grip-g {
-  display: grid;
-  place-items: center;
-  padding: 4px 2px 4px 8px;
-  color: var(--p-fg3);
-  cursor: grab;
-}
-.nc-gh-b {
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: 26px;
-  height: 26px;
-  border: 0;
-  border-radius: 7px;
-  background: none;
-  color: var(--p-fg2);
-  cursor: pointer;
-}
-.nc-gh-b:hover {
-  background: var(--inset);
-  color: var(--p-fg);
-}
-/* A service while arranging: tick-box, dot, name, grip. */
-.nc-svcs-in .nc-pick {
-  position: relative;
-  grid-template-columns: auto auto minmax(0, 1fr) auto;
-  cursor: grab;
-}
-/* Round tick-boxes in Garnet's Pyrope, a white tick when chosen. */
-.nc-pick input {
-  appearance: none;
-  -webkit-appearance: none;
-  display: grid;
-  place-items: center;
-  width: 16px;
-  height: 16px;
-  margin: 0;
-  border-radius: 50%;
-  border: 1.5px solid var(--p-fg3);
-  background: transparent;
-  cursor: pointer;
-  transition:
-    background 0.15s,
-    border-color 0.15s;
-}
-.nc-pick input:checked {
-  border-color: var(--brand-tick);
-  background: var(--brand-tick)
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4.5 8.2l2.3 2.3 4.7-4.9' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
-    center / 12px no-repeat;
-}
-.nc-pick input:focus-visible {
-  outline: 2px solid var(--p-accent);
-  outline-offset: 2px;
-}
-.nc-pick-x {
-  width: 16px;
-}
-.nc-pick[data-on] {
-  background: var(--inset);
-}
-.nc-grip {
-  color: var(--p-fg3);
 }
 .nc-svcs-in .nav-sec-g {
   position: relative;
@@ -786,6 +747,48 @@
 }
 .nc-svcs-in [data-drop='after']::after {
   bottom: -1px;
+}
+/* Removing a group: "Are you sure?" in its heading, where the × was. */
+.nc-confirm {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 30px;
+  padding: 2px 4px 2px 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--p-fg);
+}
+.nc-confirm > span {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nc-confirm button {
+  flex: none;
+  height: 26px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.nc-confirm-yes {
+  background: var(--bad);
+  color: #1c1c1c;
+}
+.nc-confirm-no {
+  background: var(--inset-2);
+  color: var(--p-fg);
+}
+/* A folded group a service will go into. */
+.nc-gh[data-drop='into'] {
+  box-shadow: inset 0 0 0 2px var(--drop-line);
 }
 .nc-drop-empty {
   margin: 2px 8px 6px;

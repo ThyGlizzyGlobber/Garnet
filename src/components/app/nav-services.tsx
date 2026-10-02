@@ -1,14 +1,28 @@
 'use client';
 
-import { useState, useTransition, type DragEvent, type ReactNode } from 'react';
+import {
+  useRef,
+  useState,
+  useTransition,
+  type DragEvent,
+  type FormEvent,
+  type ReactNode,
+} from 'react';
 import { useTranslations } from 'next-intl';
 import { saveNavLayoutAction } from '@/app/(app)/nav-actions';
-import { suggestGroupName, MAX_GROUPS, type NavLayout, type NavLine } from '@/lib/nav-layout';
+import {
+  exampleGroupName,
+  MAX_GROUPS,
+  type NavGroup,
+  type NavLayout,
+  type NavLine,
+} from '@/lib/nav-layout';
 import { Icon } from './icons';
 import { useFold } from './nav-section';
+import { dragScroll, lowerHalf } from './nav-drag';
 
 export interface NavServicesSection {
-  /** null: the services in no group (always last). */
+  /** null: the services in no group. */
   id: string | null;
   name: string;
   keys: string[];
@@ -16,208 +30,198 @@ export interface NavServicesSection {
 
 export interface NavServicesRow {
   key: string;
-  name: string;
-  /** Its colour, as CSS. */
-  colour: string;
-  /** The line itself, drawn by the shell (dot, name, figure; a main service's arrow). */
+  /** The line itself, drawn by the shell (dot, name, figure; a main service's arrow and services). */
   node: ReactNode;
 }
 
+/** The groups and the services in none, the household's and My Services': what this component changes. */
+type Arrangement = Omit<NavLayout, 'children'>;
+/** The household's services, or My Services (the person's own). */
+type Area = 'household' | 'mine';
 type Drag = { kind: 'entry'; key: string } | { kind: 'group'; id: string };
-/** My Services as a place to drop (a group id never has a colon). */
+type Drop =
+  | { kind: 'entry'; sec: string | null; index: number }
+  | { kind: 'group'; area: Area; index: number };
+
+/** My Services' services in no group, as a place to drop (a group id never has a colon). */
 const MINE = 'mine:';
 /** The person's own lines: "ms:…", "mc:…", "mt:…" (src/lib/nav-layout.ts). */
 const isMine = (key: string) => key.startsWith('m');
-type Drop = { kind: 'entry'; sec: string | null; index: number } | { kind: 'group'; index: number };
+
+const groupsOf = (secs: NavServicesSection[]): NavGroup[] =>
+  secs
+    .filter((s): s is NavServicesSection & { id: string } => s.id !== null)
+    .map((s) => ({ id: s.id, name: s.name, items: s.keys }));
+const looseOf = (secs: NavServicesSection[]) => secs.find((s) => s.id === null)?.keys ?? [];
 
 /**
- * The side menu's services, arranged in place (owner, 2026-10-02). The
- * pencil beside "Services" starts editing: every service gets a tick-box,
- * and ticking some offers a name for a new group (suggested from what's
- * ticked: "e.g. Essentials"). While editing, services and whole groups are
- * dragged where they should go (a line shows where they'll land), groups are
- * renamed in place and removed with their ×, their services going back
- * under Other Services. "Group 5 services" saves the new group at once; the
- * pencil becomes a tick that saves the rest and stops editing; Escape leaves
- * without saving what isn't saved yet. My Services, the person's own, is always last: it
- * isn't renamed or removed, and only its order changes (its services can't
- * leave it, nor others join it). The Services page follows the same order.
+ * The side menu's services, arranged by dragging (owner, 2026-10-02), in two
+ * parts under bold titles: Services (the household's) and, below a rule, My
+ * Services (the person's own). Each part is laid out the same way: the
+ * person's groups, then the services in none (under "Other Services" once
+ * there are groups), then a button for a new group ("New Service Group",
+ * "New Personal Group") that opens a name field; the new group is made empty
+ * and services are dragged into it. A service or a whole group (by its
+ * heading) is dropped where the line shows; a group renames on a
+ * double-click of its heading and goes with its ×. The person's own services
+ * stay under My Services and the household's under Services. Every change is
+ * saved at once; the Services page follows it. Services inside a main
+ * service are reordered by NavGroup.
  */
 export function NavServices({
   sections,
-  mine: mineKeys,
+  mine: mineSections,
   rows,
   lines,
   labels,
 }: {
   sections: NavServicesSection[];
-  /** My Services, in the person's order. */
-  mine: string[];
+  /** My Services: the person's own groups, then their own in no group. */
+  mine: NavServicesSection[];
   rows: NavServicesRow[];
   lines: NavLine[];
   labels: { head: string; thisMonth: string; other: string; mine: string };
 }) {
   const t = useTranslations('navEdit');
   const [, start] = useTransition();
-  // What the server last sent, and a saved change it hasn't caught up with yet.
-  const sent = JSON.stringify([sections, mineKeys]);
+  // What the server last sent, and a change it hasn't caught up with yet.
+  const sent = JSON.stringify([sections, mineSections]);
   const [seen, setSeen] = useState(sent);
-  const [saved, setSaved] = useState<NavLayout | null>(null);
+  const [saved, setSaved] = useState<Arrangement | null>(null);
   if (seen !== sent) {
     setSeen(sent);
     setSaved(null);
   }
-  // While editing: the arrangement being made, the services ticked and the new group's name.
-  const [draft, setDraft] = useState<NavLayout | null>(null);
-  const [picked, setPicked] = useState<string[]>([]);
-  const [newName, setNewName] = useState('');
   const [drag, setDrag] = useState<Drag | null>(null);
   const [drop, setDrop] = useState<Drop | null>(null);
-  const editing = draft !== null;
+  const [renaming, setRenaming] = useState<{ id: string; value: string } | null>(null);
 
   const byKey = new Map(rows.map((r) => [r.key, r]));
   const lineOf = new Map(lines.map((l) => [l.key, l]));
-  const suggest = (keys: string[]) =>
-    suggestGroupName(keys.map((k) => lineOf.get(k)).filter((l): l is NavLine => !!l));
+  const linesOf = (keys: string[]) =>
+    keys.map((k) => lineOf.get(k)).filter((l): l is NavLine => !!l);
 
-  // The arrangement shown, tidied: services that no longer exist dropped, new ones under Other Services.
-  const base: NavLayout = draft ??
-    saved ?? {
-      groups: sections
-        .filter((s): s is NavServicesSection & { id: string } => s.id !== null)
-        .map((s) => ({ id: s.id, name: s.name, items: s.keys })),
-      loose: sections.find((s) => s.id === null)?.keys ?? [],
-      mine: mineKeys,
-    };
-  const groups = base.groups.map((g) => ({ ...g, items: g.items.filter((k) => byKey.has(k)) }));
-  const placed = new Set(groups.flatMap((g) => g.items));
+  // The arrangement shown, tidied: services that no longer exist dropped, new ones in no group.
+  const base: Arrangement = saved ?? {
+    groups: groupsOf(sections),
+    loose: looseOf(sections),
+    mine: looseOf(mineSections),
+    mineGroups: groupsOf(mineSections),
+  };
+  const tidy = (gs: NavGroup[]) =>
+    gs.map((g) => ({ ...g, items: g.items.filter((k) => byKey.has(k)) }));
+  const groups = tidy(base.groups);
+  const mineGroups = tidy(base.mineGroups);
+  const placed = new Set([...groups, ...mineGroups].flatMap((g) => g.items));
   const keys = rows.map((r) => r.key);
-  const loose = [
-    ...base.loose.filter((k) => byKey.has(k) && !placed.has(k)),
-    ...keys.filter((k) => !isMine(k) && !placed.has(k) && !base.loose.includes(k)),
+  const ungrouped = (stored: string[], own: boolean) => [
+    ...stored.filter((k) => byKey.has(k) && !placed.has(k) && isMine(k) === own),
+    ...keys.filter((k) => isMine(k) === own && !placed.has(k) && !stored.includes(k)),
   ];
-  const mine = [
-    ...base.mine.filter((k) => byKey.has(k)),
-    ...keys.filter((k) => isMine(k) && !base.mine.includes(k)),
-  ];
-  const current: NavLayout = { groups, loose, mine };
+  const loose = ungrouped(base.loose, false);
+  const mine = ungrouped(base.mine, true);
+  const current: Arrangement = { groups, loose, mine, mineGroups };
+  const mineIds = new Set(mineGroups.map((g) => g.id));
+  const areaOfGroup = (id: string): Area => (mineIds.has(id) ? 'mine' : 'household');
+  const isMineSec = (sec: string | null) => sec === MINE || (sec !== null && mineIds.has(sec));
 
+  const commit = (next: Arrangement) => {
+    setSaved(next);
+    start(() => saveNavLayoutAction(next));
+  };
   const listOf = (sec: string | null) =>
-    sec === null ? loose : sec === MINE ? mine : (groups.find((g) => g.id === sec)?.items ?? []);
-  const ordered = (keys: string[]) =>
-    [...groups.flatMap((g) => g.items), ...loose].filter((k) => keys.includes(k));
+    sec === null
+      ? loose
+      : sec === MINE
+        ? mine
+        : ([...groups, ...mineGroups].find((g) => g.id === sec)?.items ?? []);
+  /** Every list of services, changed by f. */
+  const mapLists = (f: (sec: string | null, items: string[]) => string[]): Arrangement => ({
+    groups: groups.map((g) => ({ ...g, items: f(g.id, g.items) })),
+    loose: f(null, loose),
+    mine: f(MINE, mine),
+    mineGroups: mineGroups.map((g) => ({ ...g, items: f(g.id, g.items) })),
+  });
 
-  /** The ticked services as a new group, after the others. */
-  const withNewGroup = (l: NavLayout): NavLayout => {
-    if (!picked.length || l.groups.length >= MAX_GROUPS) return l;
-    const items = ordered(picked);
-    return {
-      groups: [
-        ...l.groups.map((g) => ({ ...g, items: g.items.filter((k) => !items.includes(k)) })),
-        { id: freeId(l.groups), name: newName.trim() || suggest(items), items },
-      ],
-      loose: l.loose.filter((k) => !items.includes(k)),
-      mine: l.mine,
-    };
-  };
-  /** Unnamed groups take the name suggested for them; then it's kept. */
-  const save = (next: NavLayout) => {
-    const named = {
-      ...next,
-      groups: next.groups.map((g) => ({ ...g, name: g.name.trim() || suggest(g.items) })),
-    };
-    setSaved(named);
-    start(() => saveNavLayoutAction(named));
-    return named;
-  };
-  /** "Group 5 services": the new group is saved at once, and editing carries on. */
-  const addGroup = () => {
-    setDraft(save(withNewGroup(current)));
-    setPicked([]);
-    setNewName('');
-  };
-
-  const begin = () => {
-    setDraft(current);
-    setPicked([]);
-    setNewName('');
-  };
-  /** The tick: save everything and stop editing. */
-  const finish = () => {
-    save(withNewGroup(current));
-    setDraft(null);
-    setPicked([]);
-  };
-  const cancel = () => {
-    setDraft(null);
-    setPicked([]);
-  };
-
-  /** Move a service to a place in a group (or under Other Services: null). */
+  /** Move a service to a place in a group, or among the ungrouped (null: the household's; MINE: My Services'). */
   const moveEntry = (key: string, sec: string | null, index: number) => {
-    // My Services keeps its own, and only its own.
-    if (isMine(key) !== (sec === MINE)) return;
+    if (isMine(key) !== isMineSec(sec)) return;
     const from = listOf(sec).indexOf(key);
     const at = from >= 0 && from < index ? index - 1 : index;
+    if (from === at) return;
     const take = (list: string[]) => list.filter((k) => k !== key);
     const into = (list: string[]) => [...list.slice(0, at), key, ...list.slice(at)];
-    setDraft({
-      groups: groups.map((g) => ({
-        ...g,
-        items: g.id === sec ? into(take(g.items)) : take(g.items),
-      })),
-      loose: sec === null ? into(take(loose)) : take(loose),
-      mine: sec === MINE ? into(take(mine)) : mine,
-    });
+    commit(mapLists((id, items) => (id === sec ? into(take(items)) : take(items))));
   };
-  const moveGroup = (id: string, index: number) => {
-    const from = groups.findIndex((g) => g.id === id);
-    if (from < 0) return;
+  const moveGroup = (id: string, area: Area, index: number) => {
+    if (areaOfGroup(id) !== area) return;
+    const list = area === 'mine' ? mineGroups : groups;
+    const from = list.findIndex((g) => g.id === id);
     const at = from < index ? index - 1 : index;
-    const rest = groups.filter((g) => g.id !== id);
-    setDraft({ groups: [...rest.slice(0, at), groups[from]!, ...rest.slice(at)], loose, mine });
+    if (from < 0 || from === at) return;
+    const rest = list.filter((g) => g.id !== id);
+    const next = [...rest.slice(0, at), list[from]!, ...rest.slice(at)];
+    commit(area === 'mine' ? { ...current, mineGroups: next } : { ...current, groups: next });
   };
   const removeGroup = (id: string) => {
-    const g = groups.find((x) => x.id === id);
-    setDraft({
-      groups: groups.filter((x) => x.id !== id),
-      loose: [...(g?.items ?? []), ...loose],
-      mine,
-    });
+    const items = [...groups, ...mineGroups].find((x) => x.id === id)?.items ?? [];
+    commit(
+      areaOfGroup(id) === 'mine'
+        ? {
+            ...current,
+            mineGroups: mineGroups.filter((x) => x.id !== id),
+            mine: [...items, ...mine],
+          }
+        : { ...current, groups: groups.filter((x) => x.id !== id), loose: [...items, ...loose] },
+    );
   };
-  const renameGroup = (id: string, name: string) =>
-    setDraft({ groups: groups.map((x) => (x.id === id ? { ...x, name } : x)), loose, mine });
+  const rename = (id: string, value: string) => {
+    setRenaming(null);
+    const name = value.trim();
+    const g = [...groups, ...mineGroups].find((x) => x.id === id);
+    if (!g || !name || name === g.name) return;
+    const named = (gs: NavGroup[]) => gs.map((x) => (x.id === id ? { ...x, name } : x));
+    commit({ ...current, groups: named(groups), mineGroups: named(mineGroups) });
+  };
+  const create = (area: Area, name: string) => {
+    const g = { id: freeId([...groups, ...mineGroups]), name, items: [] };
+    commit(
+      area === 'mine'
+        ? { ...current, mineGroups: [...mineGroups, g] }
+        : { ...current, groups: [...groups, g] },
+    );
+  };
+  // The name fields' examples, from what's still in no group in each part.
+  const example = exampleGroupName(linesOf(loose));
+  const mineExample = exampleGroupName(linesOf(mine));
 
-  // Dragging (while editing): where it would land, shown as a line.
+  // Dragging: where it would land, shown as a line.
   const aim = (d: Drop) => {
     if (JSON.stringify(drop) !== JSON.stringify(d)) setDrop(d);
-  };
-  const lower = (e: DragEvent) => {
-    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    return e.clientY > r.top + r.height / 2;
   };
   const endDrag = () => {
     setDrag(null);
     setDrop(null);
   };
   const onDrop = (e: DragEvent) => {
+    if (!drag) return;
     e.preventDefault();
-    if (drag?.kind === 'entry' && drop?.kind === 'entry') moveEntry(drag.key, drop.sec, drop.index);
-    if (drag?.kind === 'group' && drop?.kind === 'group') moveGroup(drag.id, drop.index);
+    if (drag.kind === 'entry' && drop?.kind === 'entry') moveEntry(drag.key, drop.sec, drop.index);
+    if (drag.kind === 'group' && drop?.kind === 'group') moveGroup(drag.id, drop.area, drop.index);
     endDrag();
   };
   const startDrag = (d: Drag) => (e: DragEvent) => {
     e.stopPropagation();
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', d.kind === 'entry' ? d.key : d.id);
-    // A group is dragged by its grip, but the whole group goes with the cursor.
+    // A group is dragged by its heading, but the whole group goes with the cursor.
     const whole = d.kind === 'group' && (e.currentTarget as HTMLElement).closest('.nav-sec-g');
     if (whole) e.dataTransfer.setDragImage(whole, 16, 16);
     setDrag(d);
   };
-  /** A held service may land here: the person's own only in My Services, the rest anywhere else. */
+  /** A held service may land here: the person's own only under My Services, the household's only under Services. */
   const fits = (sec: string | null) =>
-    drag?.kind === 'entry' && isMine(drag.key) === (sec === MINE);
+    drag?.kind === 'entry' && isMine(drag.key) === isMineSec(sec);
   /** Over a heading (or an empty group) while a service is held: it goes last in that group. */
   const intoGroup = (sec: string | null, count: number) => (e: DragEvent) => {
     if (!fits(sec)) return;
@@ -225,15 +229,15 @@ export function NavServices({
     e.stopPropagation();
     aim({ kind: 'entry', sec, index: count });
   };
-  const groupOver = (index: (e: DragEvent) => number) => (e: DragEvent) => {
-    if (drag?.kind !== 'group') return;
+  /** Over a group while a group of the same part is held: before or after it. */
+  const groupOver = (area: Area, index: (e: DragEvent) => number) => (e: DragEvent) => {
+    if (drag?.kind !== 'group' || areaOfGroup(drag.id) !== area) return;
     e.preventDefault();
-    aim({ kind: 'group', index: index(e) });
+    e.stopPropagation();
+    aim({ kind: 'group', area, index: index(e) });
   };
 
   const entry = (key: string, sec: string | null, i: number, count: number) => {
-    const r = byKey.get(key)!;
-    if (!editing) return <div key={key}>{r.node}</div>;
     const mark =
       drop?.kind === 'entry' && drop.sec === sec
         ? drop.index === i
@@ -242,14 +246,12 @@ export function NavServices({
             ? 'after'
             : undefined
         : undefined;
-    const on = picked.includes(key);
     return (
-      <label
+      <div
         key={key}
-        className="nc-s nc-pick"
+        className="nc-dnd"
         draggable
         data-drop={mark}
-        data-on={on ? '' : undefined}
         data-dragging={drag?.kind === 'entry' && drag.key === key ? '' : undefined}
         onDragStart={startDrag({ kind: 'entry', key })}
         onDragEnd={endDrag}
@@ -257,24 +259,11 @@ export function NavServices({
           if (!fits(sec)) return;
           e.preventDefault();
           e.stopPropagation();
-          aim({ kind: 'entry', sec, index: i + (lower(e) ? 1 : 0) });
+          aim({ kind: 'entry', sec, index: i + (lowerHalf(e) ? 1 : 0) });
         }}
       >
-        {/* My Services can't be grouped: no tick-box, only its order. */}
-        {sec === MINE ? (
-          <span className="nc-pick-x" />
-        ) : (
-          <input
-            type="checkbox"
-            checked={on}
-            aria-label={t('pick', { name: r.name })}
-            onChange={() => setPicked(on ? picked.filter((k) => k !== key) : [...picked, key])}
-          />
-        )}
-        <i style={{ ['--svc' as string]: r.colour }} aria-hidden="true" />
-        <span>{r.name}</span>
-        <Icon name="move" width={13} height={13} className="nc-grip" />
-      </label>
+        {byKey.get(key)!.node}
+      </div>
     );
   };
   const emptyDrop = (sec: string | null) => (
@@ -286,114 +275,58 @@ export function NavServices({
       {t('dropHere')}
     </div>
   );
-  const groupMark = (gi: number) =>
-    drop?.kind === 'group'
+  const groupMark = (area: Area, gi: number, count: number) =>
+    drop?.kind === 'group' && drop.area === area
       ? drop.index === gi
         ? 'before'
-        : drop.index === groups.length && gi === groups.length - 1
+        : drop.index === count && gi === count - 1
           ? 'after'
           : undefined
       : undefined;
 
-  return (
-    <div
-      className="nc-svcs-in"
-      data-editing={editing ? '' : undefined}
-      onDragOver={(e) => drag && e.preventDefault()}
-      onDrop={onDrop}
-      onKeyDown={(e) => {
-        if (editing && e.key === 'Escape') cancel();
-      }}
-    >
-      {/* The heading and, while editing, the new group's name stay in view as the list scrolls. */}
-      <div className="nc-top">
-        <div className="nav-sec nc-head">
-          <b>{labels.head}</b>
-          <span>{editing ? t('editing') : labels.thisMonth}</span>
-          <button
-            type="button"
-            className={`nc-edit${editing ? ' is-on' : ''}`}
-            onClick={editing ? finish : begin}
-            aria-label={editing ? t('save') : t('edit')}
-            title={editing ? t('save') : t('edit')}
-          >
-            <Icon name={editing ? 'check' : 'pencil'} width={13} height={13} />
-          </button>
-        </div>
-
-        {editing && (
-          <div className="nc-newg">
-            {picked.length ? (
-              <>
-                <input
-                  className="nc-gname"
-                  autoFocus
-                  value={newName}
-                  maxLength={40}
-                  aria-label={t('groupName')}
-                  placeholder={t('placeholder', { name: suggest(ordered(picked)) })}
-                  onChange={(e) => setNewName(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') addGroup();
-                  }}
-                />
-                <button
-                  type="button"
-                  className="nc-btn"
-                  onClick={addGroup}
-                  disabled={groups.length >= MAX_GROUPS}
-                >
-                  {t('addGroup', { count: picked.length })}
-                </button>
-              </>
-            ) : (
-              <p>{t('hint')}</p>
-            )}
-          </div>
-        )}
-      </div>
-
-      {groups.map((g, gi) => (
+  /** One part of the menu: its groups, its services in no group, and its new-group button. */
+  const part = (
+    area: Area,
+    gs: NavGroup[],
+    ungroupedKeys: string[],
+    sec: string | null,
+    newGroup: { label: string; example: string },
+  ) => (
+    <>
+      {gs.map((g, gi) => (
         <Group
           key={g.id}
           foldId={`grp-${g.id}`}
-          name={g.name || suggest(g.items)}
-          editing={editing}
-          dropMark={groupMark(gi)}
+          name={g.name}
+          dropMark={groupMark(area, gi, gs.length)}
           dragging={drag?.kind === 'group' && drag.id === g.id}
-          onDragOver={groupOver((e) => gi + (lower(e) ? 1 : 0))}
+          onDragOver={groupOver(area, (e) => gi + (lowerHalf(e) ? 1 : 0))}
           onHeadOver={intoGroup(g.id, g.items.length)}
-          labels={{ show: t('show'), hide: t('hide') }}
-          editHead={
-            <>
-              <span
-                className="nc-grip-g"
-                draggable
-                onDragStart={startDrag({ kind: 'group', id: g.id })}
-                onDragEnd={endDrag}
-                aria-hidden="true"
-              >
-                <Icon name="move" width={13} height={13} />
-              </span>
+          headInto={drop?.kind === 'entry' && drop.sec === g.id && drop.index === g.items.length}
+          labels={{ show: t('show'), hide: t('hide'), rename: t('renameHint') }}
+          drag={{ onDragStart: startDrag({ kind: 'group', id: g.id }), onDragEnd: endDrag }}
+          onRename={() => setRenaming({ id: g.id, value: g.name })}
+          renameField={
+            renaming?.id === g.id && (
               <input
                 className="nc-gname"
-                value={g.name}
+                autoFocus
+                value={renaming.value}
                 maxLength={40}
                 aria-label={t('groupName')}
-                placeholder={t('placeholder', { name: suggest(g.items) })}
-                onChange={(e) => renameGroup(g.id, e.target.value)}
+                onChange={(e) => setRenaming({ id: g.id, value: e.target.value })}
+                onBlur={() => rename(g.id, renaming.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') rename(g.id, renaming.value);
+                  if (e.key === 'Escape') setRenaming(null);
+                }}
               />
-              <button
-                type="button"
-                className="nc-gh-b"
-                aria-label={t('remove', { name: g.name || suggest(g.items) })}
-                title={t('remove', { name: g.name || suggest(g.items) })}
-                onClick={() => removeGroup(g.id)}
-              >
-                <Icon name="x" width={12} height={12} />
-              </button>
-            </>
+            )
           }
+          remove={{
+            label: t('remove', { name: g.name }),
+            onRemove: () => removeGroup(g.id),
+          }}
         >
           {g.items.length
             ? g.items.map((k, i) => entry(k, g.id, i, g.items.length))
@@ -401,34 +334,125 @@ export function NavServices({
         </Group>
       ))}
 
-      {groups.length > 0 ? (
+      {gs.length > 0 ? (
         <Group
-          foldId="other"
+          foldId={area === 'mine' ? 'mine-other' : 'other'}
           name={labels.other}
-          editing={editing}
-          onDragOver={groupOver(() => groups.length)}
-          onHeadOver={intoGroup(null, loose.length)}
+          onDragOver={groupOver(area, () => gs.length)}
+          onHeadOver={intoGroup(sec, ungroupedKeys.length)}
+          headInto={
+            drop?.kind === 'entry' && drop.sec === sec && drop.index === ungroupedKeys.length
+          }
           labels={{ show: t('show'), hide: t('hide') }}
         >
-          {loose.length ? loose.map((k, i) => entry(k, null, i, loose.length)) : emptyDrop(null)}
+          {ungroupedKeys.length
+            ? ungroupedKeys.map((k, i) => entry(k, sec, i, ungroupedKeys.length))
+            : emptyDrop(sec)}
         </Group>
       ) : (
-        <div className="nc-loose" onDragOver={intoGroup(null, loose.length)}>
-          {loose.map((k, i) => entry(k, null, i, loose.length))}
+        <div className="nc-loose" onDragOver={intoGroup(sec, ungroupedKeys.length)}>
+          {ungroupedKeys.map((k, i) => entry(k, sec, i, ungroupedKeys.length))}
         </div>
       )}
 
-      {mine.length > 0 && (
-        <Group
-          foldId="mine"
-          name={labels.mine}
-          editing={editing}
-          onDragOver={groupOver(() => groups.length)}
-          onHeadOver={intoGroup(MINE, mine.length)}
-          labels={{ show: t('show'), hide: t('hide') }}
-        >
-          {mine.map((k, i) => entry(k, MINE, i, mine.length))}
-        </Group>
+      {gs.length < MAX_GROUPS && (
+        <NewGroup
+          label={newGroup.label}
+          placeholder={t('newPlaceholder', { name: newGroup.example })}
+          create={t('create')}
+          fieldLabel={t('groupName')}
+          onCreate={(name) => create(area, name)}
+        />
+      )}
+    </>
+  );
+
+  return (
+    <div
+      className="nc-svcs-in"
+      onDragOver={(e) => {
+        if (!drag) return;
+        e.preventDefault();
+        dragScroll(e);
+      }}
+      onDrop={onDrop}
+    >
+      <div className="nav-sec nc-head">
+        <b>{labels.head}</b>
+        <span>{labels.thisMonth}</span>
+      </div>
+      {part('household', groups, loose, null, { label: t('newGroup'), example })}
+
+      {mine.length + mineGroups.length > 0 && (
+        <div className="nc-mine">
+          <div className="nav-sec nc-head">
+            <b>{labels.mine}</b>
+          </div>
+          {part('mine', mineGroups, mine, MINE, { label: t('newMineGroup'), example: mineExample })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * "New Service Group" / "New Personal Group": a dashed button (not a
+ * heading, so it never reads as the title of what's under it) that opens a
+ * name field; Enter makes the group, then services are dragged into it.
+ */
+function NewGroup({
+  label,
+  placeholder,
+  create,
+  fieldLabel,
+  onCreate,
+}: {
+  label: string;
+  placeholder: string;
+  create: string;
+  fieldLabel: string;
+  onCreate: (name: string) => void;
+}) {
+  const [adding, setAdding] = useState(false);
+  const [name, setName] = useState('');
+  const close = () => {
+    setAdding(false);
+    setName('');
+  };
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    onCreate(name.trim());
+    close();
+  };
+  return (
+    <div className="nc-newg">
+      {adding ? (
+        <form className="nc-newg-f" onSubmit={submit}>
+          <input
+            className="nc-gname"
+            autoFocus
+            value={name}
+            maxLength={40}
+            aria-label={fieldLabel}
+            placeholder={placeholder}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') close();
+            }}
+            onBlur={() => !name.trim() && close()}
+          />
+          {name.trim() && (
+            <button type="submit" className="nc-btn">
+              {create}
+            </button>
+          )}
+        </form>
+      ) : (
+        <button type="button" className="nc-newg-b" onClick={() => setAdding(true)}>
+          <Icon name="plus" width={14} height={14} />
+          {label}
+        </button>
       )}
     </div>
   );
@@ -442,33 +466,59 @@ function freeId(groups: { id: string }[]): string {
   return `g${n.toString(36)}`;
 }
 
-/** One group in the menu: a heading that folds it (or, while editing, names and drags it), then its services. */
+/**
+ * One group in the menu: a heading that folds it, then its services. A
+ * person's own group's heading also drags the group, renames on a
+ * double-click and has a × to remove it.
+ */
 function Group({
   foldId,
   name,
-  editing,
-  editHead,
   dropMark,
   dragging,
+  headInto,
   onDragOver,
   onHeadOver,
   labels,
+  drag,
+  onRename,
+  renameField,
+  remove,
   children,
 }: {
   foldId: string;
   name: string;
-  editing: boolean;
-  /** The heading while editing (Other Services keeps its plain one). */
-  editHead?: ReactNode;
   dropMark?: 'before' | 'after';
   dragging?: boolean;
+  /** A held service would land at the end of this group: a folded group's heading lights up. */
+  headInto?: boolean;
   onDragOver: (e: DragEvent) => void;
   onHeadOver: (e: DragEvent) => void;
-  labels: { show: string; hide: string };
+  labels: { show: string; hide: string; rename?: string };
+  drag?: { onDragStart: (e: DragEvent) => void; onDragEnd: () => void };
+  onRename?: () => void;
+  renameField?: ReactNode;
+  /** Its ×: asks "Are you sure?" in the heading itself before the group goes. */
+  remove?: { label: string; onRemove: () => void };
   children: ReactNode;
 }) {
-  const [stored, toggle] = useFold(foldId);
-  const open = editing || stored;
+  const [open, toggle] = useFold(foldId);
+  const t = useTranslations('navEdit');
+  const [confirming, setConfirming] = useState(false);
+  // A click folds it; a double-click renames instead (the fold waits to see which).
+  const pending = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const click = () => {
+    if (!onRename) return toggle();
+    if (pending.current) {
+      clearTimeout(pending.current);
+      pending.current = null;
+      return onRename();
+    }
+    pending.current = setTimeout(() => {
+      pending.current = null;
+      toggle();
+    }, 220);
+  };
   return (
     <div
       className="nav-sec-g"
@@ -477,20 +527,64 @@ function Group({
       data-dragging={dragging ? '' : undefined}
       onDragOver={onDragOver}
     >
-      <div className="nc-gh" onDragOver={onHeadOver}>
-        {editing && editHead ? (
-          editHead
+      <div
+        className="nc-gh"
+        draggable={!!drag && !renameField && !confirming}
+        onDragStart={drag?.onDragStart}
+        onDragEnd={drag?.onDragEnd}
+        onDragOver={onHeadOver}
+        data-drop={headInto && !open ? 'into' : undefined}
+      >
+        {confirming && remove ? (
+          <span className="nc-confirm" role="group" aria-label={remove.label}>
+            <span>{t('sure')}</span>
+            <button
+              type="button"
+              className="nc-confirm-yes"
+              autoFocus
+              onClick={() => {
+                setConfirming(false);
+                remove.onRemove();
+              }}
+            >
+              {t('imSure')}
+            </button>
+            <button
+              type="button"
+              className="nc-confirm-no"
+              onClick={() => setConfirming(false)}
+              onKeyDown={(e) => e.key === 'Escape' && setConfirming(false)}
+            >
+              {t('cancel')}
+            </button>
+          </span>
         ) : (
-          <button
-            type="button"
-            className="nav-sec nav-sec-t"
-            aria-expanded={open}
-            aria-label={`${open ? labels.hide : labels.show} · ${name}`}
-            onClick={editing ? undefined : toggle}
-          >
-            <Icon name="chevron-down" width={13} height={13} className="nav-sec-chev" />
-            <b>{name}</b>
-          </button>
+          renameField || (
+            <button
+              type="button"
+              className="nav-sec nav-sec-t"
+              aria-expanded={open}
+              aria-label={`${open ? labels.hide : labels.show} · ${name}`}
+              title={labels.rename}
+              onClick={click}
+            >
+              <Icon name="chevron-down" width={13} height={13} className="nav-sec-chev" />
+              <b>{name}</b>
+            </button>
+          )
+        )}
+        {!renameField && !confirming && remove && (
+          <span className="nc-gh-act">
+            <button
+              type="button"
+              className="nc-gh-b"
+              aria-label={remove.label}
+              title={remove.label}
+              onClick={() => setConfirming(true)}
+            >
+              <Icon name="x" width={12} height={12} />
+            </button>
+          </span>
         )}
       </div>
       {open && children}

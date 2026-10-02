@@ -17,7 +17,15 @@ import {
   type ServiceGroup,
   type ServiceWithType,
 } from '@/lib/services';
-import { arrange, navKey, orderMine, type NavGroup, type NavLine } from '@/lib/nav-layout';
+import {
+  arrange,
+  navKey,
+  orderChildren,
+  arrangeMine,
+  type NavGroup,
+  type NavLayout,
+  type NavLine,
+} from '@/lib/nav-layout';
 import { getNavLayout } from '@/lib/nav-store';
 import { isEssential, type GroupedCategory } from '@/lib/service-categories';
 import { totalsForRange } from '@/lib/stats';
@@ -71,8 +79,8 @@ export interface ShellView {
   split: boolean;
   /** The household's services as the viewer arranged them; groups with nothing in them included. */
   sections: ShellSection[];
-  /** My Services: the viewer's own, in their order, last. */
-  mine: ShellEntry[];
+  /** My Services, last: the viewer's own groups (empty ones included), then their own in no group. */
+  mine: ShellSection[];
   /** What each line is, for naming a group (the menu's editor). */
   lines: NavLine[];
   inboxCount: number;
@@ -112,15 +120,11 @@ export function shellView(hh: Household, me: Member, today: string, db: Db = get
     }));
   const minor = (s: ServiceWithType) => due.get(s.id) ?? 0;
   // The household's services, arranged in the viewer's groups; then My Services, their own.
-  const groups = groupServices(listServices(hh.id, {}, db));
-  const all = entries(groups, minor, vehicles(null), false);
-  const own = entries(
-    groupServices(listServices(hh.id, { owner: me.id }, db)),
-    minor,
-    vehicles(me.id),
-    true,
-  );
   const layout = getNavLayout(me.id, db);
+  const groups = groupServices(listServices(hh.id, {}, db));
+  const all = entries(groups, minor, vehicles(null), false, layout);
+  const ownGroups = groupServices(listServices(hh.id, { owner: me.id }, db));
+  const own = entries(ownGroups, minor, vehicles(me.id), true, layout);
   const essential = (e: ShellEntry) =>
     e.kind === 'service' && isEssential(groups.find((g) => navKey(g) === e.key)!.services[0]!.type);
   return {
@@ -133,8 +137,8 @@ export function shellView(hh: Household, me: Member, today: string, db: Db = get
     currency: hh.currency,
     split: hh.splitMode === 'shared',
     sections: arrange(all, (e) => e.key, layout, essential),
-    mine: orderMine(own, (e) => e.key, layout),
-    lines: navLines(groups),
+    mine: arrangeMine(own, (e) => e.key, layout),
+    lines: [...navLines(groups), ...navLines(ownGroups, true)],
     inboxCount: documentCounts(hh.id, { viewer: me.id }, db).needs_review,
     address: billsAddress(hh, db),
     me: { name: me.name, colour: me.colour, admin: isAdmin(me), role: me.role },
@@ -143,9 +147,9 @@ export function shellView(hh: Household, me: Member, today: string, db: Db = get
 }
 
 /** What each line of the nav is, for naming a group of them. */
-export function navLines(groups: ServiceGroup<ServiceWithType>[]): NavLine[] {
+export function navLines(groups: ServiceGroup<ServiceWithType>[], mine = false): NavLine[] {
   return groups.map((g) => ({
-    key: navKey(g),
+    key: navKey(g, mine),
     typeSlug: g.category ? null : (g.typeSlug ?? g.services[0]!.type.slug),
     category: g.category,
   }));
@@ -158,6 +162,8 @@ function entries(
   vehicles: ShellService[],
   /** The viewer's own (My Services). */
   mine: boolean,
+  /** The viewer's order inside each main service. */
+  layout: NavLayout | null,
 ): ShellEntry[] {
   // A sub-service opens its own page.
   const line = (s: ServiceWithType): ShellService => ({
@@ -193,7 +199,7 @@ function entries(
       colour: g.colour,
       // Its services' month added up, like every other line.
       minor: g.services.reduce((sum, s) => sum + minor(s), 0),
-      children,
+      children: orderChildren(children, (c) => c.id, layout, [key]),
     };
   });
 }
