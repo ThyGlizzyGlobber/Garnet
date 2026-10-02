@@ -257,6 +257,53 @@
   /* Where a dragged service lands: iOS blue. */
   --drop-line: #0a84ff;
 }
+/*
+  The brand at the top of the column on every page (owner, 2026-10-02): the
+  Garnet mark and the name in Bricolage Grotesque SemiBold, given room.
+*/
+.nc-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px 26px;
+  color: #ffffff;
+  text-decoration: none;
+}
+.nc-logo span {
+  font-family: var(--f-display);
+  font-weight: 600;
+  font-size: 25px;
+  letter-spacing: -0.015em;
+  line-height: 1;
+}
+.nc-logo .mark-gem {
+  flex: none;
+  filter: drop-shadow(0 4px 10px rgba(168, 20, 31, 0.45));
+}
+/* Where you are: the household (or all of them) as one quiet row under the brand. */
+.nav.column .sw-column .nc-brand {
+  padding: 8px 10px 8px 8px;
+  border-radius: 14px;
+  background: var(--inset);
+}
+.nav.column .sw-column .nc-brand:hover,
+.nav.column .sw-column .nc-brand[aria-expanded='true'] {
+  background: var(--inset-2);
+}
+.nav.column .sw-column .mark {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+}
+.nav.column .sw-column {
+  margin-bottom: 10px;
+}
+.nav.column .sw-column .nc-bt b {
+  font-family: var(--f-body);
+  font-weight: 650;
+  font-size: 14px;
+  letter-spacing: 0;
+}
 /* The household's mark: a light tile on the graphite. */
 .nav.column .mark {
   background: rgba(255, 255, 255, 0.12);
@@ -293,7 +340,6 @@
   gap: 10px;
   padding: 4px 4px 14px;
   border: 0;
-  border-bottom: 1px solid var(--line);
   background: none;
   text-align: left;
   cursor: pointer;
@@ -402,7 +448,6 @@
   flex-direction: column;
   gap: 1px;
   padding-top: 8px;
-  border-top: 1px solid var(--line);
 }
 .nav-sec {
   padding: 8px 12px 4px;
@@ -505,7 +550,14 @@
   }
   .nav.column .nc-brand {
     justify-content: center;
-    padding: 2px 0 12px;
+    padding: 6px 0;
+  }
+  .nav.column .nc-logo {
+    justify-content: center;
+    padding: 4px 0 18px;
+  }
+  .nav.column .nc-logo span {
+    display: none;
   }
   .nav.column .nav-i {
     flex-direction: column;

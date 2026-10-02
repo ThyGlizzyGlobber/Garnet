@@ -79,6 +79,9 @@ const ICONS: Record<string, string> = {
   chart: 'M4 20.5V4 M4 20.5h16.5 M8 16.5v-4 M12 16.5V8 M16 16.5v-6',
   layers: 'M12 3.5 3 8l9 4.5L21 8z M3 12.5l9 4.5 9-4.5 M3 16.5l9 4.5 9-4.5',
   grid: '<rect x="3.5" y="3.5" width="17" height="17" rx="3"/><path d="M3.5 9.2h17M3.5 14.8h17M9.2 3.5v17M14.8 3.5v17"/>',
+  // The Account Dashboard: four tiles of different sizes.
+  dashboard:
+    '<rect x="3.5" y="3.5" width="7" height="9" rx="1.8"/><rect x="13.5" y="3.5" width="7" height="5" rx="1.8"/><rect x="13.5" y="11.5" width="7" height="9" rx="1.8"/><rect x="3.5" y="15.5" width="7" height="5" rx="1.8"/>',
   desktop: '<rect x="2.5" y="4" width="19" height="12.5" rx="2"/><path d="M8.5 20.5h7M12 16.5v4"/>',
   phone: '<rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/>',
   devices:

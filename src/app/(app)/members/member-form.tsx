@@ -35,6 +35,7 @@ export function MemberForm({
   submitLabel,
   cancelHref,
   side,
+  nameLocked,
 }: {
   action: FormAction;
   initial: MemberFormValues;
@@ -46,6 +47,12 @@ export function MemberForm({
   submitLabel: string;
   cancelHref: string;
   side?: ReactNode;
+  /**
+   * A joined member's name is theirs (owner, 2026-10-02): changed only by
+   * them, on their Profile, for every household. When set, the name shows
+   * read-only with this line under it.
+   */
+  nameLocked?: ReactNode;
 }) {
   const t = useTranslations('members.form');
   const tc = useTranslations('common');
@@ -59,8 +66,15 @@ export function MemberForm({
             <Card className="form-main">
               <SectionHead title={t('details')} />
               <div className="fld-row">
-                <Field label={t('name')} error={errors.name}>
-                  <Input name="name" defaultValue={initial.name} autoComplete="off" required />
+                <Field label={t('name')} error={errors.name} hint={nameLocked}>
+                  <Input
+                    name="name"
+                    defaultValue={initial.name}
+                    autoComplete="off"
+                    required
+                    readOnly={!!nameLocked}
+                    aria-readonly={!!nameLocked}
+                  />
                 </Field>
                 <div className="fld">
                   <span className="fld-l">{t('colour')}</span>

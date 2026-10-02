@@ -107,7 +107,7 @@ export function HouseholdSwitcher({
           ))}
           <div className="sw-sep" role="separator" />
           <Link href="/account" role="menuitem" className="sw-item" onClick={() => setOpen(false)}>
-            <Icon name="grid" width={17} height={17} />
+            <Icon name="dashboard" width={17} height={17} />
             <span>{labels.dashboard}</span>
           </Link>
         </div>

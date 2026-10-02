@@ -7,6 +7,7 @@ import type { ShellEntry, ShellView } from '@/lib/shell';
 import { logout } from '@/app/login/actions';
 import { AccountMenu, type AccountMenuItem } from './account-menu';
 import { AddBillButton } from './add-bill';
+import { GarnetMark } from './garnet-mark';
 import { Icon } from './icons';
 import { NavGroup } from './nav-group';
 import { NavHouseholds } from './nav-households';
@@ -60,8 +61,10 @@ export interface ShellLabels {
   households: string;
   account: string;
   console: string;
-  /** "Your households", under the product's name in the account variant. */
+  /** "Your households": the switcher's name in the account area. */
   yourHouseholds: string;
+  /** Under it: "3 Households". */
+  householdCount: (count: number) => string;
   /** The account area's menu: Overview, then My Account's pages. */
   acct: {
     overview: string;
@@ -143,8 +146,9 @@ export function AppShell({
     current: h.current,
     icon: typeIcon(h.type),
   }));
-  const brandTitle = account ? labels.product : view.household.name;
-  const brandIcon = account ? 'grid' : typeIcon(view.household.type);
+  // The switcher names where you are: a household, or (the account area) all of them.
+  const brandTitle = account ? labels.yourHouseholds : view.household.name;
+  const brandIcon = account ? 'dashboard' : typeIcon(view.household.type);
   const myRole =
     labels.roles[roleKey(view.me.role, view.household.type)] ??
     (view.me.admin ? labels.admin : labels.member);
@@ -152,7 +156,7 @@ export function AppShell({
   const am = labels.accountMenu;
   const menuGroups: AccountMenuItem[][] = [
     [
-      { href: '/account', label: am.dashboard, icon: 'grid' },
+      { href: '/account', label: am.dashboard, icon: 'dashboard' },
       ...(account
         ? []
         : [
@@ -228,12 +232,18 @@ export function AppShell({
     );
   return (
     <div className="app">
+      {/* The same column everywhere (owner, 2026-10-02): the brand, where you
+          are (the switcher), the main links, headed sections, and you. */}
       <nav className="nav glass-strong vertical column" aria-label="Main">
+        <Link href={account ? '/account/overview' : '/'} className="nc-logo">
+          <GarnetMark size={30} />
+          <span>{labels.product}</span>
+        </Link>
         <HouseholdSwitcher
           place="column"
           icon={brandIcon}
           title={brandTitle}
-          sub={account ? labels.yourHouseholds : who}
+          sub={account ? labels.householdCount(view.households.length) : who}
           rows={rows}
           labels={labels.switcher}
           action={switchAction}

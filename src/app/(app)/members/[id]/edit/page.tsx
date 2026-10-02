@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { NewPinForm } from '@/components/app/auth-forms';
@@ -168,6 +169,19 @@ export default async function EditMemberPage({ params }: { params: Promise<{ id:
         submitLabel={t('form.save')}
         cancelHref="/members"
         side={side}
+        nameLocked={
+          m.accountId
+            ? me.id === m.id
+              ? t.rich('form.nameYours', {
+                  link: (chunks) => (
+                    <Link href="/account/profile" className="link">
+                      {chunks}
+                    </Link>
+                  ),
+                })
+              : t('form.nameTheirs', { name: m.name })
+            : undefined
+        }
         initial={{
           id: m.id,
           name: m.name,

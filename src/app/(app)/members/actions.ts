@@ -149,7 +149,8 @@ export async function updateMemberAction(_prev: ActionState, fd: FormData): Prom
     if (admin && !isAdmin(target) && isRole(asked) && asked !== ADMIN_ROLE)
       setMemberRole(me.householdId, id, roleFor(hh.type, asked));
     updateMember(me.householdId, id, {
-      name: v.name,
+      // A joined member's name is theirs: changed on their Profile, never here.
+      ...(target.accountId ? {} : { name: v.name }),
       colour: v.colour,
       paymentDetails: readPaymentDetails(fd),
       // Move-in, move-out and weight decide everyone's shares: admins only.

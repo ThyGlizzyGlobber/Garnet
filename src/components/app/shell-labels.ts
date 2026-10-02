@@ -50,6 +50,7 @@ export async function shellLabels(householdName: string): Promise<ShellLabels> {
     account: t('accountShort'),
     console: t('console'),
     yourHouseholds: t('yourHouseholds'),
+    householdCount: (count) => t('householdCount', { count }),
     acct: {
       overview: t('acct.overview'),
       myAccount: t('acct.myAccount'),

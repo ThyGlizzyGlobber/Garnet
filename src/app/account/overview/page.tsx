@@ -47,7 +47,7 @@ export default async function OverviewPage() {
     <div className="scr account pf">
       <PageTitle title={t('title')} lede={t('lede', { count: view.tiles.length })} />
       {view.tiles.length === 0 ? (
-        <EmptyCard icon="grid" title={t('emptyTitle')} body={t('emptyBody')} />
+        <EmptyCard icon="dashboard" title={t('emptyTitle')} body={t('emptyBody')} />
       ) : (
         <>
           <Card>

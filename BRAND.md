@@ -324,8 +324,7 @@ The studio's `.ring` is `.gauge` here (Tailwind owns `ring`):
   whole left edge (`--side-bg`: `#242424` light, `#121212` dark, over a 24 px
   blur), 292 px wide, square (owner, 2026-10-02: full height, not a floating
   card, wider; solid was jarring, so 75%). It carries its own dark tokens, so
-  its text, dropdowns and menus read light on graphite in both themes: the
-  household at the top, then Home · Services · Bills · Money · Members · Inbox
+  its text, dropdowns and menus read light on graphite in both themes: the Garnet mark and name (Bricolage Grotesque SemiBold) at the top, then the household switcher as one quiet row, then Home · Services · Bills · Money · Members · Inbox
   (42 px items, radius 14), then the services with this month's amount
   beside each, and you at the foot.
 - **The services in the column** are arranged by each person, by dragging

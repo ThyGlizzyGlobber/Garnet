@@ -42,7 +42,8 @@
       "appearance": "Appearance",
       "developer": "Developer",
       "primary": "Primary"
-    }
+    },
+    "householdCount": "{count, plural, one {# Household} other {# Households}}"
   },
   "setup": {
     "title": "Set up your household.",
@@ -865,7 +866,9 @@
       "colourHint": "Their avatar and their part of each split bar.",
       "role": "Role",
       "roleHint": "What they are here. Only admins add people, set splits and change settings.",
-      "roleBoarderHint": "A boarder pays no share until an admin puts them in a service’s split."
+      "roleBoarderHint": "A boarder pays no share until an admin puts them in a service’s split.",
+      "nameYours": "Your name is yours to change, on <link>your Profile</link>, and it changes in every household.",
+      "nameTheirs": "Only {name} can change their name, from their own profile."
     },
     "status": {
       "joined": "Joined",
