@@ -135,6 +135,11 @@ export const account = sqliteTable(
     /** The household they were last in, so a new device starts somewhere sensible (D6). */
     lastMemberId: text('last_member_id'),
     lastSignInAt: text('last_sign_in_at'),
+    /**
+     * When the person last set their profile photo (DATA_DIR/avatars/<id>.jpg);
+     * null = none. Doubles as the photo's version in its URL.
+     */
+    avatarAt: text('avatar_at'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },

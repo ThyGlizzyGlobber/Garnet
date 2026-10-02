@@ -31,7 +31,7 @@ export default async function UnsubscribePage({
           <h2>{t('doneTitle')}</h2>
           <p className="muted">{t('done')}</p>
         </div>
-        <LinkButton href="/settings#emails" variant="ghost" className="wide">
+        <LinkButton href="/settings/notifications" variant="ghost" className="wide">
           {t('change')}
         </LinkButton>
       </AuthShell>
@@ -70,7 +70,7 @@ export default async function UnsubscribePage({
           {t('cta')}
         </Button>
       </form>
-      <LinkButton href="/settings#emails" variant="ghost" className="wide">
+      <LinkButton href="/settings/notifications" variant="ghost" className="wide">
         {t('change')}
       </LinkButton>
     </AuthShell>

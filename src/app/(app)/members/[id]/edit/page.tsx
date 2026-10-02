@@ -7,6 +7,7 @@ import { Avatar } from '@/components/ui/colour';
 import { BackLink } from '@/components/ui/controls';
 import { InlineAction } from '@/components/ui/form';
 import { getAccount } from '@/lib/accounts';
+import { avatarUrl } from '@/lib/profile';
 import { authState } from '@/lib/auth/session';
 import { countDevices } from '@/lib/auth/devices';
 import { pageContext } from '@/lib/context';
@@ -147,7 +148,12 @@ export default async function EditMemberPage({ params }: { params: Promise<{ id:
         className="member-h glass rounded-card"
         style={{ ['--m' as string]: colourCss(m.colour) }}
       >
-        <Avatar name={m.name} colour={m.colour} size="lg" />
+        <Avatar
+          name={m.name}
+          colour={m.colour}
+          photo={avatarUrl(m.accountId ? getAccount(m.accountId) : null)}
+          size="lg"
+        />
         <div>
           <div className="eyebrow">{tr(roleKey(m.role, hh.type))}</div>
           <h1>{m.name}</h1>

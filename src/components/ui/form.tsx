@@ -7,6 +7,8 @@ export interface ActionState {
   error?: string;
   fieldErrors?: Record<string, string>;
   ok?: boolean;
+  /** A line to show once it worked ("Saved in all 3 households"). */
+  note?: string;
 }
 
 export type FormAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;

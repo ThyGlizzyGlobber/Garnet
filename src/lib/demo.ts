@@ -1,3 +1,4 @@
+import { deletePhotoFile } from '@/lib/profile';
 import fs from 'node:fs';
 import { eq, isNull, like, notInArray } from 'drizzle-orm';
 import path from 'node:path';
@@ -51,13 +52,12 @@ export function exitDemo(householdId: string, db: Db = getDb()): void {
     .where(isNull(member.accountId))
     .all()
     .flatMap((r) => (r.id ? [r.id] : []));
-  db.delete(account)
-    .where(
-      linked.length
-        ? notInArray(account.id, linked)
-        : like(account.email, `%@${DEMO_EMAIL_DOMAIN}`),
-    )
-    .run();
+  const gone = linked.length
+    ? notInArray(account.id, linked)
+    : like(account.email, `%@${DEMO_EMAIL_DOMAIN}`);
+  const ids = db.select({ id: account.id }).from(account).where(gone).all();
+  db.delete(account).where(gone).run();
+  for (const { id } of ids) deletePhotoFile(id);
   fs.writeFileSync(
     path.join(ensureDataDirs().config, OFF),
     JSON.stringify({ exitedAt: new Date().toISOString() }),

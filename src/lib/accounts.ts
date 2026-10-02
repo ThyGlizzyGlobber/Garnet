@@ -62,6 +62,7 @@ export function signInAccount(
     glass: 'auto',
     lastMemberId: null,
     lastSignInAt: now,
+    avatarAt: null,
     createdAt: now,
     updatedAt: now,
   };

@@ -1,22 +1,15 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import { logout } from '@/app/login/actions';
-import { saveAppearanceAction } from '@/app/(app)/settings/actions';
 import { joinWithCodeAction } from '@/app/welcome/actions';
-import { AppearanceFade } from '@/components/app/appearance-fade';
 import { JoinCodeForm } from '@/components/app/auth-forms';
 import { Icon } from '@/components/app/icons';
-import { Button, Card, LinkButton } from '@/components/ui';
-import { Kv, PageTitle, SectionHead } from '@/components/ui/blocks';
+import { PageTitle, SectionHead } from '@/components/ui/blocks';
 import { Chip } from '@/components/ui/chip';
 import { Avatars } from '@/components/ui/colour';
-import { Segmented } from '@/components/ui/controls';
 import { accountView, type HouseholdTile } from '@/lib/account';
 import { roleKey, typeIcon } from '@/lib/household-types';
-import { getAppearance } from '@/lib/auth/appearance';
 import { authState, pathFor } from '@/lib/auth/session';
-import { getEnv } from '@/lib/env';
 import { formatMoney } from '@/lib/format';
 import { LeaveButton } from './leave-button';
 import { makePrimaryAction, switchHouseholdAction } from './actions';
@@ -41,12 +34,7 @@ export default async function AccountPage({
   const demo = state.kind === 'ok' && state.demo;
   const view = accountView(state.account ?? null, me);
   const t = await getTranslations('account');
-  const ta = await getTranslations('appearance');
-  const tn = await getTranslations('nav');
-  const ts = await getTranslations('settings.account');
   const tr = await getTranslations('roles');
-  const look = await getAppearance();
-  const env = getEnv();
   const money = (minor: number, currency: string, locale: string) =>
     formatMoney(minor, currency, locale, { whole: true });
   const owe = view.oweAll;
@@ -90,94 +78,6 @@ export default async function AccountPage({
           )}
         </div>
       </section>
-
-      <Card id="account" className="acct-card">
-        <SectionHead title={tn('account')} />
-        <Kv
-          rows={[
-            [ts('name'), view.name ?? '—'],
-            [
-              ts('email'),
-              view.email ? (
-                <span key="e" className="mono">
-                  {view.email}
-                </span>
-              ) : (
-                ts('demo')
-              ),
-            ],
-            [
-              ts('signsInWith'),
-              view.method === 'google'
-                ? ts('google')
-                : view.method === 'code'
-                  ? ts('code')
-                  : ts('demoSignIn'),
-            ],
-            [
-              ts('pin'),
-              view.hasPin ? ts('pinSet', { days: env.AUTH_SESSION_DAYS }) : ts('pinNone'),
-            ],
-          ]}
-        />
-        <AppearanceFade>
-          <div className="set-row">
-            <span>
-              <b>{ta('lightOrDark')}</b>
-              <span className="muted small">{ta('lightOrDarkBody')}</span>
-            </span>
-            <form action={saveAppearanceAction}>
-              <Segmented
-                small
-                name="theme"
-                value={look.theme}
-                label={ta('lightOrDark')}
-                items={[
-                  { value: 'light', label: ta('themes.light'), icon: 'sun' },
-                  { value: 'dark', label: ta('themes.dark'), icon: 'moon' },
-                  { value: 'auto', label: ta('themes.auto'), icon: 'devices' },
-                ]}
-              />
-            </form>
-          </div>
-          <div className="set-row">
-            <span>
-              <b>{ta('glass')}</b>
-              <span className="muted small">{ta('glassBody')}</span>
-            </span>
-            <form action={saveAppearanceAction}>
-              <Segmented
-                small
-                name="glass"
-                value={look.glass}
-                label={ta('glass')}
-                items={[
-                  { value: 'clear', label: ta('glassModes.clear'), icon: 'layers' },
-                  { value: 'solid', label: ta('glassModes.solid'), icon: 'grid' },
-                  { value: 'auto', label: ta('glassModes.auto'), icon: 'devices' },
-                ]}
-              />
-            </form>
-          </div>
-        </AppearanceFade>
-        <div className="set-acts">
-          {me && view.hasPin && (
-            <LinkButton
-              href={`/members/${me.id}/edit#pin`}
-              variant="secondary"
-              size="sm"
-              icon="lock"
-            >
-              {ts('changePin')}
-            </LinkButton>
-          )}
-          <form action={logout}>
-            <Button variant="ghost" size="sm">
-              {tn('logout')}
-            </Button>
-          </form>
-        </div>
-      </Card>
     </div>
   );
 }

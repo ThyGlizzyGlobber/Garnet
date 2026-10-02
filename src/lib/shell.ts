@@ -93,6 +93,8 @@ export interface ShellView {
     role: string;
     /** The account's email, for the account menu (none for demo sign-ins). */
     email?: string | null;
+    /** Their profile photo (src/lib/profile.ts). */
+    photo?: string | null;
   };
   /** A developer of the install sees the Console (SCOPE-console.md). */
   developer: boolean;

@@ -439,6 +439,17 @@
   height: 46px;
   font-size: 19px;
 }
+/* A profile photo in place of the initial. */
+.av-photo {
+  overflow: hidden;
+  background: var(--inset-2);
+}
+.av-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
 .avs {
   display: inline-flex;
 }

@@ -32,7 +32,17 @@
     "accountShort": "Account",
     "yourHouseholds": "Your households",
     "allowance": "Allowance",
-    "console": "Backend management"
+    "console": "Backend management",
+    "acct": {
+      "overview": "Overview",
+      "myAccount": "My Account",
+      "profile": "Profile",
+      "notifications": "Notifications",
+      "security": "Security & Access",
+      "appearance": "Appearance",
+      "developer": "Developer",
+      "primary": "Primary"
+    }
   },
   "setup": {
     "title": "Set up your household.",
@@ -942,37 +952,37 @@
     }
   },
   "settings": {
-    "title": "Settings",
+    "title": "Household settings",
     "ownerOnly": "Only the owner can change these.",
     "saved": "Saved.",
     "save": "Save",
     "region": "Region",
     "fields": {
-      "name": "Household name",
-      "splitMode": "Bills are",
-      "paymentReferenceTemplate": "Payment reference template",
+      "name": "Name",
+      "splitMode": "Bills",
+      "paymentReferenceTemplate": "Payment reference",
       "currency": "Currency",
-      "locale": "Locale",
-      "timezone": "Timezone",
-      "fiscalYearStartMonth": "Financial year starts in",
-      "weekStartsOn": "Week starts on",
-      "membersCanExport": "Everyone can download the household's bills",
-      "type": "Kind of household",
+      "locale": "Number and date format",
+      "timezone": "Time zone",
+      "fiscalYearStartMonth": "Financial year starts",
+      "weekStartsOn": "Week starts",
+      "membersCanExport": "Everyone can download bills",
+      "type": "Type",
       "address": "Property address",
       "allowance": "Utilities allowance",
       "allowancePeriod": "Per"
     },
     "hints": {
-      "splitMode": "Switching to single stops new bills being split. Existing shares are kept.",
-      "paymentReferenceTemplate": "Placeholders: '{service}', '{period}', '{member}', '{ref}'. Trimmed to 18 characters.",
-      "membersCanExport": "Lets every member download the zip of the household's bills and their files (Bills → Download everything), not just admins. Personal bills are only ever in their owner's download.",
+      "splitMode": "Existing shares stay as they are.",
+      "paymentReferenceTemplate": "Use '{service}', '{period}', '{member}' and '{ref}'. Up to 18 characters.",
+      "membersCanExport": "Members can download the household’s bills as a zip. Personal bills stay private.",
       "membersCanExportShort": "Otherwise only admins can",
-      "type": "Decides the roles people can have. Whether bills are split is set just below.",
-      "allowance": "Leave empty when the tenants pay their utilities directly. With an amount, bills up to it are covered by the rent and the overage is owed by the tenants."
+      "type": "Sets the roles people can have.",
+      "allowance": "Leave empty if tenants pay utilities directly. Anything over the allowance is owed by the tenants."
     },
     "splitModes": {
-      "shared": "split between members",
-      "single": "not split (single household)"
+      "shared": "Split between members",
+      "single": "Not split"
     },
     "system": {
       "title": "System",
@@ -987,10 +997,10 @@
       "status": "Status"
     },
     "demo": {
-      "title": "Demo mode",
-      "body": "This household is the fictional demo. Exiting deletes every demo member, service and bill on this server and opens the setup wizard for your real household. Demo data will not be re-created, even with DEMO_MODE still set.",
-      "exit": "Exit demo mode",
-      "confirm": "Delete the demo household and start real setup? This cannot be undone."
+      "title": "Demo household",
+      "body": "This is the fictional demo. Leaving deletes all of its data and starts setting up your own household.",
+      "exit": "Leave the demo",
+      "confirm": "Delete the demo household and set up your own? This can’t be undone."
     },
     "update": {
       "title": "Software update",
@@ -1000,14 +1010,14 @@
       "available": "{count, plural, one {# update available} other {# updates available}}",
       "availableUnknown": "Latest release: {sha}",
       "more": "and {count} more",
-      "howItWorks": "The NAS snapshots your data, downloads the new version and restarts the app. It's back in about two minutes.",
+      "howItWorks": "The NAS takes a snapshot, installs the update and restarts, in about two minutes.",
       "updateNow": "Update now",
       "updateAnyway": "Install latest release",
-      "confirm": "Update now? The app restarts and is unavailable for about two minutes.",
+      "confirm": "Update now? The app is unavailable for about two minutes.",
       "checkAgain": "Check again",
       "unconfigured": "Update checks need UPDATE_REPO and UPDATE_GITHUB_TOKEN. You can still install the latest release.",
       "error": "Couldn't check for updates: {message}",
-      "queued": "Update requested. Waiting for the NAS to pick it up (within a minute)…",
+      "queued": "Update requested. The NAS picks it up within a minute…",
       "applying": "The NAS is downloading and installing the update…",
       "restarting": "Restarting…",
       "slow": "This is taking longer than usual. Check the updater cron job and update.log on the NAS.",
@@ -1015,10 +1025,11 @@
       "done": "Updated from {from} ({date})."
     },
     "metrics": {
-      "title": "Details from earlier bills and emails",
-      "body": "{count, plural, one {# document came} other {# documents came}} in before the app kept every figure from a bill and the date printed on each receipt and email. Analyse them again to fill those in, so usage comparisons have history and the Inbox files everything under the right month.",
+      "title": "Details from earlier bills",
+      "body": "{count, plural, one {# document was} other {# documents were}} analysed before every figure and date was kept. Analyse again to fill in usage history and file each under the right month.",
       "start": "Analyse {count, plural, one {# document} other {# documents}} again",
-      "reading": "Analysing earlier documents in the background. Refresh in a minute or two to see how many are left."
+      "reading": "Analysing in the background. Refresh in a minute to see what’s left.",
+      "done": "Nothing to fill in. Every earlier document has its details."
     },
     "glance": {
       "members": "Members",
@@ -1033,7 +1044,6 @@
       "noCap": "No monthly cap",
       "ofLimit": "of {limit} this month"
     },
-    "lede": "How the app looks for you, what it emails you, and your household.",
     "account": {
       "name": "Name",
       "email": "Email",
@@ -1045,25 +1055,78 @@
       "pin": "PIN",
       "pinSet": "Set · asked again every {days, plural, one {day} other {# days}}",
       "pinNone": "Not set",
-      "changePin": "Change PIN",
-      "open": "Your account",
-      "openSub": "Your households, how you sign in, your PIN, light or dark."
-    },
-    "emails": {
-      "title": "Emails"
+      "changePin": "Change PIN"
     },
     "household": {
-      "title": "Household",
-      "justYou": "Just you",
-      "youAdmin": "you’re an admin",
-      "youMember": "you’re a member",
-      "notSplit": "bills aren’t split",
       "noAddress": "No bills address yet: set BILLS_ADDRESS_TEMPLATE and the inbound secret."
     },
-    "showDetails": "Household details",
-    "editDetails": "Edit household details",
     "householdTypes": {
       "none": "Not set"
+    },
+    "index": {
+      "lede": "Settings for {household}.",
+      "general": "General",
+      "features": "Features",
+      "developer": "Developer",
+      "adminOnly": "Admins only",
+      "viewOnly": "Only admins can change these.",
+      "household": {
+        "title": "Household details",
+        "desc": "Name, type, currency, time zone and financial year",
+        "lede": "How your household’s money, dates and payment references look."
+      },
+      "members": {
+        "title": "Members",
+        "desc": "Who lives here and what they can do"
+      },
+      "billsAddress": {
+        "title": "Bills address",
+        "desc": "Where your household forwards its bills",
+        "lede": "Forward bills here and they’re added for you.",
+        "none": "No bills address has been set up yet."
+      },
+      "location": {
+        "title": "Location",
+        "desc": "Your postcode, for weather and seasons"
+      },
+      "account": {
+        "title": "Your account",
+        "desc": "Sign-in, PIN, appearance and your households"
+      },
+      "notifications": {
+        "title": "Notifications",
+        "desc": "The emails Garnet sends you",
+        "lede": "Emails go to the address you sign in with."
+      },
+      "sharing": {
+        "title": "Area comparisons",
+        "desc": "Compare your bills with households nearby"
+      },
+      "wall": {
+        "title": "Wall display",
+        "desc": "A full-screen view for a tablet on the wall"
+      },
+      "catchUp": {
+        "title": "Details from earlier bills",
+        "desc": "Fill in details for older documents"
+      },
+      "demo": {
+        "title": "Demo household",
+        "desc": "Leave the demo and set up your own"
+      },
+      "update": {
+        "title": "Software update",
+        "desc": "Install the latest version",
+        "lede": "What’s installed and what’s new."
+      },
+      "system": {
+        "title": "System",
+        "desc": "This install’s set-up"
+      },
+      "console": {
+        "title": "Backend management",
+        "desc": "Households, accounts, access and health"
+      }
     }
   },
   "dashboard": {
@@ -1554,10 +1617,10 @@
     "title": "Household bills address",
     "body": "Forward bills to this address and they're added automatically. Forward a provider's “payment failed” or “overdue” email and the bill is flagged.",
     "label": "Forward bills to",
-    "howForward": "Forward a bill from your own inbox as it is: the PDF, the email itself, or a photo. No need to change anything with your providers.",
+    "howForward": "Forward bills from your own inbox as they are: a PDF, the email or a photo.",
     "howReview": "Only the attachments from a forwarded email are kept; the email itself isn't stored. Receipts mark the bill they paid.",
     "replace": "Get a new address",
-    "replaceConfirm": "Replace the address? The current one stops working immediately, so let everyone in the household know the new one.",
+    "replaceConfirm": "Replace the address? The current one stops working straight away.",
     "short": "Forward bills to ",
     "howTrust": "Bills forwarded by household members from the email they sign in with are added straight away. Anything else waits for a quick look."
   },
@@ -1752,27 +1815,27 @@
   },
   "location": {
     "title": "Location",
-    "body": "Your postcode lets the app know your seasons and, later, your local weather. We never ask for your address.",
+    "body": "Your postcode sets your seasons and local weather. Never your address.",
     "country": "Country",
     "place": "Postcode or suburb",
     "placeOptional": "Postcode or suburb (optional)",
-    "placeHint": "Type your postcode or suburb and pick it from the list.",
+    "placeHint": "Type a postcode or suburb and pick it from the list.",
     "placePlaceholder": "e.g. 3550 or Bendigo",
     "postcode": "Postcode",
     "postcodeOptional": "Postcode (optional)",
-    "noDataHint": "We don't have postcode details for this country yet, so seasons come from your timezone for now.",
+    "noDataHint": "No postcode data for this country yet, so seasons use your time zone.",
     "change": "Change",
     "save": "Save location",
     "remove": "Remove location",
-    "none": "No location yet. Seasons are worked out from your timezone until you add one.",
+    "none": "No location yet. Seasons use your time zone for now.",
     "southern": "Southern hemisphere",
     "northern": "Northern hemisphere",
-    "tropical": "Tropics (wet and dry seasons)",
+    "tropical": "Tropics (wet and dry)",
     "temperate": "Four seasons",
     "attribution": "Postcode data © GeoNames, licensed CC BY 4.0.",
     "prompt": {
       "title": "Add your postcode",
-      "body": "It tells the app your seasons, so it can warn you before winter or summer changes your bills. Just the postcode, never your address.",
+      "body": "So the app knows your seasons and can warn you before your bills change. Postcode only, never your address.",
       "action": "Add postcode",
       "dismiss": "Not now"
     }
@@ -1826,14 +1889,14 @@
   },
   "sharing": {
     "title": "Area comparisons",
-    "body": "Your household adds anonymised figures to area comparisons, and gets \"households like yours\" figures and better estimates back when your own history is thin. A figure is only kept or shown when at least {k} households stand behind it.",
-    "shared": "Shared: monthly cost, usage, rates, supply charges and solar export per kind of service (electricity, gas…), with your postcode area and household size band.",
-    "never": "Never shared: names, emails, addresses, account or invoice numbers, notes or the bills themselves.",
-    "checkbox": "Share anonymised figures for area comparisons",
-    "checkboxHint": "On by default. Turning it off takes your household out of every area figure straight away.",
+    "body": "Share anonymised figures to see how you compare with households nearby, and get better estimates. A figure only shows once {k} or more households are behind it.",
+    "shared": "Shared: cost, usage and rates per type of service, with your postcode area and household size.",
+    "never": "Never shared: names, emails, addresses, account numbers or the bills themselves.",
+    "checkbox": "Share anonymised figures",
+    "checkboxHint": "Turning it off removes your household from every figure straight away.",
     "save": "Save",
-    "onMember": "Your household shares anonymised figures (your admin can change this).",
-    "offMember": "Your household doesn't share figures (your admin can change this).",
+    "onMember": "Your household shares anonymised figures. An admin can change this.",
+    "offMember": "Your household doesn’t share figures. An admin can change this.",
     "since": {
       "on": "On since {date}.",
       "off": "Off since {date}."
@@ -1841,11 +1904,11 @@
     "privacy": "How your data is used",
     "notice": {
       "title": "Area comparisons are on",
-      "body": "Your household adds anonymised figures (costs, usage and rates per kind of service, with your postcode area) to comparisons with similar households, never names, addresses or bills. You can turn this off in Settings at any time.",
+      "body": "Your household shares anonymised costs, usage and rates with your postcode area, never names, addresses or bills. Turn it off in Settings any time.",
       "ok": "Got it",
       "change": "Change in Settings"
     },
-    "setup": "Share anonymised figures for area comparisons (you can turn this off later in Settings)."
+    "setup": "Share anonymised figures for area comparisons (change it any time in Settings)."
   },
   "area": {
     "title": "Households like yours",
@@ -2838,7 +2901,8 @@
     "appearance": "Appearance",
     "wall": "Wall display",
     "backend": "Backend management",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "profile": "Profile"
   },
   "account": {
     "title": "Hey, {name}.",
@@ -3092,5 +3156,100 @@
     "sure": "Are you sure?",
     "imSure": "I'm sure",
     "cancel": "Cancel"
+  },
+  "profile": {
+    "verified": "Verified email",
+    "demo": "Demo people have no profile to change.",
+    "personal": "Personal details",
+    "email": "Email",
+    "demoEmail": "Demo household",
+    "everywhere": "{count, plural, =0 {Your name and photo go with you into every household you join.} one {Your name and photo are what your household sees.} other {Your name and photo are the same in all # of your households.}}",
+    "households": "Your households",
+    "home": "Primary",
+    "current": "Open now",
+    "differs": "{count, plural, one {# household uses} other {# households use}} another name for you, because someone there already has this one.",
+    "name": {
+      "label": "Name",
+      "save": "Save",
+      "saving": "Saving…",
+      "required": "Enter your name.",
+      "tooLong": "Up to {max} characters.",
+      "saved": "Saved in all your households.",
+      "kept": "Saved. {households} kept your old name, as someone there already uses this one."
+    },
+    "photo": {
+      "label": "Photo",
+      "set": "Added",
+      "unset": "None yet, so your initial shows",
+      "add": "Add photo",
+      "change": "Change photo",
+      "remove": "Remove",
+      "uploading": "Uploading…",
+      "none": "Choose a photo first.",
+      "tooBig": "That photo is too big. Up to 15 MB.",
+      "unreadable": "That file couldn’t be opened as a photo. Try a JPEG or PNG."
+    },
+    "security": {
+      "title": "Security & Access",
+      "lede": "How you sign in, your PIN, and the devices signed in as you.",
+      "signIn": "Sign-in",
+      "created": "Account created",
+      "lastSignIn": "Last sign-in",
+      "noPassword": "There’s no password: you sign in with Google or a code emailed to you.",
+      "devices": "Devices",
+      "devicesBody": "{count, plural, one {Signed in on this device only.} other {Signed in on # devices.}}",
+      "devicesDemo": "Demo people sign in with a name and PIN.",
+      "signOutOthers": "Sign out other devices",
+      "signOutOthersConfirm": "Sign out every other device? They’ll need to sign in again."
+    },
+    "notifications": {
+      "title": "Notifications",
+      "lede": "Emails go to {email}. Choose what each household sends you.",
+      "demo": "Demo people don’t get emails.",
+      "emptyTitle": "No households yet",
+      "emptyBody": "Start or join a household and its emails show up here."
+    },
+    "appearance": {
+      "title": "Appearance",
+      "lede": "Yours on every device you sign in on."
+    }
+  },
+  "accountOverview": {
+    "title": "Overview",
+    "lede": "{count, plural, =0 {No households yet.} one {Your household at a glance.} other {All # of your households at a glance.}}",
+    "emptyTitle": "No households yet",
+    "emptyBody": "Start or join a household from Households.",
+    "owe": "You owe",
+    "oweSub": "across your households",
+    "month": "Bills this month",
+    "monthSub": "due across your households",
+    "mixed": "In more than one currency",
+    "overdue": "Overdue",
+    "overdueSub": "bills past their due date",
+    "waiting": "To confirm",
+    "waitingSub": "documents waiting",
+    "byHousehold": "By household",
+    "col": {
+      "household": "Household",
+      "month": "This month",
+      "owe": "You owe",
+      "attention": "Needs attention"
+    },
+    "open": "Open {household}",
+    "overdueN": "{count} overdue",
+    "waitingN": "{count} to confirm",
+    "allClear": "All clear",
+    "recent": "Coming up and overdue",
+    "today": "today",
+    "daysTo": "{count, plural, one {in # day} other {in # days}}",
+    "daysLate": "{count, plural, one {# day late} other {# days late}}",
+    "status": {
+      "overdue": "Overdue",
+      "today": "Due today",
+      "tomorrow": "Due tomorrow",
+      "soon": "Due soon",
+      "due": "To pay",
+      "paid": "Paid"
+    }
   }
 }

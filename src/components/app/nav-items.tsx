@@ -11,15 +11,31 @@ export interface NavItem {
   badge?: number;
 }
 
-/** Which nav item a path belongs to: Home only at "/", the others by prefix. */
+/**
+ * Which nav item a path belongs to: Home only at "/", the others by prefix,
+ * the longest winning (Overview at /account/overview, not Households at /account).
+ */
 function activeItem(items: NavItem[], pathname: string): NavItem | undefined {
-  return items.find((it) => (it.href === '/' ? pathname === '/' : pathname.startsWith(it.href)));
+  const fits = (href: string) =>
+    href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(`${href}/`);
+  return items.filter((it) => fits(it.href)).sort((a, b) => b.href.length - a.href.length)[0];
 }
 
-/** The nav's links, the current section marked. */
-export function NavItems({ items, iconSize = 21 }: { items: NavItem[]; iconSize?: number }) {
+/**
+ * The nav's links, the current section marked. `among` is every link in the
+ * menu when it's split into lists (the account area's), so only one is ever marked.
+ */
+export function NavItems({
+  items,
+  among,
+  iconSize = 21,
+}: {
+  items: NavItem[];
+  among?: NavItem[];
+  iconSize?: number;
+}) {
   const pathname = usePathname();
-  const active = activeItem(items, pathname);
+  const active = activeItem(among ?? items, pathname);
   return (
     <div className="nav-items">
       {items.map((it) => (
@@ -27,7 +43,7 @@ export function NavItems({ items, iconSize = 21 }: { items: NavItem[]; iconSize?
           key={it.href}
           href={it.href}
           className="nav-i"
-          aria-current={it === active ? 'page' : undefined}
+          aria-current={it.href === active?.href ? 'page' : undefined}
           aria-label={it.label}
         >
           <Icon name={it.icon} width={iconSize} height={iconSize} />

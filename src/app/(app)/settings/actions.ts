@@ -112,21 +112,21 @@ export async function requestUpdateAction(): Promise<void> {
   const me = await requireDeveloper();
   requestUpdate(me.name);
   await auditDeveloper('update.request');
-  revalidatePath('/settings');
+  revalidatePath('/settings', 'layout');
 }
 
 export async function cancelUpdateAction(): Promise<void> {
   await requireDeveloper();
   cancelUpdateRequest();
   await auditDeveloper('update.cancel');
-  revalidatePath('/settings');
+  revalidatePath('/settings', 'layout');
 }
 
 /** Skip the short cache and ask GitHub again. */
 export async function recheckUpdateAction(): Promise<void> {
   await requireDeveloper();
   await checkForUpdate({ fresh: true });
-  revalidatePath('/settings');
+  revalidatePath('/settings', 'layout');
 }
 
 /** Admin: give the household a new bills address; the old one stops working. */
@@ -134,7 +134,7 @@ export async function replaceBillsAddressAction(): Promise<void> {
   const me = await requireOwner();
   const hh = getHousehold(me.householdId);
   if (hh) replaceAlias(hh);
-  revalidatePath('/settings');
+  revalidatePath('/settings', 'layout');
 }
 
 /** Read figures from bills that came in before they were kept (in the background). */
@@ -147,7 +147,7 @@ export async function readMissingMetricsAction(): Promise<void> {
       ),
     )
     .catch((e) => console.error('[metrics]', (e as Error).message));
-  revalidatePath('/settings');
+  revalidatePath('/settings', 'layout');
 }
 
 /** Where the household is (postcode and country, never an address). Admins only. */
@@ -165,7 +165,7 @@ export async function saveLocationAction(_prev: ActionState, fd: FormData): Prom
     if (e instanceof LocationError) return { fieldErrors: { postalCode: e.message } };
     throw e;
   }
-  revalidatePath('/settings');
+  revalidatePath('/settings', 'layout');
   revalidatePath('/');
   return { ok: true };
 }
@@ -173,7 +173,7 @@ export async function saveLocationAction(_prev: ActionState, fd: FormData): Prom
 export async function removeLocationAction(): Promise<void> {
   const me = await requireOwner();
   clearHouseholdLocation(me.householdId);
-  revalidatePath('/settings');
+  revalidatePath('/settings', 'layout');
 }
 
 /** Area comparisons on or off (admins). Turning it off takes the household out of every figure now. */
@@ -182,7 +182,7 @@ export async function saveSharingAction(fd: FormData): Promise<void> {
   const share = fd.get('share') === 'on';
   setRegionalSharing(me.householdId, share, 'settings', me.id);
   if (!share && regionalEnabled()) computeRegionalStats();
-  revalidatePath('/settings');
+  revalidatePath('/settings', 'layout');
   revalidatePath('/');
 }
 

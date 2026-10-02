@@ -322,6 +322,77 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* The account area's Overview, then Households with each household under it. */
+.nc-acct-top {
+  display: grid;
+  gap: 2px;
+}
+.nc-acct-top > .nav-items {
+  display: contents;
+}
+.nc-hh-h {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+.nc-hh-t {
+  margin-right: 4px;
+}
+.nc-hh[data-open] .nc-hh-t .ic {
+  transform: none;
+}
+.nc-hh-c {
+  margin-top: 2px;
+  margin-left: 22px;
+}
+.nc-hh-i {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: var(--p-fg2);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.nc-hh-i:hover {
+  background: var(--inset);
+  color: var(--p-fg);
+}
+.nc-hh-i span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nc-hh-p {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--inset-2);
+  color: var(--p-fg);
+  font-size: 10.5px;
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+/* The account area's My Account (and Developer) items, under their headings. */
+.nc-acct {
+  display: grid;
+  gap: 2px;
+}
+.nc-acct .nav-sec {
+  padding-top: 14px;
+}
+.nc-svcs:empty {
+  border-top: 0;
+}
 .nc-svcs {
   flex: 1;
   min-height: 0;
@@ -425,6 +496,9 @@
   }
   .nav.column .nc-bt,
   .nav.column .nc-brand > .sw-chev,
+  .nav.column .nc-acct .nav-sec,
+  .nav.column .nc-hh-t,
+  .nav.column .nc-hh-c,
   .nav.column .nc-svcs,
   .nav.column .nc-me > .ic {
     display: none;

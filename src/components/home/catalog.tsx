@@ -1525,7 +1525,7 @@ const CATALOG: WidgetDef[] = [
         <div className={w > 1 ? 'pc pc-m' : 'pc'}>
           <Hdr icon="pin" title={t('weather.title')} />
           <p className="pc-t">{t('postcode.body')}</p>
-          <LinkButton href="/settings#location" variant="secondary" size="sm" icon="pin">
+          <LinkButton href="/settings/location" variant="secondary" size="sm" icon="pin">
             {t('postcode.add')}
           </LinkButton>
         </div>

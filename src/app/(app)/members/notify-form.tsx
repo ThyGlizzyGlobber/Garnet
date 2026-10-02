@@ -8,15 +8,19 @@ import { ActionForm, type FormAction } from '@/components/ui/form';
 export function NotifyForm({
   action,
   initial,
+  memberId,
 }: {
   action: FormAction;
   initial: { bills: boolean; reminders: boolean; problems: boolean };
+  /** Whose preferences, from the account area (one of the person's households); this household's otherwise. */
+  memberId?: string;
 }) {
   const t = useTranslations('notify.prefs');
   return (
     <ActionForm action={action} submitLabel={t('save')} className="grid">
       {() => (
         <>
+          {memberId && <input type="hidden" name="memberId" value={memberId} />}
           {(['bills', 'reminders', 'problems'] as const).map((k) => (
             <div key={k} className="tg-row">
               <span>

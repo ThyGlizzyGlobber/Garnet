@@ -30,7 +30,7 @@ export function AccountMenu({
 }: {
   /** The nav column's foot (the menu rises beside it), or the phone top bar's avatar (it drops). */
   place: 'column' | 'topbar';
-  me: { name: string; colour: string; sub: string };
+  me: { name: string; colour: string; sub: string; photo?: string | null };
   /** Groups of links, divided by a line. */
   groups: AccountMenuItem[][];
   signOutLabel: string;
@@ -73,7 +73,7 @@ export function AccountMenu({
       {open && (
         <div className="am-menu" role="menu" aria-label={openLabel}>
           <div className="am-who">
-            <Avatar name={me.name} colour={me.colour} size="lg" />
+            <Avatar name={me.name} colour={me.colour} photo={me.photo} size="lg" />
             <span>
               <b>{me.name}</b>
               <span>{me.sub}</span>

@@ -7,7 +7,7 @@ import type { ActionState } from '@/components/ui/form';
 import { errorText, fieldErrors, str, zodToState } from '@/lib/actions';
 import { DEFAULT_COLOUR } from '@/lib/palette';
 import { getTranslations } from 'next-intl/server';
-import { setAccountPin } from '@/lib/accounts';
+import { membershipsFor, setAccountPin } from '@/lib/accounts';
 import { hashPin, PIN_PATTERN, verifyPin } from '@/lib/auth/pin';
 import { forgetOtherDevices, recordPinFailure, resetPinFailures } from '@/lib/auth/devices';
 import {
@@ -233,9 +233,11 @@ export async function removeAccessAction(fd: FormData): Promise<void> {
 export async function changePinAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
   const t = await getTranslations('pin');
   const s = await authState();
-  if (s.kind !== 'ok' || !s.account) redirect('/');
-  const deviceId = await currentDeviceId(s.account.id);
-  if (!s.account.pinHash || !(await verifyPin(str(fd, 'current'), s.account.pinHash))) {
+  // From a household or from the account area (no household yet).
+  const acct = s.kind === 'ok' || s.kind === 'no-household' ? s.account : null;
+  if (!acct) redirect('/');
+  const deviceId = await currentDeviceId(acct.id);
+  if (!acct.pinHash || !(await verifyPin(str(fd, 'current'), acct.pinHash))) {
     await new Promise((r) => setTimeout(r, 400));
     if (deviceId && recordPinFailure(deviceId).forgotten) {
       await dropDeviceCookie();
@@ -247,17 +249,19 @@ export async function changePinAction(_prev: ActionState, fd: FormData): Promise
   const pin = str(fd, 'pin');
   if (!PIN_PATTERN.test(pin)) return { fieldErrors: { pin: t('invalid') } };
   if (pin !== str(fd, 'pinConfirm')) return { fieldErrors: { pinConfirm: t('mismatch') } };
-  setAccountPin(s.account.id, await hashPin(pin));
+  setAccountPin(acct.id, await hashPin(pin));
   return { ok: true };
 }
 
 /** Sign this account out of every other browser. */
 export async function signOutOtherDevicesAction(): Promise<void> {
   const s = await authState();
-  if (s.kind !== 'ok' || !s.account) redirect('/');
-  const keep = await currentDeviceId(s.account.id);
-  if (keep) forgetOtherDevices(s.account.id, keep);
-  revalidatePath(`/members/${s.member.id}/edit`);
+  const acct = s.kind === 'ok' || s.kind === 'no-household' ? s.account : null;
+  if (!acct) redirect('/');
+  const keep = await currentDeviceId(acct.id);
+  if (keep) forgetOtherDevices(acct.id, keep);
+  if (s.kind === 'ok') revalidatePath(`/members/${s.member.id}/edit`);
+  revalidatePath('/account', 'layout');
 }
 
 /** Your own email preferences. */
@@ -265,12 +269,19 @@ export async function saveNotifyPrefsAction(
   _prev: ActionState,
   fd: FormData,
 ): Promise<ActionState> {
-  const me = await requireMember();
+  // Your own preferences in this household, or (from the account area) in any of yours.
+  const s = await authState();
+  const acct = s.kind === 'ok' || s.kind === 'no-household' ? s.account : null;
+  const wanted = str(fd, 'memberId');
+  const me =
+    wanted && acct ? membershipsFor(acct.id).find((m) => m.id === wanted) : await requireMember();
+  if (!me) redirect('/account');
   setNotifyPref(me.householdId, me.id, {
     bills: fd.get('bills') === 'on',
     reminders: fd.get('reminders') === 'on',
     problems: fd.get('problems') === 'on',
   });
   revalidatePath(`/members/${me.id}/edit`);
+  revalidatePath('/account', 'layout');
   return { ok: true };
 }

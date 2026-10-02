@@ -95,7 +95,7 @@ export default async function HomePage() {
             <b>{tsh('notice.title')}</b> <span className="text-fg-2">{tsh('notice.body')}</span>
           </span>
           <InlineAction action={acknowledgeSharingAction} label={tsh('notice.ok')} />
-          <LinkButton href="/settings#sharing" variant="secondary" size="sm">
+          <LinkButton href="/settings/sharing" variant="secondary" size="sm">
             {tsh('notice.change')}
           </LinkButton>
           <Link href="/privacy" className="text-sm font-semibold text-accent">

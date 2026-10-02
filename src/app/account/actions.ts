@@ -10,6 +10,7 @@ import { authState, setActiveMember, startDemoSession } from '@/lib/auth/session
 import { todayIn } from '@/lib/dates';
 import { getHousehold } from '@/lib/households';
 import { leaveBlocker, leaveHousehold, makePrimary } from '@/lib/members';
+import { MAX_NAME, MAX_PHOTO_BYTES, removePhoto, renameEverywhere, savePhoto } from '@/lib/profile';
 
 /** The memberships this session may switch between (the account's; in the demo, the demo person's). */
 async function mine() {
@@ -61,4 +62,49 @@ export async function leaveHouseholdAction(_prev: ActionState, fd: FormData): Pr
   }
   revalidatePath('/', 'layout');
   redirect('/account?left=1');
+}
+
+/** The signed-in account (demo people have none, so they can't change a profile). */
+async function myAccount() {
+  const s = await authState();
+  if (s.kind === 'ok' && s.account) return s.account;
+  if (s.kind === 'no-household') return s.account;
+  redirect('/account');
+}
+
+/** Your name, in every household you belong to (one that already has someone by it keeps the old one). */
+export async function saveNameAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
+  const a = await myAccount();
+  const t = await getTranslations('profile.name');
+  const name = str(fd, 'name').trim().replace(/\s+/g, ' ');
+  if (!name) return { fieldErrors: { name: t('required') } };
+  if (name.length > MAX_NAME) return { fieldErrors: { name: t('tooLong', { max: MAX_NAME }) } };
+  const { kept } = renameEverywhere(a.id, name);
+  revalidatePath('/', 'layout');
+  return {
+    ok: true,
+    note: kept.length
+      ? t('kept', { households: new Intl.ListFormat('en', { type: 'conjunction' }).format(kept) })
+      : t('saved'),
+  };
+}
+
+/** A new profile photo. */
+export async function savePhotoAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
+  const a = await myAccount();
+  const t = await getTranslations('profile.photo');
+  const file = fd.get('photo');
+  if (!(file instanceof File) || file.size === 0) return { error: t('none') };
+  if (file.size > MAX_PHOTO_BYTES) return { error: t('tooBig') };
+  const result = await savePhoto(a.id, Buffer.from(await file.arrayBuffer()));
+  if (!result.ok) return { error: t(result.reason === 'too-big' ? 'tooBig' : 'unreadable') };
+  revalidatePath('/', 'layout');
+  return { ok: true };
+}
+
+/** Take the profile photo away (the initial shows again). */
+export async function removePhotoAction(): Promise<void> {
+  const a = await myAccount();
+  removePhoto(a.id);
+  revalidatePath('/', 'layout');
 }

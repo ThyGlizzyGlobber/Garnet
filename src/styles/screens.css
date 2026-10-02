@@ -611,21 +611,108 @@ a.paper:hover .paper-stamp {
   margin-top: 4px;
 }
 
-/* ---------- Settings ---------- */
-.set-grid {
+/* ---------- Household settings ---------- */
+/* The list (after Xero's organisation settings): two columns of linked lines. */
+.set-index {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--gap);
+  align-items: start;
+  max-width: 1040px;
+}
+@media (max-width: 899px) {
+  .set-index {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.set-index-col {
   display: grid;
   gap: var(--gap);
 }
-/* The cards flow down columns so a tall card leaves no gap beside it. */
-.set-col {
-  columns: 3 300px;
-  column-gap: var(--gap);
-  margin-bottom: calc(-1 * var(--gap));
+.set-sec {
+  display: grid;
+  gap: 8px;
 }
-.set-col > * {
+.set-sec-h {
+  margin: 0;
+  padding-left: 4px;
+  font-family: var(--f-body);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--p-fg2);
+}
+.set-list {
+  display: grid;
+  padding: 4px;
+}
+.set-link {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 12px;
+  border-radius: calc(var(--r-card) - 6px);
+  color: var(--p-fg);
+  text-decoration: none;
+}
+.set-link + .set-link {
+  box-shadow: 0 -1px 0 var(--line);
+}
+.set-link:hover {
+  background: var(--inset);
+  box-shadow: none;
+}
+.set-link:hover + .set-link {
+  box-shadow: none;
+}
+.set-link:focus-visible {
+  outline: 2px solid var(--p-accent);
+  outline-offset: -2px;
+}
+.set-ic {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  background: var(--inset-2);
+  color: var(--p-fg2);
+}
+.set-link-t {
+  display: grid;
+  gap: 2px;
   min-width: 0;
-  break-inside: avoid;
-  margin-bottom: var(--gap);
+}
+.set-link-t b {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 15px;
+  font-weight: 650;
+}
+.set-link-t > span {
+  font-size: var(--fs-small);
+  color: var(--p-fg2);
+}
+.set-link-t > .set-only {
+  color: var(--p-fg3);
+  font-style: italic;
+}
+.set-lock {
+  color: var(--p-fg2);
+}
+.set-chev {
+  color: var(--p-fg3);
+}
+.set-link:hover .set-chev {
+  color: var(--p-fg);
+}
+/* One setting's page: its card at a reading width. */
+.set-page > .glass,
+.set-page > .card {
+  max-width: 760px;
 }
 .set-lede {
   margin: -4px 0 0;
@@ -3238,4 +3325,183 @@ input.inp-plain[type='color'] {
 }
 .con-inline input {
   width: 72px;
+}
+
+/* ---------- My Account: Profile, Security & Access, Notifications, Appearance, Overview ---------- */
+.pf-head {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 32px 20px 24px;
+  text-align: center;
+}
+.pf-head .pf-av {
+  width: 112px;
+  height: 112px;
+  font-size: 44px;
+  margin-bottom: 6px;
+  box-shadow:
+    0 0 0 4px var(--g-bg-strong),
+    0 12px 32px -12px rgba(0, 0, 0, 0.5);
+}
+.pf-title {
+  margin: 0;
+  font-family: var(--f-display);
+  font-weight: var(--fw-display);
+  letter-spacing: var(--ls-display);
+  font-size: 28px;
+}
+.pf-email {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--p-fg2);
+}
+.pf-verified {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--toggle-on);
+  color: #fff;
+}
+.pf-photo-acts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+.pf-photo-acts > .pf-msg {
+  flex-basis: 100%;
+}
+.pf-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: var(--gap);
+  align-items: start;
+}
+@media (max-width: 639px) {
+  .pf-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.pf-narrow {
+  max-width: 760px;
+}
+.pf-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+.pf-name .inp-plain {
+  flex: 1;
+  min-width: 160px;
+  min-height: 36px;
+  font-size: 14px;
+}
+.pf-msg {
+  margin: 0;
+  flex-basis: 100%;
+  color: var(--p-fg2);
+}
+.pf-msg.bad {
+  color: var(--bad);
+}
+
+/* Overview: a row per household, then the bills coming up and overdue. */
+.ov-table {
+  display: grid;
+  padding: 4px;
+}
+.ov-table > form {
+  display: contents;
+}
+.ov-row {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) 1fr 1fr minmax(0, 1.3fr);
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 12px;
+  border: 0;
+  border-radius: calc(var(--r-card) - 6px);
+  background: none;
+  color: var(--p-fg);
+  font: inherit;
+  text-align: left;
+}
+.ov-table > * + * .ov-row,
+.ov-table > .ov-row + .ov-row {
+  box-shadow: 0 -1px 0 var(--line);
+}
+button.ov-row {
+  cursor: pointer;
+}
+button.ov-row:hover {
+  background: var(--inset);
+}
+.ov-h {
+  padding-block: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--p-fg2);
+}
+.ov-hh {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.ov-hh-t {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.ov-hh-t b {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ov-hh-m {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ov-home {
+  color: var(--p-fg2);
+}
+.ov-att {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+@media (max-width: 759px) {
+  .ov-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .ov-h {
+    display: none;
+  }
+  .ov-row > [data-label] {
+    display: none;
+  }
+  .ov-row > .ov-att {
+    display: flex;
+    grid-column: 1 / -1;
+  }
+  .ov-bill > .muted {
+    grid-column: 1 / -1;
+    order: 3;
+  }
 }

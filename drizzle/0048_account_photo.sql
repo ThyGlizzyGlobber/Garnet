@@ -1,0 +1,1 @@
+ALTER TABLE `account` ADD `avatar_at` text;

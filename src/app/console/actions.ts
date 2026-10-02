@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { str } from '@/lib/actions';
+import { deletePhotoFile } from '@/lib/profile';
 import { audit } from '@/lib/audit';
 import { clientIp } from '@/lib/request';
 import {
@@ -184,6 +185,7 @@ export async function deleteAccountAction(fd: FormData): Promise<void> {
   const a = getAccount(str(fd, 'accountId'));
   if (a && a.id !== me.id && membershipsFor(a.id).length === 0) {
     getDb().delete(account).where(eq(account.id, a.id)).run();
+    deletePhotoFile(a.id);
     log({ action: 'account.delete', targetKind: 'account', targetId: a.id, targetName: a.email });
   }
   revalidatePath('/console');

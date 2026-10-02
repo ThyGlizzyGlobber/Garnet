@@ -1,337 +1,102 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
-import { logout } from '@/app/login/actions';
-import { Button, Card, LinkButton } from '@/components/ui';
-import { AddressCard, Kv, PageTitle, SectionHead } from '@/components/ui/blocks';
-import { Avatars } from '@/components/ui/colour';
-import { InlineAction } from '@/components/ui/form';
-import { authState, viewerIsDeveloper } from '@/lib/auth/session';
-import { billsAddress } from '@/lib/bills-address';
+import { Icon } from '@/components/app/icons';
+import { PageTitle } from '@/components/ui/blocks';
+import { viewerIsDeveloper } from '@/lib/auth/session';
 import { pageContext } from '@/lib/context';
-import { formatMinorPlain } from '@/lib/format';
-import { getEnv, isInboundEmailConfigured, isLlmConfigured } from '@/lib/env';
+import { getEnv, isLlmConfigured } from '@/lib/env';
 import { catchUpCount, isReadingMetrics } from '@/ingest/metrics';
-import {
-  countriesWithData,
-  countryFromLocale,
-  describeLocation,
-  hasPostcodeData,
-} from '@/lib/location';
-import { isActiveOn, listMembers } from '@/lib/members';
-import { latestRegionalChoice, regionalEnabled } from '@/lib/regional';
+import { regionalEnabled } from '@/lib/regional';
 import { isAdmin } from '@/lib/roles';
-import { householdClimate } from '@/lib/seasons';
-import { saveNotifyPrefsAction } from '../members/actions';
-import { NotifyForm } from '../members/notify-form';
-import {
-  exitDemoAction,
-  readMissingMetricsAction,
-  removeLocationAction,
-  replaceBillsAddressAction,
-  saveSharingAction,
-} from './actions';
-import { LocationForm } from './location-form';
-import { SettingsForm } from './settings-form';
-import { UpdateCard } from './update-card';
+
+/** A line in the list: a page of settings, what it's for, and whether this person can change it. */
+interface SettingLink {
+  href: string;
+  icon: string;
+  title: string;
+  desc: string;
+  /** Only admins change it: others see a lock and can look. */
+  locked?: boolean;
+}
 
 /**
- * Settings: how the app looks for this person first, then their account,
- * what it emails them, and the household (members, the bills address, the
- * household's own settings, location, area comparisons), with the admin and
- * operator tools after.
+ * Household settings: a list of what can be set, in two columns (General,
+ * Features; the developer's tools under them), each line opening its own
+ * page (owner, 2026-10-02, after Xero's organisation settings). A line only
+ * admins can change shows a lock for everyone else.
  */
 export default async function SettingsPage() {
-  const { hh, me, today } = await pageContext();
-  const operator = await viewerIsDeveloper();
+  const { hh, me } = await pageContext();
   const admin = isAdmin(me);
-  const address = billsAddress(hh);
-  const env = getEnv();
+  const developer = await viewerIsDeveloper();
   const t = await getTranslations('settings');
-  const tn = await getTranslations('nav');
-  const tl = await getTranslations('location');
-  const ts = await getTranslations('sharing');
-  const tp = await getTranslations('notify.prefs');
-  const tb = await getTranslations('billsAddress');
-  const state = await authState();
-  const account = state.kind === 'ok' ? state.account : null;
-  const members = listMembers(hh.id);
-  const living = members.filter((m) => isActiveOn(m, today));
-  const choice = latestRegionalChoice(hh.id);
-  const place = describeLocation(hh);
-  const climate = householdClimate(hh);
-  const missing = catchUpCount(hh.id);
-  const reading = isReadingMetrics(hh.id);
-  const months = Array.from({ length: 12 }, (_, i) =>
-    new Intl.DateTimeFormat(hh.locale, { month: 'long' }).format(new Date(2026, i, 1)),
+  const ti = await getTranslations('settings.index');
+  const row = (key: string, href: string, icon: string, locked = false): SettingLink => ({
+    href,
+    icon,
+    title: ti(`${key}.title`),
+    desc: ti(`${key}.desc`),
+    locked: locked && !admin,
+  });
+  const catchUp =
+    admin && isLlmConfigured(getEnv()) && (catchUpCount(hh.id) > 0 || isReadingMetrics(hh.id));
+
+  const general: SettingLink[] = [
+    row('household', '/settings/household', 'home', true),
+    row('members', '/members', 'people'),
+    row('billsAddress', '/settings/bills-address', 'mail'),
+    row('location', '/settings/location', 'pin', true),
+    row('account', '/account/profile', 'user'),
+  ];
+  const features: SettingLink[] = [
+    row('notifications', '/settings/notifications', 'bell'),
+    ...(regionalEnabled() ? [row('sharing', '/settings/sharing', 'chart', true)] : []),
+    row('wall', '/wall', 'wall'),
+    ...(catchUp ? [row('catchUp', '/settings/catch-up', 'layers')] : []),
+    ...(hh.isDemo && admin ? [row('demo', '/settings/demo', 'logout')] : []),
+  ];
+  const tools: SettingLink[] = developer
+    ? [
+        row('update', '/settings/update', 'download'),
+        row('system', '/settings/system', 'sliders'),
+        row('console', '/console', 'shield'),
+      ]
+    : [];
+
+  const list = (head: string, links: SettingLink[]) => (
+    <section className="set-sec">
+      <h2 className="set-sec-h">{head}</h2>
+      <div className="glass rounded-card set-list">
+        {links.map((l) => (
+          <Link key={l.href} href={l.href} className="set-link">
+            <span className="set-ic" aria-hidden="true">
+              <Icon name={l.icon} width={18} height={18} />
+            </span>
+            <span className="set-link-t">
+              <b>
+                {l.locked && (
+                  <Icon name="lock" width={13} height={13} className="set-lock" aria-hidden />
+                )}
+                {l.title}
+              </b>
+              <span>{l.desc}</span>
+              {l.locked && <span className="set-only">{ti('adminOnly')}</span>}
+            </span>
+            <Icon name="chevron-right" width={16} height={16} className="set-chev" />
+          </Link>
+        ))}
+      </div>
+    </section>
   );
-  const days = Array.from({ length: 7 }, (_, i) =>
-    new Intl.DateTimeFormat(hh.locale, { weekday: 'long' }).format(new Date(2026, 1, 1 + i)),
-  );
-  const names = new Intl.ListFormat(hh.locale, { type: 'conjunction' }).format(
-    living.map((m) => m.name),
-  );
-  const householdLine = [
-    living.length <= 1 ? t('household.justYou') : names,
-    admin ? t('household.youAdmin') : t('household.youMember'),
-    hh.splitMode === 'shared' ? null : t('household.notSplit'),
-  ]
-    .filter(Boolean)
-    .join(' · ');
 
   return (
     <div className="scr settings">
-      <PageTitle title={t('title')} lede={t('lede')} />
-      <div className="set-grid">
-        <div className="set-col">
-          <Card id="account">
-            <SectionHead title={tn('account')} />
-            <p className="muted set-lede">{t('account.openSub')}</p>
-            <div className="set-acts">
-              <LinkButton href="/account" variant="secondary" size="sm" icon="user">
-                {t('account.open')}
-              </LinkButton>
-              <LinkButton href="/wall" variant="secondary" size="sm" icon="desktop">
-                {tn('wall')}
-              </LinkButton>
-              <form action={logout}>
-                <Button variant="ghost" size="sm">
-                  {tn('logout')}
-                </Button>
-              </form>
-            </div>
-          </Card>
-
-          <Card id="emails">
-            <SectionHead title={t('emails.title')} />
-            {account ? (
-              <NotifyForm
-                action={saveNotifyPrefsAction}
-                initial={{
-                  bills: me.notifyBills,
-                  reminders: me.notifyReminders,
-                  problems: me.notifyProblems,
-                }}
-              />
-            ) : (
-              <p className="muted small">{tp('noEmail')}</p>
-            )}
-          </Card>
-
-          <Card id="household">
-            <SectionHead
-              title={t('household.title')}
-              right={
-                <Link href="/members" className="btn btn-plain btn-sm">
-                  {tn('members')}
-                </Link>
-              }
-            />
-            <div className="set-hh">
-              <Avatars
-                members={living.map((m) => ({ name: m.name, colour: m.colour }))}
-                size="md"
-              />
-              <span>
-                <b>{hh.name}</b>
-                <span className="muted small">{householdLine}</span>
-              </span>
-            </div>
-            {address ? (
-              <div id="bills-address">
-                <AddressCard label={tb('label')} address={address} />
-                <p className="set-note mt-2">{tb('howForward')}</p>
-                {admin && (
-                  <div className="set-acts">
-                    <InlineAction
-                      action={replaceBillsAddressAction}
-                      label={tb('replace')}
-                      variant="ghost"
-                      confirm={tb('replaceConfirm')}
-                    />
-                  </div>
-                )}
-              </div>
-            ) : (
-              operator && <p className="set-note">{t('household.noAddress')}</p>
-            )}
-            <SettingsForm
-              readOnly={!admin}
-              timezones={Intl.supportedValuesOf('timeZone')}
-              months={months}
-              days={days}
-              initial={{
-                name: hh.name,
-                currency: hh.currency,
-                locale: hh.locale,
-                timezone: hh.timezone,
-                fiscalYearStartMonth: hh.fiscalYearStartMonth,
-                weekStartsOn: hh.weekStartsOn,
-                splitMode: hh.splitMode,
-                type: hh.type,
-                address: hh.address,
-                allowance:
-                  hh.allowanceMinor !== null
-                    ? formatMinorPlain(hh.allowanceMinor, hh.currency)
-                    : '',
-                allowancePeriod: hh.allowancePeriod,
-                paymentReferenceTemplate: hh.paymentReferenceTemplate,
-                membersCanExport: hh.membersCanExport,
-              }}
-            />
-          </Card>
-
-          <Card id="location">
-            <SectionHead title={tl('title')} />
-            <p className="muted small">{tl('body')}</p>
-            {place ? (
-              <p className="mt-2">
-                <b>{place}</b>
-                {hh.region && <span className="muted"> · {hh.region}</span>}
-                <span className="muted small block">
-                  {climate.hemisphere === 'south' ? tl('southern') : tl('northern')} ·{' '}
-                  {climate.climate === 'tropical' ? tl('tropical') : tl('temperate')}
-                </span>
-              </p>
-            ) : (
-              <p className="muted mt-2">{tl('none')}</p>
-            )}
-            {admin && (
-              <div className="mt-3">
-                <LocationForm
-                  withData={countriesWithData()}
-                  initial={{
-                    country: hh.country ?? countryFromLocale(hh.locale) ?? 'AU',
-                    postalCode: hh.postalCode ?? '',
-                    locality: hh.locality ?? '',
-                  }}
-                />
-              </div>
-            )}
-            {admin && place && (
-              <div className="set-acts">
-                <InlineAction action={removeLocationAction} label={tl('remove')} variant="ghost" />
-              </div>
-            )}
-            {hh.country && hasPostcodeData(hh.country) && (
-              <p className="set-note mt-3">{tl('attribution')}</p>
-            )}
-          </Card>
-
-          {regionalEnabled() && (
-            <Card id="sharing">
-              <SectionHead title={ts('title')} />
-              <p className="muted small">{ts('body', { k: env.REGIONAL_MIN_HOUSEHOLDS })}</p>
-              <p className="set-note mt-2">{ts('shared')}</p>
-              <p className="set-note">{ts('never')}</p>
-              {admin ? (
-                <form action={saveSharingAction}>
-                  <div className="tg-row mt-3">
-                    <span>
-                      <b>{ts('checkbox')}</b>
-                      <span className="muted small">{ts('checkboxHint')}</span>
-                    </span>
-                    <label className="toggle">
-                      <input
-                        type="checkbox"
-                        role="switch"
-                        name="share"
-                        defaultChecked={hh.shareRegional}
-                        aria-label={ts('checkbox')}
-                      />
-                      <i aria-hidden="true" />
-                    </label>
-                  </div>
-                  <div className="set-acts">
-                    <Button type="submit" variant="secondary" size="sm">
-                      {ts('save')}
-                    </Button>
-                  </div>
-                </form>
-              ) : (
-                <p className="mt-3">{hh.shareRegional ? ts('onMember') : ts('offMember')}</p>
-              )}
-              {choice && (
-                <p className="set-note mt-2">
-                  {ts(choice.granted ? 'since.on' : 'since.off', {
-                    date: new Intl.DateTimeFormat(hh.locale, { dateStyle: 'medium' }).format(
-                      new Date(choice.at),
-                    ),
-                  })}
-                </p>
-              )}
-              <Link href="/privacy" className="btn btn-plain btn-sm mt-2">
-                {ts('privacy')}
-              </Link>
-            </Card>
-          )}
-
-          {admin && isLlmConfigured(env) && (missing > 0 || reading) && (
-            <Card>
-              <SectionHead title={t('metrics.title')} />
-              <p className="muted small">
-                {reading ? t('metrics.reading') : t('metrics.body', { count: missing })}
-              </p>
-              {!reading && (
-                <div className="set-acts">
-                  <InlineAction
-                    action={readMissingMetricsAction}
-                    label={t('metrics.start', { count: missing })}
-                    variant="secondary"
-                  />
-                </div>
-              )}
-            </Card>
-          )}
-
-          {hh.isDemo && admin && (
-            <Card className="bg-warning-soft">
-              <SectionHead title={t('demo.title')} />
-              <p className="muted small">{t('demo.body')}</p>
-              <div className="set-acts">
-                <InlineAction
-                  action={exitDemoAction}
-                  label={t('demo.exit')}
-                  variant="danger"
-                  confirm={t('demo.confirm')}
-                />
-              </div>
-            </Card>
-          )}
-
-          {operator && <UpdateCard hh={hh} />}
-          {operator && (
-            <Card>
-              <SectionHead
-                title={t('system.title')}
-                right={
-                  <Link href="/console/health" className="btn btn-plain btn-sm">
-                    {t('system.status')}
-                  </Link>
-                }
-              />
-              <Kv
-                rows={[
-                  [
-                    t('system.dataDir'),
-                    <span key="d" className="mono small">
-                      {env.DATA_DIR}
-                    </span>,
-                  ],
-                  [
-                    t('system.billsAddresses'),
-                    isInboundEmailConfigured(env)
-                      ? t('system.configured')
-                      : t('system.notConfigured'),
-                  ],
-                  [
-                    t('system.llm'),
-                    isLlmConfigured(env) ? t('system.configured') : t('system.notConfigured'),
-                  ],
-                  [t('system.demoMode'), env.DEMO_MODE ? t('system.on') : t('system.off')],
-                ]}
-              />
-            </Card>
-          )}
+      <PageTitle title={t('title')} lede={ti('lede', { household: hh.name })} />
+      <div className="set-index">
+        <div className="set-index-col">{list(ti('general'), general)}</div>
+        <div className="set-index-col">
+          {list(ti('features'), features)}
+          {tools.length > 0 && list(ti('developer'), tools)}
         </div>
       </div>
     </div>

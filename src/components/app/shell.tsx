@@ -9,6 +9,7 @@ import { AccountMenu, type AccountMenuItem } from './account-menu';
 import { AddBillButton } from './add-bill';
 import { Icon } from './icons';
 import { NavGroup } from './nav-group';
+import { NavHouseholds } from './nav-households';
 import { NavServices } from './nav-services';
 import { OfflineBar } from './offline-bar';
 import { NavItems, SectionName, type NavItem } from './nav-items';
@@ -61,6 +62,18 @@ export interface ShellLabels {
   console: string;
   /** "Your households", under the product's name in the account variant. */
   yourHouseholds: string;
+  /** The account area's menu: Overview, then My Account's pages. */
+  acct: {
+    overview: string;
+    myAccount: string;
+    profile: string;
+    notifications: string;
+    security: string;
+    appearance: string;
+    developer: string;
+    /** Beside the primary household in the menu. */
+    primary: string;
+  };
   switcher: SwitcherLabels;
   accountMenu: {
     open: string;
@@ -68,6 +81,7 @@ export interface ShellLabels {
     settings: string;
     notifications: string;
     appearance: string;
+    profile: string;
     wall: string;
     backend: string;
     signOut: string;
@@ -95,12 +109,26 @@ export function AppShell({
   children: ReactNode;
 }) {
   const account = variant === 'account';
+  // The account area (SCOPE-accounts.md §3): its households, then My Account.
+  const accountItems: NavItem[] = [
+    { href: '/account/profile', label: labels.acct.profile, icon: 'user' },
+    { href: '/account/notifications', label: labels.acct.notifications, icon: 'bell' },
+    { href: '/account/security', label: labels.acct.security, icon: 'lock' },
+    { href: '/account/appearance', label: labels.acct.appearance, icon: 'sun' },
+  ];
+  const developerItems: NavItem[] = view.developer
+    ? [{ href: '/console', label: labels.console, icon: 'shield' }]
+    : [];
+  // Overview first, then Households (owner, 2026-10-02).
+  const overview: NavItem = {
+    href: '/account/overview',
+    label: labels.acct.overview,
+    icon: 'chart',
+  };
+  const householdsItem: NavItem = { href: '/account', label: labels.households, icon: 'home' };
+  const allAccountItems = [overview, householdsItem, ...accountItems, ...developerItems];
   const items: NavItem[] = account
-    ? [
-        { href: '/account', label: labels.households, icon: 'grid' },
-        { href: '/account#account', label: labels.account, icon: 'user' },
-        ...(view.developer ? [{ href: '/console', label: labels.console, icon: 'sliders' }] : []),
-      ]
+    ? [overview, householdsItem]
     : [
         { href: '/', label: labels.nav.home, icon: 'home' },
         { href: '/services', label: labels.nav.services, icon: 'services' },
@@ -129,9 +157,10 @@ export function AppShell({
         ? []
         : [
             { href: '/settings', label: am.settings, icon: 'sliders' },
-            { href: '/settings#emails', label: am.notifications, icon: 'bell' },
+            { href: '/account/notifications', label: am.notifications, icon: 'bell' },
           ]),
-      { href: '/account#account', label: am.appearance, icon: 'sun' },
+      { href: '/account/profile', label: am.profile, icon: 'user' },
+      { href: '/account/appearance', label: am.appearance, icon: 'sun' },
     ],
     [
       ...(account ? [] : [{ href: '/wall', label: am.wall, icon: 'wall' }]),
@@ -141,6 +170,7 @@ export function AppShell({
   const menuMe = {
     name: view.me.name,
     colour: view.me.colour,
+    photo: view.me.photo,
     sub: view.me.email ?? (account ? labels.account : `${myRole} · ${view.household.name}`),
   };
   const line = (s: { name: string; minor: number }) => (
@@ -208,7 +238,41 @@ export function AppShell({
           labels={labels.switcher}
           action={switchAction}
         />
-        <NavItems items={items} />
+        {account ? (
+          <div className="nav-items nc-acct-top">
+            <NavItems items={[overview]} among={allAccountItems} />
+            <NavHouseholds
+              label={labels.households}
+              households={view.households.map((h) => ({
+                memberId: h.memberId,
+                name: h.name,
+                icon: typeIcon(h.type),
+                primary: h.primary,
+              }))}
+              labels={{
+                primary: labels.acct.primary,
+                open: labels.switcher.open,
+                show: labels.showSubs,
+                hide: labels.hideSubs,
+              }}
+              action={switchAction}
+            />
+          </div>
+        ) : (
+          <NavItems items={items} />
+        )}
+        {account && (
+          <div className="nc-acct">
+            <div className="nav-sec">{labels.acct.myAccount}</div>
+            <NavItems items={accountItems} among={allAccountItems} />
+            {developerItems.length > 0 && (
+              <>
+                <div className="nav-sec">{labels.acct.developer}</div>
+                <NavItems items={developerItems} among={allAccountItems} />
+              </>
+            )}
+          </div>
+        )}
         <div className="nc-svcs">
           {account ? null : anyServices ? (
             <>
@@ -247,7 +311,7 @@ export function AppShell({
           signOut={logout}
           openLabel={`${view.me.name} · ${am.open}`}
         >
-          <Avatar name={view.me.name} colour={view.me.colour} />
+          <Avatar name={view.me.name} colour={view.me.colour} photo={view.me.photo} />
           <span className="nc-bt">
             <b>{view.me.name}</b>
             <span>{account ? labels.account : myRole}</span>
@@ -281,7 +345,7 @@ export function AppShell({
             signOut={logout}
             openLabel={`${view.me.name} · ${am.open}`}
           >
-            <Avatar name={view.me.name} colour={view.me.colour} />
+            <Avatar name={view.me.name} colour={view.me.colour} photo={view.me.photo} />
           </AccountMenu>
         </div>
       </header>
@@ -297,7 +361,14 @@ export function AppShell({
 
       {/* A phone's bar keeps five: Members is reached from Settings there. */}
       <nav className="nav glass-strong horizontal bar" aria-label="Main">
-        <NavItems items={items.filter((it) => it.href !== '/members')} iconSize={22} />
+        <NavItems
+          items={
+            account
+              ? [...items, ...accountItems.slice(0, 3)]
+              : items.filter((it) => it.href !== '/members')
+          }
+          iconSize={22}
+        />
       </nav>
     </div>
   );

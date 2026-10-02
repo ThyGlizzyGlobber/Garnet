@@ -6,6 +6,7 @@ import { PageTitle } from '@/components/ui/blocks';
 import { Chip } from '@/components/ui/chip';
 import { Avatar } from '@/components/ui/colour';
 import { getAccount } from '@/lib/accounts';
+import { avatarUrl } from '@/lib/profile';
 import { pageContext } from '@/lib/context';
 import { joinStatus, latestInvites } from '@/lib/invites';
 import { isActiveOn, listMembers } from '@/lib/members';
@@ -47,8 +48,9 @@ export default async function MembersPage() {
           const canOpen = admin || me.id === m.id;
           const status = joinStatus(m, invites.get(m.id));
           const ledger = shared ? memberLedger(hh.id, m.id, today, hh.fiscalYearStartMonth) : null;
+          const acct = m.accountId ? getAccount(m.accountId) : null;
           const signsIn = m.accountId
-            ? getAccount(m.accountId)?.googleSub
+            ? acct?.googleSub
               ? t('signsIn.google')
               : t('signsIn.code')
             : status === 'pending'
@@ -57,7 +59,7 @@ export default async function MembersPage() {
           const line = m.id === me.id ? `${t('you')} · ${signsIn}` : signsIn;
           const top = (
             <>
-              <Avatar name={m.name} colour={m.colour} size="lg" />
+              <Avatar name={m.name} colour={m.colour} photo={avatarUrl(acct)} size="lg" />
               <span>
                 <b>{m.name}</b>
                 <span className="muted small">{line}</span>

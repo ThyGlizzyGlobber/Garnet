@@ -10,6 +10,7 @@ import { accountGivenName, isDeveloper } from '@/lib/accounts';
 import { authState, pathFor } from '@/lib/auth/session';
 import { formatMoney } from '@/lib/format';
 import { DEFAULT_COLOUR } from '@/lib/palette';
+import { avatarUrl } from '@/lib/profile';
 import type { ShellView } from '@/lib/shell';
 import { ConsoleTabs } from './tabs';
 
@@ -41,6 +42,7 @@ export default async function ConsoleLayout({ children }: { children: ReactNode 
       admin: false,
       role: 'member',
       email: account?.email ?? null,
+      photo: avatarUrl(account),
     },
     developer: true,
   };

@@ -37,11 +37,14 @@ export type IdentitySize = 'sm' | 'md' | 'lg';
 export function Avatar({
   name,
   colour,
+  photo,
   size = 'md',
   className,
 }: {
   name: string;
   colour: string;
+  /** Their profile photo's URL (src/lib/profile.ts), shown instead of the initial. */
+  photo?: string | null;
   size?: IdentitySize;
   className?: string;
 }) {
@@ -49,10 +52,16 @@ export function Avatar({
     <span
       aria-hidden="true"
       title={name}
-      className={cx('av', size !== 'md' && `av-${size}`, className)}
+      className={cx('av', size !== 'md' && `av-${size}`, photo && 'av-photo', className)}
       style={{ ['--m' as string]: colourCss(colour) }}
     >
-      {name.slice(0, 1).toUpperCase()}
+      {photo ? (
+        // A small, private, already-sized image: next/image would add nothing.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={photo} alt="" />
+      ) : (
+        name.slice(0, 1).toUpperCase()
+      )}
     </span>
   );
 }

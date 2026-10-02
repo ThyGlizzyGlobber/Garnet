@@ -62,6 +62,108 @@ export function SettingsForm({
             {t('saved')}
           </p>
         )}
+        <div className="grid gap-3">
+          <Field label={t('fields.name')} error={e.name}>
+            <Input name="name" defaultValue={initial.name} required />
+          </Field>
+          <Field label={t('fields.type')} hint={t('hints.type')}>
+            <Select name="type" defaultValue={initial.type ?? ''}>
+              <option value="">{t('householdTypes.none')}</option>
+              {HOUSEHOLD_TYPES.map((k) => (
+                <option key={k} value={k}>
+                  {tt(`${k}.name`)}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          {initial.type === 'investment_property' && (
+            <>
+              <Field label={t('fields.address')} optional>
+                <Input name="address" defaultValue={initial.address ?? ''} maxLength={120} />
+              </Field>
+              <div className="fld-row">
+                <Field label={t('fields.allowance')} hint={t('hints.allowance')} optional>
+                  <Input
+                    name="allowance"
+                    inputMode="decimal"
+                    defaultValue={initial.allowance}
+                    className="narrow"
+                  />
+                </Field>
+                <Field label={t('fields.allowancePeriod')}>
+                  <Select name="allowancePeriod" defaultValue={initial.allowancePeriod}>
+                    {ALLOWANCE_PERIODS.map((k) => (
+                      <option key={k} value={k}>
+                        {tp(k)}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+              </div>
+            </>
+          )}
+          <Field label={t('fields.splitMode')} hint={t('hints.splitMode')}>
+            <Select name="splitMode" defaultValue={initial.splitMode}>
+              <option value="shared">{t('splitModes.shared')}</option>
+              <option value="single">{t('splitModes.single')}</option>
+            </Select>
+          </Field>
+          <Field
+            label={t('fields.paymentReferenceTemplate')}
+            error={e.paymentReferenceTemplate}
+            hint={t('hints.paymentReferenceTemplate')}
+          >
+            <Input
+              name="paymentReferenceTemplate"
+              defaultValue={initial.paymentReferenceTemplate}
+            />
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label={t('fields.currency')} error={e.currency}>
+              <Input
+                name="currency"
+                defaultValue={initial.currency}
+                maxLength={3}
+                className="uppercase"
+              />
+            </Field>
+            <Field label={t('fields.locale')} error={e.locale}>
+              <Input name="locale" defaultValue={initial.locale} />
+            </Field>
+          </div>
+          <Field label={t('fields.timezone')} error={e.timezone}>
+            <Select name="timezone" defaultValue={initial.timezone}>
+              {timezones.map((tz) => (
+                <option key={tz} value={tz}>
+                  {tz}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label={t('fields.fiscalYearStartMonth')}>
+              <Select
+                name="fiscalYearStartMonth"
+                defaultValue={String(initial.fiscalYearStartMonth)}
+              >
+                {months.map((m, i) => (
+                  <option key={m} value={i + 1}>
+                    {m}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field label={t('fields.weekStartsOn')}>
+              <Select name="weekStartsOn" defaultValue={String(initial.weekStartsOn)}>
+                {days.map((d, i) => (
+                  <option key={d} value={i}>
+                    {d}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          </div>
+        </div>
         <div className="tg-row">
           <span>
             <b>{t('fields.membersCanExport')}</b>
@@ -73,113 +175,6 @@ export function SettingsForm({
             defaultChecked={initial.membersCanExport}
           />
         </div>
-        <details className="group mt-1">
-          <summary className="btn btn-plain btn-sm cursor-pointer list-none">
-            {readOnly ? t('showDetails') : t('editDetails')}
-          </summary>
-          <div className="mt-3 grid gap-3">
-            <Field label={t('fields.name')} error={e.name}>
-              <Input name="name" defaultValue={initial.name} required />
-            </Field>
-            <Field label={t('fields.type')} hint={t('hints.type')}>
-              <Select name="type" defaultValue={initial.type ?? ''}>
-                <option value="">{t('householdTypes.none')}</option>
-                {HOUSEHOLD_TYPES.map((k) => (
-                  <option key={k} value={k}>
-                    {tt(`${k}.name`)}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            {initial.type === 'investment_property' && (
-              <>
-                <Field label={t('fields.address')} optional>
-                  <Input name="address" defaultValue={initial.address ?? ''} maxLength={120} />
-                </Field>
-                <div className="fld-row">
-                  <Field label={t('fields.allowance')} hint={t('hints.allowance')} optional>
-                    <Input
-                      name="allowance"
-                      inputMode="decimal"
-                      defaultValue={initial.allowance}
-                      className="narrow"
-                    />
-                  </Field>
-                  <Field label={t('fields.allowancePeriod')}>
-                    <Select name="allowancePeriod" defaultValue={initial.allowancePeriod}>
-                      {ALLOWANCE_PERIODS.map((k) => (
-                        <option key={k} value={k}>
-                          {tp(k)}
-                        </option>
-                      ))}
-                    </Select>
-                  </Field>
-                </div>
-              </>
-            )}
-            <Field label={t('fields.splitMode')} hint={t('hints.splitMode')}>
-              <Select name="splitMode" defaultValue={initial.splitMode}>
-                <option value="shared">{t('splitModes.shared')}</option>
-                <option value="single">{t('splitModes.single')}</option>
-              </Select>
-            </Field>
-            <Field
-              label={t('fields.paymentReferenceTemplate')}
-              error={e.paymentReferenceTemplate}
-              hint={t('hints.paymentReferenceTemplate')}
-            >
-              <Input
-                name="paymentReferenceTemplate"
-                defaultValue={initial.paymentReferenceTemplate}
-              />
-            </Field>
-            <div className="grid grid-cols-2 gap-3">
-              <Field label={t('fields.currency')} error={e.currency}>
-                <Input
-                  name="currency"
-                  defaultValue={initial.currency}
-                  maxLength={3}
-                  className="uppercase"
-                />
-              </Field>
-              <Field label={t('fields.locale')} error={e.locale}>
-                <Input name="locale" defaultValue={initial.locale} />
-              </Field>
-            </div>
-            <Field label={t('fields.timezone')} error={e.timezone}>
-              <Select name="timezone" defaultValue={initial.timezone}>
-                {timezones.map((tz) => (
-                  <option key={tz} value={tz}>
-                    {tz}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <div className="grid grid-cols-2 gap-3">
-              <Field label={t('fields.fiscalYearStartMonth')}>
-                <Select
-                  name="fiscalYearStartMonth"
-                  defaultValue={String(initial.fiscalYearStartMonth)}
-                >
-                  {months.map((m, i) => (
-                    <option key={m} value={i + 1}>
-                      {m}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-              <Field label={t('fields.weekStartsOn')}>
-                <Select name="weekStartsOn" defaultValue={String(initial.weekStartsOn)}>
-                  {days.map((d, i) => (
-                    <option key={d} value={i}>
-                      {d}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-            </div>
-          </div>
-        </details>
         {!readOnly && (
           <div className="set-acts">
             <Button type="submit" size="sm" disabled={pending}>
