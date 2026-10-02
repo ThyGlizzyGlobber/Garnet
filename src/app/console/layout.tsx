@@ -30,8 +30,9 @@ export default async function ConsoleLayout({ children }: { children: ReactNode 
     households: householdTiles(me, account),
     currency: 'AUD',
     split: false,
-    services: [],
+    sections: [],
     mine: [],
+    lines: [],
     inboxCount: 0,
     address: null,
     me: {

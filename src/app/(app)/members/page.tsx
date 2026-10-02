@@ -5,7 +5,6 @@ import { LinkButton } from '@/components/ui';
 import { PageTitle } from '@/components/ui/blocks';
 import { Chip } from '@/components/ui/chip';
 import { Avatar } from '@/components/ui/colour';
-import { BackLink } from '@/components/ui/controls';
 import { getAccount } from '@/lib/accounts';
 import { pageContext } from '@/lib/context';
 import { joinStatus, latestInvites } from '@/lib/invites';
@@ -22,7 +21,6 @@ import { memberLedger } from '@/lib/stats';
 export default async function MembersPage() {
   const { hh, me, date, today, money } = await pageContext();
   const t = await getTranslations('members');
-  const tn = await getTranslations('nav');
   const members = listMembers(hh.id);
   const invites = latestInvites(hh.id);
   const admin = isAdmin(me);
@@ -32,7 +30,6 @@ export default async function MembersPage() {
 
   return (
     <div className="scr">
-      <BackLink href="/settings">{tn('settings')}</BackLink>
       <PageTitle
         title={t('title')}
         lede={solo ? t('ledeSolo') : t('lede', { household: hh.name })}

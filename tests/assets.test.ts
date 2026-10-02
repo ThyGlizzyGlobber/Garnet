@@ -142,9 +142,9 @@ describe('Vehicles and Health are main services', () => {
       'car_insurance',
     ]);
     // The nav: Vehicles → Registration, Car insurance, each showing Vehicles with that kind.
-    const nav = shellView(hh, mum, TODAY, db).services.find(
-      (e) => e.kind === 'group' && e.category === 'vehicle',
-    );
+    const nav = shellView(hh, mum, TODAY, db)
+      .sections.flatMap((x) => x.entries)
+      .find((e) => e.kind === 'group' && e.category === 'vehicle');
     expect(nav?.kind === 'group' && nav.children.map((c) => c.href)).toEqual([
       '/services/category/vehicle',
       '/services/category/vehicle',
@@ -225,7 +225,7 @@ describe('filing bills under a vehicle', () => {
       db,
     );
     expect(filed.service.typeSlug).toBe('vehicle_registration');
-    expect(filed.service.name).toBe('Vehicle registration');
+    expect(filed.service.name).toBe('Vehicle Registration');
     expect(filed.assetId).toBe(fiesta.id);
     expect(listBills(hh.id, { serviceId: insurance.id }, db)).toEqual([]);
   });
@@ -495,7 +495,7 @@ describe('the pages', () => {
     expect(assetKindOf('health')).toBeNull();
   });
 
-  it('Donations sit under Lifestyle; Subscriptions keep a page of their own, priced a month', () => {
+  it('Donations and Subscriptions are main services of their own; subscriptions priced a month', () => {
     const { hh, mum, svc } = setup();
     svc('gym', 'Peak Fitness');
     const charity = createService(
@@ -534,11 +534,12 @@ describe('the pages', () => {
     bill(hh, charity.id, { amountMinor: 2500 });
     const groups = groupServices(listServices(hh.id, {}, db));
     expect(groups.find((g) => g.category === 'lifestyle')?.services.map((s) => s.typeSlug)).toEqual(
-      ['gym', 'donations'],
+      ['gym'],
     );
     expect(groups.find((g) => g.typeSlug === 'subscriptions')?.services).toHaveLength(2);
-    const lifestyle = serviceCardsView(hh, mum, { category: 'lifestyle' }, TODAY, db);
-    expect(lifestyle.cards.map((c) => c.service.name)).toContain('Red Cross');
+    expect(groups.find((g) => g.typeSlug === 'donations')?.services).toHaveLength(1);
+    const donations = serviceCardsView(hh, mum, { typeSlug: 'donations' }, TODAY, db);
+    expect(donations.cards.map((c) => c.service.name)).toEqual(['Red Cross']);
     const subs = subscriptionsView(hh, mum, TODAY, db);
     // Each at its own price and how often; a yearly plan stays yearly, never
     // a twelfth. Largest over a year first; the monthly total is the monthly ones.

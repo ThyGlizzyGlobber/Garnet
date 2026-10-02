@@ -90,6 +90,7 @@ export function createMember(householdId: string, input: MemberInput, db: Db = g
     notifyProblems: true,
     paymentDetails: input.paymentDetails ?? [],
     isPrimary: input.isPrimary ?? false,
+    navLayout: null,
     createdAt: now,
     updatedAt: now,
   };

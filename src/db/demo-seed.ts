@@ -169,7 +169,7 @@ export async function seedDemo(db: Db = getDb()) {
     hh.id,
     {
       typeSlug: 'council_rates',
-      name: 'Council rates',
+      name: 'Council Rates',
       provider: 'City of Riverside',
       cadence: 'annual',
       payerMemberId: alex.id,
@@ -181,7 +181,7 @@ export async function seedDemo(db: Db = getDb()) {
     hh.id,
     {
       typeSlug: 'vehicle_registration',
-      name: 'Car rego',
+      name: 'Car Rego',
       provider: 'Transport Registry',
       cadence: 'annual',
       ownerMemberId: alex.id,
@@ -253,7 +253,7 @@ export async function seedDemo(db: Db = getDb()) {
     hh.id,
     {
       typeSlug: 'ambulance_cover',
-      name: 'Ambulance cover',
+      name: 'Ambulance Cover',
       provider: 'StateCare Ambulance',
       cadence: 'annual',
       payerMemberId: jordan.id,
@@ -264,7 +264,7 @@ export async function seedDemo(db: Db = getDb()) {
     hh.id,
     {
       typeSlug: 'health_insurance',
-      name: 'Health insurance',
+      name: 'Health Insurance',
       provider: 'Harbourside Health',
       cadence: 'monthly',
       ownerMemberId: alex.id,
@@ -520,7 +520,7 @@ export async function seedDemo(db: Db = getDb()) {
     hh.id,
     {
       typeSlug: 'car_insurance',
-      name: 'Car insurance',
+      name: 'Car Insurance',
       provider: 'Harbourside Insurance',
       cadence: 'annual',
       ownerMemberId: alex.id,
@@ -564,7 +564,7 @@ export async function seedDemo(db: Db = getDb()) {
     hh.id,
     {
       typeSlug: 'car_insurance',
-      name: 'Car insurance',
+      name: 'Car Insurance',
       provider: 'Harbourside Insurance',
       cadence: 'annual',
       payerMemberId: jordan.id,
@@ -845,7 +845,7 @@ function seedOtherHouseholds(alex: Member, pin: string, db: Db) {
     maple.id,
     {
       typeSlug: 'council_rates',
-      name: 'Council rates',
+      name: 'Council Rates',
       provider: 'City of Riverside',
       cadence: 'annual',
       payerMemberId: chris.id,

@@ -240,10 +240,10 @@ describe('the service a council notice lands on', () => {
     expect(outcome.status).toBe('extracted');
     expect(getBill(hh.id, outcome.billId!, db)!.serviceId).toBe(old.id);
     const svc = getService(hh.id, old.id, db)!;
-    // The household already has a "Council rates", so the provider tells them apart.
+    // The household already has a "Council Rates", so the provider tells them apart.
     expect([svc.typeSlug, svc.name]).toEqual([
       'council_rates',
-      'Council rates (City of Greater Example)',
+      'Council Rates (City of Greater Example)',
     ]);
   });
 
@@ -267,7 +267,7 @@ describe('the service a council notice lands on', () => {
     const svc = getBill(hh.id, outcome.billId!, db)!.service;
     expect([svc.typeSlug, svc.name, svc.cadence]).toEqual([
       'council_rates',
-      'Council rates (Shire of Elsewhere)',
+      'Council Rates (Shire of Elsewhere)',
       'annual',
     ]);
   });

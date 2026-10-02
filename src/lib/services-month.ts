@@ -8,7 +8,13 @@ import { addMonths } from '@/lib/periods';
 import { expectedBills } from '@/lib/expected';
 import { perDayFallback } from '@/lib/projections';
 import type { GroupedCategory } from '@/lib/service-categories';
-import { groupServices, listServices, type ServiceWithType } from '@/lib/services';
+import { navKey } from '@/lib/nav-layout';
+import {
+  groupServices,
+  listServices,
+  type ServiceGroup,
+  type ServiceWithType,
+} from '@/lib/services';
 
 /**
  * The Services page: one month of bills, service by service. Each service
@@ -16,7 +22,9 @@ import { groupServices, listServices, type ServiceWithType } from '@/lib/service
  * each instalment in its own month), where it stands, and how it compares
  * with the bill before; a service with nothing due that month says when the
  * next is expected, or when it last had a bill due. Main services (Vehicles,
- * Subscriptions…) gather theirs. Listed in the order they need attention. Pure numbers; the page words them.
+ * Subscriptions…) gather theirs. In list order; the page arranges them as
+ * the viewer arranged the side menu (src/lib/nav-layout.ts). Pure numbers;
+ * the page words them.
  */
 
 export type MonthScope = 'all' | 'household' | 'mine';
@@ -38,11 +46,11 @@ export interface MonthItem {
   spark: number[];
 }
 
-export type MonthEntry =
+/** key: the side menu's (src/lib/nav-layout.ts); mine: one of the viewer's own (My Services). */
+export type MonthEntry = { key: string; mine: boolean } & (
   | { kind: 'service'; item: MonthItem }
   | {
       kind: 'group';
-      key: string;
       typeSlug: string | null;
       category: GroupedCategory | null;
       label: string;
@@ -55,7 +63,8 @@ export type MonthEntry =
       toCome: number;
       /** Its services' months added up. */
       spark: number[];
-    };
+    }
+);
 
 export interface ServicesMonth {
   month: string;
@@ -150,36 +159,33 @@ export function servicesMonth(
   }
 
   const listed = services.filter((s) => items.has(s.id));
-  const entries = groupServices(listed).map((g): MonthEntry => {
-    const its = g.services.map((s) => items.get(s.id)!);
-    if (!g.typeSlug && !g.category) return { kind: 'service', item: its[0]! };
-    return {
-      kind: 'group',
-      key: g.category ? `c-${g.category}` : `t-${g.typeSlug}`,
-      typeSlug: g.typeSlug,
-      category: g.category,
-      label: g.label,
-      icon: g.icon,
-      colour: g.colour,
-      items: its,
-      amountMinor: its.reduce((s, i) => s + i.amountMinor, 0),
-      status: worst(its.map((i) => i.status)),
-      toCome: its.filter((i) => i.expected && i.expected.dueDate.slice(0, 7) === month).length,
-      spark: sparkMonths.map((_, k) => its.reduce((sum, i) => sum + i.spark[k]!, 0)),
+  // The household's, then the viewer's own (My Services), each gathered into main services.
+  const toEntry =
+    (mine: boolean) =>
+    (g: ServiceGroup<ServiceWithType>): MonthEntry => {
+      const its = g.services.map((s) => items.get(s.id)!);
+      const key = navKey(g, mine);
+      if (!g.typeSlug && !g.category) return { kind: 'service', key, mine, item: its[0]! };
+      return {
+        kind: 'group',
+        key,
+        mine,
+        typeSlug: g.typeSlug,
+        category: g.category,
+        label: g.label,
+        icon: g.icon,
+        colour: g.colour,
+        items: its,
+        amountMinor: its.reduce((s, i) => s + i.amountMinor, 0),
+        status: worst(its.map((i) => i.status)),
+        toCome: its.filter((i) => i.expected && i.expected.dueDate.slice(0, 7) === month).length,
+        spark: sparkMonths.map((_, k) => its.reduce((sum, i) => sum + i.spark[k]!, 0)),
+      };
     };
-  });
-  // What needs attention first: overdue, due soon, due later, expected this
-  // month, paid, then nothing this month; the nav's order within each.
-  const rank = (i: MonthItem) =>
-    i.status
-      ? { overdue: 0, today: 1, tomorrow: 1, soon: 1, due: 2, paid: 4 }[i.status.key]
-      : i.expected && i.expected.dueDate.slice(0, 7) === month
-        ? 3
-        : 5;
-  const rankOf = (e: MonthEntry) =>
-    e.kind === 'service' ? rank(e.item) : Math.min(...e.items.map(rank));
-  entries.sort((a, b) => rankOf(a) - rankOf(b));
-
+  const entries = [
+    ...groupServices(listed.filter((s) => !s.ownerMemberId)).map(toEntry(false)),
+    ...groupServices(listed.filter((s) => !!s.ownerMemberId)).map(toEntry(true)),
+  ];
   const all = [...items.values()];
   const monthBills = all.flatMap((i) => i.bills);
   return {

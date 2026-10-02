@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import type { ReactNode } from 'react';
+import { Fragment, type ReactNode } from 'react';
 import { getTranslations } from 'next-intl/server';
 import { rowCtx, statusLabel } from '@/components/app/bill-rows';
 import { Icon } from '@/components/app/icons';
@@ -15,6 +15,8 @@ import { billsAddress } from '@/lib/bills-address';
 import { pageContext } from '@/lib/context';
 import { colourCss } from '@/lib/palette';
 import { addMonths } from '@/lib/periods';
+import { arrange, orderMine } from '@/lib/nav-layout';
+import { getNavLayout } from '@/lib/nav-store';
 import { groupTypes, isEssential } from '@/lib/service-categories';
 import { listServiceTypes, listServices } from '@/lib/services';
 import {
@@ -32,8 +34,8 @@ const SCOPES: MonthScope[] = ['all', 'household', 'mine'];
  * Services, one month at a time: a tile per service (and per main service:
  * Vehicles, Health, Lifestyle, Subscriptions, each opening its page) with
  * what's due this month, a year's line, where it stands and how it compares
- * with the bill before, in the order they need attention. Numbers from
- * servicesMonth().
+ * with the bill before, in the groups and order the viewer gave the side
+ * menu. Numbers from servicesMonth().
  */
 export default async function ServicesPage({
   searchParams,
@@ -212,9 +214,21 @@ export default async function ServicesPage({
     });
   };
 
+  // The same groups, in the same order, as the viewer's side menu.
   const isEveryday = (e: MonthEntry) => e.kind === 'service' && isEssential(e.item.service.type);
-  const essentials = view.entries.filter(isEveryday);
-  const others = view.entries.filter((e) => !isEveryday(e));
+  const layout = getNavLayout(me.id);
+  const sections = arrange(
+    view.entries.filter((e) => !e.mine),
+    (e) => e.key,
+    layout,
+    isEveryday,
+  ).filter((sec) => sec.entries.length > 0);
+  // My Services, the viewer's own, last.
+  const mine = orderMine(
+    view.entries.filter((e) => e.mine),
+    (e) => e.key,
+    layout,
+  );
   const c = view.counts;
   const right = (
     <>
@@ -305,21 +319,22 @@ export default async function ServicesPage({
               ]}
             />
           </Card>
-          {/* The everyday bills first, then the main services and the rest;
-              each in the order they need attention. */}
-          {essentials.length > 0 && (
+          {/* Each of the viewer's groups, then the services in no group, then My Services. */}
+          {sections.map((sec, i) => (
+            <Fragment key={sec.group?.id ?? 'loose'}>
+              {(sec.group || sections.length > 1) && (
+                <SectionHead
+                  title={sec.group?.name ?? tm('otherServices')}
+                  className={i ? 'mt-2' : ''}
+                />
+              )}
+              <div className="st-grid">{sec.entries.map(entry)}</div>
+            </Fragment>
+          ))}
+          {mine.length > 0 && (
             <>
-              <SectionHead title={tm('essentials')} />
-              <div className="st-grid">{essentials.map(entry)}</div>
-            </>
-          )}
-          {others.length > 0 && (
-            <>
-              <SectionHead
-                title={tm('everythingElse')}
-                className={essentials.length ? 'mt-2' : ''}
-              />
-              <div className="st-grid">{others.map(entry)}</div>
+              <SectionHead title={tm('myServices')} className={sections.length ? 'mt-2' : ''} />
+              <div className="st-grid">{mine.map(entry)}</div>
             </>
           )}
         </>

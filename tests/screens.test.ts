@@ -159,12 +159,12 @@ describe('servicesMonth', () => {
 
     // Jordan's rego, due 18 Oct, is in October, under Vehicles.
     const jo = servicesMonth(hh, jordan.id, TODAY, '2026-10', 'all', db);
-    // Attention order: the rego due this month comes before power, with nothing due.
+    // List order (the page arranges them as the side menu is): power, then Vehicles.
     expect(jo.entries.map((x) => (x.kind === 'group' ? x.category : x.item.service.name))).toEqual([
-      'vehicle',
       'Electricity',
+      'vehicle',
     ]);
-    expect(jo.entries[0]!.kind === 'group' && jo.entries[0]!.spark).toHaveLength(12);
+    expect(jo.entries[1]!.kind === 'group' && jo.entries[1]!.spark).toHaveLength(12);
     const vehicles = jo.entries.find((x) => x.kind === 'group');
     expect(vehicles).toMatchObject({ kind: 'group', category: 'vehicle', amountMinor: 91_250 });
     expect(vehicles?.kind === 'group' && vehicles.status?.key).toBe('due');

@@ -69,6 +69,7 @@ describe('service type catalog', () => {
       'water',
       'rent',
       'council_rates',
+      'land_tax',
       'strata',
       'health_insurance',
       'contents_insurance',

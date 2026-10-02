@@ -26,10 +26,10 @@ export function groupTypes<T extends { category?: string | null }>(types: T[]) {
 /**
  * Categories that are a main service of their own, holding their types as
  * sub-services: Vehicles (Registration, Car insurance…), Health (Health
- * insurance, Ambulance cover), Lifestyle (Gym, Donations…) and Home &
- * property (strata, home insurance, gardening, cleaning, repairs…).
- * Subscriptions stays its own main service, rent and council rates stand on
- * their own (see OWN_MAIN_SERVICES, STANDALONE_TYPES). Vehicles' bills are also filed under the
+ * insurance, Ambulance cover), Lifestyle (Gym…) and Home & Property
+ * (council rates, land tax, strata, home insurance, gardening, repairs…).
+ * Subscriptions and Donations stay main services of their own, rent stands on
+ * its own (see OWN_MAIN_SERVICES, STANDALONE_TYPES). Vehicles' bills are also filed under the
  * household's vehicles (src/lib/assets.ts).
  */
 const MAIN_CATEGORIES = ['vehicle', 'health', 'lifestyle', 'home'] as const;
@@ -81,18 +81,15 @@ export function isGroupedCategory(
 
 /**
  * Types that are a main service of their own even though their category is
- * one: Subscriptions has its own page, a list of every subscription.
- * (Donations, with a service per charity, sits under Lifestyle.)
+ * one, holding a service each as sub-services: Subscriptions (Netflix,
+ * Spotify) and Donations (a service per charity; owner, 2026-10-02).
  */
-const OWN_MAIN_SERVICES = new Set(['subscriptions']);
+const OWN_MAIN_SERVICES = new Set(['subscriptions', 'donations']);
 
-/**
- * Types of a main service's category that stay on their own: rent and
- * council rates are everyday bills, not parts of Home & property.
- */
-const STANDALONE_TYPES = new Set(['rent', 'council_rates']);
+/** Types of a main service's category that stay on their own: rent is an everyday bill, not part of Home & Property. */
+const STANDALONE_TYPES = new Set(['rent']);
 
-/** Is this type one of a main service's sub-services (Registration under Vehicles, Gym under Lifestyle)? */
+/** Is this type one of a main service's sub-services (Registration under Vehicles, Council Rates under Home & Property)? */
 export const inMainCategory = (ty: { slug: string; category?: string | null }): boolean =>
   isGroupedCategory(ty.category) &&
   !OWN_MAIN_SERVICES.has(ty.slug) &&
@@ -104,18 +101,11 @@ export function assetKindOf(category: string | null | undefined): 'vehicle' | nu
 }
 
 /**
- * The everyday bills: shown first, under Essentials, on the Services page
- * and in the nav, each on its own (never folded into a main service).
+ * The everyday bills, each on its own (never folded into a main service):
+ * first in the nav and on the Services page until someone arranges them, and
+ * "Essentials" is the name suggested for a group of them (src/lib/nav-layout.ts).
  */
-const ESSENTIAL_TYPES = new Set([
-  'internet',
-  'electricity',
-  'gas',
-  'water',
-  'phone',
-  'rent',
-  'council_rates',
-]);
+const ESSENTIAL_TYPES = new Set(['internet', 'electricity', 'gas', 'water', 'phone', 'rent']);
 
 export const isEssential = (ty: { slug: string }): boolean => ESSENTIAL_TYPES.has(ty.slug);
 

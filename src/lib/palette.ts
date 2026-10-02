@@ -41,6 +41,9 @@ const SERVICE_COLOURS: { name: string; light: string; dark: string }[] = [
   { name: 'brown-8', light: '#d7c3b0', dark: '#e7d3bf' },
   // A ninth for Home & property, which has more parts than eight: greyed, for "Something else".
   { name: 'brown-9', light: '#8f8276', dark: '#b3a699' },
+  // A tenth and eleventh since council rates and land tax joined it (2026-10-02).
+  { name: 'brown-10', light: '#4d3520', dark: '#6e5640' },
+  { name: 'brown-11', light: '#a99a8c', dark: '#c4b6a8' },
   { name: 'lime-1', light: '#4f670c', dark: '#677f26' },
   { name: 'lime-2', light: '#627f0e', dark: '#7f9d2e' },
   { name: 'lime-3', light: '#709211', dark: '#92b435' },
@@ -58,6 +61,14 @@ const SERVICE_COLOURS: { name: string; light: string; dark: string }[] = [
   { name: 'plum-7', light: '#cb98c4', dark: '#e0b0d9' },
   { name: 'plum-8', light: '#d7b1d2', dark: '#e7c3e2' },
   { name: 'grey', light: '#7c828c', dark: '#a3a9b2' },
+  // Shades of the palette's green, for Donations' charities.
+  { name: 'green-1', light: '#004d00', dark: '#1f5a1f' },
+  { name: 'green-2', light: '#005f00', dark: '#2a6e2a' },
+  { name: 'green-3', light: '#007000', dark: '#358235' },
+  { name: 'green-5', light: '#2f9a2f', dark: '#3fa03f' },
+  { name: 'green-6', light: '#57ad57', dark: '#62b462' },
+  { name: 'green-7', light: '#7fc17f', dark: '#86c886' },
+  { name: 'green-8', light: '#a6d4a6', dark: '#a9dba9' },
   { name: 'red-1', light: '#942f2f', dark: '#964343' },
   { name: 'red-2', light: '#b63a3a', dark: '#b85252' },
   { name: 'red-3', light: '#d14342', dark: '#d45f5f' },
@@ -69,16 +80,16 @@ const SERVICE_COLOURS: { name: string; light: string; dark: string }[] = [
 
 /**
  * The shades of a colour's family, darkest first, the base fourth ("red" is
- * the palette's): eight, and a greyed ninth where a main service needs one.
+ * the palette's): eight, and a ninth to eleventh where a main service needs more.
  */
 export function shadesOf(base: string): string[] {
   // A shade's family is its name without the step ("lime-6" → "lime").
   const name = [...PALETTE, ...SERVICE_COLOURS]
     .find((p) => p.light.toLowerCase() === base.toLowerCase())
-    ?.name.replace(/-\d$/, '');
+    ?.name.replace(/-\d+$/, '');
   if (!name) return [];
   const all = [...PALETTE, ...SERVICE_COLOURS];
-  return [1, 2, 3, 4, 5, 6, 7, 8, 9]
+  return [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
     .map((k) => all.find((p) => p.name === (k === 4 ? name : `${name}-${k}`))?.light)
     .filter((c): c is string => !!c);
 }

@@ -21,16 +21,13 @@
     "member": "Member",
     "servicesHead": "Services",
     "thisMonth": "this month",
-    "justYours": "Just yours",
+    "otherServices": "Other Services",
+    "myServices": "My Services",
     "noServices": "Each provider’s first bill adds its service here.",
     "householdHome": "{household}, Home",
     "account": "Your account",
     "showSubs": "Show sub-services",
     "hideSubs": "Hide sub-services",
-    "essentials": "Essentials",
-    "everythingElse": "Everything else",
-    "showSection": "Show",
-    "hideSection": "Hide",
     "households": "Households",
     "accountShort": "Account",
     "yourHouseholds": "Your households",
@@ -593,7 +590,7 @@
       "alreadyHaveBody": "Open it, or carry on if this is something else from them.",
       "essentials": "Essentials",
       "everythingElse": "Everything else",
-      "somethingElse": "Something else",
+      "somethingElse": "Something Else",
       "change": "Change",
       "whichKind": "Which kind?",
       "kinds": {
@@ -818,8 +815,8 @@
       "nothing": "Nothing this month",
       "count": "{count, plural, one {# service} other {# services}}",
       "open": "Open {name}",
-      "essentials": "Essentials",
-      "everythingElse": "Everything else"
+      "otherServices": "Other Services",
+      "myServices": "My Services"
     }
   },
   "members": {
@@ -2665,7 +2662,7 @@
       "vehicle": "Vehicles",
       "health": "Health",
       "lifestyle": "Lifestyle",
-      "home": "Home & property"
+      "home": "Home & Property"
     },
     "yours": "Yours",
     "billCount": "{count, plural, one {# bill} other {# bills}}",
@@ -2683,8 +2680,9 @@
     "emptyTitle": "Nothing under {name} yet",
     "emptyBody": {
       "health": "Add your health insurance and ambulance cover, or forward a bill and it’s set up for you.",
-      "lifestyle": "Add your gym, memberships and donations, or forward a bill and it’s set up for you.",
-      "home": "Add your strata, home insurance, gardener, cleaner and the like, or forward a bill and it’s set up for you."
+      "lifestyle": "Add your gym, memberships and classes, or forward a bill and it’s set up for you.",
+      "home": "Add your council rates, land tax, strata, home insurance, gardener, cleaner and the like, or forward a bill and it’s set up for you.",
+      "donations": "Add the charities you give to, or forward a donation receipt and it’s set up for you."
     },
     "whoseFollows": "Whose it is follows {name}, the vehicle it’s filed under.",
     "kinds": {
@@ -2814,7 +2812,8 @@
       "plus": "plus {list}",
       "overYear": "Over a year",
       "aheadLine": "About {amount} to pay over the next 12 months."
-    }
+    },
+    "addCharity": "Add a charity"
   },
   "joined": {
     "side": "You’re in.",
@@ -3078,5 +3077,19 @@
       },
       "more": "Older"
     }
+  },
+  "navEdit": {
+    "edit": "Arrange services",
+    "save": "Save the menu",
+    "editing": "Tick to group",
+    "hint": "Tick services to put them in a group, or drag them where you want them.",
+    "groupName": "Group name",
+    "placeholder": "e.g. {name}",
+    "addGroup": "{count, plural, one {Group # service} other {Group # services}}",
+    "pick": "Put {name} in a group",
+    "remove": "Remove {name} (its services stay in the menu)",
+    "dropHere": "Drag services here",
+    "show": "Show",
+    "hide": "Hide"
   }
 }

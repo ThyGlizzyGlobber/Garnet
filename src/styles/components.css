@@ -267,9 +267,10 @@
   transition: transform 0.2s;
   pointer-events: none;
 }
+/* On is iOS green in every theme (owner, 2026-10-02); off keeps the pale track. */
 .toggle[aria-checked='true'],
 .toggle:has(input:checked) {
-  background: var(--p-accent);
+  background: var(--toggle-on);
 }
 .toggle[aria-checked='true'] i,
 .toggle:has(input:checked) i {

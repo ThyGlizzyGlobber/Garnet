@@ -1,9 +1,8 @@
 'use client';
 
-import { useSyncExternalStore, type ReactNode } from 'react';
-import { Icon } from './icons';
+import { useSyncExternalStore } from 'react';
 
-/** Remembered per browser: which of the nav's service sections are folded away. */
+/** Remembered per browser: which of the nav's service groups are folded away. */
 const key = (id: string) => `hud-nav-${id}`;
 const listeners = new Set<() => void>();
 /** This page's choices, for when the browser won't store them (private browsing). */
@@ -26,26 +25,11 @@ function isOpen(id: string): boolean {
 }
 
 /**
- * One of the nav's service sections (Essentials, Everything else, Just
- * yours): its heading folds the section away or opens it again. Open until
- * someone folds it; that choice is kept in this browser.
+ * Whether one of the nav's service groups is open, and its fold. Open until
+ * someone folds it; that choice is kept in this browser (the server renders
+ * every group open).
  */
-export function NavSection({
-  id,
-  title,
-  aside,
-  showLabel,
-  hideLabel,
-  children,
-}: {
-  id: string;
-  title: string;
-  /** Beside the heading ("this month"). */
-  aside?: string;
-  showLabel: string;
-  hideLabel: string;
-  children: ReactNode;
-}) {
+export function useFold(id: string): [boolean, () => void] {
   const open = useSyncExternalStore(
     subscribe,
     () => isOpen(id),
@@ -60,20 +44,5 @@ export function NavSection({
     }
     for (const l of listeners) l();
   };
-  return (
-    <div className="nav-sec-g" data-open={open ? '' : undefined}>
-      <button
-        type="button"
-        className="nav-sec nav-sec-t"
-        aria-expanded={open}
-        aria-label={`${open ? hideLabel : showLabel} · ${title}`}
-        onClick={toggle}
-      >
-        <Icon name="chevron-down" width={13} height={13} className="nav-sec-chev" />
-        <b>{title}</b>
-        {aside && open && <span>{aside}</span>}
-      </button>
-      {open && children}
-    </div>
-  );
+  return [open, toggle];
 }

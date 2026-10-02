@@ -153,8 +153,12 @@
   --g-spec: rgba(255, 255, 255, 0.92);
   --g-shadow: 0 28px 56px -30px rgba(0, 0, 0, 0.3), 0 2px 8px -4px rgba(0, 0, 0, 0.08);
   --g-solid: #f7f7f7;
-  /* The side menu: solid graphite (owner, 2026-10-02), darker than the page in dark mode. */
-  --side-bg: #242424;
+  /* The side menu: graphite at 75% (owner, 2026-10-02: solid was jarring), darker in dark mode. */
+  --side-bg: rgba(36, 36, 36, 0.75);
+  /* The same, solid: behind what stays pinned in the menu. */
+  --side-solid: #242424;
+  /* A switch that's on: iOS green (owner, 2026-10-02); iOS's dark-mode green in dark. */
+  --toggle-on: #34c759;
   /* Solid glass for reduced transparency: the scheme's page colour, lifted. */
   --g-tint: color-mix(in srgb, var(--p-bg) 55%, white);
   --ctl-bg: rgba(255, 255, 255, 0.42);
@@ -176,6 +180,13 @@
   --sc-yellow: #eda100;
   --sc-magenta: #e87ba4;
   --sc-green: #008300;
+  --sc-green-1: #004d00;
+  --sc-green-2: #005f00;
+  --sc-green-3: #007000;
+  --sc-green-5: #2f9a2f;
+  --sc-green-6: #57ad57;
+  --sc-green-7: #7fc17f;
+  --sc-green-8: #a6d4a6;
   --sc-violet: #4a3aa7;
   --sc-red: #e34948;
   --sc-slate-1: #3b485a;
@@ -195,6 +206,8 @@
   --sc-brown-7: #c9b097;
   --sc-brown-8: #d7c3b0;
   --sc-brown-9: #8f8276;
+  --sc-brown-10: #4d3520;
+  --sc-brown-11: #a99a8c;
   --sc-lime-1: #4f670c;
   --sc-lime-2: #627f0e;
   --sc-lime-3: #709211;
@@ -254,7 +267,9 @@
   --g-spec: rgba(255, 255, 255, 0.45);
   --g-shadow: 0 30px 60px -28px rgba(0, 0, 0, 0.7), 0 2px 8px -4px rgba(0, 0, 0, 0.3);
   --g-solid: #262626;
-  --side-bg: #121212;
+  --side-bg: rgba(18, 18, 18, 0.75);
+  --side-solid: #161616;
+  --toggle-on: #30d158;
   --g-tint: color-mix(in srgb, var(--p-bg) 88%, white);
   --ctl-bg: rgba(255, 255, 255, 0.09);
   --ctl-rim: rgba(255, 255, 255, 0.16);
@@ -273,6 +288,13 @@
   --sc-yellow: #c98500;
   --sc-magenta: #d55181;
   --sc-green: #008300;
+  --sc-green-1: #1f5a1f;
+  --sc-green-2: #2a6e2a;
+  --sc-green-3: #358235;
+  --sc-green-5: #3fa03f;
+  --sc-green-6: #62b462;
+  --sc-green-7: #86c886;
+  --sc-green-8: #a9dba9;
   --sc-violet: #9085e9;
   --sc-red: #e66767;
   --sc-slate-1: #5c6878;
@@ -292,6 +314,8 @@
   --sc-brown-7: #dfc5aa;
   --sc-brown-8: #e7d3bf;
   --sc-brown-9: #b3a699;
+  --sc-brown-10: #6e5640;
+  --sc-brown-11: #c4b6a8;
   --sc-lime-1: #677f26;
   --sc-lime-2: #7f9d2e;
   --sc-lime-3: #92b435;
@@ -348,7 +372,9 @@
     --g-spec: rgba(255, 255, 255, 0.45);
     --g-shadow: 0 30px 60px -28px rgba(0, 0, 0, 0.7), 0 2px 8px -4px rgba(0, 0, 0, 0.3);
     --g-solid: #262626;
-    --side-bg: #121212;
+    --side-bg: rgba(18, 18, 18, 0.75);
+    --side-solid: #161616;
+    --toggle-on: #30d158;
     --g-tint: color-mix(in srgb, var(--p-bg) 88%, white);
     --ctl-bg: rgba(255, 255, 255, 0.09);
     --ctl-rim: rgba(255, 255, 255, 0.16);
@@ -367,6 +393,13 @@
     --sc-yellow: #c98500;
     --sc-magenta: #d55181;
     --sc-green: #008300;
+    --sc-green-1: #1f5a1f;
+    --sc-green-2: #2a6e2a;
+    --sc-green-3: #358235;
+    --sc-green-5: #3fa03f;
+    --sc-green-6: #62b462;
+    --sc-green-7: #86c886;
+    --sc-green-8: #a9dba9;
     --sc-violet: #9085e9;
     --sc-red: #e66767;
     --sc-slate-1: #5c6878;
@@ -386,7 +419,8 @@
     --sc-brown-7: #dfc5aa;
     --sc-brown-8: #e7d3bf;
     --sc-brown-9: #b3a699;
-    --sc-brown-9: #b3a699;
+    --sc-brown-10: #6e5640;
+    --sc-brown-11: #c4b6a8;
     --sc-lime-1: #677f26;
     --sc-lime-2: #7f9d2e;
     --sc-lime-3: #92b435;

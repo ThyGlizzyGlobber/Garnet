@@ -169,21 +169,21 @@ for what the thing is; nothing at the top level shares one. The parts inside
 a main service wear shades of its colour (`src/lib/palette.ts`:
 `SERVICE_COLOURS`, eight steps a family, "-1" darkest … "-8" lightest).
 
-| Entry           | Colour  | Parts inside, in shades                                                                                                                        |
-| --------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| Water           | Blue    |                                                                                                                                                |
-| Electricity     | Yellow  |                                                                                                                                                |
-| Gas             | Orange  |                                                                                                                                                |
-| Internet        | Violet  |                                                                                                                                                |
-| Phone           | Aqua    |                                                                                                                                                |
-| Rent            | Magenta |                                                                                                                                                |
-| Council rates   | Green   |                                                                                                                                                |
-| Vehicles        | Slate   | Rego (base), Car insurance, Roadside, Servicing, Something else                                                                                |
-| Health          | Red     | Health insurance (base), Ambulance cover, Something else                                                                                       |
-| Lifestyle       | Lime    | Gym (base), Donations, Something else                                                                                                          |
-| Home & property | Brown   | Strata, Building and Contents insurance, Gardening (base), Cleaning, Pest control, Pool & spa, Repairs, Something else (a ninth, greyed shade) |
-| Subscriptions   | Plum    | each subscription a shade in charts                                                                                                            |
-| Other           | Grey    |                                                                                                                                                |
+| Entry           | Colour  | Parts inside, in shades                                                                                                                                                                        |
+| --------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Water           | Blue    |                                                                                                                                                                                                |
+| Electricity     | Yellow  |                                                                                                                                                                                                |
+| Gas             | Orange  |                                                                                                                                                                                                |
+| Internet        | Violet  |                                                                                                                                                                                                |
+| Phone           | Aqua    |                                                                                                                                                                                                |
+| Rent            | Magenta |                                                                                                                                                                                                |
+| Vehicles        | Slate   | Rego (base), Car insurance, Roadside, Servicing, Something else                                                                                                                                |
+| Health          | Red     | Health insurance (base), Ambulance cover, Something else                                                                                                                                       |
+| Lifestyle       | Lime    | Gym (base), Something else                                                                                                                                                                     |
+| Home & Property | Brown   | Council Rates, Land Tax, Strata, Building and Contents insurance, Gardening (base), Cleaning, Pest control, Pool & spa, Repairs, Something else (ninth to eleventh shades for the extra parts) |
+| Subscriptions   | Plum    | each subscription a shade in charts                                                                                                                                                            |
+| Donations       | Green   | each charity a shade in charts                                                                                                                                                                 |
+| Other           | Grey    |                                                                                                                                                                                                |
 
 Members keep the eight-colour palette. Series that share a colour in a chart
 (Netflix and Spotify) get shades of it.
@@ -320,14 +320,23 @@ The studio's `.ring` is `.gauge` here (Tailwind owns `ring`):
 
 ## 9. Layout and navigation
 
-- **Desktop (≥ 1200 px): the nav column.** A solid graphite panel down the
-  whole left edge (`--side-bg`: `#242424` light, `#121212` dark), 292 px wide,
-  square (owner, 2026-10-02: full height, not a floating card, wider, and
-  solid like the reference). It carries its own dark tokens, so its text,
-  dropdowns and menus read light on graphite in both themes: the household at
-  the top, then Home · Services · Bills · Money · Inbox (42 px items, radius
-  14), then the services list with this month's amount beside each, and you
-  at the foot.
+- **Desktop (≥ 1200 px): the nav column.** A graphite panel at 75% down the
+  whole left edge (`--side-bg`: `#242424` light, `#121212` dark, over a 24 px
+  blur), 292 px wide, square (owner, 2026-10-02: full height, not a floating
+  card, wider; solid was jarring, so 75%). It carries its own dark tokens, so
+  its text, dropdowns and menus read light on graphite in both themes: the
+  household at the top, then Home · Services · Bills · Money · Members · Inbox
+  (42 px items, radius 14), then the services with this month's amount
+  beside each, and you at the foot.
+- **The services in the column** are arranged by each person: their own
+  groups first, then Other Services (in no group), then My Services (their
+  own; always last, never renamed, only reordered). The pencil beside
+  "Services" starts arranging: round Pyrope tick-boxes on each service, a
+  name field once some are ticked ("e.g. Essentials"), dragging with an iOS
+  blue drop line (`--drop-line`), and the pencil becomes a round Pyrope tick
+  that saves. The Services page shows the same groups in the same order.
+- **Switches** are iOS green when on (`--toggle-on`: `#34c759` light,
+  `#30d158` dark) and the pale track when off.
 - **The household switcher**: the household's name drops down a plain list of
   every household you belong to (the current one ticked) and, under a line,
   **Dashboard** (the Account Dashboard). Starting or joining a household lives

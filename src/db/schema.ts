@@ -186,6 +186,11 @@ export const member = sqliteTable(
       .default([]),
     /** The account's home of residence: first in the switcher, and where the app opens (D7). One per account. */
     isPrimary: integer('is_primary', { mode: 'boolean' }).notNull().default(false),
+    /**
+     * How this person arranged the services in the side menu (and so on the
+     * Services page): JSON from src/lib/nav-layout.ts. Null = the default order.
+     */
+    navLayout: text('nav_layout'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },

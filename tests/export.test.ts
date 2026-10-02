@@ -111,7 +111,7 @@ function setup() {
     hh.id,
     {
       typeSlug: 'council_rates',
-      name: 'Council rates',
+      name: 'Council Rates',
       provider: 'City of Riverside',
       payerMemberId: jo.id,
     },
@@ -221,7 +221,7 @@ describe('filing on the NAS', () => {
     );
     const doc = getDocument(hh.id, docId, db)!;
     expect(doc.path).toBe(
-      `households/Riverside House ${n} (${hh.id.slice(-6)})/2026/08 August/Council rates/2026-08-11 Council rates - City of Riverside.pdf`,
+      `households/Riverside House ${n} (${hh.id.slice(-6)})/2026/08 August/Council Rates/2026-08-11 Council Rates - City of Riverside.pdf`,
     );
     expect(fs.existsSync(documentPath(doc))).toBe(true);
   });
@@ -250,7 +250,7 @@ describe('filing on the NAS', () => {
     );
     refileDocuments(hh.id, db);
     expect(getDocument(hh.id, receipt.id, db)!.path).toMatch(
-      /\/2026\/09 September\/Council rates\/2026-09-18 Council rates - City of Riverside - receipt\.pdf$/,
+      /\/2026\/09 September\/Council Rates\/2026-09-18 Council Rates - City of Riverside - receipt\.pdf$/,
     );
 
     updateService(hh.id, rates.id, { name: 'Rates' }, db);
@@ -272,7 +272,7 @@ describe('filing on the NAS', () => {
       notice('Example Roads', 'vehicle_registration', '2026-07-20'),
     );
     expect(getDocument(hh.id, docId, db)!.path).toMatch(
-      /\/2026\/07 July\/Vehicle registration \(Sam, personal\)\/2026-07-20 Vehicle registration - Example Roads\.pdf$/,
+      /\/2026\/07 July\/Vehicle Registration \(Sam, personal\)\/2026-07-20 Vehicle Registration - Example Roads\.pdf$/,
     );
   });
 
@@ -287,7 +287,7 @@ describe('filing on the NAS', () => {
       },
     });
     expect(getDocument(hh.id, second.docId, db)!.path).toMatch(
-      /2026-08-11 Council rates - City of Riverside \(2\)\.pdf$/,
+      /2026-08-11 Council Rates - City of Riverside \(2\)\.pdf$/,
     );
   });
 });
@@ -311,20 +311,20 @@ describe('the export zip', () => {
       'files.csv',
       'instalments.csv',
       'shares.csv',
-      '2026/07 July/Vehicle registration (Jo, personal)/2026-07-20 Vehicle registration - Jo Roads.pdf',
-      '2026/08 August/Council rates/2026-08-11 Council rates - City of Riverside.pdf',
+      '2026/07 July/Vehicle Registration (Jo, personal)/2026-07-20 Vehicle Registration - Jo Roads.pdf',
+      '2026/08 August/Council Rates/2026-08-11 Council Rates - City of Riverside.pdf',
     ]);
     expect(
       files
         .get(
-          `${root}/2026/08 August/Council rates/2026-08-11 Council rates - City of Riverside.pdf`,
+          `${root}/2026/08 August/Council Rates/2026-08-11 Council Rates - City of Riverside.pdf`,
         )!
         .toString(),
     ).toMatch(/^%PDF-1\.4/);
     const bills = files.get(`${root}/bills.csv`)!.toString();
     expect(bills).toContain('Personal (Jo)');
     expect(bills).toContain(
-      '2026/08 August/Council rates/2026-08-11 Council rates - City of Riverside.pdf',
+      '2026/08 August/Council Rates/2026-08-11 Council Rates - City of Riverside.pdf',
     );
     expect(bills).not.toContain('Sam Roads');
     expect(files.get(`${root}/README.txt`)!.toString()).toContain('2 bills and 2 files');
@@ -333,9 +333,9 @@ describe('the export zip', () => {
     const mine = exportEntries(hh.id, { owner: sam.id }, '2026-09-29', db);
     const theirs = [...unzip(await zipBuffer(mine.entries)).keys()];
     expect(theirs.filter((k) => k.endsWith('.pdf'))).toEqual([
-      `${root}/2026/07 July/Vehicle registration (Sam, personal)/2026-07-21 Vehicle registration - Sam Roads.pdf`,
+      `${root}/2026/07 July/Vehicle Registration (Sam, personal)/2026-07-21 Vehicle Registration - Sam Roads.pdf`,
     ]);
-    expect(theirs.some((k) => k.includes('Council rates'))).toBe(false);
+    expect(theirs.some((k) => k.includes('Council Rates'))).toBe(false);
   });
 });
 
@@ -353,8 +353,8 @@ describe('who can download the household’s bills', () => {
     // Sam, a member: the household's bills and their own.
     expect(canExportHousehold(sam, hh)).toBe(true);
     expect(await pdfs(exportScope(sam, hh))).toEqual([
-      'Vehicle registration (Sam, personal)',
-      'Council rates',
+      'Vehicle Registration (Sam, personal)',
+      'Council Rates',
     ]);
 
     const adminsOnly = updateHousehold(hh.id, { membersCanExport: false }, db);
@@ -362,8 +362,8 @@ describe('who can download the household’s bills', () => {
     expect(canExportHousehold(jo, adminsOnly)).toBe(true);
     // Now only their own personal bills; the admin still gets the household's (not Sam's).
     expect(await pdfs(exportScope(sam, adminsOnly))).toEqual([
-      'Vehicle registration (Sam, personal)',
+      'Vehicle Registration (Sam, personal)',
     ]);
-    expect(await pdfs(exportScope(jo, adminsOnly))).toEqual(['Council rates']);
+    expect(await pdfs(exportScope(jo, adminsOnly))).toEqual(['Council Rates']);
   });
 });

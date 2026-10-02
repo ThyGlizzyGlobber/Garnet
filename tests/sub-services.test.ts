@@ -107,10 +107,16 @@ const bill = (serviceId: string, x: Partial<BillInput> = {}) =>
   );
 
 describe('the catalog', () => {
-  it('has Donations under Lifestyle, and Subscriptions and Donations hold sub-services', () => {
+  it('has Donations as a main service of its own, and Subscriptions and Donations hold sub-services', () => {
     const types = listServiceTypes(db);
     const donations = types.find((t) => t.slug === 'donations')!;
-    expect(donations).toMatchObject({ category: 'lifestyle', hasSubServices: true });
+    expect(donations).toMatchObject({ hasSubServices: true, label: 'Donations' });
+    expect(inMainCategory(donations)).toBe(false);
+    // Council rates and land tax are parts of Home & Property.
+    for (const slug of ['council_rates', 'land_tax'])
+      expect(inMainCategory(types.find((t) => t.slug === slug)!)).toBe(true);
+    // Names in Title Case.
+    expect(types.find((t) => t.slug === 'repairs')!.label).toBe('Repairs & Maintenance');
     expect(types.filter((t) => t.hasSubServices).map((t) => t.slug)).toEqual([
       'subscriptions',
       'donations',
@@ -125,8 +131,8 @@ describe('the catalog', () => {
     expect(colour('gas')).toBe('#eb6834');
     expect(colour('water')).toBe('#2a78d6');
     // Every top-level entry on the Services page wears its own colour: the
-    // everyday bills, each main service, Subscriptions and Other.
-    const everyday = ['internet', 'electricity', 'gas', 'water', 'phone', 'rent', 'council_rates'];
+    // everyday bills, each main service, Subscriptions, Donations and Other.
+    const everyday = ['internet', 'electricity', 'gas', 'water', 'phone', 'rent'];
     expect(
       types
         .filter(isEssential)
@@ -137,6 +143,7 @@ describe('the catalog', () => {
       ...everyday.map(colour),
       ...Object.values(CATEGORY_COLOURS),
       colour('subscriptions'),
+      colour('donations'),
       colour('other'),
     ].map((c) => c.toLowerCase());
     expect(new Set(top).size).toBe(top.length);
@@ -198,7 +205,7 @@ describe('sub-services', () => {
       amountMinor: 3100,
     });
     const shell = shellView(hh, alex, TODAY, db);
-    const entry = shell.services.find((e) => e.kind === 'group')!;
+    const entry = shell.sections.flatMap((x) => x.entries).find((e) => e.kind === 'group')!;
     expect(entry).toMatchObject({
       kind: 'group',
       href: '/services/group/subscriptions',

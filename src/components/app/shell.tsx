@@ -9,7 +9,7 @@ import { AccountMenu, type AccountMenuItem } from './account-menu';
 import { AddBillButton } from './add-bill';
 import { Icon } from './icons';
 import { NavGroup } from './nav-group';
-import { NavSection } from './nav-section';
+import { NavServices } from './nav-services';
 import { OfflineBar } from './offline-bar';
 import { NavItems, SectionName, type NavItem } from './nav-items';
 import { HouseholdSwitcher, type SwitcherLabels, type SwitcherRow } from './household-switcher';
@@ -24,7 +24,14 @@ import { roleKey, typeIcon } from '@/lib/household-types';
  * menu. Layout in src/styles/shell.css; the numbers come from shellView().
  */
 export interface ShellLabels {
-  nav: { home: string; services: string; bills: string; money: string; inbox: string };
+  nav: {
+    home: string;
+    services: string;
+    bills: string;
+    money: string;
+    members: string;
+    inbox: string;
+  };
   settings: string;
   search: string;
   /** Under the household's name: "3 Members" (owner's wording). */
@@ -34,14 +41,11 @@ export interface ShellLabels {
   /** Role names by roleKey (Admin, Owner/Landlord, Tenant…). */
   roles: Record<string, string>;
   servicesHead: string;
-  /** The nav's two service sections: the everyday bills, and the rest. */
-  essentials: string;
-  everythingElse: string;
-  /** A section heading's fold: "Show" / "Hide". */
-  showSection: string;
-  hideSection: string;
   thisMonth: string;
-  justYours: string;
+  /** The services in no group, once there are groups. */
+  otherServices: string;
+  /** The viewer's own services, last. */
+  myServices: string;
   noServices: string;
   /** The arrow on a main service with sub-services. */
   showSubs: string;
@@ -102,6 +106,7 @@ export function AppShell({
         { href: '/services', label: labels.nav.services, icon: 'services' },
         { href: '/bills', label: labels.nav.bills, icon: 'bills' },
         ...(view.split ? [{ href: '/money', label: labels.nav.money, icon: 'money' }] : []),
+        { href: '/members', label: labels.nav.members, icon: 'people' },
         { href: '/inbox', label: labels.nav.inbox, icon: 'inbox', badge: view.inboxCount },
       ];
   const rows: SwitcherRow[] = view.households.map((h) => ({
@@ -145,8 +150,9 @@ export function AppShell({
       <b>{money(s.minor, view.currency, locale)}</b>
     </>
   );
-  const essentials = view.services.filter((s) => s.kind === 'service' && s.essential);
-  const others = view.services.filter((s) => !(s.kind === 'service' && s.essential));
+  const nameOf = (s: ShellEntry) =>
+    s.kind === 'group' && s.category ? (labels.main[s.category] ?? s.name) : s.name;
+  const anyServices = view.mine.length > 0 || view.sections.some((sec) => sec.entries.length > 0);
   const row = (s: ShellEntry) =>
     s.kind === 'group' ? (
       <NavGroup
@@ -194,42 +200,31 @@ export function AppShell({
         />
         <NavItems items={items} />
         <div className="nc-svcs">
-          {account ? null : view.services.length + view.mine.length > 0 ? (
+          {account ? null : anyServices ? (
             <>
-              {/* The everyday bills first, then the main services and the rest;
-                  each section folds away from its heading. */}
-              {essentials.length > 0 && (
-                <NavSection
-                  id="essentials"
-                  title={labels.essentials}
-                  aside={labels.thisMonth}
-                  showLabel={labels.showSection}
-                  hideLabel={labels.hideSection}
-                >
-                  {essentials.map(row)}
-                </NavSection>
-              )}
-              {others.length > 0 && (
-                <NavSection
-                  id="everything-else"
-                  title={labels.everythingElse}
-                  aside={essentials.length === 0 ? labels.thisMonth : undefined}
-                  showLabel={labels.showSection}
-                  hideLabel={labels.hideSection}
-                >
-                  {others.map(row)}
-                </NavSection>
-              )}
-              {view.mine.length > 0 && (
-                <NavSection
-                  id="just-yours"
-                  title={labels.justYours}
-                  showLabel={labels.showSection}
-                  hideLabel={labels.hideSection}
-                >
-                  {view.mine.map(row)}
-                </NavSection>
-              )}
+              {/* The person's own groups in their order, then the services in
+                  no group; the pencil arranges them in place. */}
+              <NavServices
+                sections={view.sections.map((sec) => ({
+                  id: sec.group?.id ?? null,
+                  name: sec.group?.name ?? '',
+                  keys: sec.entries.map((e) => e.key),
+                }))}
+                mine={view.mine.map((e) => e.key)}
+                rows={[...view.sections.flatMap((sec) => sec.entries), ...view.mine].map((e) => ({
+                  key: e.key,
+                  name: nameOf(e),
+                  colour: colourCss(e.colour),
+                  node: row(e),
+                }))}
+                lines={view.lines}
+                labels={{
+                  head: labels.servicesHead,
+                  thisMonth: labels.thisMonth,
+                  other: labels.otherServices,
+                  mine: labels.myServices,
+                }}
+              />
             </>
           ) : (
             <>
@@ -294,8 +289,9 @@ export function AppShell({
         </div>
       </main>
 
+      {/* A phone's bar keeps five: Members is reached from Settings there. */}
       <nav className="nav glass-strong horizontal bar" aria-label="Main">
-        <NavItems items={items} iconSize={22} />
+        <NavItems items={items.filter((it) => it.href !== '/members')} iconSize={22} />
       </nav>
     </div>
   );

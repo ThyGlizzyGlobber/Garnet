@@ -10,21 +10,29 @@ import { monthBounds } from '@/lib/periods';
 import { documentCounts } from '@/lib/review';
 import { billsAddress } from '@/lib/bills-address';
 import { isAdmin } from '@/lib/roles';
-import { byType, groupServices, listServices, type ServiceWithType } from '@/lib/services';
+import {
+  byType,
+  groupServices,
+  listServices,
+  type ServiceGroup,
+  type ServiceWithType,
+} from '@/lib/services';
+import { arrange, navKey, orderMine, type NavGroup, type NavLine } from '@/lib/nav-layout';
+import { getNavLayout } from '@/lib/nav-store';
 import { isEssential, type GroupedCategory } from '@/lib/service-categories';
 import { totalsForRange } from '@/lib/stats';
 
 /**
  * What the app's frame shows around every page (BRAND.md §9): the household
- * and who lives there, the nav (Money only when bills are split), each
- * service with this month's cost, the viewer's own services with their
- * latest bill, the Inbox count, and the viewer for the Settings link.
+ * and who lives there, the nav (Money only when bills are split), the
+ * services with what's due on each this month, arranged in the viewer's own
+ * groups and order (src/lib/nav-layout.ts), the Inbox count, and the viewer.
  */
 interface ShellService {
   id: string;
   name: string;
   colour: string;
-  /** Minor units: this month's accrued cost, or a personal service's latest bill. */
+  /** Minor units: what's due on it this month. */
   minor: number;
   href: string;
 }
@@ -32,11 +40,11 @@ interface ShellService {
 /**
  * A line in the nav's services: a service on its own, or a main service with
  * its sub-services under an arrow (Subscriptions → Netflix, Spotify; Vehicles
- * → Registration, Car insurance), whose figure is theirs added up. A
- * category's name (Vehicles) is the shell's to word.
+ * → its vehicles), whose figure is theirs added up. A category's name
+ * (Vehicles) is the shell's to word.
  */
 export type ShellEntry =
-  | ({ kind: 'service'; /** An everyday bill (Essentials). */ essential: boolean } & ShellService)
+  | ({ kind: 'service'; key: string } & ShellService)
   | {
       kind: 'group';
       key: string;
@@ -48,6 +56,12 @@ export type ShellEntry =
       children: ShellService[];
     };
 
+/** One of the viewer's groups in the nav, or (group null) the services in none. */
+interface ShellSection {
+  group: NavGroup | null;
+  entries: ShellEntry[];
+}
+
 export interface ShellView {
   household: { name: string; members: string[]; type: HouseholdType | null };
   /** Every household this person belongs to, for the switcher (SCOPE-accounts.md §3b). */
@@ -55,8 +69,12 @@ export interface ShellView {
   /** The household's currency, for the nav's figures. */
   currency: string;
   split: boolean;
-  services: ShellEntry[];
+  /** The household's services as the viewer arranged them; groups with nothing in them included. */
+  sections: ShellSection[];
+  /** My Services: the viewer's own, in their order, last. */
   mine: ShellEntry[];
+  /** What each line is, for naming a group (the menu's editor). */
+  lines: NavLine[];
   inboxCount: number;
   /** The household's bills address, for the Add bill sheet. */
   address: string | null;
@@ -74,10 +92,12 @@ export interface ShellView {
 
 export function shellView(hh: Household, me: Member, today: string, db: Db = getDb()): ShellView {
   const { start, end } = monthBounds(today.slice(0, 7));
-  const month = totalsForRange(hh.id, start, end, db);
-  const accrued = new Map(month.byService.map((t) => [t.service.id, t.minor]));
+  // What's due this month on the household's services and the viewer's own.
+  const scope = { viewer: me.id };
+  const month = totalsForRange(hh.id, start, end, db, scope);
+  const due = new Map(month.byService.map((t) => [t.service.id, t.minor]));
   // Vehicles, each with what's due on it this month.
-  const vehicleBills = listBills(hh.id, { viewer: me.id }, db).filter((b) => b.assetId);
+  const vehicleBills = listBills(hh.id, scope, db).filter((b) => b.assetId);
   const vehicles = (owner: string | null): ShellService[] =>
     listAssets(hh.id, owner ? { kind: 'vehicle', owner } : { kind: 'vehicle' }, db).map((a) => ({
       id: a.id,
@@ -90,16 +110,19 @@ export function shellView(hh: Household, me: Member, today: string, db: Db = get
         .reduce((sum, p) => sum + p.amountMinor, 0),
       href: `/services/vehicles/${a.id}`,
     }));
-  const services = entries(
-    listServices(hh.id, {}, db),
-    (s) => accrued.get(s.id) ?? 0,
-    vehicles(null),
-  );
-  const mine = entries(
-    listServices(hh.id, { owner: me.id }, db),
-    (s) => listBills(hh.id, { serviceId: s.id, limit: 1 }, db)[0]?.amountMinor ?? 0,
+  const minor = (s: ServiceWithType) => due.get(s.id) ?? 0;
+  // The household's services, arranged in the viewer's groups; then My Services, their own.
+  const groups = groupServices(listServices(hh.id, {}, db));
+  const all = entries(groups, minor, vehicles(null), false);
+  const own = entries(
+    groupServices(listServices(hh.id, { owner: me.id }, db)),
+    minor,
     vehicles(me.id),
+    true,
   );
+  const layout = getNavLayout(me.id, db);
+  const essential = (e: ShellEntry) =>
+    e.kind === 'service' && isEssential(groups.find((g) => navKey(g) === e.key)!.services[0]!.type);
   return {
     household: {
       name: hh.name,
@@ -109,8 +132,9 @@ export function shellView(hh: Household, me: Member, today: string, db: Db = get
     households: householdTiles(me, null, db),
     currency: hh.currency,
     split: hh.splitMode === 'shared',
-    services,
-    mine,
+    sections: arrange(all, (e) => e.key, layout, essential),
+    mine: orderMine(own, (e) => e.key, layout),
+    lines: navLines(groups),
     inboxCount: documentCounts(hh.id, { viewer: me.id }, db).needs_review,
     address: billsAddress(hh, db),
     me: { name: me.name, colour: me.colour, admin: isAdmin(me), role: me.role },
@@ -118,11 +142,22 @@ export function shellView(hh: Household, me: Member, today: string, db: Db = get
   };
 }
 
+/** What each line of the nav is, for naming a group of them. */
+export function navLines(groups: ServiceGroup<ServiceWithType>[]): NavLine[] {
+  return groups.map((g) => ({
+    key: navKey(g),
+    typeSlug: g.category ? null : (g.typeSlug ?? g.services[0]!.type.slug),
+    category: g.category,
+  }));
+}
+
 function entries(
-  services: ServiceWithType[],
+  groups: ServiceGroup<ServiceWithType>[],
   minor: (s: ServiceWithType) => number,
   /** Vehicles' lines: the vehicles themselves, when there are any. */
   vehicles: ShellService[],
+  /** The viewer's own (My Services). */
+  mine: boolean,
 ): ShellEntry[] {
   // A sub-service opens its own page.
   const line = (s: ServiceWithType): ShellService => ({
@@ -132,13 +167,9 @@ function entries(
     minor: minor(s),
     href: `/services/${s.id}`,
   });
-  return groupServices(services).map((g): ShellEntry => {
-    if (!g.category && !g.typeSlug)
-      return {
-        kind: 'service',
-        essential: isEssential(g.services[0]!.type),
-        ...line(g.services[0]!),
-      };
+  return groups.map((g): ShellEntry => {
+    const key = navKey(g, mine);
+    if (!g.category && !g.typeSlug) return { kind: 'service', key, ...line(g.services[0]!) };
     // Vehicles → its vehicles, each opening its own page (until there are
     // none: one line per kind of bill); every other main service → its services.
     const children =
@@ -155,7 +186,7 @@ function entries(
           : g.services.map(line);
     return {
       kind: 'group',
-      key: g.category ? `c-${g.category}` : `t-${g.typeSlug}`,
+      key,
       href: g.category ? `/services/category/${g.category}` : `/services/group/${g.typeSlug}`,
       name: g.category ? '' : g.label,
       category: g.category,

@@ -185,7 +185,8 @@ describe('0018 instalments, 0019–0022 service types and names', () => {
       const types = after
         .prepare('SELECT id, name, type_slug FROM service ORDER BY length(id), id')
         .all();
-      // Re-filed, and a service named after its old type ("Other") takes the new name (0020).
+      // Re-filed, and a service named after its old type ("Other") takes the new name (0020);
+      // names after a type are in Title Case since 0047.
       expect(types).toEqual([
         { id: 'S1', name: 'Rates', type_slug: 'council_rates' },
         { id: 'S2', name: 'Council', type_slug: 'council_rates' },
@@ -193,21 +194,21 @@ describe('0018 instalments, 0019–0022 service types and names', () => {
         { id: 'S3', name: 'Home & contents', type_slug: 'building_insurance' },
         { id: 'S4', name: 'Gym', type_slug: 'gym' }, // 0026
         { id: 'S5', name: 'Internet', type_slug: 'internet' },
-        { id: 'S6', name: 'Council rates', type_slug: 'council_rates' },
+        { id: 'S6', name: 'Council Rates', type_slug: 'council_rates' },
         { id: 'S7', name: 'Hospital & extras', type_slug: 'health_insurance' },
         { id: 'S8', name: 'Contents', type_slug: 'contents_insurance' },
         { id: 'S9', name: 'Insurance', type_slug: 'other' },
         // 0022: ambulance cover and home services (an "Other"-named service is renamed).
-        { id: 'S10', name: 'Ambulance cover', type_slug: 'ambulance_cover' },
+        { id: 'S10', name: 'Ambulance Cover', type_slug: 'ambulance_cover' },
         { id: 'S11', name: 'Lawns', type_slug: 'gardening' },
         { id: 'S12', name: 'Cleaner', type_slug: 'cleaning' },
         { id: 'S13', name: 'Termite check', type_slug: 'pest_control' },
         { id: 'S14', name: 'Pool', type_slug: 'pool' },
         { id: 'S15', name: 'Plumber', type_slug: 'repairs' },
         // 0025: roadside assistance.
-        { id: 'S16', name: 'Roadside assistance', type_slug: 'roadside_assistance' },
+        { id: 'S16', name: 'Roadside Assistance', type_slug: 'roadside_assistance' },
         // 0026: gym memberships and vehicle repairs & servicing.
-        { id: 'S17', name: 'Gym membership', type_slug: 'gym' },
+        { id: 'S17', name: 'Gym Membership', type_slug: 'gym' },
         { id: 'S18', name: 'Mechanic', type_slug: 'vehicle_maintenance' },
       ]);
       expect(after.prepare("SELECT slug FROM service_type WHERE slug = 'insurance'").get()).toBe(

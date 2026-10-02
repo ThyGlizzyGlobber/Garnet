@@ -8,6 +8,7 @@ import { createBill } from '@/lib/bills';
 import { createHousehold, updateHousehold } from '@/lib/households';
 import { createMember } from '@/lib/members';
 import { createService } from '@/lib/services';
+import { saveNavLayout } from '@/lib/nav-store';
 import { shellView } from '@/lib/shell';
 
 /** The frame around every page: who's here, what each service costs this month, the viewer. */
@@ -97,25 +98,79 @@ describe('shellView', () => {
       type: null,
     });
     expect(v.split).toBe(true);
-    expect(v.services.map((s) => [s.name, s.minor])).toEqual([['Electricity', 92_000]]);
-    // An everyday bill: listed under Essentials.
-    expect(v.services[0]!.kind === 'service' && v.services[0]!.essential).toBe(true);
-    // Rego is under Vehicles, one line per kind of vehicle bill.
-    const mine = v.mine[0]!;
-    expect(mine.kind === 'group' && mine.category).toBe('vehicle');
-    expect(mine.kind === 'group' && mine.children.map((c) => [c.name, c.minor])).toEqual([
-      ['Vehicle registration', 91_250],
+    // No groups yet: one list of the household's; Jordan's own rego under My Services' Vehicles.
+    expect(v.sections).toHaveLength(1);
+    expect(v.sections[0]!.group).toBeNull();
+    expect(v.sections[0]!.entries.map((s) => [s.key.slice(0, 2), s.name, s.minor])).toEqual([
+      ['s:', 'Electricity', 92_000],
     ]);
-    expect(mine.minor).toBe(91_250);
+    expect(v.mine.map((s) => [s.key, s.minor])).toEqual([['mc:vehicle', 91_250]]);
+    const vehicles = v.mine[0]!;
+    expect(vehicles.kind === 'group' && vehicles.category).toBe('vehicle');
+    // One line per kind of vehicle bill, with what's due this month.
+    expect(vehicles.kind === 'group' && vehicles.children.map((c) => [c.name, c.minor])).toEqual([
+      ['Vehicle Registration', 91_250],
+    ]);
+    expect(v.lines.map((l) => l.key.slice(0, 2))).toEqual(['s:']);
     expect(v.inboxCount).toBe(0);
     expect(v.me).toEqual({ name: 'Jordan', colour: jordan.colour, admin: false, role: 'member' });
 
     // Alex doesn't see Jordan's rego; a household that doesn't split loses Money.
-    expect(shellView(hh, alex, '2026-09-29', db).mine).toEqual([]);
+    expect(
+      shellView(hh, alex, '2026-09-29', db).sections.flatMap((x) => x.entries.map((e) => e.name)),
+    ).toEqual(['Electricity']);
     const single = updateHousehold(hh.id, { splitMode: 'single' }, db);
     expect(shellView(single, alex, '2026-09-29', db)).toMatchObject({
       split: false,
       me: { admin: true },
     });
+  });
+
+  it('arranges the services in the viewer’s own groups and order', () => {
+    const hh = createHousehold(
+      {
+        name: 'Arranged',
+        currency: 'AUD',
+        locale: 'en-AU',
+        timezone: 'Australia/Melbourne',
+        fiscalYearStartMonth: 7,
+        splitMode: 'shared',
+      },
+      db,
+    );
+    const kim = createMember(hh.id, { name: 'Kim', role: 'owner', activeFrom: '2026-01-01' }, db);
+    const svc = (typeSlug: string, name: string) =>
+      createService(hh.id, { typeSlug, name, provider: name, payerMemberId: kim.id }, db);
+    const water = svc('water', 'Water');
+    const power = svc('electricity', 'Electricity');
+    const gas = svc('gas', 'Gas');
+    svc('gym', 'Gym');
+    const names = () =>
+      shellView(hh, kim, '2026-09-29', db).sections.map((x) => [
+        x.group?.name ?? null,
+        x.entries.map((e) => e.name || e.key),
+      ]);
+    // By default: the everyday bills first, in catalog order.
+    expect(names()).toEqual([[null, ['Electricity', 'Gas', 'Water', 'c:lifestyle']]]);
+
+    // Kim groups power and gas, unnamed (it takes the suggested name); the rest follow it.
+    const { lines } = shellView(hh, kim, '2026-09-29', db);
+    saveNavLayout(
+      kim.id,
+      {
+        loose: ['c:lifestyle', `s:${water.id}`],
+        groups: [{ id: 'g1', name: '', items: [`s:${gas.id}`, `s:${power.id}`] }],
+        mine: [],
+      },
+      lines,
+      db,
+    );
+    expect(names()).toEqual([
+      ['Energy', ['Gas', 'Electricity']],
+      [null, ['c:lifestyle', 'Water']],
+    ]);
+    // A service added later joins the ones in no group, after the groups.
+    svc('internet', 'Internet');
+    expect(names()[1]).toEqual([null, ['c:lifestyle', 'Water', 'Internet']]);
   });
 });
