@@ -2056,20 +2056,6 @@ input.inp-plain[type='color'] {
 .wall-app .hg-edit {
   font-size: 13px;
 }
-.wall-app .wg-h {
-  font-size: 15px;
-}
-.wall-app .wg-fig {
-  font-size: clamp(34px, min(20cqh, 14cqw), 76px);
-}
-.wall-app .wg-line {
-  font-size: 15px;
-}
-.wall-app .up-main b,
-.wall-app .up-end b {
-  font-size: 16px;
-}
-
 /* ---------- smaller screens ---------- */
 @media (max-width: 899px) {
   .form-grid,

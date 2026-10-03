@@ -431,27 +431,26 @@ export function HomeGrid({ data, layouts: initial, kind }: Props) {
     >
       {editing && (
         <div className="home-edit">
+          <div className="home-edit-t">
+            <b>{t('edit.title')}</b>
+            <span>{t('edit.hint')}</span>
+          </div>
+          {kind === 'home' && (
+            <Segmented
+              small
+              items={densities}
+              value={layout.density}
+              label={t('edit.grid')}
+              onChange={(v) => setDensity(v as Density)}
+            />
+          )}
+          <Button variant="secondary" size="sm" onClick={reset}>
+            {t('edit.reset')}
+          </Button>
           <Button variant="secondary" size="sm" icon="plus" onClick={() => setGallery(true)}>
             {t('edit.add')}
           </Button>
-          {kind === 'home' ? (
-            <div className="home-dens">
-              <span className="muted small">{t('edit.grid')}</span>
-              <Segmented
-                small
-                items={densities}
-                value={layout.density}
-                label={t('edit.grid')}
-                onChange={(v) => setDensity(v as Density)}
-              />
-            </div>
-          ) : (
-            <span className="home-dens" />
-          )}
-          <Button variant="ghost" size="sm" onClick={reset}>
-            {t('edit.reset')}
-          </Button>
-          <Button size="sm" onClick={() => setEdit(false)}>
+          <Button size="sm" icon="check" onClick={() => setEdit(false)}>
             {t('edit.done')}
           </Button>
         </div>
@@ -471,7 +470,7 @@ export function HomeGrid({ data, layouts: initial, kind }: Props) {
           onPointerCancel={endDrag}
         >
           {Array.from({ length: pageCount }, (_, p) => (
-            <PageSlots key={p} p={p} cols={cols} rows={rows} />
+            <PageSlots key={p} p={p} cols={cols} rows={rows} label={t('edit.drop')} />
           ))}
           {packed.slice(0, pageCount).map((pg, p) =>
             pg.map((it) => {
@@ -576,7 +575,17 @@ export function HomeGrid({ data, layouts: initial, kind }: Props) {
 }
 
 /** The page's snap target and, in edit mode, the empty blocks. */
-function PageSlots({ p, cols, rows }: { p: number; cols: number; rows: number }) {
+function PageSlots({
+  p,
+  cols,
+  rows,
+  label,
+}: {
+  p: number;
+  cols: number;
+  rows: number;
+  label: string;
+}) {
   return (
     <>
       <i
@@ -584,11 +593,14 @@ function PageSlots({ p, cols, rows }: { p: number; cols: number; rows: number })
         style={{ gridColumn: `${p * cols + 1} / span ${cols}`, gridRow: '1 / -1' }}
       />
       {Array.from({ length: rows * cols }, (_, i) => (
-        <i
+        <span
           key={i}
           className="hg-slot"
           style={{ gridColumn: p * cols + (i % cols) + 1, gridRow: Math.floor(i / cols) + 1 }}
-        />
+        >
+          <Icon name="plus" width={22} height={22} />
+          <span>{label}</span>
+        </span>
       ))}
     </>
   );

@@ -306,7 +306,7 @@ In `src/components/ui`, drawn with the studio's CSS (`src/styles/components.css`
 
 ## 8. Instruments
 
-Every widget and card carries at least one visual besides text. All drawn in
+Every card carries at least one visual besides text (Home's widgets have their own rules, §9). All drawn in
 plain SVG on the server (`src/components/charts`, CSS in `src/styles/charts.css`),
 no chart library; one hover layer (`hover.tsx`) gives every chart its tooltip.
 The studio's `.ring` is `.gauge` here (Tailwind owns `ring`):
@@ -366,15 +366,46 @@ The studio's `.ring` is `.gauge` here (Tailwind owns `ring`):
   `src/styles/shell.css`; its numbers come from `shellView()` (`src/lib/shell.ts`).
 - **Top bar**: search on the left; Inbox and Add bill on the right.
 - Pages keep a reading width of 1240 px; very wide screens cap at about 1600.
-- **Home is a widget grid** (`src/components/home`, engine in `src/lib/home-grid.ts`,
-  data in `src/lib/home-data.ts`) sized to the screen, like the iPhone home screen:
-  5 × 3 on desktop and iPad landscape, 3 × 4 on iPad portrait, 2 × 4 on iPhone
-  (each also comfier or denser). Six widgets on page one ("This month so far"
-  is 2 × 2); more pages swipe sideways. **Edit Home**: long-press or Edit, then
-  drag, resize, remove, add from the gallery, or change the grid size; works
-  with the keyboard too. Layouts are saved per person and device type.
-- **The wall** (`/wall`) is the Home grid in kiosk mode: clock and household
-  at the top, four big widgets (4 × 2 landscape), its own layout, Back to Home.
+- **Home is a widget grid** (`src/components/home`, engine in `src/lib/home-grid.ts`;
+  scope and decisions in SCOPE-widgets.md, the design canvas linked there).
+  - **Blocks are square** and the grid keeps its ratio: a block's side is the
+    smaller of what the width and height allow for the screen's columns and
+    rows (desktop and iPad landscape 4×3 · 5×3 · 6×4, iPad portrait 3×4 · 4×5 ·
+    4×6, phone 2×3 · 2×4 · 2×5 by density); the grid sits centred, pages scroll
+    sideways with dots under it, and there is room around it for the cards'
+    shadows.
+  - **Three sizes**, like Apple's: Small 1×1, Medium 2×1, Large 2×2. A saved
+    layout with an older size takes the nearest.
+  - **One instrument leads every widget** (`pieces.tsx`, `widgets.css`): a ring
+    (part of a whole) or a gauge (a reading against a limit) only for real
+    progress; otherwise an icon and one figure. Small is the instrument over a
+    figure and a name, together in the middle; Medium is the instrument beside
+    a title, the figure and two or three facts; Large is Medium on top, then a
+    chart or a list, then the action.
+  - **Everything inside scales with the block** (`--u`, a hundredth of the
+    tighter of a block's height and width), with small floors for a phone and
+    no caps, so the wall's big blocks grow their words with their rings.
+  - **Colour:** the ring and its icon wear the service's colour; a widget
+    about the whole household wears Graphite; overdue is `--overdue` for the
+    ring and its words, and nothing else is red.
+  - **In a ring:** "2 / 3", never "2 of 3"; a unit shares the number's line
+    up to four characters ("412L"), else sits underneath ("6.8" / "kWh").
+  - **Buttons:** full width at the foot of Large, a round one top-right on
+    Medium, none on Small (a tap opens what the widget is about). The wall
+    shows none.
+  - **States:** overdue (the ring full and red), all paid (full, a tick),
+    nothing due (empty, a tick), no bills yet (empty, the service's icon
+    filled), loading (empty, grey bars).
+  - **Edit Home** (long-press or the button) takes the greeting's place: its
+    title and "Drag to move · tap a widget to change its size", then the grid
+    density, Reset, Add widget, Done. Widgets show a round remove button in
+    the top-left corner; a tapped one is outlined with a Small · Medium ·
+    Large picker under it; empty blocks are dashed with a plus and "Drop a
+    widget here". Add a widget is one panel: search, the list, a size, the
+    widget as it will be on a plain backdrop, Add to Home.
+- **The wall** (`/wall`) is the same grid in kiosk mode: a clock, the household
+  and the weather on top, four by two bigger blocks, its own layout, nothing to
+  tap, Back to Home.
 
 ## 10. Motion
 

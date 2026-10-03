@@ -3,7 +3,7 @@
 _Drafted 2026-10-03 from the design canvas the owner and the assistant worked
 through that day ("Garnet Home Widgets",
 https://claude.ai/artifact/8eR7HgonFF1rQXzV3qXyDt; boards H to P are the
-settled design, A to G the rounds that led there). The owner's decisions are in §5 and their
+settled design, A to G the rounds that led there). **Built 2026-10-03, stages W1 to W5** (see the decisions log in CLAUDE.md for what each did and the few places it differs). The owner's decisions are in §5 and their
 answers to the questions in §8 (all as recommended, the same day); the build
 order is §7._
 
