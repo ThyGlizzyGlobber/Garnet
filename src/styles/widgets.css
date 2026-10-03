@@ -2,18 +2,24 @@
   Home widgets in three sizes (SCOPE-widgets.md §3; the pieces are
   src/components/home/pieces.tsx). Everything is sized from --u, one
   hundredth of a block's height, so a widget keeps its proportions whatever
-  the grid makes a block: Small and Medium are one block high, Large is two
+  the grid makes a block (nothing is capped: on the wall's big blocks the
+  words grow with the ring; small floors keep them legible on a phone): Small and Medium are one block high, Large is two
   blocks and the gap between them. .widget (home.css) is the size container.
 */
 .wx {
   --wx-c: var(--p-accent);
-  --u: 1cqh;
+  /* A block is designed square, Medium and Large a little over two wide: the
+     tighter of height and width sets the scale, so nothing outgrows its card. */
+  --u: min(1cqh, 1cqw);
   min-width: 0;
   min-height: 0;
   color: var(--p-fg);
 }
+.wx-m {
+  --u: min(1cqh, calc(100cqw / 214));
+}
 .wx-l {
-  --u: calc((100cqh - var(--gap, 14px)) / 200);
+  --u: min(calc((100cqh - var(--gap, 14px)) / 200), calc(100cqw / 214));
 }
 
 /* Small: the instrument over a figure and a name. */
@@ -29,8 +35,8 @@
 .wx-ring {
   position: relative;
   flex: none;
-  height: 100%;
-  aspect-ratio: 1;
+  width: calc(var(--u) * 81);
+  height: calc(var(--u) * 81);
 }
 .wx-s .wx-ring,
 .wx-s .wx-plain {
@@ -67,10 +73,10 @@
   font-family: var(--f-display);
   font-weight: 600;
   letter-spacing: -0.02em;
-  font-size: clamp(20px, calc(var(--u) * 20), 46px);
+  font-size: max(20px, calc(var(--u) * 20));
 }
 .wx-s .wx-ring-in b {
-  font-size: clamp(18px, calc(var(--u) * 15.3), 36px);
+  font-size: max(18px, calc(var(--u) * 15.3));
 }
 /* The unit: underneath by default, beside the number when the two are short. */
 .wx-ring-in b u {
@@ -86,7 +92,7 @@
 }
 .wx-ring-in > span {
   margin-top: 0.3em;
-  font-size: clamp(10px, calc(var(--u) * 6.2), 14px);
+  font-size: max(10px, calc(var(--u) * 6.2));
   font-weight: 600;
   color: var(--p-fg3);
 }
@@ -108,8 +114,8 @@
 /* An icon and one big figure, for what has no progress to show. */
 .wx-plain {
   flex: none;
-  height: 100%;
-  aspect-ratio: 1;
+  width: calc(var(--u) * 81);
+  height: calc(var(--u) * 81);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -133,20 +139,20 @@
   font-weight: 600;
   letter-spacing: -0.03em;
   white-space: nowrap;
-  font-size: clamp(34px, calc(var(--u) * 35), 80px);
+  font-size: max(34px, calc(var(--u) * 35));
 }
 .wx-s .wx-plain b {
-  font-size: clamp(26px, calc(var(--u) * 24.7), 58px);
+  font-size: max(26px, calc(var(--u) * 24.7));
 }
 .wx-plain.compact b {
-  font-size: clamp(22px, calc(var(--u) * 20), 46px);
+  font-size: max(22px, calc(var(--u) * 20));
 }
 .wx-s .wx-plain.compact b {
-  font-size: clamp(18px, calc(var(--u) * 14.7), 34px);
+  font-size: max(18px, calc(var(--u) * 14.7));
 }
 .wx-plain > span {
   margin-top: 0.45em;
-  font-size: clamp(10.5px, calc(var(--u) * 6.8), 15px);
+  font-size: max(10.5px, calc(var(--u) * 6.8));
   font-weight: 600;
   color: var(--p-fg3);
   white-space: nowrap;
@@ -165,12 +171,12 @@
   align-items: flex-start;
 }
 .wx-cap b {
-  font-size: clamp(13px, calc(var(--u) * 8.8), 20px);
+  font-size: max(13px, calc(var(--u) * 8.8));
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 .wx-cap span {
-  font-size: clamp(10.5px, calc(var(--u) * 6.8), 15px);
+  font-size: max(10.5px, calc(var(--u) * 6.8));
   font-weight: 600;
   color: var(--p-fg2);
 }
@@ -194,9 +200,6 @@
   flex: 1;
   height: 100%;
 }
-.wx-l .wx-top {
-  height: calc(var(--u) * 100 - 2 * var(--wpad));
-}
 .wx-col {
   flex: 1;
   min-width: 0;
@@ -206,7 +209,7 @@
 }
 .wx-title {
   margin-bottom: 2px;
-  font-size: clamp(11.5px, calc(var(--u) * 7.4), 16px);
+  font-size: max(11.5px, calc(var(--u) * 7.4));
   font-weight: 700;
   color: var(--p-fg2);
   white-space: nowrap;
@@ -219,7 +222,7 @@
   font-weight: 600;
   letter-spacing: -0.02em;
   line-height: 1.13;
-  font-size: clamp(22px, calc(var(--u) * 17.6), 42px);
+  font-size: max(22px, calc(var(--u) * 17.6));
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -237,28 +240,28 @@
   flex-direction: column;
 }
 .wx-body > * + .wx-rows {
-  margin-top: 8px;
+  margin-top: calc(var(--u) * 4.7);
 }
 .wx-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: calc(var(--u) * 4.7);
   min-width: 0;
   padding: calc(var(--u) * 4.1) 0;
   border-top: 1px solid var(--line);
-  font-size: clamp(11.5px, calc(var(--u) * 7.4), 16px);
+  font-size: max(11.5px, calc(var(--u) * 7.4));
   line-height: 1.2;
   color: inherit;
   text-decoration: none;
 }
 .wx-col .wx-row {
   padding: calc(var(--u) * 3) 0;
-  font-size: clamp(11px, calc(var(--u) * 7), 15px);
+  font-size: max(11px, calc(var(--u) * 7));
 }
 .wx-dot {
   flex: none;
-  width: 8px;
-  height: 8px;
+  width: max(7px, calc(var(--u) * 4.7));
+  height: max(7px, calc(var(--u) * 4.7));
   border-radius: 50%;
 }
 .wx-rm {
@@ -318,7 +321,7 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
-  margin-top: 12px;
+  margin-top: calc(var(--u) * 7);
 }
 .wx-foot {
   flex: none;
@@ -326,31 +329,31 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  height: 36px;
+  gap: calc(var(--u) * 3.5);
+  height: max(34px, calc(var(--u) * 21));
   border: 0;
   border-radius: 999px;
   background: var(--p-accent);
   color: var(--p-on-accent);
-  font: 700 12.5px var(--f-body);
+  font: 700 max(12.5px, calc(var(--u) * 7.4)) var(--f-body);
   text-decoration: none;
   cursor: pointer;
 }
 .wx-foot svg {
-  width: 14px;
-  height: 14px;
+  width: max(14px, calc(var(--u) * 8.2));
+  height: max(14px, calc(var(--u) * 8.2));
   stroke-width: 2.5;
 }
 /* Medium: the same action as a round button, top right. */
 .wx-round {
   position: absolute;
-  top: 10px;
-  right: 10px;
+  top: calc(var(--u) * 6);
+  right: calc(var(--u) * 6);
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: max(34px, calc(var(--u) * 21));
+  height: max(34px, calc(var(--u) * 21));
   border: 0;
   border-radius: 50%;
   background: var(--p-accent);
@@ -358,8 +361,8 @@
   cursor: pointer;
 }
 .wx-round svg {
-  width: 16px;
-  height: 16px;
+  width: max(16px, calc(var(--u) * 9.4));
+  height: max(16px, calc(var(--u) * 9.4));
   stroke-width: 2.5;
 }
 
@@ -400,7 +403,7 @@ a.wx-row {
   min-height: calc(var(--u) * 24);
   display: flex;
   align-items: stretch;
-  gap: 6px;
+  gap: calc(var(--u) * 3.5);
 }
 .wx-bars > div {
   flex: 1;
@@ -408,18 +411,18 @@ a.wx-row {
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  gap: 4px;
+  gap: calc(var(--u) * 2.4);
 }
 .wx-bars i {
   display: block;
-  border-radius: 4px;
+  border-radius: calc(var(--u) * 2.4);
   background: var(--line-2);
 }
 .wx-bars .on i {
   background: var(--wx-c);
 }
 .wx-bars span {
-  font-size: 9.5px;
+  font-size: max(9.5px, calc(var(--u) * 5.6));
   font-weight: 600;
   line-height: 1;
   text-align: center;
