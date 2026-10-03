@@ -1,0 +1,282 @@
+import Link from 'next/link';
+import type { CSSProperties, ReactNode } from 'react';
+import { Icon } from '@/components/app/icons';
+import { unitInline } from './fmt';
+
+/**
+ * The pieces every Home widget is drawn from (SCOPE-widgets.md §3): one
+ * instrument (a ring, a gauge, or an icon and a figure) leading three fixed
+ * sizes. A widget hands over a WxSpec of formatted strings; WxCard lays it
+ * out at Small, Medium or Large. The CSS is src/styles/widgets.css.
+ */
+export type WxSize = 's' | 'm' | 'l';
+type WxTone = 'ok' | 'warn' | 'overdue';
+
+type WxInstrument =
+  | {
+      kind: 'ring';
+      /** 0 to 1. Nothing is drawn at 0: an empty ring. */
+      value: number;
+      /** A three-quarter arc, for a reading against a limit. */
+      gauge?: boolean;
+      big?: string;
+      /** A measurement's unit, placed by the four-character rule. */
+      unit?: string;
+      small?: string;
+      /** An icon in the centre instead of a figure (a tick, or the service's own). */
+      icon?: string;
+      /** The icon as a solid shape: no bills yet. */
+      filled?: boolean;
+    }
+  | { kind: 'plain'; icon: string; big: string; small: string; compact?: boolean };
+
+interface WxFact {
+  label: string;
+  value: string;
+  tone?: WxTone;
+}
+
+interface WxAction {
+  icon: string;
+  label: string;
+  onClick?: () => void;
+  href?: string;
+}
+
+export interface WxSpec {
+  /** A CSS colour for the instrument; the accent when the widget is about the whole household. */
+  colour?: string;
+  /** The ring and its words turn the overdue red. */
+  overdue?: boolean;
+  instrument: WxInstrument;
+  /** Small: the figure and the name under the instrument. */
+  cap: [string, string];
+  title: string;
+  figure?: ReactNode;
+  facts?: WxFact[];
+  /** Large: the chart or list under the top block. */
+  body?: ReactNode;
+  action?: WxAction;
+}
+
+const R = 45.25;
+const C = 2 * Math.PI * R;
+
+function Ring({ i }: { i: Extract<WxInstrument, { kind: 'ring' }> }) {
+  const span = i.gauge ? 0.75 : 1;
+  const value = Math.max(0, Math.min(1, i.value));
+  return (
+    <div className="wx-ring">
+      <svg viewBox="0 0 100 100" aria-hidden="true">
+        <g transform={`rotate(${i.gauge ? 135 : -90} 50 50)`}>
+          <circle className="wx-track" cx="50" cy="50" r={R} strokeDasharray={`${C * span} ${C}`} />
+          {value > 0 && (
+            <circle
+              className="wx-arc"
+              cx="50"
+              cy="50"
+              r={R}
+              strokeDasharray={`${C * span * value} ${C}`}
+            />
+          )}
+        </g>
+      </svg>
+      <div className="wx-ring-in">
+        {i.icon ? (
+          <span className={i.filled ? 'wx-ic filled' : 'wx-ic'}>
+            <Icon name={i.icon} />
+          </span>
+        ) : (
+          <>
+            <b>
+              {i.big}
+              {i.unit && (
+                <u className={unitInline(i.big ?? '', i.unit) ? 'in' : undefined}>{i.unit}</u>
+              )}
+            </b>
+            {i.small && <span>{i.small}</span>}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Plain({ i }: { i: Extract<WxInstrument, { kind: 'plain' }> }) {
+  return (
+    <div className={i.compact ? 'wx-plain compact' : 'wx-plain'}>
+      <Icon name={i.icon} />
+      <b>{i.big}</b>
+      <span>{i.small}</span>
+    </div>
+  );
+}
+
+const Instrument = ({ i }: { i: WxInstrument }) =>
+  i.kind === 'ring' ? <Ring i={i} /> : <Plain i={i} />;
+
+/** A figure with its cents set small: "$3,184" and ".20". */
+export function WxFig({ main, minor }: { main: string; minor?: string }) {
+  return (
+    <div className="wx-fig">
+      {main}
+      {minor && <small>{minor}</small>}
+    </div>
+  );
+}
+
+/** One line of a Large widget's list: a coloured dot, a title over a quiet line, a value. */
+export function WxRow({
+  colour,
+  title,
+  sub,
+  value,
+  note,
+  href,
+}: {
+  colour?: string;
+  title: string;
+  sub?: string;
+  value?: string;
+  note?: string;
+  href?: string;
+}) {
+  const inner = (
+    <>
+      {colour && <i className="wx-dot" style={{ background: colour }} />}
+      <span className="wx-rm">
+        <b>{title}</b>
+        {sub && <span>{sub}</span>}
+      </span>
+      {(value || note) && (
+        <span className="wx-re">
+          {value && <b>{value}</b>}
+          {note && <span>{note}</span>}
+        </span>
+      )}
+    </>
+  );
+  return href ? (
+    <Link href={href} className="wx-row">
+      {inner}
+    </Link>
+  ) : (
+    <div className="wx-row">{inner}</div>
+  );
+}
+
+/** A label and its value on one line. */
+export function WxKv({ label, value, tone }: WxFact) {
+  return (
+    <div className="wx-row wx-kv">
+      <span className="wx-rm">{label}</span>
+      <span className="wx-re">
+        <b className={tone ? `wx-t-${tone}` : undefined}>{value}</b>
+      </span>
+    </div>
+  );
+}
+
+export function WxRows({ children }: { children: ReactNode }) {
+  return <div className="wx-rows">{children}</div>;
+}
+
+function Action({ a, round }: { a: WxAction; round?: boolean }) {
+  const cls = round ? 'wx-round' : 'wx-foot';
+  const inner = (
+    <>
+      <Icon name={a.icon} />
+      {!round && a.label}
+    </>
+  );
+  return a.href ? (
+    <Link href={a.href} className={cls} aria-label={round ? a.label : undefined}>
+      {inner}
+    </Link>
+  ) : (
+    <button
+      type="button"
+      className={cls}
+      onClick={a.onClick}
+      aria-label={round ? a.label : undefined}
+    >
+      {inner}
+    </button>
+  );
+}
+
+/** A widget at one of the three sizes. */
+export function WxCard({ spec, size }: { spec: WxSpec; size: WxSize }) {
+  const style = {
+    '--wx-c': spec.overdue ? 'var(--overdue)' : (spec.colour ?? 'var(--p-accent)'),
+  } as CSSProperties;
+  const cls = `wx wx-${size}${spec.instrument.kind === 'plain' ? ' wx-pl' : ''}`;
+  if (size === 's')
+    return (
+      <div className={cls} style={style}>
+        <Instrument i={spec.instrument} />
+        <div className="wx-cap">
+          <b>{spec.cap[0]}</b>
+          <span>{spec.cap[1]}</span>
+        </div>
+      </div>
+    );
+  return (
+    <div className={cls} style={style}>
+      <div className="wx-top">
+        <Instrument i={spec.instrument} />
+        <div className="wx-col">
+          <div className="wx-title">{spec.title}</div>
+          {spec.figure}
+          {spec.facts?.map((f) => (
+            <WxKv key={f.label} {...f} />
+          ))}
+        </div>
+      </div>
+      {size === 'm' && spec.action && <Action a={spec.action} round />}
+      {size === 'l' && (
+        <div className="wx-body">
+          {spec.body}
+          {spec.action && <Action a={spec.action} />}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** A widget before its numbers arrive: an empty ring and grey bars. */
+export function WxSkeleton({ size }: { size: WxSize }) {
+  const ring = <Ring i={{ kind: 'ring', value: 0, big: '' }} />;
+  const bar = (w: number) => <i className="wx-sk" style={{ width: `${w}%` }} />;
+  if (size === 's')
+    return (
+      <div className="wx wx-s" aria-busy="true">
+        {ring}
+        <div className="wx-cap">
+          {bar(60)}
+          {bar(40)}
+        </div>
+      </div>
+    );
+  return (
+    <div className={`wx wx-${size}`} aria-busy="true">
+      <div className="wx-top">
+        {ring}
+        <div className="wx-col">
+          {bar(40)}
+          {bar(75)}
+          {bar(100)}
+          {bar(100)}
+        </div>
+      </div>
+      {size === 'l' && (
+        <div className="wx-body">
+          {bar(100)}
+          {bar(100)}
+          {bar(80)}
+          {bar(90)}
+        </div>
+      )}
+    </div>
+  );
+}

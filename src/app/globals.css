@@ -3,6 +3,7 @@
 @import '../styles/charts.css' layer(components);
 @import '../styles/shell.css' layer(components);
 @import '../styles/home.css' layer(components);
+@import '../styles/widgets.css' layer(components);
 @import '../styles/screens.css' layer(components);
 
 /*
@@ -129,6 +130,8 @@
   --ok: #4a6079;
   --warn: #8a5a00;
   --bad: #a8141f;
+  /* An overdue widget's ring and words: brighter than Pyrope 600, the same in dark (SCOPE-widgets.md Q4). */
+  --overdue: #d3212d;
   --line: rgba(28, 28, 28, 0.1);
   --line-2: rgba(28, 28, 28, 0.16);
   --inset: rgba(28, 28, 28, 0.05);

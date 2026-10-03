@@ -93,6 +93,12 @@ Empty states say what will appear and offer the one action that fills it.
    inside it.
 4. **Every screen works on desktop, iPad and iPhone.**
 
+**Overdue red (owner, 2026-10-03).** A Home widget that is overdue draws its
+ring and the words that say how late it is in `#D3212D` (`--overdue`), in light
+and dark. It is brighter than Pyrope 600 because Pyrope is too dim against a
+dark card; it is used by widgets only, and `--bad` stays for other warnings.
+Small overdue words are bold and never under 13 px.
+
 ## 2. Colour
 
 ### The Garnet scheme

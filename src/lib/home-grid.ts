@@ -127,6 +127,39 @@ export function locate(pages: Pages, id: string): { p: number; i: number } | nul
   return null;
 }
 
+/**
+ * The three sizes every widget comes in (SCOPE-widgets.md §3a): Small is one
+ * block, Medium two wide, Large two by two.
+ */
+const WIDGET_SIZES = { small: [1, 1], medium: [2, 1], large: [2, 2] } as const;
+export type WidgetSize = keyof typeof WIDGET_SIZES;
+export const SIZE_LIST: [number, number][] = [
+  [...WIDGET_SIZES.small],
+  [...WIDGET_SIZES.medium],
+  [...WIDGET_SIZES.large],
+];
+
+/**
+ * Which of the three a block size is nearest (SCOPE-widgets.md §8, Q2): one
+ * block stays Small, anything one block high and wider is Medium, anything
+ * two or more blocks high is Large.
+ */
+export function sizeName(w: number, h: number): WidgetSize {
+  if (h >= 2) return 'large';
+  return w >= 2 ? 'medium' : 'small';
+}
+
+/** A layout saved with the older sizes, each widget brought to the nearest of the three. */
+export function convertPages(pages: Pages, converts: (id: string) => boolean = () => true): Pages {
+  return pages.map((pg) =>
+    pg.map((it) => {
+      if (!converts(it.id)) return it;
+      const [w, h] = WIDGET_SIZES[sizeName(it.w, it.h)];
+      return { id: it.id, w, h };
+    }),
+  );
+}
+
 /** The sizes a widget can take on this grid. */
 export function sizesOn(sizes: [number, number][], cols: number, rows: number): [number, number][] {
   return sizes.filter(([w, h]) => w <= cols && h <= rows);

@@ -44,3 +44,11 @@ export function makeFmt(d: { locale: string; currency: string; today: string }, 
 }
 
 export type Fmt = ReturnType<typeof makeFmt>;
+
+/**
+ * A measurement inside a gauge (SCOPE-widgets.md §3b): number and unit share
+ * a line when together they are four characters or fewer ("412L"); longer,
+ * the unit sits underneath ("6.8" over "kWh"). The decimal point counts.
+ */
+export const unitInline = (figure: string, unit: string): boolean =>
+  (figure + unit).replace(/\s/g, '').length <= 4;

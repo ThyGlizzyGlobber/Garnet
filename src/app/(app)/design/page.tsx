@@ -19,6 +19,16 @@ import { Avatar, Avatars, Disc, Swatch } from '@/components/ui/colour';
 import { BackLink, IconButton, SearchField, Segmented, Toggle } from '@/components/ui/controls';
 import { Arc, Ring } from '@/components/ui/ring';
 import {
+  WxCard,
+  WxFig,
+  WxKv,
+  WxRow,
+  WxRows,
+  WxSkeleton,
+  type WxSize,
+  type WxSpec,
+} from '@/components/home/pieces';
+import {
   BillRow,
   DocRow,
   FileRow,
@@ -176,6 +186,152 @@ function Section({
     </section>
   );
 }
+
+/** The three widget sizes at a 170 px block with the grid's 14 px gap. */
+const WX_SIZES: [WxSize, number, number][] = [
+  ['s', 170, 170],
+  ['m', 354, 170],
+  ['l', 354, 354],
+];
+
+/** Fictional widgets, one per kind of instrument and state (null draws the loading state). */
+const WIDGETS: [string, WxSpec | null][] = [
+  [
+    'A ring: part of a whole',
+    {
+      instrument: { kind: 'ring', value: 0.12, big: '12%', small: 'paid' },
+      cap: ['$3,184', 'September'],
+      title: 'September',
+      figure: <WxFig main="$3,184" minor=".20" />,
+      facts: [
+        { label: 'Paid', value: '$386.03' },
+        { label: 'To pay', value: '$2,798.17' },
+      ],
+      body: (
+        <WxRows>
+          <WxRow colour="var(--sc-magenta)" title="Rent" value="$2,296.67" />
+          <WxRow colour="var(--sc-brown)" title="Council Rates" value="$412.50" />
+          <WxRow colour="var(--sc-yellow)" title="Electricity" value="$248.60" />
+          <WxRow colour="var(--sc-orange)" title="Gas" value="$137.43" />
+        </WxRows>
+      ),
+    },
+  ],
+  [
+    'A gauge: a reading against a limit, the unit underneath',
+    {
+      colour: 'var(--sc-yellow)',
+      instrument: {
+        kind: 'ring',
+        gauge: true,
+        value: 0.85,
+        big: '6.8',
+        unit: 'kWh',
+        small: 'a day',
+      },
+      cap: ['$248.60', 'Electricity'],
+      title: 'Electricity',
+      figure: <WxFig main="$248" minor=".60" />,
+      facts: [
+        { label: 'Limit', value: '8 kWh a day' },
+        { label: 'On last year', value: '↓ 8%', tone: 'ok' },
+      ],
+      body: (
+        <WxRows>
+          <WxKv label="Same time last year" value="7.4 kWh a day" />
+          <WxKv label="Next bill, about 14 Oct" value="≈ $230" />
+          <WxKv label="Your share" value="$82.87" />
+        </WxRows>
+      ),
+    },
+  ],
+  [
+    'A gauge with a short unit beside the number',
+    {
+      colour: 'var(--sc-blue)',
+      instrument: { kind: 'ring', gauge: true, value: 0.55, big: '412', unit: 'L', small: 'a day' },
+      cap: ['$186.40', 'Water'],
+      title: 'Water',
+      figure: <WxFig main="$186" minor=".40" />,
+      facts: [
+        { label: 'Limit', value: '750 L a day' },
+        { label: 'On last year', value: '↑ 3%' },
+      ],
+    },
+  ],
+  [
+    'An icon and a figure',
+    {
+      colour: 'var(--sc-blue)',
+      instrument: { kind: 'plain', icon: 'cloud-sun', big: '19°', small: 'Partly cloudy' },
+      cap: ['Bendigo', 'Low 9°'],
+      title: 'Heating this week',
+      figure: <WxFig main="≈ $14" />,
+      facts: [
+        { label: 'A normal week', value: '≈ $11' },
+        { label: 'Low tonight', value: '9°' },
+      ],
+      body: (
+        <WxRows>
+          <WxKv label="Heating days ahead" value="3 of 7" />
+          <WxKv label="Coldest night" value="Fri · 4°" />
+          <WxKv label="Rain" value="Thu, Fri" />
+        </WxRows>
+      ),
+    },
+  ],
+  [
+    'Overdue, with an action',
+    {
+      overdue: true,
+      instrument: { kind: 'ring', value: 1, big: '3', small: 'days over' },
+      cap: ['$137.50', 'Council Rates'],
+      title: 'Overdue',
+      figure: <WxFig main="$137" minor=".50" />,
+      facts: [
+        { label: 'Council Rates', value: '3 days over', tone: 'overdue' },
+        { label: 'Your share of', value: '$412.50' },
+      ],
+      body: (
+        <WxRows>
+          <WxRow colour="var(--sc-magenta)" title="Rent" sub="Thu 1 Oct" value="$918.67" />
+          <WxRow colour="var(--sc-violet)" title="Internet" sub="Sat 3 Oct" value="$29.67" />
+          <WxRow colour="var(--sc-blue)" title="Water" sub="Mon 12 Oct" value="$62.13" />
+        </WxRows>
+      ),
+      action: { icon: 'check', label: 'Mark paid', href: '/design' },
+    },
+  ],
+  [
+    'All paid',
+    {
+      instrument: { kind: 'ring', value: 1, icon: 'check' },
+      cap: ['$3,184', 'All paid'],
+      title: 'September',
+      figure: <WxFig main="$3,184" minor=".20" />,
+      facts: [
+        { label: 'Paid', value: '$3,184.20' },
+        { label: 'To pay', value: '$0.00' },
+      ],
+    },
+  ],
+  [
+    'No bills yet',
+    {
+      colour: 'var(--sc-yellow)',
+      instrument: { kind: 'ring', value: 0, icon: 'bolt', filled: true },
+      cap: ['Electricity', 'Add a bill to start'],
+      title: 'Electricity',
+      figure: <WxFig main="No bills yet" />,
+      facts: [
+        { label: 'To start', value: 'Add a bill' },
+        { label: 'Then', value: 'Usage shows here' },
+      ],
+      action: { icon: 'plus', label: 'Add a bill', href: '/design' },
+    },
+  ],
+  ['Loading', null],
+];
 
 export default async function DesignPage() {
   await requireMember();
@@ -734,6 +890,30 @@ export default async function DesignPage() {
             <CalendarGrid days={days} weekdays={['M', 'T', 'W', 'T', 'F', 'S', 'S']} />
           </div>
         </Cell>
+      </Section>
+
+      <Section
+        title="Home widgets"
+        sub="Three sizes, one instrument each (SCOPE-widgets.md): a ring or gauge for real progress, an icon and a figure otherwise."
+        columns={2}
+      >
+        {WIDGETS.map(([label, spec]) => (
+          <Cell key={label} label={label} span={2}>
+            <div className="flex flex-wrap items-start gap-[14px]">
+              {WX_SIZES.map(([size, w, h]) => (
+                <div
+                  key={size}
+                  className="widget glass"
+                  style={{ width: w, height: h, borderRadius: 'var(--r-card)' }}
+                >
+                  <div className="wg-in">
+                    {spec ? <WxCard spec={spec} size={size} /> : <WxSkeleton size={size} />}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Cell>
+        ))}
       </Section>
 
       <Section title="Surfaces" sub="Sheets and toasts." columns={2}>

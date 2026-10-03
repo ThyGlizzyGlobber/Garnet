@@ -1,0 +1,379 @@
+/*
+  Home widgets in three sizes (SCOPE-widgets.md §3; the pieces are
+  src/components/home/pieces.tsx). Everything is sized from --u, one
+  hundredth of a block's height, so a widget keeps its proportions whatever
+  the grid makes a block: Small and Medium are one block high, Large is two
+  blocks and the gap between them. .widget (home.css) is the size container.
+*/
+.wx {
+  --wx-c: var(--p-accent);
+  --u: 1cqh;
+  min-width: 0;
+  min-height: 0;
+  color: var(--p-fg);
+}
+.wx-l {
+  --u: calc((100cqh - var(--gap, 14px)) / 200);
+}
+
+/* Small: the instrument over a figure and a name. */
+.wx-s {
+  align-items: center;
+  justify-content: space-between;
+}
+.wx-s.wx-pl {
+  align-items: flex-start;
+}
+
+/* The instrument: a ring or gauge with its reading in the middle. */
+.wx-ring {
+  position: relative;
+  flex: none;
+  height: 100%;
+  aspect-ratio: 1;
+}
+.wx-s .wx-ring,
+.wx-s .wx-plain {
+  width: calc(var(--u) * 56.5);
+  height: calc(var(--u) * 56.5);
+}
+.wx-ring svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.wx-ring circle {
+  fill: none;
+  stroke-width: 9.5;
+  stroke-linecap: round;
+}
+.wx-track {
+  stroke: var(--line-2);
+}
+.wx-arc {
+  stroke: var(--wx-c);
+}
+.wx-ring-in {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  text-align: center;
+}
+.wx-ring-in b {
+  font-family: var(--f-display);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-size: clamp(20px, calc(var(--u) * 20), 46px);
+}
+.wx-s .wx-ring-in b {
+  font-size: clamp(18px, calc(var(--u) * 15.3), 36px);
+}
+/* The unit: underneath by default, beside the number when the two are short. */
+.wx-ring-in b u {
+  display: block;
+  margin-top: 0.12em;
+  font-size: 0.5em;
+  letter-spacing: 0;
+  text-decoration: none;
+}
+.wx-ring-in b u.in {
+  display: inline;
+  margin: 0 0 0 0.1em;
+}
+.wx-ring-in > span {
+  margin-top: 0.3em;
+  font-size: clamp(10px, calc(var(--u) * 6.2), 14px);
+  font-weight: 600;
+  color: var(--p-fg3);
+}
+/* Outranks the quiet word's rule above: the icon wears the instrument's colour. */
+.wx-ring-in > .wx-ic {
+  display: flex;
+  margin: 0;
+  color: var(--wx-c);
+}
+.wx-ic svg {
+  width: calc(var(--u) * 23.5);
+  height: calc(var(--u) * 23.5);
+  stroke-width: 2.25;
+}
+.wx-ic.filled svg {
+  fill: currentColor;
+}
+
+/* An icon and one big figure, for what has no progress to show. */
+.wx-plain {
+  flex: none;
+  height: 100%;
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  line-height: 1;
+  min-width: 0;
+}
+.wx-plain svg {
+  width: calc(var(--u) * 17.6);
+  height: calc(var(--u) * 17.6);
+  margin-bottom: calc(var(--u) * 4.7);
+  color: var(--wx-c);
+  stroke-width: 1.75;
+}
+.wx-s .wx-plain svg {
+  width: calc(var(--u) * 14);
+  height: calc(var(--u) * 14);
+}
+.wx-plain b {
+  font-family: var(--f-display);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  white-space: nowrap;
+  font-size: clamp(34px, calc(var(--u) * 35), 80px);
+}
+.wx-s .wx-plain b {
+  font-size: clamp(26px, calc(var(--u) * 24.7), 58px);
+}
+.wx-plain.compact b {
+  font-size: clamp(22px, calc(var(--u) * 20), 46px);
+}
+.wx-s .wx-plain.compact b {
+  font-size: clamp(18px, calc(var(--u) * 14.7), 34px);
+}
+.wx-plain > span {
+  margin-top: 0.45em;
+  font-size: clamp(10.5px, calc(var(--u) * 6.8), 15px);
+  font-weight: 600;
+  color: var(--p-fg3);
+  white-space: nowrap;
+}
+
+/* Small's caption. */
+.wx-cap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.2;
+  min-width: 0;
+  max-width: 100%;
+}
+.wx-pl .wx-cap {
+  align-items: flex-start;
+}
+.wx-cap b {
+  font-size: clamp(13px, calc(var(--u) * 8.8), 20px);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.wx-cap span {
+  font-size: clamp(10.5px, calc(var(--u) * 6.8), 15px);
+  font-weight: 600;
+  color: var(--p-fg2);
+}
+.wx-cap b,
+.wx-cap span {
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Medium, and the top of Large: the instrument beside a title, a figure and facts. */
+.wx-top {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 9.4);
+  min-height: 0;
+}
+.wx-m .wx-top {
+  flex: 1;
+  height: 100%;
+}
+.wx-l .wx-top {
+  height: calc(var(--u) * 100 - 2 * var(--wpad));
+}
+.wx-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.wx-title {
+  margin-bottom: 2px;
+  font-size: clamp(11.5px, calc(var(--u) * 7.4), 16px);
+  font-weight: 700;
+  color: var(--p-fg2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wx-fig {
+  margin-bottom: calc(var(--u) * 3.5);
+  font-family: var(--f-display);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.13;
+  font-size: clamp(22px, calc(var(--u) * 17.6), 42px);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.wx-fig small {
+  margin-left: 1px;
+  font-size: 0.55em;
+  letter-spacing: 0;
+  color: var(--p-fg2);
+}
+
+/* Lines: a list row, or a label and its value. */
+.wx-rows {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+}
+.wx-body > * + .wx-rows {
+  margin-top: 8px;
+}
+.wx-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: calc(var(--u) * 4.1) 0;
+  border-top: 1px solid var(--line);
+  font-size: clamp(11.5px, calc(var(--u) * 7.4), 16px);
+  line-height: 1.2;
+  color: inherit;
+  text-decoration: none;
+}
+.wx-col .wx-row {
+  padding: calc(var(--u) * 3) 0;
+  font-size: clamp(11px, calc(var(--u) * 7), 15px);
+}
+.wx-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.wx-rm {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.wx-rm b {
+  font-weight: 600;
+}
+.wx-rm b,
+.wx-rm span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wx-rm span,
+.wx-re span {
+  font-size: 0.88em;
+  font-weight: 500;
+  color: var(--p-fg3);
+}
+.wx-re {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-variant-numeric: tabular-nums;
+}
+.wx-re b {
+  font-weight: 700;
+}
+.wx-kv .wx-rm {
+  display: block;
+  font-weight: 500;
+  color: var(--p-fg2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wx-t-ok {
+  color: var(--ok);
+}
+.wx-t-warn {
+  color: var(--warn);
+}
+/* Overdue words match the ring; bold and never under 13 px, to stay readable on a dark card. */
+.wx-t-overdue {
+  color: var(--overdue);
+  font-size: max(13px, 1em);
+}
+
+/* Large: the chart or list under the top block, the action at the foot. */
+.wx-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  margin-top: 12px;
+}
+.wx-foot {
+  flex: none;
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 36px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--p-accent);
+  color: var(--p-on-accent);
+  font: 700 12.5px var(--f-body);
+  text-decoration: none;
+  cursor: pointer;
+}
+.wx-foot svg {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2.5;
+}
+/* Medium: the same action as a round button, top right. */
+.wx-round {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--p-accent);
+  color: var(--p-on-accent);
+  cursor: pointer;
+}
+.wx-round svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2.5;
+}
+
+/* Loading: grey bars where the words will be. */
+.wx-sk {
+  display: block;
+  height: calc(var(--u) * 6.5);
+  margin: calc(var(--u) * 3.5) 0;
+  border-radius: 99px;
+  background: var(--line-2);
+}
+.wx[aria-busy] .wx-cap {
+  width: 100%;
+}
+.wx-cap .wx-sk {
+  margin: calc(var(--u) * 2.4) auto;
+}
