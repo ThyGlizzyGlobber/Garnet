@@ -33,6 +33,7 @@ import {
   nextSize,
   normalise,
   pack,
+  sizeName,
   sizesOn,
   type Density,
   type Device,
@@ -40,7 +41,9 @@ import {
   type LayoutKind,
   type Placed,
 } from '@/lib/home-grid';
-import { ALWAYS, catalogFor, type WidgetCtx, type WidgetDef } from './catalog';
+import { ALWAYS, WHEN_NEEDED, catalogFor, type WidgetCtx, type WidgetDef } from './catalog';
+import { WxCard } from './pieces';
+import { emptySpec } from './widgets';
 import { makeFmt } from './fmt';
 import {
   markMyShareAction,
@@ -383,10 +386,20 @@ export function HomeGrid({ data, layouts: initial, kind }: Props) {
     return { value: k, label: `${c}×${r}` };
   });
   const onGrid = new Set(layout.pages.flat().map((x) => x.id));
-  const galleryItems = catalog.filter((w) => !onGrid.has(w.id) && available(w.id, facts));
+  // Heads-up, the instalment plan and the season ahead are offered only while they have something to show.
+  const galleryItems = catalog.filter(
+    (w) =>
+      !onGrid.has(w.id) &&
+      available(w.id, facts) &&
+      !(WHEN_NEEDED.has(w.id) && w.render(ctx(2, 1)) === null),
+  );
 
   return (
-    <div className="home" data-editing={editing}>
+    <div
+      className="home"
+      data-editing={editing}
+      style={{ ['--cols' as string]: cols, ['--rows' as string]: rows }}
+    >
       {editing && (
         <div className="home-edit">
           <Button variant="secondary" size="sm" icon="plus" onClick={() => setGallery(true)}>
@@ -556,23 +569,18 @@ function PageSlots({ p, cols, rows }: { p: number; cols: number; rows: number })
   );
 }
 
+const SIZE_OF = { small: 's', medium: 'm', large: 'l' } as const;
+
+/** A widget with nothing to show yet, in the same three sizes. */
 function Empty({ def, w, h, t }: { def: WidgetDef; w: number; h: number; t: WidgetCtx['t'] }) {
   const key = def.id.startsWith('svc-') ? 'service' : def.id;
-  return (
-    <div className="wg-empty">
-      <header className="wg-h">
-        <Icon name={def.icon} width={15} height={15} />
-        <span className="wg-t">{t(`widgets.${key}.name`, { service: '' })}</span>
-      </header>
-      <div className="we-body">
-        <span className="we-ic">
-          <Icon name={def.icon} width={20} height={20} />
-        </span>
-        <b>{t(`empty.${key}.title`)}</b>
-        {(h > 1 || w > 1) && <span className="muted small">{t(`empty.${key}.body`)}</span>}
-      </div>
-    </div>
+  const spec = emptySpec(
+    def.icon,
+    t(`widgets.${key}.name`, { service: '' }),
+    t(`empty.${key}.title`),
+    t(`empty.${key}.body`),
   );
+  return <WxCard spec={spec} size={SIZE_OF[sizeName(w, h)]} />;
 }
 
 function GalleryItem({

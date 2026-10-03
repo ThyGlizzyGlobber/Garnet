@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { CSSProperties, ReactNode } from 'react';
 import { Icon } from '@/components/app/icons';
+import { addDays } from '@/lib/dates';
 import { unitInline } from './fmt';
 
 /**
@@ -180,16 +181,110 @@ export function WxKv({ label, value, tone }: WxFact) {
 }
 
 /** A few bars, the last one in the widget's colour: the months up to now. */
-export function WxBars({ values, labels }: { values: number[]; labels: string[] }) {
+export function WxBars({
+  values,
+  labels,
+  flat,
+}: {
+  values: number[];
+  labels: string[];
+  /** Every bar the same grey: months that haven't happened. */
+  flat?: boolean;
+}) {
   const max = Math.max(...values, 0);
   return (
-    <div className="wx-bars">
+    <div className={flat ? 'wx-bars flat' : 'wx-bars'}>
       {values.map((v, i) => (
         <div key={i} className={i === values.length - 1 ? 'on' : undefined}>
           <i style={{ height: `${max > 0 ? Math.max(4, (v / max) * 100) : 4}%` }} />
           <span>{labels[i]}</span>
         </div>
       ))}
+    </div>
+  );
+}
+
+/** A sentence or two where a figure would be: an empty widget saying what will appear. */
+export function WxNote({ children }: { children: ReactNode }) {
+  return <p className="wx-note">{children}</p>;
+}
+
+/**
+ * Weeks of days from a Monday, a dot under each day something is due (in its
+ * service's colour, hollow once paid) and today filled in.
+ */
+export function WxCal({
+  start,
+  weeks,
+  today,
+  locale,
+  items,
+}: {
+  start: string;
+  weeks: number;
+  today: string;
+  locale: string;
+  items: { date: string; colour: string; paid: boolean }[];
+}) {
+  const letter = new Intl.DateTimeFormat(locale, { weekday: 'narrow', timeZone: 'UTC' });
+  const days = Array.from({ length: weeks * 7 }, (_, i) => addDays(start, i));
+  return (
+    <div className="wx-cal">
+      {days.slice(0, 7).map((d) => (
+        <span key={`h${d}`} className="hd">
+          {letter.format(new Date(`${d}T00:00:00Z`))}
+        </span>
+      ))}
+      {days.map((d) => {
+        const due = items.find((x) => x.date === d);
+        return (
+          <span key={d} className={d === today ? 'today' : d < today ? 'past' : undefined}>
+            {Number(d.slice(8, 10))}
+            {due && (
+              <i className={due.paid ? 'paid' : undefined} style={{ background: due.colour }} />
+            )}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Quick actions: a grid of buttons, each an icon over its name. */
+export function WxActs({ acts }: { acts: { icon: string; label: string; href: string }[] }) {
+  return (
+    <div className={`wx-acts n${acts.length}`}>
+      {acts.map((a) => (
+        <Link key={a.href + a.label} href={a.href} className="wx-act">
+          <Icon name={a.icon} />
+          <span>{a.label}</span>
+        </Link>
+      ))}
+    </div>
+  );
+}
+
+/** Small's one action: a round button over its name. */
+export function WxBig({
+  icon,
+  label,
+  sub,
+  href,
+}: {
+  icon: string;
+  label: string;
+  sub: string;
+  href: string;
+}) {
+  return (
+    <div className="wx wx-s">
+      <Link href={href} className="wx-big" aria-label={label}>
+        <Icon name={icon} />
+      </Link>
+      <div className="wx-cap">
+        <b>{label}</b>
+        <span>{sub}</span>
+      </div>
     </div>
   );
 }

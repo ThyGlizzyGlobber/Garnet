@@ -48,6 +48,13 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  /* The grid measures the room it has here to keep its blocks square. */
+  container-type: size;
+  --bar: 0px;
+}
+/* Edit Home's bar takes a line off the room for the grid. */
+.home[data-editing='true'] {
+  --bar: 48px;
 }
 .home-edit {
   flex: none;
@@ -62,15 +69,28 @@
   gap: 8px;
   margin-right: auto;
 }
+/*
+  Blocks are square (owner, 2026-10-03: the grid keeps its ratio, it doesn't
+  stretch to the window). A block's side is the smaller of what the width and
+  the height allow for this many columns and rows; the grid is exactly that
+  big and sits in the middle, with the dots straight under it.
+*/
 .hg-scroller {
-  flex: 1;
-  min-height: 0;
+  --room-h: calc(100cqh - 32px - var(--bar));
+  --b: min(
+    calc((100cqw - (var(--cols) - 1) * var(--gap)) / var(--cols)),
+    calc((var(--room-h) - (var(--rows) - 1) * var(--gap)) / var(--rows))
+  );
+  flex: none;
+  box-sizing: content-box;
+  width: calc(var(--cols) * var(--b) + (var(--cols) - 1) * var(--gap));
+  height: calc(var(--rows) * var(--b) + (var(--rows) - 1) * var(--gap));
   overflow-x: auto;
   overflow-y: hidden;
   scroll-snap-type: x mandatory;
   container-type: size;
   scrollbar-width: none;
-  margin: calc(var(--gap) * -1) calc(var(--gap) * -0.5);
+  margin: calc(var(--gap) * -1) auto;
   padding: var(--gap) calc(var(--gap) * 0.5);
   scroll-padding-inline: calc(var(--gap) * 0.5);
   overscroll-behavior-x: contain;
@@ -372,8 +392,8 @@
   }
 }
 .widget.preview {
-  width: calc(var(--pw) * 124px + (var(--pw) - 1) * 12px);
-  height: calc(var(--ph) * 112px + (var(--ph) - 1) * 12px);
+  width: calc(var(--pw) * 118px + (var(--pw) - 1) * 12px);
+  height: calc(var(--ph) * 118px + (var(--ph) - 1) * 12px);
   flex: none;
 }
 

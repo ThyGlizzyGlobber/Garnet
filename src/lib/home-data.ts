@@ -57,7 +57,7 @@ interface HomeService {
   shares: { paid: number; total: number } | null;
 }
 
-export interface Upcoming {
+interface Upcoming {
   billId: string;
   serviceId: string;
   serviceName: string;

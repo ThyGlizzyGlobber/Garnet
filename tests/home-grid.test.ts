@@ -238,7 +238,7 @@ describe('saved layouts', () => {
     );
     const alex = createMember(hh.id, { name: 'Alex', activeFrom: '2026-01-01' }, db);
     const jordan = createMember(hh.id, { name: 'Jordan', activeFrom: '2026-01-01' }, db);
-    const mine = { density: 'dense' as const, pages: [[{ id: 'week', w: 3, h: 1 }]] };
+    const mine = { density: 'dense' as const, pages: [[{ id: 'week', w: 2, h: 1 }]] };
     saveLayout(hh.id, alex.id, 'phone', 'home', mine, db);
     saveLayout(hh.id, alex.id, 'phone', 'home', mine, db); // saving again replaces
     const alexs = layoutsFor(hh.id, alex.id, 'home', facts, db);
@@ -343,7 +343,7 @@ describe('a measurement inside a gauge', () => {
 describe('a saved layout brought up to date', () => {
   const stored = (pages: unknown) => parseLayout({ density: 'standard', pages })!.pages;
 
-  it('gives the widgets drawn in three sizes the nearest size and leaves the rest', () => {
+  it('gives every widget the nearest of the three sizes', () => {
     expect(
       stored([
         [
@@ -360,7 +360,7 @@ describe('a saved layout brought up to date', () => {
         { id: 'nextdue', w: 2, h: 2 },
         { id: 'weather', w: 2, h: 1 },
         { id: 'svc-abc', w: 2, h: 1 },
-        { id: 'week', w: 3, h: 1 },
+        { id: 'week', w: 2, h: 1 },
       ],
     ]);
   });
@@ -393,8 +393,7 @@ describe('a saved layout brought up to date', () => {
       for (const fresh of [false, true])
         for (const it of defaultLayout(device, 'home', { ...facts, fresh }).pages.flat()) {
           expect(it.id).not.toBe('settled');
-          if (['month', 'weather', 'nextdue', 'owes', 'inbox'].includes(it.id))
-            expect(SIZE_LIST).toContainEqual([it.w, it.h]);
+          expect(SIZE_LIST).toContainEqual([it.w, it.h]);
         }
   });
 });

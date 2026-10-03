@@ -23,9 +23,11 @@
 }
 
 /* Small: the instrument over a figure and a name. */
+/* The two sit together in the middle of the card, however tall the block is. */
 .wx-s {
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
+  gap: calc(var(--u) * 7);
 }
 .wx-s.wx-pl {
   align-items: flex-start;
@@ -249,7 +251,7 @@
   min-width: 0;
   padding: calc(var(--u) * 4.1) 0;
   border-top: 1px solid var(--line);
-  font-size: max(11.5px, calc(var(--u) * 7.4));
+  font-size: max(10.5px, calc(var(--u) * 7.4));
   line-height: 1.2;
   color: inherit;
   text-decoration: none;
@@ -433,4 +435,134 @@ a.wx-row {
 .wall-app .wx-foot,
 .wall-app .wx-round {
   display: none;
+}
+
+.wx-bars.flat .on i {
+  background: var(--line-2);
+}
+/* Bars beside the instrument (Medium) keep a set height. */
+.wx-col .wx-bars {
+  flex: none;
+  height: calc(var(--u) * 50);
+}
+
+/* Words where a figure would be. */
+.wx-note {
+  margin: 0;
+  font-size: max(11.5px, calc(var(--u) * 7.4));
+  line-height: 1.35;
+  font-weight: 500;
+  color: var(--p-fg2);
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Days in weeks, a dot under each due day. */
+.wx-cal {
+  flex: none;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  row-gap: calc(var(--u) * 1.8);
+  text-align: center;
+  font-size: max(10.5px, calc(var(--u) * 6.8));
+  font-weight: 600;
+}
+.wx-cal span {
+  position: relative;
+  height: calc(var(--u) * 16);
+  line-height: calc(var(--u) * 13);
+  border-radius: calc(var(--u) * 5);
+}
+.wx-cal .hd {
+  height: calc(var(--u) * 10);
+  line-height: calc(var(--u) * 9);
+  font-size: max(9.5px, calc(var(--u) * 5.8));
+  color: var(--p-fg3);
+}
+.wx-cal .past {
+  color: var(--p-fg3);
+}
+.wx-cal .today {
+  background: var(--p-accent);
+  color: var(--p-on-accent);
+  font-weight: 800;
+}
+.wx-cal i {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--u) * 0.6);
+  width: calc(var(--u) * 3);
+  height: calc(var(--u) * 3);
+  margin-left: calc(var(--u) * -1.5);
+  border-radius: 50%;
+}
+.wx-cal i.paid {
+  opacity: 0.4;
+}
+.wx-col .wx-cal {
+  margin-bottom: calc(var(--u) * 3);
+}
+
+/* Quick actions. */
+.wx-acts {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  gap: calc(var(--u) * 6);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.wx-l .wx-acts {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: minmax(0, 1fr);
+}
+.wx-act {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  min-width: 0;
+  padding: calc(var(--u) * 7);
+  border-radius: calc(var(--u) * 9.4);
+  background: var(--inset-2);
+  color: var(--p-fg);
+  font-size: max(11.5px, calc(var(--u) * 7.4));
+  font-weight: 700;
+  line-height: 1.25;
+  text-decoration: none;
+}
+.wx-act svg {
+  width: calc(var(--u) * 12);
+  height: calc(var(--u) * 12);
+  color: var(--wx-c);
+}
+.wx-big {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(var(--u) * 42);
+  height: calc(var(--u) * 42);
+  border-radius: 50%;
+  background: var(--p-accent);
+  color: var(--p-on-accent);
+}
+.wx-big svg {
+  width: calc(var(--u) * 16.5);
+  height: calc(var(--u) * 16.5);
+  stroke-width: 2.25;
+}
+
+/*
+  The card's padding scales with its block too (16 px at the 170 px block the
+  widgets were drawn at), so a small phone block keeps room for its rows.
+*/
+.widget[data-h='1'] > .wg-in {
+  --wpad: max(10px, min(9.4cqh, 9.4cqw));
+}
+.widget[data-w='2'][data-h='1'] > .wg-in {
+  --wpad: max(10px, min(9.4cqh, 4.5cqw));
+}
+.widget[data-h='2'] > .wg-in {
+  --wpad: max(10px, min(4.5cqh, 4.5cqw));
 }

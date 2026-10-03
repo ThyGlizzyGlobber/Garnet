@@ -160,14 +160,10 @@ export function convertPages(pages: Pages, converts: (id: string) => boolean = (
   );
 }
 
-/** The widgets already drawn in the three sizes (SCOPE-widgets.md W2); the rest follow in W3. */
-const THREE_SIZES = new Set(['month', 'weather', 'nextdue', 'owes', 'inbox']);
-const threeSizes = (id: string): boolean => THREE_SIZES.has(id) || id.startsWith('svc-');
-
 /**
  * A layout brought up to date: "Shares settled" is part of Settle up now (it
  * becomes Settle up, or goes when Settle up is already there), and every
- * widget drawn in the three sizes takes the nearest of them.
+ * widget takes the nearest of the three sizes.
  */
 function upgrade(pages: Pages): Pages {
   const hasOwes = pages.some((pg) => pg.some((it) => it.id === 'owes'));
@@ -180,7 +176,7 @@ function upgrade(pages: Pages): Pages {
       return [{ ...it, id: 'owes' }];
     }),
   );
-  return convertPages(merged, threeSizes);
+  return convertPages(merged);
 }
 
 /** The sizes a widget can take on this grid. */
