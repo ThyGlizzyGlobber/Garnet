@@ -29,6 +29,11 @@ interface UsagePart {
 
 export interface UsagePeriod {
   billId: string;
+  /**
+   * The days the usage covers: the meter-reading period when the bill prints
+   * one apart from its own (water bills charge the quarter ahead but bill the
+   * usage read over the quarter behind), else the bill's period.
+   */
   periodStart: string;
   periodEnd: string;
   days: number;
@@ -108,6 +113,49 @@ function totalUsage(b: BillListItem, figures: BillMetric[], unit: string | null)
   return sum;
 }
 
+/**
+ * The days a bill's usage covers. A usage figure with its own dates wins
+ * (the meter-reading period), then a printed number of days in the reading
+ * period, then the bill's period.
+ */
+function usageSpan(
+  b: BillListItem,
+  figures: BillMetric[],
+  billDays: number,
+): { start: string; end: string; days: number } {
+  const dated = figures.find(
+    (m) =>
+      (m.kind === 'usage' || m.kind === 'reading') &&
+      m.key !== 'solar_export' &&
+      m.periodStart &&
+      m.periodEnd &&
+      m.periodEnd >= m.periodStart,
+  );
+  if (dated)
+    return {
+      start: dated.periodStart!,
+      end: dated.periodEnd!,
+      days: Math.max(1, daysInclusive(dated.periodStart!, dated.periodEnd!)),
+    };
+  const printed = figures.find(
+    (m) => m.key === 'days_in_period' && m.value !== null && m.value >= 1 && m.value <= 400,
+  );
+  const days = printed ? Math.round(printed.value!) : billDays;
+  return { start: b.periodStart, end: b.periodEnd, days };
+}
+
+/** The bill's own "average daily usage", in the history's unit (L a day → kL a day), or null. */
+function printedDailyUsage(figures: BillMetric[], unit: string | null): number | null {
+  const avg = figures.find(
+    (m) => m.key === 'daily_average_usage' && m.value !== null && m.value > 0,
+  );
+  if (!avg) return null;
+  // "L/day" and "L per day" are the unit L, a day.
+  const per = avg.unit?.replace(/\s*(\/|per)\s*day$/i, '').trim() || null;
+  if (!per || !unit) return null;
+  return per === unit ? avg.value! : convertUnit(avg.value!, per, unit);
+}
+
 function figuresFor(householdId: string, billIds: string[], db: Db): Map<string, BillMetric[]> {
   const byBill = new Map<string, BillMetric[]>();
   if (!billIds.length) return byBill;
@@ -139,19 +187,23 @@ export function usageHistory(
   // The service's unit, else whatever the latest bill with usage used.
   const unit = svc.usageUnit ?? [...bills].reverse().find((b) => b.usageUnit)?.usageUnit ?? null;
   const periods = bills.map((b): UsagePeriod => {
-    const days = Math.max(1, daysInclusive(b.periodStart, b.periodEnd));
+    const billDays = Math.max(1, daysInclusive(b.periodStart, b.periodEnd));
     const own = figures.get(b.id) ?? [];
     const quantity = totalUsage(b, own, unit);
+    const span = usageSpan(b, own, billDays);
+    const days = span.days;
     return {
       billId: b.id,
-      periodStart: b.periodStart,
-      periodEnd: b.periodEnd,
+      periodStart: span.start,
+      periodEnd: span.end,
       days,
       quantity,
-      perDay: quantity === null ? null : quantity / days,
+      // The bill's own daily average when it prints one, else the usage over its days.
+      perDay: printedDailyUsage(own, unit) ?? (quantity === null ? null : quantity / days),
       costMinor: b.amountMinor,
       currency: b.currency,
-      costPerDayMinor: b.amountMinor / days,
+      // The money is for the bill's own period, whatever the usage covers.
+      costPerDayMinor: b.amountMinor / billDays,
       parts: own
         .filter(isUsagePart)
         .map((m) => ({ key: m.key, label: m.label, q: inUnit(m.value!, m.unit, unit) }))

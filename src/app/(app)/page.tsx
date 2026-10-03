@@ -62,10 +62,14 @@ export default async function HomePage() {
       <div className="hh d6-hh">
         <div>
           <h1>{t('head.hey', { name: me.name })}</h1>
-          <p>
-            {dateLine}
-            {weatherLine && ` · ${weatherLine}`}
-          </p>
+          {/* The date and weather, and at the right Edit Home (placed by the grid). */}
+          <div className="d6-line">
+            <p>
+              {dateLine}
+              {weatherLine && ` · ${weatherLine}`}
+            </p>
+            <span id="home-edit-slot" className="d6-edit" />
+          </div>
         </div>
       </div>
       {allowance && (

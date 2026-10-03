@@ -33,7 +33,16 @@ export async function generateMetadata(): Promise<Metadata> {
     robots: { index: false, follow: false },
     manifest: '/manifest.webmanifest',
     appleWebApp: { capable: true, statusBarStyle: 'black-translucent', title: t('shortName') },
-    icons: { icon: '/icon.svg', apple: '/icon-192.png' },
+    // The tab's icon is the stone alone, no background (owner, 2026-10-03); the
+    // home-screen icon keeps its dark tile, as iOS would fill transparency black.
+    icons: {
+      icon: [
+        { url: '/favicon.svg', type: 'image/svg+xml' },
+        { url: '/favicon.png', type: 'image/png', sizes: '64x64' },
+      ],
+      shortcut: '/favicon.ico',
+      apple: '/icon-192.png',
+    },
   };
 }
 

@@ -320,7 +320,7 @@
       "recurringHint": "The same charge each time: the next one shows as upcoming, and is recorded if no bill comes in."
     },
     "anomaly": "Unusual",
-    "download": "Download everything",
+    "download": "Download Bills",
     "tile": {
       "instalment": "Instalment {n} of {of}",
       "paidProvider": "Paid",
@@ -408,7 +408,7 @@
       "lockedShares": "Housemates have paid shares of its bills, so it stays the household’s."
     },
     "downloadHint": "A zip of every bill: spreadsheets for your accountant plus each bill's file, filed by year, month and service",
-    "downloadMine": "Download my bills",
+    "downloadMine": "Download My Bills",
     "downloadMineHint": "A zip of your personal bills: a spreadsheet plus each bill's file, filed by year, month and service",
     "files": {
       "title": "Bill & files",

@@ -11,6 +11,7 @@ import { uncapDeveloperHouseholds } from '@/lib/console';
 import { adoptLegacyDemoFlag } from '@/lib/demo';
 import { getEnv } from '@/lib/env';
 import { ensureDataDirs } from '@/lib/paths';
+import { markWaterFiguresForReread } from '@/lib/metrics';
 import { runOnce } from '@/lib/upgrades';
 
 /**
@@ -78,6 +79,12 @@ export async function prepareInstall(): Promise<void> {
     'access',
     runOnce('2026-10-01 early access list from accounts', () => seedAllowedFromAccounts()),
     'listed {n} address(es) that already had an account',
+  );
+  // Water usage is per meter-reading period: figures from before may lack those dates.
+  log(
+    'usage',
+    runOnce('2026-10-03 water figures again', () => markWaterFiguresForReread()),
+    'marked {n} water bill(s) to have their figures analysed again',
   );
 
   if (dataKeyConfigured()) {

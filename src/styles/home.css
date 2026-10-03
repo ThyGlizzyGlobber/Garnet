@@ -156,6 +156,25 @@
 .d6-hh p {
   margin-top: 6px;
 }
+/* The date line with Edit Home at its right, over the grid's top right corner. */
+.d6-hh > div {
+  width: 100%;
+}
+.d6-line {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+.d6-line p {
+  min-width: 0;
+}
+.d6-edit {
+  flex: none;
+}
+.d6-edit .hg-edit {
+  position: static;
+}
 @media (max-width: 639px) {
   .d6-hh h1 {
     font-size: calc(var(--fs-h1) * 1.1);

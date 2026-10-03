@@ -230,3 +230,64 @@ describe('figure changes between bills', () => {
     expect(byKey.get('late_fee')).toBeNull();
   });
 });
+
+describe('usage read over another period (water)', () => {
+  function water() {
+    const { hh, jo } = household();
+    const svc = createService(
+      hh.id,
+      {
+        typeSlug: 'water',
+        name: 'Water',
+        provider: 'Riverbend',
+        usageUnit: 'kL',
+        payerMemberId: jo.id,
+      },
+      db,
+    );
+    // Service charges for the quarter ahead; the water used between the last two readings.
+    const bill = (start: string, end: string, usage: number, figures: ExtractedMetric[]) => {
+      const b = createBill(
+        hh.id,
+        {
+          serviceId: svc.id,
+          amountMinor: 30_000,
+          periodStart: start,
+          periodEnd: end,
+          dueDate: start,
+          usageQuantity: usage,
+          usageUnit: 'kL',
+          source: 'llm',
+        },
+        db,
+      );
+      saveBillMetrics(hh.id, b.id, figures, db);
+      return b;
+    };
+    return { hh, svc, bill };
+  }
+
+  it('works out a day over the meter-reading period, or the printed days, or the printed average', () => {
+    const { hh, svc, bill } = water();
+    // Read over 12 Mar – 10 Jun (91 days): 91 kL is 1 kL a day, though the bill is for Jul–Sep.
+    bill('2026-07-01', '2026-09-30', 91, [
+      {
+        ...fig('water_usage', 'usage', 91, 'kL'),
+        periodStart: '2026-03-12',
+        periodEnd: '2026-06-10',
+      },
+    ]);
+    // No dates on the figure, but "days in period: 92" printed: 46 kL over 92 days.
+    bill('2026-10-01', '2026-12-31', 46, [fig('days_in_period', 'other', 92, 'days')]);
+    // A printed average daily usage in litres wins: 1,500 L a day is 1.5 kL.
+    bill('2027-01-01', '2027-03-31', 999, [fig('daily_average_usage', 'average', 1500, 'L/day')]);
+    const h = usageHistory(hh.id, svc.id, db)!;
+    expect(h.periods.map((p) => [p.periodStart, p.days, p.perDay])).toEqual([
+      ['2026-03-12', 91, 1],
+      ['2026-10-01', 92, 0.5],
+      ['2027-01-01', 90, 1.5],
+    ]);
+    // The comparison follows: 1.5 against 0.5 a day is three times.
+    expect(compareUsage(hh.id, svc.id, db)!.previous!.usage.pct).toBeCloseTo(2, 5);
+  });
+});

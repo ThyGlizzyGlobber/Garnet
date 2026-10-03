@@ -1,6 +1,6 @@
-import { and, asc, eq, isNotNull, isNull } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNotNull, isNull } from 'drizzle-orm';
 import { getDb, type Db } from '@/db/client';
-import { bill, billMetric, METRIC_KINDS, type BillMetric } from '@/db/schema';
+import { bill, billMetric, METRIC_KINDS, service, type BillMetric } from '@/db/schema';
 import type { ExtractedMetric } from '@/ingest/extractors/types';
 import { ulid } from '@/lib/ids';
 import { listUnits } from '@/lib/units';
@@ -96,4 +96,25 @@ export function billsMissingMetrics(
       ),
     )
     .all() as { id: string; sourceDocumentId: string }[];
+}
+
+/**
+ * Ask for water bills' figures again (owner, 2026-10-03): usage is read over
+ * the meter-reading period, not the bill's, and figures analysed before the
+ * analyser was told so may lack those dates. Marks them for the "Details from
+ * earlier bills" catch-up in Settings; only figures change, never a bill.
+ */
+export function markWaterFiguresForReread(db: Db = getDb()): number {
+  const water = db
+    .select({ id: service.id })
+    .from(service)
+    .where(eq(service.typeSlug, 'water'))
+    .all()
+    .map((s) => s.id);
+  if (!water.length) return 0;
+  return db
+    .update(bill)
+    .set({ metricsReadAt: null })
+    .where(and(inArray(bill.serviceId, water), isNotNull(bill.sourceDocumentId)))
+    .run().changes;
 }

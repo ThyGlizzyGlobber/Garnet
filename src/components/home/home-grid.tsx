@@ -7,11 +7,13 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   type CSSProperties,
   type KeyboardEvent,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Icon } from '@/components/app/icons';
@@ -62,7 +64,12 @@ interface Props {
 
 const isShort = () => typeof window !== 'undefined' && window.innerHeight < 760;
 
+/** Home's slot for Edit Home, beside the date (see the Home page), once the page is in the browser. */
+const editSlotEl = () => document.getElementById('home-edit-slot');
+const noSubscribe = () => () => {};
+
 export function HomeGrid({ data, layouts: initial, kind }: Props) {
+  const editSlot = useSyncExternalStore(noSubscribe, editSlotEl, () => null);
   const t = useTranslations('home');
   const router = useRouter();
   const toast = useToast();
@@ -490,12 +497,17 @@ export function HomeGrid({ data, layouts: initial, kind }: Props) {
             />
           ))}
         </div>
-        {!editing && (
-          <button type="button" className="hg-edit" onClick={() => setEdit(true)}>
-            <Icon name="grid" width={15} height={15} />
-            <span>{t('edit.title')}</span>
-          </button>
-        )}
+        {!editing &&
+          (() => {
+            const button = (
+              <button type="button" className="hg-edit" onClick={() => setEdit(true)}>
+                <Icon name="grid" width={15} height={15} />
+                <span>{t('edit.title')}</span>
+              </button>
+            );
+            // On Home it sits at the grid's top right, on the date's line (owner, 2026-10-03).
+            return editSlot ? createPortal(button, editSlot) : kind === 'home' ? null : button;
+          })()}
       </div>
 
       <Sheet

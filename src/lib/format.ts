@@ -200,7 +200,8 @@ export function formatPercent(
 export function formatQty(n: number, locale: string): string {
   const a = Math.abs(n);
   return new Intl.NumberFormat(locale, {
-    maximumFractionDigits: a >= 100 ? 0 : a >= 1 ? 1 : 2,
+    // Two decimals under 10 (1.73 kL a day), so a percentage can be checked against the figures.
+    maximumFractionDigits: a >= 100 ? 0 : a >= 10 ? 1 : 2,
   }).format(n);
 }
 

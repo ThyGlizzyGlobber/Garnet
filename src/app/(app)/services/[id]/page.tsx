@@ -165,20 +165,22 @@ export default async function ServicePage({
   const againstSub = (r: (typeof o.comparisons)[number]) =>
     r.period
       ? `${formatMonthRange(r.period.periodStart, r.period.periodEnd, hh.locale)}${r.period.periodEnd.slice(0, 4) !== today.slice(0, 4) && r.period.periodStart.slice(0, 4) === r.period.periodEnd.slice(0, 4) ? ` ${r.period.periodEnd.slice(0, 4)}` : ''}${r.period.perDay !== null ? ` · ${t('perDay', { qty: qty(r.period.perDay), unit })}` : ''}`
-      : r.against === 'limit'
-        ? t('vs.limitSub', { qty: qty(r.limit ?? 0), unit })
-        : r.against === 'similar'
-          ? t('vs.similarSub')
-          : r.cost?.pct != null
-            ? t('costChange', {
-                change:
-                  Math.abs(r.cost.pct) < SAME_BAND
-                    ? t('same')
-                    : r.cost.pct > 0
-                      ? t('more', { pct: pctOf(r.cost.pct) })
-                      : t('less', { pct: pctOf(r.cost.pct) }),
-              })
-            : '';
+      : r.against === 'average'
+        ? t('perDay', { qty: qty(r.usage.from), unit })
+        : r.against === 'limit'
+          ? t('vs.limitSub', { qty: qty(r.limit ?? 0), unit })
+          : r.against === 'similar'
+            ? t('vs.similarSub')
+            : r.cost?.pct != null
+              ? t('costChange', {
+                  change:
+                    Math.abs(r.cost.pct) < SAME_BAND
+                      ? t('same')
+                      : r.cost.pct > 0
+                        ? t('more', { pct: pctOf(r.cost.pct) })
+                        : t('less', { pct: pctOf(r.cost.pct) }),
+                })
+              : '';
 
   const tw = await getTranslations('weather.adjusted');
   const adj = o.weather;
