@@ -155,5 +155,3 @@ export function Badge({
 }) {
   return <Chip tone={badgeTone[tone]}>{children}</Chip>;
 }
-
-export const filterChipClass = (active = false) => cx('chip-btn', active && 'on');

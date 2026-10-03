@@ -2602,7 +2602,15 @@
       "done": "Done",
       "remove": "Remove",
       "size": "Change size",
-      "page": "Page {n}"
+      "page": "Page {n}",
+      "search": "Search widgets",
+      "none": "No widget by that name.",
+      "addToHome": "Add to Home",
+      "sizes": {
+        "small": "Small",
+        "medium": "Medium",
+        "large": "Large"
+      }
     },
     "wx": {
       "paid": "Paid",

@@ -297,8 +297,7 @@
   background: repeating-linear-gradient(135deg, var(--p-accent) 0 2px, transparent 2px 4px);
   box-shadow: inset 0 0 0 1px var(--p-accent);
 }
-.wg-remove,
-.wg-size {
+.wg-remove {
   display: none;
   position: absolute;
   z-index: 3;
@@ -312,25 +311,15 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
 }
 .wg-remove {
-  top: -6px;
-  left: -6px;
+  top: 8px;
+  left: 8px;
   width: 24px;
   height: 24px;
   border-radius: 50%;
   background: var(--g-solid);
   color: var(--p-fg);
 }
-.wg-size {
-  right: 8px;
-  bottom: 8px;
-  height: 24px;
-  padding: 0 8px;
-  border-radius: 99px;
-  background: var(--p-accent);
-  color: var(--p-on-accent);
-}
-.home[data-editing='true'] .wg-remove,
-.home[data-editing='true'] .wg-size {
+.home[data-editing='true'] .wg-remove {
   display: flex;
 }
 .home[data-editing='true'] .widget {
@@ -349,7 +338,7 @@
   animation: none !important;
 }
 .widget.placeholder .wg-remove,
-.widget.placeholder .wg-size {
+.widget.placeholder .wg-pick {
   display: none !important;
 }
 .drag-ghost {
@@ -372,7 +361,7 @@
     scale 0.22s;
 }
 .drag-ghost .wg-remove,
-.drag-ghost .wg-size {
+.drag-ghost .wg-pick {
   display: none;
 }
 .widget.dragging {
@@ -1522,46 +1511,96 @@
 .gallery-sheet {
   width: min(760px, 100%);
 }
-.gal {
+/* Add a widget: search, the list, a size, the widget as it will be, Add to Home. */
+.add {
   display: grid;
-  gap: 12px;
-}
-.gal-item {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
   gap: 14px;
-  align-items: start;
-  padding: 12px;
-  border-radius: var(--r-inner);
-  background: var(--inset);
 }
-.gal-prev {
-  max-width: 100%;
-  overflow: auto;
-  scrollbar-width: none;
-}
-.gal-meta {
+.add-list {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px;
-  min-width: 0;
-  align-content: start;
+  max-height: 208px;
+  overflow-y: auto;
 }
-.gal-meta > b {
+.add-pick {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  height: 40px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  color: var(--p-fg);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.add-pick .ic {
+  flex: none;
+  color: var(--p-fg2);
+}
+.add-pick span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.add-pick[aria-pressed='true'] {
+  background: var(--inset-2);
+}
+.add-about {
+  display: grid;
+  gap: 2px;
+}
+.add-about b {
   font-family: var(--f-display);
   font-weight: var(--fw-display);
   font-size: 15px;
 }
-.gal-sizes {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+/* The preview sits on a plain backdrop, so it reads as glass without the scene's glow. */
+.add-prev {
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  border-radius: var(--r-inner);
+  background: var(--inset);
+  overflow: auto;
+  scrollbar-width: none;
 }
-.gal-meta .btn {
-  justify-self: start;
-  margin-top: 4px;
+.add .btn {
+  justify-self: stretch;
+  justify-content: center;
 }
-@media (max-width: 639px) {
-  .gal-item {
-    grid-template-columns: minmax(0, 1fr);
-  }
+
+/* Edit Home: a tapped widget is outlined and offers Small · Medium · Large under it. */
+.home[data-editing='true'] .widget.sel {
+  z-index: 40;
+  animation: none;
+  outline: 2px solid var(--p-accent);
+  outline-offset: -2px;
+}
+.wg-pick {
+  position: absolute;
+  z-index: 41;
+  top: calc(100% + 8px);
+  left: 0;
+  padding: 6px;
+  border-radius: 16px;
+  background: var(--tip-bg);
+  box-shadow:
+    inset 0 0 0 1px var(--line),
+    0 20px 40px -16px rgba(0, 0, 0, 0.5);
+  white-space: nowrap;
+  cursor: default;
+}
+.wg-pick.up {
+  top: auto;
+  bottom: calc(100% + 8px);
+}
+.wg-pick.end {
+  left: auto;
+  right: 0;
 }
