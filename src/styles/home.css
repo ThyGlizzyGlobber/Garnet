@@ -476,89 +476,6 @@
 .m-tall {
   gap: 10px;
 }
-.wx {
-  gap: 6px;
-}
-.wx-now {
-  display: grid;
-  gap: 2px;
-}
-.wx-place {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12.5px;
-  font-weight: 700;
-  color: var(--p-fg2);
-}
-.wx-temp {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.wx-temp span {
-  font-family: var(--f-num);
-  font-size: clamp(30px, 26cqh, 52px);
-  font-weight: 500;
-  letter-spacing: -0.03em;
-  line-height: 1;
-}
-.wx-ic {
-  color: var(--p-accent2);
-}
-.wx-sky {
-  font-size: 12.5px;
-  color: var(--p-fg2);
-}
-.wx-m {
-  flex-direction: row !important;
-  align-items: center;
-  gap: 16px;
-}
-.wx-days {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: 1fr;
-  gap: 4px;
-  flex: 1;
-}
-.wx-d {
-  display: grid;
-  justify-items: center;
-  gap: 3px;
-  padding: 8px 2px;
-  border-radius: 12px;
-  font-size: 12px;
-  color: var(--p-fg);
-}
-.wx-d .ic {
-  color: var(--p-fg2);
-}
-.wx-d.heat {
-  background: color-mix(in srgb, var(--warn) 14%, transparent);
-}
-.wx-d.cool {
-  background: color-mix(in srgb, var(--p-accent) 16%, transparent);
-}
-.wx-l .wx-days {
-  flex: none;
-  margin: 8px 0;
-}
-.wx-line {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin: 0;
-  font-weight: 650;
-  font-size: 13px;
-}
-.wx-line .ic {
-  color: var(--warn);
-}
-.wx-s .chip {
-  align-self: flex-start;
-  margin-top: auto;
-}
 .nd-s {
   gap: 4px;
 }
@@ -1401,9 +1318,6 @@
   .wg-h {
     margin-bottom: 5px;
   }
-  .wx-sky {
-    display: none;
-  }
 }
 @container (max-height: 150px) {
   .nt-list > :nth-child(n + 2) {
@@ -1463,7 +1377,6 @@
   .sa-s > .muted,
   .nd-s .btn,
   .ib-fig span,
-  .wx-s .chip,
   .nt-s > .muted,
   .mn-body .chip,
   .pl-body .muted,

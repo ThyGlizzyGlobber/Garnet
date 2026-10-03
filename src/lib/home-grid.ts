@@ -160,6 +160,29 @@ export function convertPages(pages: Pages, converts: (id: string) => boolean = (
   );
 }
 
+/** The widgets already drawn in the three sizes (SCOPE-widgets.md W2); the rest follow in W3. */
+const THREE_SIZES = new Set(['month', 'weather', 'nextdue', 'owes', 'inbox']);
+const threeSizes = (id: string): boolean => THREE_SIZES.has(id) || id.startsWith('svc-');
+
+/**
+ * A layout brought up to date: "Shares settled" is part of Settle up now (it
+ * becomes Settle up, or goes when Settle up is already there), and every
+ * widget drawn in the three sizes takes the nearest of them.
+ */
+function upgrade(pages: Pages): Pages {
+  const hasOwes = pages.some((pg) => pg.some((it) => it.id === 'owes'));
+  let renamed = false;
+  const merged = pages.map((pg) =>
+    pg.flatMap((it) => {
+      if (it.id !== 'settled') return [it];
+      if (hasOwes || renamed) return [];
+      renamed = true;
+      return [{ ...it, id: 'owes' }];
+    }),
+  );
+  return convertPages(merged, threeSizes);
+}
+
 /** The sizes a widget can take on this grid. */
 export function sizesOn(sizes: [number, number][], cols: number, rows: number): [number, number][] {
   return sizes.filter(([w, h]) => w <= cols && h <= rows);
@@ -262,7 +285,7 @@ const HOME_DEFAULTS: Record<Device, Def> = {
       ['nextdue', 1, 1],
       ['week', 3, 1],
       ['owes', 2, 1],
-      ['settled', 1, 1],
+      ['inbox', 1, 1],
     ],
     [
       ['services', 3, 1],
@@ -352,7 +375,6 @@ const WALL_DEFAULT: Def = [
 /** What a household can show in place of a widget it can't (not splitting, no postcode). */
 const SPLIT_ONLY: Record<string, string> = {
   owes: 'calendar',
-  settled: 'plan',
   setaside: 'forecast',
 };
 
@@ -387,7 +409,7 @@ export function defaultLayout(device: Device, kind: LayoutKind, facts: Household
       .map(([id, w, h]) => ({ id: swapFor(id, facts), w, h }))
       .filter((it) => (seen.has(it.id) ? false : (seen.add(it.id), true))),
   );
-  return { density: kind === 'wall' ? 'standard' : HOME_DENSITY[device], pages };
+  return { density: kind === 'wall' ? 'standard' : HOME_DENSITY[device], pages: upgrade(pages) };
 }
 
 /** A stored layout checked before use: known shape, sane numbers, at most 40 pages. */
@@ -408,5 +430,5 @@ export function parseLayout(raw: unknown): Layout | null {
     }
     out.push(items);
   }
-  return { density: density as Density, pages: out };
+  return { density: density as Density, pages: upgrade(out) };
 }

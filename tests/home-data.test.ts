@@ -48,6 +48,19 @@ describe('homeData', () => {
     expect(d.month.day).toBe(29);
     expect(d.month.projectedMinor).toBeGreaterThanOrEqual(d.month.knownMinor);
     expect(d.monthly).toHaveLength(12);
+    // This month's ring: what's due, and how much of it the providers have.
+    expect(d.month.bills).toBeGreaterThan(0);
+    expect(d.month.paidBills).toBeLessThanOrEqual(d.month.bills);
+    expect(d.month.paidMinor).toBeLessThanOrEqual(d.month.dueMinor);
+    expect(d.month.dueMinor).toBe(d.month.knownMinor);
+    // A metered service carries its usage a day; a split one, its shares paid.
+    const power = d.services.find((x) => x.name === 'Electricity')!;
+    expect(power.usage?.perDay).toBeGreaterThan(0);
+    expect(power.usage?.unit).toBe('kWh');
+    const rent = d.services.find((x) => x.name === 'Rent')!;
+    expect(rent.usage).toBeNull();
+    expect(rent.shares!.paid).toBeLessThanOrEqual(rent.shares!.total);
+    expect(rent.shares!.total).toBe(2);
     expect(d.forecast).toHaveLength(6);
     // What Alex pays next is in due-date order, nothing already paid, nothing a month away.
     for (let i = 1; i < d.upcoming.length; i++)

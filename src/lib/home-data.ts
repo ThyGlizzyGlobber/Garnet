@@ -46,6 +46,15 @@ interface HomeService {
   } | null;
   /** Cost per day against the same time last year, as a fraction. */
   vsLastYear: number | null;
+  /** The latest bill's usage a day, with the household's limit when one is set. */
+  usage: {
+    perDay: number;
+    unit: string;
+    limitPerDay: number | null;
+    vsLastYear: number | null;
+  } | null;
+  /** Housemates' shares of what is due next on the latest bill: how many are paid. */
+  shares: { paid: number; total: number } | null;
 }
 
 export interface Upcoming {
@@ -85,6 +94,11 @@ export interface HomeData {
     day: number;
     days: number;
     knownMinor: number;
+    /** The household's bills and instalments due this month: how many, and how much is paid. */
+    bills: number;
+    paidBills: number;
+    dueMinor: number;
+    paidMinor: number;
     projectedMinor: number;
     vsLastMonth: number | null;
     byService: { id: string; minor: number }[];
@@ -223,6 +237,24 @@ export function homeData(hh: Household, me: Member, today: string, db: Db = getD
       status: billStatus(paid, due.dueDate, today),
     };
   };
+  const usageOf = (id: string): HomeService['usage'] => {
+    const u = usage.find((x) => x.serviceId === id);
+    if (!u || u.latest.perDay === null) return null;
+    return {
+      perDay: u.latest.perDay,
+      unit: u.unit ?? '',
+      limitPerDay: u.limit?.perDay ?? null,
+      vsLastYear: u.lastYear?.usage.pct ?? null,
+    };
+  };
+  const sharesPaidOf = (id: string): HomeService['shares'] => {
+    const b = bills.find((x) => x.serviceId === id);
+    if (!split || !b || b.ownerMemberId) return null;
+    const list = sharesOf(b.id, dueNow(b).seq ?? 0).filter(
+      (s) => s.memberId !== b.service.payerMemberId,
+    );
+    return list.length ? { paid: list.filter((s) => s.paidAt).length, total: list.length } : null;
+  };
   const toService = (s: ReturnType<typeof listServices>[number]): HomeService => ({
     id: s.id,
     name: s.name,
@@ -234,6 +266,8 @@ export function homeData(hh: Household, me: Member, today: string, db: Db = getD
     spark: series.map((r) => r.byService[s.id] ?? 0),
     latest: latestOf(s.id),
     vsLastYear: usage.find((u) => u.serviceId === s.id)?.lastYear?.cost.pct ?? null,
+    usage: usageOf(s.id),
+    shares: sharesPaidOf(s.id),
   });
   const services = listServices(hh.id, {}, db).map(toService);
   const mine = listServices(hh.id, { owner: me.id }, db).map((s) => ({
@@ -247,6 +281,20 @@ export function homeData(hh: Household, me: Member, today: string, db: Db = getD
   const next = fresh ? null : projectMonth(hh.id, nextMonth(today), db);
   const lastMonthTotal = series.at(-2)?.total ?? 0;
   const yourMinor = projected?.setAside.find((s) => s.member.id === me.id)?.minor ?? null;
+
+  // The household's bills and instalments due this month, and which the provider has.
+  const dueThisMonth = bills
+    .filter((b) => !b.ownerMemberId)
+    .flatMap((b) =>
+      paysByInstalments(b)
+        ? b.instalments.map((i) => ({
+            dueDate: i.dueDate,
+            minor: i.amountMinor,
+            paid: !!i.paidToProviderAt,
+          }))
+        : [{ dueDate: b.dueDate, minor: b.amountMinor, paid: !!b.paidToProviderAt }],
+    )
+    .filter((x) => x.dueDate >= mStart && x.dueDate <= mEnd);
 
   // What the viewer pays next (a month ahead).
   const upcoming: Upcoming[] = [];
@@ -569,6 +617,10 @@ export function homeData(hh: Household, me: Member, today: string, db: Db = getD
       day: Number(today.slice(8, 10)),
       days: daysInclusive(mStart, mEnd),
       knownMinor: thisMonth.total,
+      bills: dueThisMonth.length,
+      paidBills: dueThisMonth.filter((x) => x.paid).length,
+      dueMinor: dueThisMonth.reduce((s, x) => s + x.minor, 0),
+      paidMinor: dueThisMonth.filter((x) => x.paid).reduce((s, x) => s + x.minor, 0),
       projectedMinor: Math.max(projected?.totalMinor ?? thisMonth.total, thisMonth.total),
       vsLastMonth: lastMonthTotal > 0 ? (thisMonth.total - lastMonthTotal) / lastMonthTotal : null,
       byService: thisMonth.byService.map((t) => ({ id: t.service.id, minor: t.minor })),

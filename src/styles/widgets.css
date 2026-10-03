@@ -377,3 +377,57 @@
 .wx-cap .wx-sk {
   margin: calc(var(--u) * 2.4) auto;
 }
+
+/* A tap anywhere opens what the widget is about; its buttons and rows sit above. */
+.wx-link {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+}
+.wx-foot,
+a.wx-row {
+  position: relative;
+  z-index: 1;
+}
+.wx-round {
+  z-index: 1;
+}
+
+/* Bars: the months up to now, the latest in the widget's colour. */
+.wx-bars {
+  flex: 1;
+  min-height: calc(var(--u) * 24);
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+}
+.wx-bars > div {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 4px;
+}
+.wx-bars i {
+  display: block;
+  border-radius: 4px;
+  background: var(--line-2);
+}
+.wx-bars .on i {
+  background: var(--wx-c);
+}
+.wx-bars span {
+  font-size: 9.5px;
+  font-weight: 600;
+  line-height: 1;
+  text-align: center;
+  color: var(--p-fg3);
+}
+
+/* The wall is read, not tapped. */
+.wall-app .wx-foot,
+.wall-app .wx-round {
+  display: none;
+}

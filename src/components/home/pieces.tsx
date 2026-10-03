@@ -57,6 +57,8 @@ export interface WxSpec {
   /** Large: the chart or list under the top block. */
   body?: ReactNode;
   action?: WxAction;
+  /** Where a tap on the widget goes (its buttons and list rows keep their own). */
+  href?: string;
 }
 
 const R = 45.25;
@@ -177,6 +179,21 @@ export function WxKv({ label, value, tone }: WxFact) {
   );
 }
 
+/** A few bars, the last one in the widget's colour: the months up to now. */
+export function WxBars({ values, labels }: { values: number[]; labels: string[] }) {
+  const max = Math.max(...values, 0);
+  return (
+    <div className="wx-bars">
+      {values.map((v, i) => (
+        <div key={i} className={i === values.length - 1 ? 'on' : undefined}>
+          <i style={{ height: `${max > 0 ? Math.max(4, (v / max) * 100) : 4}%` }} />
+          <span>{labels[i]}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function WxRows({ children }: { children: ReactNode }) {
   return <div className="wx-rows">{children}</div>;
 }
@@ -211,9 +228,11 @@ export function WxCard({ spec, size }: { spec: WxSpec; size: WxSize }) {
     '--wx-c': spec.overdue ? 'var(--overdue)' : (spec.colour ?? 'var(--p-accent)'),
   } as CSSProperties;
   const cls = `wx wx-${size}${spec.instrument.kind === 'plain' ? ' wx-pl' : ''}`;
+  const link = spec.href && <Link href={spec.href} className="wx-link" aria-label={spec.title} />;
   if (size === 's')
     return (
       <div className={cls} style={style}>
+        {link}
         <Instrument i={spec.instrument} />
         <div className="wx-cap">
           <b>{spec.cap[0]}</b>
@@ -223,6 +242,7 @@ export function WxCard({ spec, size }: { spec: WxSpec; size: WxSize }) {
     );
   return (
     <div className={cls} style={style}>
+      {link}
       <div className="wx-top">
         <Instrument i={spec.instrument} />
         <div className="wx-col">

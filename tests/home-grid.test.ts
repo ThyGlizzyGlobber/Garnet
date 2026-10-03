@@ -339,3 +339,62 @@ describe('a measurement inside a gauge', () => {
     expect(unitInline('1,204', 'L')).toBe(false);
   });
 });
+
+describe('a saved layout brought up to date', () => {
+  const stored = (pages: unknown) => parseLayout({ density: 'standard', pages })!.pages;
+
+  it('gives the widgets drawn in three sizes the nearest size and leaves the rest', () => {
+    expect(
+      stored([
+        [
+          { id: 'month', w: 4, h: 2 },
+          { id: 'nextdue', w: 2, h: 3 },
+          { id: 'weather', w: 3, h: 1 },
+          { id: 'svc-abc', w: 2, h: 1 },
+          { id: 'week', w: 3, h: 1 },
+        ],
+      ]),
+    ).toEqual([
+      [
+        { id: 'month', w: 2, h: 2 },
+        { id: 'nextdue', w: 2, h: 2 },
+        { id: 'weather', w: 2, h: 1 },
+        { id: 'svc-abc', w: 2, h: 1 },
+        { id: 'week', w: 3, h: 1 },
+      ],
+    ]);
+  });
+
+  it('folds Shares settled into Settle up', () => {
+    // Both on Home: Settle up stays, Shares settled goes.
+    expect(
+      stored([[{ id: 'owes', w: 2, h: 1 }], [{ id: 'settled', w: 1, h: 1 }]]).map((pg) =>
+        pg.map((x) => x.id),
+      ),
+    ).toEqual([['owes'], []]);
+    // Only Shares settled: it becomes Settle up, where it was, at its size.
+    expect(
+      stored([
+        [
+          { id: 'settled', w: 1, h: 1 },
+          { id: 'week', w: 2, h: 1 },
+        ],
+      ]),
+    ).toEqual([
+      [
+        { id: 'owes', w: 1, h: 1 },
+        { id: 'week', w: 2, h: 1 },
+      ],
+    ]);
+  });
+
+  it('starts every screen with sizes the widgets have', () => {
+    for (const device of ['desktop', 'tabletL', 'tabletP', 'phone'] as const)
+      for (const fresh of [false, true])
+        for (const it of defaultLayout(device, 'home', { ...facts, fresh }).pages.flat()) {
+          expect(it.id).not.toBe('settled');
+          if (['month', 'weather', 'nextdue', 'owes', 'inbox'].includes(it.id))
+            expect(SIZE_LIST).toContainEqual([it.w, it.h]);
+        }
+  });
+});
