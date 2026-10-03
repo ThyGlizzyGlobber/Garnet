@@ -219,10 +219,9 @@ export default async function DesignPage() {
               ['Paid', 'var(--ok)'],
               ['Due', 'var(--warn)'],
               ['Overdue', 'var(--bad)'],
-              ['Scene 1', 'var(--p-blob1)'],
-              ['Scene 2', 'var(--p-blob2)'],
-              ['Scene 3', 'var(--p-blob3)'],
-              ['Scene 4', 'var(--p-blob4)'],
+              ['Scene 1', 'var(--p-glow1)'],
+              ['Scene 2', 'var(--p-glow2)'],
+              ['Scene 3', 'var(--p-glow3)'],
             ].map(([n, v]) => (
               <div key={n} className="flex items-center gap-2">
                 <i className="size-5 rounded-full" style={{ background: v }} />

@@ -226,9 +226,7 @@
   the scene shows faintly through a blur rather than a solid slab. It sets its own dark tokens, so everything in it, the household and
   account menus included, reads light on dark without rules of its own.
 */
-/* Outranks the solid-glass rules for Reduce transparency (globals.css), which
-   would otherwise paint it light grey. */
-:root .app > .nav.column {
+.app > .nav.column {
   background: var(--side-bg);
   -webkit-backdrop-filter: blur(24px) saturate(120%);
   backdrop-filter: blur(24px) saturate(120%);

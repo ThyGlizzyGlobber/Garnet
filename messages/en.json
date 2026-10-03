@@ -2102,13 +2102,6 @@
       "light": "Light",
       "dark": "Dark",
       "auto": "Automatic"
-    },
-    "glass": "Reduce Transparency",
-    "glassBody": "Automatic follows your phone or computer.",
-    "glassModes": {
-      "clear": "Glass",
-      "solid": "Frosted",
-      "auto": "Automatic"
     }
   },
   "ui": {

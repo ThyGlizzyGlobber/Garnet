@@ -19,7 +19,7 @@ export const dynamic = 'force-dynamic';
 /**
  * The Account Dashboard (SCOPE-accounts.md §3): every household this person
  * belongs to as a tile leading with what they owe there, Start and Join
- * tiles, and the Account card (name, email, sign-in, PIN, light/dark, glass,
+ * tiles, and the Account card (name, email, sign-in, PIN, light/dark,
  * sign out). Numbers from accountView().
  */
 export default async function AccountPage({

@@ -165,10 +165,9 @@ export async function setPinAction(_prev: ActionState, fd: FormData): Promise<Ac
 }
 
 export async function logout(): Promise<void> {
-  // The sign-in page keeps this person's light/dark and glass on this device.
+  // The sign-in page keeps this person's light or dark on this device.
   const s = await authState();
-  if (s.kind === 'ok' && s.account)
-    await rememberAppearance({ theme: s.account.theme, glass: s.account.glass });
+  if (s.kind === 'ok' && s.account) await rememberAppearance({ theme: s.account.theme });
   await signOut();
   redirect('/login');
 }

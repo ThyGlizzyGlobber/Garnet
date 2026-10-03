@@ -39,10 +39,9 @@ describe('the one colour scheme in globals.css', () => {
   const tokenNames = [
     '--p-bg',
     '--p-ground',
-    '--p-blob1',
-    '--p-blob2',
-    '--p-blob3',
-    '--p-blob4',
+    '--p-glow1',
+    '--p-glow2',
+    '--p-glow3',
     '--p-accent',
     '--p-accent2',
     '--p-on-accent',
@@ -81,14 +80,15 @@ describe('the one colour scheme in globals.css', () => {
 
 describe('the appearance cookie', () => {
   it('round-trips and falls back to the default', () => {
-    expect(formatAppearance({ theme: 'dark', glass: 'clear' })).toBe('dark.clear');
-    expect(parseAppearance('dark.clear')).toEqual({ theme: 'dark', glass: 'clear' });
-    expect(parseAppearance('dusk.frosty')).toEqual({ theme: 'auto', glass: 'auto' });
+    expect(formatAppearance({ theme: 'dark' })).toBe('dark');
+    expect(parseAppearance('dark')).toEqual({ theme: 'dark' });
+    expect(parseAppearance('dusk.frosty')).toEqual({ theme: 'auto' });
     expect(parseAppearance(undefined)).toEqual(DEFAULT_APPEARANCE);
-    // Cookies from the preset days read "preset.theme.glass"; the preset is ignored.
-    expect(parseAppearance('violet.light.solid')).toEqual({ theme: 'light', glass: 'solid' });
-    expect(parseAppearance('ruby.dark')).toEqual({ theme: 'dark', glass: 'auto' });
-    expect(DEFAULT_APPEARANCE).toEqual({ theme: 'auto', glass: 'auto' });
+    // Older cookies carried a preset before the theme and a glass choice after it; both are ignored.
+    expect(parseAppearance('dark.clear')).toEqual({ theme: 'dark' });
+    expect(parseAppearance('violet.light.solid')).toEqual({ theme: 'light' });
+    expect(parseAppearance('ruby.dark')).toEqual({ theme: 'dark' });
+    expect(DEFAULT_APPEARANCE).toEqual({ theme: 'auto' });
   });
 });
 
@@ -126,9 +126,9 @@ describe('an account’s appearance', () => {
 
   it('starts automatic and keeps what the person picks, on the account not the household', () => {
     const account = signInAccount({ email: 'casey@example.com', name: 'Casey' }, db);
-    expect([account.theme, account.glass]).toEqual(['auto', 'auto']);
-    setAccountAppearance(account.id, { theme: 'dark', glass: 'solid' }, db);
-    expect(getAccount(account.id, db)).toMatchObject({ theme: 'dark', glass: 'solid' });
+    expect(account.theme).toBe('auto');
+    setAccountAppearance(account.id, { theme: 'dark' }, db);
+    expect(getAccount(account.id, db)).toMatchObject({ theme: 'dark' });
 
     const { ownerId } = setUpHousehold(
       account,
@@ -149,6 +149,6 @@ describe('an account’s appearance', () => {
     );
     expect(ownerId).toBeTruthy();
     // Starting a household changes nothing about how the app looks for them.
-    expect(getAccount(account.id, db)).toMatchObject({ theme: 'dark', glass: 'solid' });
+    expect(getAccount(account.id, db)).toMatchObject({ theme: 'dark' });
   });
 });

@@ -14,8 +14,7 @@ const APPEARANCE_COOKIE = 'hud_appearance';
  */
 export const getAppearance = cache(async (): Promise<Appearance> => {
   const s = await authState();
-  if (s.kind !== 'anonymous' && s.account)
-    return { theme: s.account.theme, glass: s.account.glass };
+  if (s.kind !== 'anonymous' && s.account) return { theme: s.account.theme };
   return parseAppearance((await cookies()).get(APPEARANCE_COOKIE)?.value);
 });
 

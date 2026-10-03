@@ -108,8 +108,6 @@ export const household = sqliteTable(
 
 /** Light, dark, or auto (follow the device). */
 export const THEMES = ['auto', 'light', 'dark'] as const;
-/** Glass cards: clear, solid, or auto (follow the device's Reduce transparency). */
-export const GLASS_MODES = ['auto', 'clear', 'solid'] as const;
 
 /**
  * A person who can sign in (Google or an emailed one-time code). Accounts are
@@ -129,9 +127,8 @@ export const account = sqliteTable(
      * they belong to (SCOPE-accounts.md D2). Nobody else can set or see it.
      */
     pinHash: text('pin_hash'),
-    /** Light, dark or automatic, and the glass, following the person to every device (D3). */
+    /** Light, dark or automatic, following the person to every device (D3). */
     theme: text('theme', { enum: THEMES }).notNull().default('auto'),
-    glass: text('glass', { enum: GLASS_MODES }).notNull().default('auto'),
     /** The household they were last in, so a new device starts somewhere sensible (D6). */
     lastMemberId: text('last_member_id'),
     lastSignInAt: text('last_sign_in_at'),

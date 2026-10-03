@@ -3,12 +3,12 @@
 import type { FormEvent, ReactNode } from 'react';
 
 /** Which attribute on <html> each Appearance choice sets (see the root layout). */
-const ATTR = { theme: 'theme', glass: 'glass' } as const;
+const ATTR = { theme: 'theme' } as const;
 
 type WithViewTransition = Document & { startViewTransition?: (update: () => void) => unknown };
 
 /**
- * Settings → Appearance: picking light or dark, or the glass, fades
+ * Appearance: picking light or dark fades
  * the page into the new look instead of cutting to it (owner, 2026-10-01).
  * The choice is put on <html> at once, inside a view transition, and the
  * form goes on to save it; the page the server sends back carries the same

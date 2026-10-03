@@ -15,7 +15,7 @@ import { replaceAlias } from '@/lib/bills-address';
 import { getHousehold, updateHousehold } from '@/lib/households';
 import { redirect } from 'next/navigation';
 import { exitDemo } from '@/lib/demo';
-import { isGlass, isTheme } from '@/lib/appearance';
+import { isTheme } from '@/lib/appearance';
 import { ALLOWANCE_PERIODS, HOUSEHOLD_TYPES } from '@/db/schema';
 import { parseMoneyToMinor } from '@/lib/format';
 import { isHouseholdType } from '@/lib/household-types';
@@ -81,7 +81,7 @@ export async function updateSettingsAction(_prev: ActionState, fd: FormData): Pr
 }
 
 /**
- * Light/dark and glass (Settings → Appearance). Saved on the account, so every
+ * Light or dark (Appearance). Saved on the account, so every
  * device and household follows; the demo keeps it in the browser only.
  */
 export async function saveAppearanceAction(fd: FormData): Promise<void> {
@@ -89,11 +89,7 @@ export async function saveAppearanceAction(fd: FormData): Promise<void> {
   if (s.kind !== 'ok') redirect('/');
   const current = await getAppearance();
   const theme = str(fd, 'theme');
-  const glass = str(fd, 'glass');
-  const next = {
-    theme: isTheme(theme) ? theme : current.theme,
-    glass: isGlass(glass) ? glass : current.glass,
-  };
+  const next = { theme: isTheme(theme) ? theme : current.theme };
   if (s.account) setAccountAppearance(s.account.id, next);
   await rememberAppearance(next);
   revalidatePath('/', 'layout');

@@ -59,7 +59,6 @@ export function signInAccount(
     googleSub: input.googleSub ?? null,
     pinHash: null,
     theme: 'auto',
-    glass: 'auto',
     lastMemberId: null,
     lastSignInAt: now,
     avatarAt: null,
@@ -165,10 +164,10 @@ export function setAccountPin(accountId: string, pinHash: string, db: Db = getDb
   touchAccount(accountId, { pinHash }, db);
 }
 
-/** Light/dark and glass follow the person (D3). */
+/** Light or dark follows the person (D3). */
 export function setAccountAppearance(
   accountId: string,
-  a: Pick<Account, 'theme' | 'glass'>,
+  a: Pick<Account, 'theme'>,
   db: Db = getDb(),
 ): void {
   touchAccount(accountId, a, db);

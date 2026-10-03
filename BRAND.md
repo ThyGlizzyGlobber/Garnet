@@ -104,16 +104,17 @@ account, with a cookie for the pages before sign-in. The roles, from §1:
 neutral grey for the page, **Graphite** for buttons, links and the active state,
 **Pyrope** red only for the brand mark and for warnings.
 
-| Token                            | Light                         | Dark                       | Use                                           |
-| -------------------------------- | ----------------------------- | -------------------------- | --------------------------------------------- |
-| `--p-bg`                         | `#f5f5f5`                     | `#1c1c1c`                  | page colour; also the browser's `theme-color` |
-| `--p-ground`                     | `#fafafa` → `#efefef`         | `#242424` → `#181818`      | the scene's base, a 160° gradient             |
-| `--p-blob1`                      | Pyrope at 16%                 | Pyrope at 34%              | the one warm glow in the scene                |
-| `--p-blob2` … `--p-blob4`        | greys                         | greys, a little Pyrope 700 | the scene's other blobs                       |
-| `--p-accent`                     | `#3a3a3a` (Graphite)          | `#d6d6d6`                  | main buttons, the active state, rings, links  |
-| `--p-accent2`                    | `#5c5c5c`                     | `#b8b8b8`                  | gradient partner for rings, arcs and progress |
-| `--p-on-accent`                  | `#ffffff`                     | `#1c1c1c`                  | text and icons on the accent                  |
-| `--p-fg` · `--p-fg2` · `--p-fg3` | `#1c1c1c` `#5c5c5c` `#757575` | `#f5f5f5` at 100/70/50%    | text: primary, secondary, tertiary            |
+| Token                            | Light                         | Dark                    | Use                                           |
+| -------------------------------- | ----------------------------- | ----------------------- | --------------------------------------------- |
+| `--p-bg`                         | `#f5f5f5`                     | `#1c1c1c`               | page colour; also the browser's `theme-color` |
+| `--p-ground`                     | `#fafafa` → `#efefef`         | `#242424` → `#181818`   | the scene's base, a 160° gradient             |
+| `--p-glow1`                      | Pyrope at 16%                 | Pyrope at 38%           | the scene's warm glow, top-left               |
+| `--p-glow2`                      | grey `#b8b8b8` at 55%         | grey `#5c5c5c` at 45%   | the glow off the right edge                   |
+| `--p-glow3`                      | grey `#757575` at 22%         | Pyrope 700 at 24%       | the glow low on the left                      |
+| `--p-accent`                     | `#3a3a3a` (Graphite)          | `#d6d6d6`               | main buttons, the active state, rings, links  |
+| `--p-accent2`                    | `#5c5c5c`                     | `#b8b8b8`               | gradient partner for rings, arcs and progress |
+| `--p-on-accent`                  | `#ffffff`                     | `#1c1c1c`               | text and icons on the accent                  |
+| `--p-fg` · `--p-fg2` · `--p-fg3` | `#1c1c1c` `#5c5c5c` `#757575` | `#f5f5f5` at 100/70/50% | text: primary, secondary, tertiary            |
 
 The tokens are keyed on `data-palette="garnet"` and `data-theme` on `<html>`
 (set by the root layout before first paint); `SCHEME` and `SCHEME_BG` in
@@ -192,15 +193,15 @@ Members keep the eight-colour palette. Series that share a colour in a chart
 
 Behind everything, fixed to the viewport (`<Scene />` in the root layout):
 
-- the preset's **ground** (`--p-ground`);
-- four **blobs**: radial gradients (`closest-side`, fading to transparent) sized
-  78 %, 80 %, 86 % and 58 % of the screen width, placed top-left, right,
-  bottom-centre and bottom-right, each drifting and breathing over 40–52 s
-  (`drift1`–`drift4`, alternate, ease-in-out);
-- **film grain** (SVG fractal noise, overlay blend) at 6 % light / 9 % dark;
-- a **vignette** from 55 % out to `--vig`.
+- the **ground** (`--p-ground`);
+- three **glows** that hold still (owner, 2026-10-03, from the widget design
+  canvas): elliptical radial gradients fading to transparent at 70 %. Pyrope at
+  12 % 6 % (about half the screen wide), a grey one at 92 % 38 %, and a third
+  at 20 % 92 % (grey in light, deep Pyrope in dark). Each keeps a minimum size
+  (520, 620 and 560 px wide) so a phone still gets the wash.
 
-No photographs. The scene holds still under `prefers-reduced-motion`.
+No photographs, no drifting blobs, no film grain, no vignette, and no
+brightness filter on the scene.
 
 ## 4. Typography
 
@@ -229,27 +230,26 @@ the old colours, not the old type.
 Clear glass over the scene: more of the colour shows through than before, with
 a soft specular rim catching light from the top-left.
 
-| Token                             | Light                                             | Dark                               |
-| --------------------------------- | ------------------------------------------------- | ---------------------------------- |
-| `--g-bg`                          | `rgba(250,251,253,.32)`                           | `rgba(255,255,255,.07)`            |
-| `--g-bg-strong`                   | preset page colour 62 % over white 30 %           | preset page colour 72 %            |
-| card blur · saturate              | 8 px · 165 % (`--g-card-blur`, `--g-card-sat`)    | the same                           |
-| strong blur · saturate · bright   | 30 px · 150 % · 1.05                              | 30 px · 150 % · 0.96               |
-| `--g-rim` (1 px card ring)        | white 34 %                                        | white 13 %                         |
-| `--g-lens` (inner glow, 18 px)    | white 20 %                                        | white 6 %                          |
-| `--g-hi` (1 px top highlight)     | white 85 %                                        | white 22 %                         |
-| `--g-spec` (rim, top-left)        | white 92 %                                        | white 45 %                         |
-| `--g-shadow`                      | `0 28px 56px -30px` + `0 2px 8px -4px`, blue-grey | the same, black 70 % / 30 %        |
-| `--g-solid`                       | `#f7f8fa`                                         | `#262b34`                          |
-| `--g-tint` (reduced transparency) | preset page colour 55 % with white                | preset page colour 88 % with white |
-| `--ctl-bg` · `--ctl-rim`          | white 42 % · 70 %                                 | white 9 % · 16 %                   |
+| Token                           | Light                                             | Dark                        |
+| ------------------------------- | ------------------------------------------------- | --------------------------- |
+| `--g-bg`                        | `rgba(250,251,253,.32)`                           | `rgba(255,255,255,.07)`     |
+| `--g-bg-strong`                 | preset page colour 62 % over white 30 %           | preset page colour 72 %     |
+| card blur · saturate            | 8 px · 165 % (`--g-card-blur`, `--g-card-sat`)    | the same                    |
+| strong blur · saturate · bright | 30 px · 150 % · 1.05                              | 30 px · 150 % · 0.96        |
+| `--g-rim` (1 px card ring)      | white 34 %                                        | white 13 %                  |
+| `--g-lens` (inner glow, 18 px)  | white 20 %                                        | white 6 %                   |
+| `--g-hi` (1 px top highlight)   | white 85 %                                        | white 22 %                  |
+| `--g-spec` (rim, top-left)      | white 92 %                                        | white 45 %                  |
+| `--g-shadow`                    | `0 28px 56px -30px` + `0 2px 8px -4px`, blue-grey | the same, black 70 % / 30 % |
+| `--g-solid`                     | `#f7f8fa`                                         | `#262b34`                   |
+| `--ctl-bg` · `--ctl-rim`        | white 42 % · 70 %                                 | white 9 % · 16 %            |
 
 The recipe (Tailwind components layer, so utilities on the same element win):
 
 - **`.glass`**, a card: clear glass like the preset previews (owner,
   2026-10-01): `--g-bg` with a light 8 px blur and a mild saturation, so the
   scene's colour shows through; in dark it is smoked glass (a 30 % tint of the
-  preset's page colour, dimmed to 0.88) over a scene lifted to 1.25, so
+  preset's page colour, dimmed to 0.88), so
   coloured lines and figures on a card stay easy to read while the glow still
   shows; `inset 0 0 0 1px rim, inset 0 1px 0 hi,
 shadow` (no inner lens glow, which read as frost), and a `::before` that
@@ -263,13 +263,10 @@ shadow` (no inner lens glow, which read as frost), and a `::before` that
   highlight. No blur of its own.
 
 Layers: **scene → glass → controls**. Never glass on glass on glass, and keep
-a screen to about ten blurred surfaces (older iPads). Under
-`prefers-reduced-transparency` (macOS: Accessibility → Display → Reduce
-transparency) the glass turns solid in the preset's colour (`--g-tint`) and
-stops blurring. Each person can choose in Settings → Appearance → Reduce
-Transparency: Glass (always clear), Frosted (always solid) or Automatic
-(follow the device); stored as `member.glass` (clear · solid · auto) and set as
-`data-glass` on `<html>`. Changing colours, light or dark, or the glass fades
+a screen to about ten blurred surfaces (older iPads). The glass is always
+glass: there is no Reduce Transparency setting and the device's
+`prefers-reduced-transparency` is not followed (owner, 2026-10-03: a web app
+keeps its look whatever the device setting). Changing light or dark fades
 the page (a 0.45 s view transition), never a jump cut. Chart tooltips use `--tip-bg`, never glass.
 
 ## 6. Shape and spacing
@@ -390,7 +387,7 @@ Inline stroke icons at 1.8 px, round caps and joins, 18–26 px, from
 Text ≥ 4.5 : 1 on its actual glass; status is never colour alone; every icon
 button has an `aria-label`; touch targets ≥ 44 px; the keyboard reaches every
 action, including moving and resizing widgets; charts have a text equivalent
-nearby; reduced motion and reduced transparency are honoured; iOS/iPadOS 16.4
+nearby; reduced motion is honoured (reduced transparency is not, by the owner's choice); iOS/iPadOS 16.4
 and later.
 
 ## 13. Do / don't

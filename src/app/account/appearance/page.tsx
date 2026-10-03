@@ -7,7 +7,7 @@ import { Segmented } from '@/components/ui/controls';
 import { getAppearance } from '@/lib/auth/appearance';
 import { accountContext } from '../context';
 
-/** Light or dark, and glass or frosted: yours on every device. */
+/** Light or dark: yours on every device. */
 export default async function AppearancePage() {
   await accountContext();
   const ta = await getTranslations('appearance');
@@ -33,25 +33,6 @@ export default async function AppearancePage() {
                   { value: 'light', label: ta('themes.light'), icon: 'sun' },
                   { value: 'dark', label: ta('themes.dark'), icon: 'moon' },
                   { value: 'auto', label: ta('themes.auto'), icon: 'devices' },
-                ]}
-              />
-            </form>
-          </div>
-          <div className="tg-row">
-            <span>
-              <b>{ta('glass')}</b>
-              <span className="muted small">{ta('glassBody')}</span>
-            </span>
-            <form action={saveAppearanceAction}>
-              <Segmented
-                small
-                name="glass"
-                value={look.glass}
-                label={ta('glass')}
-                items={[
-                  { value: 'clear', label: ta('glassModes.clear'), icon: 'layers' },
-                  { value: 'solid', label: ta('glassModes.solid'), icon: 'grid' },
-                  { value: 'auto', label: ta('glassModes.auto'), icon: 'devices' },
                 ]}
               />
             </form>
