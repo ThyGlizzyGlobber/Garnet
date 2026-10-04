@@ -209,8 +209,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  /* Words only (owner, 2026-10-04), at the size it had with its icon. */
-  min-width: 100px;
+  /* Words only (owner, 2026-10-04), a little narrower than it was with its icon. */
+  min-width: 84px;
   height: 26px;
   padding: 0 11px;
   border: 0;
