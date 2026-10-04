@@ -575,7 +575,6 @@ export function HomeGrid({ data, layouts: initial, kind }: Props) {
           (() => {
             const button = (
               <button type="button" className="hg-edit" onClick={() => setEdit(true)}>
-                <Icon name="grid" width={15} height={15} />
                 <span>{t('edit.title')}</span>
               </button>
             );
