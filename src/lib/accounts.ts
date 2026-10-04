@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull } from 'drizzle-orm';
+import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 import { getDb, type Db } from '@/db/client';
 import { account, household, member, type Account, type Member } from '@/db/schema';
 import { markAllowedUsed } from '@/lib/access';
@@ -99,7 +99,13 @@ export interface AccountRecord {
 
 /** Every account on the install, newest first, with the households each belongs to. */
 export function listAccounts(db: Db = getDb()): AccountRecord[] {
-  const rows = db.select().from(account).orderBy(desc(account.createdAt)).all();
+  // Newest first. Two accounts made in the same millisecond share a time (and their ids are
+  // random within it), so the order they were added in settles a tie.
+  const rows = db
+    .select()
+    .from(account)
+    .orderBy(desc(account.createdAt), sql`${account}.rowid desc`)
+    .all();
   const links = db
     .select({
       accountId: member.accountId,

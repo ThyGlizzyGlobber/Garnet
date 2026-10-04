@@ -1,9 +1,11 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { eq } from 'drizzle-orm';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { openDb, type Db } from '@/db/client';
 import { runMigrations } from '@/db/migrate';
+import { account } from '@/db/schema';
 import {
   accountGivenName,
   getAccount,
@@ -112,6 +114,23 @@ describe('accounts', () => {
     expect(all[0]!.households).toEqual([{ id: hh.id, name: 'Listed House', member: 'Lis' }]);
     expect(all.find((x) => x.email === 'jo.bloggs@example.com')!.households).toEqual([]);
     expect(new Set(all.map((x) => x.method))).toEqual(new Set(['code', 'google']));
+  });
+
+  it('made in the same instant are listed in the order they were added, newest first', () => {
+    const first = signInAccount({ email: 'tie-first@example.com' }, db);
+    const second = signInAccount({ email: 'tie-second@example.com' }, db);
+    // The same millisecond: the time alone can't order them.
+    const at = '2031-01-01T00:00:00.000Z';
+    for (const a of [first, second])
+      db.update(account).set({ createdAt: at }).where(eq(account.id, a.id)).run();
+    expect(
+      listAccounts(db)
+        .slice(0, 2)
+        .map((x) => x.email),
+    ).toEqual(['tie-second@example.com', 'tie-first@example.com']);
+    // Put them back so later tests see them at their real time.
+    for (const a of [first, second])
+      db.update(account).set({ createdAt: a.createdAt }).where(eq(account.id, a.id)).run();
   });
 
   it('are operators only when listed in DEVELOPER_EMAILS', () => {
