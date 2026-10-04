@@ -60,7 +60,20 @@
 .page:has(.home[data-editing='true']) .d6-hh {
   display: none;
 }
+/* The greeting, Edit Home and the edit bar are as wide as the grid and sit over
+   it (owner, 2026-10-04). Not on a phone: narrowing the greeting there wraps
+   it onto more lines, which takes height from the grid and narrows it again. */
+@media (min-width: 640px) {
+  .page:has(.home) .d6-hh {
+    width: 100%;
+    max-width: var(--home-w, none);
+    margin-inline: auto;
+  }
+}
 .home-edit {
+  width: 100%;
+  max-width: var(--home-w, none);
+  align-self: center;
   flex: none;
   display: flex;
   align-items: center;
@@ -112,13 +125,15 @@
   scroll-snap-type: x mandatory;
   container-type: size;
   scrollbar-width: none;
-  /* Room around the grid for the cards' shadows, which fall well below them
-     (owner, 2026-10-03: they were being cut off at the grid's edges). The
-     sides can take one gap before the next page would show. */
+  /* Room around the grid for the cards' shadows (owner, 2026-10-03 and -04:
+     they were being cut off at the grid's edges): well below, where they fall
+     furthest, and at both sides. Pages sit a spacer track apart (--page-gap on
+     .hg) so the next page never shows in that side room. */
+  --side: 44px;
   align-self: center;
   margin: calc(var(--gap) * -1) 0 -56px;
-  padding: var(--gap) var(--gap) 56px;
-  scroll-padding-inline: var(--gap);
+  padding: var(--gap) var(--side) 56px;
+  scroll-padding-inline: var(--side);
   overscroll-behavior-x: contain;
 }
 .hg-scroller::-webkit-scrollbar {
@@ -126,6 +141,7 @@
 }
 .hg {
   --colw: calc((100cqw - (var(--cols) - 1) * var(--gap)) / var(--cols));
+  --page-gap: calc(2 * var(--side) - 2 * var(--gap));
   display: grid;
   grid-template-rows: repeat(
     var(--rows),

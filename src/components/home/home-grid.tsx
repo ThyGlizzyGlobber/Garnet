@@ -106,6 +106,25 @@ export function HomeGrid({ data, layouts: initial, kind }: Props) {
     return () => window.removeEventListener('resize', read);
   }, []);
 
+  // The greeting above the grid lines up with it: the page is told how wide the grid is.
+  useEffect(() => {
+    const el = scroller.current;
+    const page = el?.closest<HTMLElement>('.page');
+    if (!el || !page) return;
+    const tell = () => {
+      const cs = getComputedStyle(el);
+      const w = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+      page.style.setProperty('--home-w', `${Math.round(w)}px`);
+    };
+    tell();
+    const ro = new ResizeObserver(tell);
+    ro.observe(el);
+    return () => {
+      ro.disconnect();
+      page.style.removeProperty('--home-w');
+    };
+  }, [device]);
+
   const layout = device ? layouts[device] : null;
   const [cols, rows] = device && layout ? gridFor(device, layout.density, kind, short) : [1, 1];
 
@@ -127,10 +146,13 @@ export function HomeGrid({ data, layouts: initial, kind }: Props) {
   const pageCount = Math.max(1, packed.filter((p) => p.length).length + (editing ? 1 : 0));
 
   // Paging.
+  // A page's blocks, and from one page's start to the next (pages sit apart by
+  // the scroller's side padding, the room left for the cards' shadows).
+  const blocksWidth = () =>
+    gridEl.current?.querySelector<HTMLElement>('.hg-page')?.getBoundingClientRect().width ?? 0;
   const pageWidth = () => {
-    const el = gridEl.current?.querySelector<HTMLElement>('.hg-page');
-    const gap = parseFloat(getComputedStyle(gridEl.current!).columnGap) || 0;
-    return (el?.getBoundingClientRect().width ?? 0) + gap;
+    const side = scroller.current ? parseFloat(getComputedStyle(scroller.current).paddingLeft) : 0;
+    return blocksWidth() + 2 * (side || 0);
   };
   const goPage = (p: number, smooth = true) => {
     scroller.current?.scrollTo({ left: p * pageWidth(), behavior: smooth ? 'smooth' : 'auto' });
@@ -280,14 +302,14 @@ export function HomeGrid({ data, layouts: initial, kind }: Props) {
   const cellAt = (x: number, y: number) => {
     const g = gridEl.current!.getBoundingClientRect();
     const gap = parseFloat(getComputedStyle(gridEl.current!).columnGap) || 0;
-    const pw = pageWidth() - gap;
+    const pw = blocksWidth();
     const colw = (pw - (cols - 1) * gap) / cols;
     const rowh = (g.height - (rows - 1) * gap) / rows;
-    const gc = Math.floor((x - g.left) / (colw + gap));
-    const pg = Math.max(0, Math.floor(gc / cols));
+    const stride = pageWidth() || 1;
+    const pg = Math.max(0, Math.floor((x - g.left + (stride - pw) / 2) / stride));
     return {
       page: pg,
-      c: Math.max(0, Math.min(cols - 1, gc - pg * cols)),
+      c: Math.max(0, Math.min(cols - 1, Math.floor((x - g.left - pg * stride) / (colw + gap)))),
       r: Math.max(0, Math.min(rows - 1, Math.floor((y - g.top) / (rowh + gap)))),
     };
   };
@@ -462,7 +484,11 @@ export function HomeGrid({ data, layouts: initial, kind }: Props) {
           style={{
             ['--cols' as string]: cols,
             ['--rows' as string]: rows,
-            gridTemplateColumns: `repeat(${cols * pageCount}, var(--colw))`,
+            // Each page's blocks, with a spacer track between pages.
+            gridTemplateColumns: Array.from(
+              { length: pageCount },
+              () => `repeat(${cols}, var(--colw))`,
+            ).join(' var(--page-gap) '),
           }}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
@@ -478,7 +504,7 @@ export function HomeGrid({ data, layouts: initial, kind }: Props) {
               if (!def) return null;
               const sizes = sizesOn(def.sizes, cols, rows);
               const style: CSSProperties = {
-                gridColumn: `${p * cols + it.c + 1} / span ${it.pw}`,
+                gridColumn: `${p * (cols + 1) + it.c + 1} / span ${it.pw}`,
                 gridRow: `${it.r + 1} / span ${it.ph}`,
               };
               return (
@@ -590,13 +616,16 @@ function PageSlots({
     <>
       <i
         className="hg-page"
-        style={{ gridColumn: `${p * cols + 1} / span ${cols}`, gridRow: '1 / -1' }}
+        style={{ gridColumn: `${p * (cols + 1) + 1} / span ${cols}`, gridRow: '1 / -1' }}
       />
       {Array.from({ length: rows * cols }, (_, i) => (
         <span
           key={i}
           className="hg-slot"
-          style={{ gridColumn: p * cols + (i % cols) + 1, gridRow: Math.floor(i / cols) + 1 }}
+          style={{
+            gridColumn: p * (cols + 1) + (i % cols) + 1,
+            gridRow: Math.floor(i / cols) + 1,
+          }}
         >
           <Icon name="plus" width={22} height={22} />
           <span>{label}</span>
