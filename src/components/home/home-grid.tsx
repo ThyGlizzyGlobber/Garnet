@@ -81,7 +81,12 @@ export function HomeGrid({ data, layouts: initial, kind }: Props) {
   const catalog = useMemo(() => catalogFor(data), [data]);
   const byId = useMemo(() => new Map(catalog.map((w) => [w.id, w])), [catalog]);
   const facts = useMemo(
-    () => ({ split: data.split, postcode: data.postcode, fresh: data.fresh }),
+    () => ({
+      split: data.split,
+      postcode: data.postcode,
+      fresh: data.fresh,
+      services: data.services.map((s) => s.id),
+    }),
     [data],
   );
 

@@ -33,6 +33,7 @@ export default async function HomePage() {
     split: data.split,
     postcode: data.postcode,
     fresh: data.fresh,
+    services: data.services.map((s) => s.id),
   });
   const dateLine = new Intl.DateTimeFormat(hh.locale, {
     weekday: 'long',

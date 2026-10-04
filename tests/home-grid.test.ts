@@ -17,7 +17,6 @@ import {
   parseLayout,
   SIZE_LIST,
   sizeName,
-  swapFor,
 } from '@/lib/home-grid';
 import { layoutsFor, resetLayout, saveLayout } from '@/lib/home-layout';
 import { createHousehold } from '@/lib/households';
@@ -112,27 +111,32 @@ describe('the Home grid engine', () => {
     expect(nextSize({ id: 'x', w: 2, h: 2 }, sizes, 2, 4)).toEqual([1, 1]);
   });
 
-  it('swaps what a household can’t show and starts brand-new ones on Get started', () => {
+  it('starts every household on full pages, whatever it can show', () => {
     const noSplit = { split: false, postcode: true, fresh: false };
-    expect(swapFor('owes', noSplit)).toBe('calendar');
-    expect(swapFor('weather', { ...facts, postcode: false })).toBe('postcode');
     expect(available('owes', noSplit)).toBe(false);
     expect(available('postcode', facts)).toBe(false);
+    expect(available('weather', { ...facts, postcode: false })).toBe(false);
     expect(available('start', facts)).toBe(false);
     const d = defaultLayout('desktop', 'home', facts);
     expect(d.density).toBe('standard');
     expect(d.pages[0]!.map((x) => x.id)).toEqual([
       'month',
-      'week',
       'nextdue',
       'weather',
       'owes',
+      'inbox',
+      'week',
       'services',
+      'actions',
     ]);
-    // Not splitting: owes becomes calendar on page one, so page two's calendar is dropped.
+    // Not splitting: Monthly cost takes Settle up's place, and page two still has no widget twice.
     const single = defaultLayout('desktop', 'home', noSplit);
-    expect(single.pages[0]!.map((x) => x.id)).toContain('calendar');
-    expect(single.pages[1]!.map((x) => x.id)).not.toContain('calendar');
+    expect(single.pages[0]!.map((x) => x.id)).toContain('trend');
+    expect(single.pages.flat().map((x) => x.id)).not.toContain('owes');
+    // No postcode: the weather's place asks for one.
+    expect(
+      defaultLayout('phone', 'home', { ...facts, postcode: false }).pages[0]!.map((x) => x.id),
+    ).toContain('postcode');
     expect(defaultLayout('phone', 'home', { ...facts, fresh: true }).pages[0]![0]!.id).toBe(
       'start',
     );
@@ -142,6 +146,27 @@ describe('the Home grid engine', () => {
       'nextdue',
       'weather',
     ]);
+    // A household's first service gets a widget of its own on page two.
+    const withServices = defaultLayout('desktop', 'home', { ...facts, services: ['abc', 'def'] });
+    expect(withServices.pages[1]!.map((x) => x.id)).toContain('svc-abc');
+    expect(withServices.pages.flat().map((x) => x.id)).not.toContain('season');
+    // Every page of every starting layout fills its grid exactly: no holes, nothing pushed on.
+    for (const device of ['desktop', 'tabletL', 'tabletP', 'phone'] as const)
+      for (const split of [true, false])
+        for (const postcode of [true, false])
+          for (const fresh of [true, false]) {
+            const l = defaultLayout(device, 'home', { split, postcode, fresh });
+            const [cols, rows] = gridFor(device, l.density);
+            const ids = l.pages.flat().map((x) => x.id);
+            expect(new Set(ids).size).toBe(ids.length);
+            expect(pack(l.pages, cols, rows).length).toBe(l.pages.length);
+            // A new household's last page may be part-filled; every other page is full.
+            l.pages.forEach((pg, i) => {
+              const area = pg.reduce((a, x) => a + x.w * x.h, 0);
+              if (fresh && i === l.pages.length - 1) expect(area).toBeLessThanOrEqual(cols * rows);
+              else expect(area).toBe(cols * rows);
+            });
+          }
   });
 
   it('only trusts a stored layout of the right shape', () => {

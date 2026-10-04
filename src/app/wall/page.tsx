@@ -33,6 +33,7 @@ export default async function WallPage() {
     split: data.split,
     postcode: data.postcode,
     fresh: data.fresh,
+    services: data.services.map((s) => s.id),
   });
   const wx = data.weather?.days[0];
   const weatherLine =

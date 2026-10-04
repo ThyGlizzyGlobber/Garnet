@@ -237,75 +237,88 @@ export function moveItem(
   return normalise(next, cols, rows);
 }
 
-/* ---------- defaults: the studio's calmer Home (Almanac 2, homeRev 2) ---------- */
+/* ---------- defaults: a Home that is right from the first visit ---------- */
 
-type Def = [string, number, number][][];
+/**
+ * The starting layouts (owner, 2026-10-04: "a default widget grid that is
+ * great from the outset"). Each page fills its grid exactly, with no holes:
+ * page one is what a person opens the app for (the month, what's due next,
+ * money between housemates, the Inbox, the week, adding a bill), page two is
+ * for looking further (due dates, activity, the months ahead). Sizes are S
+ * 1×1, M 2×1 and L 2×2.
+ *
+ * An entry names its widget, or a few separated by "|": the first one the
+ * household can show and hasn't placed yet is used (Settle up only when bills
+ * are split, the weather only with a postcode), so a household that doesn't
+ * split bills still gets full pages. "svc" is one of the household's own
+ * services (its first without a widget), which always has something to say.
+ */
+type Def = [string, 'S' | 'M' | 'L'][][];
+const DIMS = { S: [1, 1], M: [2, 1], L: [2, 2] } as const;
+
+/** Five across, three down (desktop and iPad landscape). */
+const WIDE: Def = [
+  [
+    ['month', 'L'],
+    ['nextdue', 'M'],
+    ['weather|postcode', 'S'],
+    ['owes|trend', 'M'],
+    ['inbox', 'S'],
+    ['week', 'M'],
+    ['services', 'M'],
+    ['actions', 'S'],
+  ],
+  [
+    ['calendar', 'L'],
+    ['activity', 'L'],
+    ['forecast', 'S'],
+    ['setaside|mine', 'S'],
+    ['trend|usage', 'M'],
+    ['usage|notices', 'M'],
+    ['svc|season|plan', 'S'],
+  ],
+];
 
 const HOME_DEFAULTS: Record<Device, Def> = {
-  desktop: [
-    [
-      ['month', 2, 2],
-      ['week', 3, 1],
-      ['nextdue', 2, 1],
-      ['weather', 1, 1],
-      ['owes', 2, 1],
-      ['services', 3, 1],
-    ],
-    [
-      ['calendar', 2, 2],
-      ['activity', 3, 2],
-      ['forecast', 3, 1],
-      ['season', 2, 1],
-    ],
-  ],
-  tabletL: [
-    [
-      ['month', 2, 2],
-      ['week', 3, 1],
-      ['nextdue', 2, 1],
-      ['weather', 1, 1],
-      ['owes', 2, 1],
-      ['services', 3, 1],
-    ],
-    [
-      ['calendar', 2, 2],
-      ['activity', 3, 2],
-      ['forecast', 3, 1],
-      ['season', 2, 1],
-    ],
-  ],
+  desktop: WIDE,
+  tabletL: WIDE,
+  // Three across, four down.
   tabletP: [
     [
-      ['month', 2, 2],
-      ['weather', 1, 1],
-      ['nextdue', 1, 1],
-      ['week', 3, 1],
-      ['owes', 2, 1],
-      ['inbox', 1, 1],
+      ['month', 'L'],
+      ['weather|postcode', 'S'],
+      ['inbox', 'S'],
+      ['nextdue', 'M'],
+      ['actions', 'S'],
+      ['owes|trend', 'M'],
+      ['forecast', 'S'],
     ],
     [
-      ['services', 3, 1],
-      ['calendar', 2, 2],
-      ['actions', 1, 1],
-      ['season', 1, 1],
-      ['activity', 3, 1],
+      ['calendar', 'L'],
+      ['setaside|mine', 'S'],
+      ['svc|season|plan', 'S'],
+      ['week', 'M'],
+      ['services', 'S'],
+      ['activity', 'M'],
+      ['usage|notices', 'S'],
     ],
   ],
+  // Two across, four down.
   phone: [
     [
-      ['month', 2, 2],
-      ['week', 2, 1],
-      ['nextdue', 2, 1],
+      ['month', 'L'],
+      ['nextdue', 'M'],
+      ['weather|postcode', 'S'],
+      ['inbox', 'S'],
     ],
     [
-      ['owes', 2, 1],
-      ['services', 2, 2],
-      ['weather', 1, 1],
-      ['actions', 1, 1],
+      ['week', 'M'],
+      ['owes|trend', 'M'],
+      ['services', 'L'],
     ],
     [
-      ['calendar', 2, 2],
-      ['activity', 2, 2],
+      ['calendar', 'L'],
+      ['activity', 'L'],
     ],
   ],
 };
@@ -317,93 +330,101 @@ const HOME_DENSITY: Record<Device, Density> = {
   phone: 'standard',
 };
 
-/** A brand-new household: Get started and the few widgets that already say something. */
+/** A brand-new household: Get started, and the widgets that fill in as bills arrive. */
+const WIDE_FRESH: Def = [
+  [
+    ['start', 'L'],
+    ['weather|postcode', 'M'],
+    ['actions', 'S'],
+    ['week', 'M'],
+    ['inbox', 'S'],
+    ['month', 'M'],
+    ['nextdue', 'M'],
+    ['services', 'S'],
+  ],
+];
 const FRESH_DEFAULTS: Record<Device, Def> = {
-  desktop: [
-    [
-      ['start', 3, 2],
-      ['weather', 2, 1],
-      ['week', 2, 1],
-      ['month', 2, 1],
-      ['nextdue', 3, 1],
-    ],
-  ],
-  tabletL: [
-    [
-      ['start', 3, 2],
-      ['weather', 2, 1],
-      ['week', 2, 1],
-      ['month', 2, 1],
-      ['nextdue', 3, 1],
-    ],
-  ],
+  desktop: WIDE_FRESH,
+  tabletL: WIDE_FRESH,
   tabletP: [
     [
-      ['start', 3, 2],
-      ['weather', 1, 1],
-      ['week', 3, 1],
-      ['month', 2, 1],
-      ['nextdue', 1, 1],
+      ['start', 'L'],
+      ['weather|postcode', 'S'],
+      ['actions', 'S'],
+      ['week', 'M'],
+      ['inbox', 'S'],
+      ['month', 'M'],
+      ['nextdue', 'S'],
     ],
   ],
   phone: [
     [
-      ['start', 2, 2],
-      ['weather', 2, 1],
-      ['week', 2, 1],
+      ['start', 'L'],
+      ['weather|postcode', 'S'],
+      ['actions', 'S'],
+      ['week', 'M'],
     ],
     [
-      ['month', 2, 1],
-      ['nextdue', 2, 1],
+      ['month', 'M'],
+      ['nextdue', 'M'],
     ],
   ],
 };
 
+/** The wall: four across, two down, read from across a room. */
 const WALL_DEFAULT: Def = [
   [
-    ['month', 2, 2],
-    ['week', 2, 1],
-    ['nextdue', 1, 1],
-    ['weather', 1, 1],
+    ['month', 'L'],
+    ['week', 'M'],
+    ['nextdue', 'S'],
+    ['weather|inbox', 'S'],
   ],
 ];
 
-/** What a household can show in place of a widget it can't (not splitting, no postcode). */
-const SPLIT_ONLY: Record<string, string> = {
-  owes: 'calendar',
-  setaside: 'forecast',
-};
+/** Widgets only a household that splits its bills has. */
+const SPLIT_ONLY = new Set(['owes', 'setaside']);
 
 export interface HouseholdFacts {
   split: boolean;
   postcode: boolean;
   /** No bills yet. */
   fresh: boolean;
+  /** The household's services, in its order: a default layout may give one its own widget. */
+  services?: string[];
 }
 
-export function swapFor(id: string, facts: HouseholdFacts): string {
-  if (!facts.split && SPLIT_ONLY[id]) return SPLIT_ONLY[id];
-  if (!facts.postcode && id === 'weather') return 'postcode';
-  return id;
-}
+/** Whether a household has anything for a widget to show at all. */
+const shows = (id: string, facts: HouseholdFacts): boolean => {
+  if (!facts.split && SPLIT_ONLY.has(id)) return false;
+  if (id === 'weather') return facts.postcode;
+  if (id === 'postcode') return !facts.postcode;
+  return true;
+};
 
-/** Whether a household can put a widget on its Home at all. */
+/** Whether a household can add a widget to its Home (Get started is only ever placed for it). */
 export function available(id: string, facts: HouseholdFacts): boolean {
-  if (!facts.split && SPLIT_ONLY[id]) return false;
-  if (!facts.postcode && id === 'weather') return false;
-  if (facts.postcode && id === 'postcode') return false;
-  return id !== 'start';
+  return shows(id, facts) && id !== 'start';
 }
 
-/** The default layout for a screen and household, with swaps applied and no widget twice. */
+/** The default layout for a screen and household: every entry's first widget it can show, none twice. */
 export function defaultLayout(device: Device, kind: LayoutKind, facts: HouseholdFacts): Layout {
   const def =
     kind === 'wall' ? WALL_DEFAULT : facts.fresh ? FRESH_DEFAULTS[device] : HOME_DEFAULTS[device];
   const seen = new Set<string>();
   const pages: Pages = def.map((pg) =>
-    pg
-      .map(([id, w, h]) => ({ id: swapFor(id, facts), w, h }))
-      .filter((it) => (seen.has(it.id) ? false : (seen.add(it.id), true))),
+    pg.flatMap(([ids, size]) => {
+      const id = ids
+        .split('|')
+        // "svc" stands for the household's next service that has no widget yet.
+        .map((x) =>
+          x === 'svc' ? (facts.services ?? []).map((s) => `svc-${s}`).find((w) => !seen.has(w)) : x,
+        )
+        .find((x): x is string => !!x && shows(x, facts) && !seen.has(x));
+      if (!id) return [];
+      seen.add(id);
+      const [w, h] = DIMS[size];
+      return [{ id, w, h }];
+    }),
   );
   return { density: kind === 'wall' ? 'standard' : HOME_DENSITY[device], pages: upgrade(pages) };
 }
