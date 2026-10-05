@@ -11,6 +11,7 @@ import { uncapDeveloperHouseholds } from '@/lib/console';
 import { adoptLegacyDemoFlag } from '@/lib/demo';
 import { getEnv } from '@/lib/env';
 import { ensureDataDirs } from '@/lib/paths';
+import { moveLayoutsToFourByThree } from '@/lib/home-layout';
 import { markWaterFiguresForReread } from '@/lib/metrics';
 import { runOnce } from '@/lib/upgrades';
 
@@ -85,6 +86,12 @@ export async function prepareInstall(): Promise<void> {
     'usage',
     runOnce('2026-10-03 water figures again', () => markWaterFiguresForReread()),
     'marked {n} water bill(s) to have their figures analysed again',
+  );
+  // Desktop Home is four by three on the new frame (SCOPE-shell.md §8 Q9).
+  log(
+    'home',
+    runOnce('2026-10-05 home four by three', () => moveLayoutsToFourByThree()),
+    'moved {n} saved Home layout(s) onto four by three',
   );
 
   if (dataKeyConfigured()) {

@@ -256,26 +256,33 @@ export function moveItem(
 type Def = [string, 'S' | 'M' | 'L'][][];
 const DIMS = { S: [1, 1], M: [2, 1], L: [2, 2] } as const;
 
-/** Five across, three down (desktop and iPad landscape). */
+/**
+ * Four across, three down (desktop and iPad landscape, SCOPE-shell.md §3e):
+ * on the frame beside the menu, four square blocks by three fill the page
+ * exactly. Household widgets only: every service is in the menu beside it.
+ */
 const WIDE: Def = [
   [
     ['month', 'L'],
     ['nextdue', 'M'],
-    ['weather|postcode', 'S'],
-    ['owes|trend', 'M'],
-    ['inbox', 'S'],
+    ['weather|postcode', 'M'],
     ['week', 'M'],
-    ['services', 'M'],
-    ['actions', 'S'],
+    ['owes|trend', 'S'],
+    ['inbox', 'S'],
   ],
   [
     ['calendar', 'L'],
     ['activity', 'L'],
-    ['forecast', 'S'],
-    ['setaside|mine', 'S'],
     ['trend|usage', 'M'],
+    ['forecast', 'S'],
+    ['actions', 'S'],
+  ],
+  [
+    ['services', 'L'],
     ['usage|notices', 'M'],
-    ['svc|season|plan', 'S'],
+    ['setaside|mine', 'M'],
+    ['season|plan|notices', 'M'],
+    ['plan|notices|mine', 'M'],
   ],
 ];
 
@@ -324,8 +331,8 @@ const HOME_DEFAULTS: Record<Device, Def> = {
 };
 
 const HOME_DENSITY: Record<Device, Density> = {
-  desktop: 'standard',
-  tabletL: 'standard',
+  desktop: 'comfy',
+  tabletL: 'comfy',
   tabletP: 'comfy',
   phone: 'standard',
 };
@@ -336,11 +343,9 @@ const WIDE_FRESH: Def = [
     ['start', 'L'],
     ['weather|postcode', 'M'],
     ['actions', 'S'],
-    ['week', 'M'],
     ['inbox', 'S'],
+    ['week', 'M'],
     ['month', 'M'],
-    ['nextdue', 'M'],
-    ['services', 'S'],
   ],
 ];
 const FRESH_DEFAULTS: Record<Device, Def> = {
@@ -448,4 +453,18 @@ export function parseLayout(raw: unknown): Layout | null {
     out.push(items);
   }
   return { density: density as Density, pages: upgrade(out) };
+}
+
+/** The screens whose Home moved to four by three (SCOPE-shell.md §8 Q9). */
+const FOUR_BY_THREE: Device[] = ['desktop', 'tabletL'];
+
+/**
+ * A saved Home layout moved onto four by three: the same widgets, sizes and
+ * order, packed onto pages of four by three; those that no longer fit on a
+ * page move to the next. Other screens, and the wall, are left as they are.
+ */
+export function toFourByThree(device: Device, kind: LayoutKind, layout: Layout): Layout {
+  if (kind !== 'home' || !FOUR_BY_THREE.includes(device)) return layout;
+  const [cols, rows] = GRIDS[device].comfy;
+  return { density: 'comfy', pages: normalise(layout.pages, cols, rows) };
 }

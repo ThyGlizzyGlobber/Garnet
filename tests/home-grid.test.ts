@@ -14,6 +14,7 @@ import {
   nextSize,
   normalise,
   pack,
+  toFourByThree,
   parseLayout,
   SIZE_LIST,
   sizeName,
@@ -118,16 +119,15 @@ describe('the Home grid engine', () => {
     expect(available('weather', { ...facts, postcode: false })).toBe(false);
     expect(available('start', facts)).toBe(false);
     const d = defaultLayout('desktop', 'home', facts);
-    expect(d.density).toBe('standard');
+    // Four by three on the frame (SCOPE-shell.md §3e), household widgets only.
+    expect(d.density).toBe('comfy');
     expect(d.pages[0]!.map((x) => x.id)).toEqual([
       'month',
       'nextdue',
       'weather',
+      'week',
       'owes',
       'inbox',
-      'week',
-      'services',
-      'actions',
     ]);
     // Not splitting: Monthly cost takes Settle up's place, and page two still has no widget twice.
     const single = defaultLayout('desktop', 'home', noSplit);
@@ -146,27 +146,61 @@ describe('the Home grid engine', () => {
       'nextdue',
       'weather',
     ]);
-    // A household's first service gets a widget of its own on page two.
+    // The desktop gives no service a widget of its own: they are all in the menu beside it.
     const withServices = defaultLayout('desktop', 'home', { ...facts, services: ['abc', 'def'] });
-    expect(withServices.pages[1]!.map((x) => x.id)).toContain('svc-abc');
-    expect(withServices.pages.flat().map((x) => x.id)).not.toContain('season');
+    expect(withServices.pages.flat().some((x) => x.id.startsWith('svc-'))).toBe(false);
+    // An iPad in portrait still gives the household's first service a widget.
+    expect(
+      defaultLayout('tabletP', 'home', { ...facts, services: ['abc'] })
+        .pages.flat()
+        .map((x) => x.id),
+    ).toContain('svc-abc');
     // Every page of every starting layout fills its grid exactly: no holes, nothing pushed on.
     for (const device of ['desktop', 'tabletL', 'tabletP', 'phone'] as const)
       for (const split of [true, false])
         for (const postcode of [true, false])
-          for (const fresh of [true, false]) {
-            const l = defaultLayout(device, 'home', { split, postcode, fresh });
-            const [cols, rows] = gridFor(device, l.density);
-            const ids = l.pages.flat().map((x) => x.id);
-            expect(new Set(ids).size).toBe(ids.length);
-            expect(pack(l.pages, cols, rows).length).toBe(l.pages.length);
-            // A new household's last page may be part-filled; every other page is full.
-            l.pages.forEach((pg, i) => {
-              const area = pg.reduce((a, x) => a + x.w * x.h, 0);
-              if (fresh && i === l.pages.length - 1) expect(area).toBeLessThanOrEqual(cols * rows);
-              else expect(area).toBe(cols * rows);
-            });
-          }
+          for (const fresh of [true, false])
+            for (const services of [[], ['abc', 'def']]) {
+              const l = defaultLayout(device, 'home', { split, postcode, fresh, services });
+              const [cols, rows] = gridFor(device, l.density);
+              const ids = l.pages.flat().map((x) => x.id);
+              expect(new Set(ids).size).toBe(ids.length);
+              expect(pack(l.pages, cols, rows).length).toBe(l.pages.length);
+              // A new household's last page may be part-filled; every other page is full.
+              l.pages.forEach((pg, i) => {
+                const area = pg.reduce((a, x) => a + x.w * x.h, 0);
+                if (fresh && i === l.pages.length - 1)
+                  expect(area).toBeLessThanOrEqual(cols * rows);
+                else expect(area).toBe(cols * rows);
+              });
+            }
+  });
+
+  it('moves a saved desktop Home onto four by three, keeping every widget in order', () => {
+    const five = {
+      density: 'standard' as const,
+      pages: [
+        [
+          { id: 'month', w: 2, h: 2 },
+          { id: 'nextdue', w: 2, h: 1 },
+          { id: 'weather', w: 1, h: 1 },
+          { id: 'owes', w: 2, h: 1 },
+          { id: 'inbox', w: 1, h: 1 },
+          { id: 'week', w: 2, h: 1 },
+          { id: 'services', w: 2, h: 1 },
+          { id: 'actions', w: 1, h: 1 },
+        ],
+      ],
+    };
+    const four = toFourByThree('desktop', 'home', five);
+    expect(four.density).toBe('comfy');
+    expect(four.pages.flat().map((x) => x.id)).toEqual(five.pages[0]!.map((x) => x.id));
+    expect(four.pages.flat().map((x) => [x.w, x.h])).toEqual(five.pages[0]!.map((x) => [x.w, x.h]));
+    expect(four.pages.length).toBe(2);
+    expect(pack(four.pages, 4, 3).length).toBe(2);
+    // The phone and the wall keep theirs.
+    expect(toFourByThree('phone', 'home', five)).toBe(five);
+    expect(toFourByThree('desktop', 'wall', five)).toBe(five);
   });
 
   it('only trusts a stored layout of the right shape', () => {

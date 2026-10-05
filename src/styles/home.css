@@ -26,22 +26,6 @@
 .app:has(.home) .main-in {
   padding-bottom: calc(var(--in-b) + var(--safe-b) + 8px);
 }
-.hh {
-  flex: none;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  gap: 12px 24px;
-  flex-wrap: wrap;
-  padding: 0 2px;
-}
-.hh h1 {
-  font-size: var(--fs-h1);
-}
-.hh p {
-  margin: 4px 0 0;
-  color: var(--p-fg2);
-}
 .home {
   flex: 1;
   min-height: 0;
@@ -50,25 +34,12 @@
   gap: 8px;
   /* The grid measures the room it has here to keep its blocks square. */
   container-type: size;
+  position: relative;
   --bar: 0px;
 }
-/* Edit Home's bar takes a line off the room for the grid. */
+/* Edit Home's bar takes a line off the room for the grid (off the frame, on a desktop it doesn't). */
 .home[data-editing='true'] {
   --bar: 58px;
-}
-/* Edit Home takes the greeting's place (the design canvas, board P). */
-.page:has(.home[data-editing='true']) .d6-hh {
-  display: none;
-}
-/* The greeting, Edit Home and the edit bar are as wide as the grid and sit over
-   it (owner, 2026-10-04). Not on a phone: narrowing the greeting there wraps
-   it onto more lines, which takes height from the grid and narrows it again. */
-@media (min-width: 640px) {
-  .page:has(.home) .d6-hh {
-    width: 100%;
-    max-width: var(--home-w, none);
-    margin-inline: auto;
-  }
 }
 .home-edit {
   width: 100%;
@@ -223,38 +194,6 @@
 }
 
 /* the Home heading (Almanac 2) */
-.d6-hh h1 {
-  font-size: calc(var(--fs-h1) * 1.25);
-  line-height: 1;
-}
-.d6-hh p {
-  margin-top: 6px;
-}
-/* The date line with Edit Home at its right, over the grid's top right corner. */
-.d6-hh > div {
-  width: 100%;
-}
-.d6-line {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 12px;
-}
-.d6-line p {
-  min-width: 0;
-}
-.d6-edit {
-  flex: none;
-}
-.d6-edit .hg-edit {
-  position: static;
-}
-@media (max-width: 639px) {
-  .d6-hh h1 {
-    font-size: calc(var(--fs-h1) * 1.1);
-  }
-}
-
 /* widgets */
 .widget {
   position: relative;
@@ -542,4 +481,159 @@
 .wg-pick.end {
   left: auto;
   right: 0;
+}
+
+/* The widget whose menu is open. */
+.home .widget.held {
+  outline: 2px solid var(--p-accent);
+  outline-offset: -2px;
+}
+/* The block a picked widget would go in (Add a widget). */
+.home[data-editing='true'] .hg-slot.aim {
+  border-color: var(--p-accent);
+  border-style: solid;
+  color: var(--p-fg);
+  background: var(--inset);
+}
+.add-hint {
+  margin: 4px 2px 0;
+  line-height: 1.45;
+}
+
+/*
+  A widget's menu (SCOPE-shell.md §3f): Edit Home, Change size, Remove
+  widget, on the same solid panel as the side menu's dropdowns.
+*/
+.wg-menu {
+  position: fixed;
+  z-index: 200;
+  width: 248px;
+  display: grid;
+  gap: 2px;
+  padding: 6px;
+  border-radius: 16px;
+  background: var(--menu-bg);
+  color: var(--p-fg);
+  box-shadow:
+    inset 0 0 0 1px var(--line),
+    0 24px 48px -16px rgba(0, 0, 0, 0.55);
+}
+.wg-menu-i {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 38px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.wg-menu-i .ic {
+  color: var(--p-fg2);
+}
+.wg-menu-i:hover,
+.wg-menu-i:focus-visible {
+  background: var(--menu-well);
+  outline: none;
+}
+.wg-menu-i.bad,
+.wg-menu-i.bad .ic {
+  color: var(--overdue);
+}
+.wg-menu-size {
+  display: grid;
+  gap: 6px;
+  padding: 6px 10px 8px;
+}
+.wg-menu-size > span {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.wg-menu-size > span .ic {
+  color: var(--p-fg2);
+}
+.wg-menu hr {
+  height: 1px;
+  margin: 2px 8px;
+  border: 0;
+  background: var(--line);
+}
+
+/*
+  A desktop (SCOPE-shell.md §3e): the grid fills the page down to the
+  frame's bottom margin, level with the account card, and the page dots sit
+  small in that margin. Edit Home's bar is on the frame's top line and Add a
+  widget is in the menu's place.
+*/
+@media (min-width: 1200px) {
+  .app:has(.home) .main-in {
+    padding-bottom: var(--frame);
+  }
+  .app .home .hg-foot {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: calc(var(--frame) * -1);
+    height: var(--frame);
+  }
+  .app .home .hg-dots {
+    padding: 4px 8px;
+    gap: 6px;
+  }
+  .app .home .hg-dot {
+    width: 6px;
+    height: 6px;
+  }
+  .app .home .hg-scroller {
+    --room-h: 100cqh;
+  }
+  .home-edit.on-frame {
+    width: 100%;
+    max-width: none;
+    min-height: 0;
+    flex-wrap: nowrap;
+  }
+  .home-edit.on-frame .home-edit-t b {
+    font-size: 26px;
+  }
+  .nav.column .add-card,
+  .add-card {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 18px 14px 14px !important;
+  }
+  .add-card > h2 {
+    margin: 0 4px;
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 22px;
+    letter-spacing: -0.02em;
+  }
+  .add-card .add {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .add-card .add-list {
+    max-height: none;
+    flex: 0 1 auto;
+    min-height: 0;
+  }
+  .add-card .add-prev {
+    padding: 12px;
+  }
 }

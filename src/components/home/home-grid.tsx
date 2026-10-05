@@ -52,13 +52,19 @@ import {
 } from '@/app/(app)/home/actions';
 
 /**
- * The Home grid (SCOPE-redesign.md R4): the widgets on pages that fit the
- * screen, sideways paging with dots, and Edit Home: long-press or Edit, then
- * drag (a floating ghost, page flip at the edges), tap a widget for its
- * Small · Medium · Large picker, remove, Add widget (search, a size and a
- * live preview), grid density, Reset. Layouts are saved per
- * person and kind of screen. Keyboard: in edit mode every widget's badge and
- * remove button are buttons; arrow keys on a focused widget move it.
+ * The Home grid (SCOPE-redesign.md R4, SCOPE-shell.md §3e–§3g): the widgets
+ * on pages that fit the screen, sideways paging with dots. A widget's menu
+ * (press and hold, right-click, or the menu key / Shift+F10 on a focused
+ * widget) offers Edit Home, Change size and Remove widget; there is no Edit
+ * Home button on Home (the account menu has it too, as /?edit=1). Edit Home:
+ * drag (a floating ghost, page flip at the edges; dragging after a press and
+ * hold starts it), tap a widget for its Small · Medium · Large picker,
+ * remove, grid density, Reset, and Add a widget (search, a size and a live
+ * preview). On a desktop the edit bar takes over the frame's top line and
+ * Add a widget takes the side menu's place until Done; elsewhere the bar sits
+ * over the grid and Add widget opens a sheet. Layouts are saved per person
+ * and kind of screen. Keyboard: in edit mode arrow keys on a focused widget
+ * move it and Delete removes it.
  */
 interface Props {
   data: HomeData;
@@ -68,12 +74,21 @@ interface Props {
 
 const isShort = () => typeof window !== 'undefined' && window.innerHeight < 760;
 
-/** Home's slot for Edit Home, beside the date (see the Home page), once the page is in the browser. */
-const editSlotEl = () => document.getElementById('home-edit-slot');
+/** The frame's slots Edit Home fills on a desktop (src/components/app/shell.tsx), once the page is in the browser. */
+const tbEditEl = () => document.getElementById('tb-edit');
+const navAddEl = () => document.getElementById('nav-add');
 const noSubscribe = () => () => {};
 
+/** A widget's menu, open at a point on the screen. */
+interface WidgetMenu {
+  id: string;
+  x: number;
+  y: number;
+}
+
 export function HomeGrid({ data, layouts: initial, kind }: Props) {
-  const editSlot = useSyncExternalStore(noSubscribe, editSlotEl, () => null);
+  const tbEdit = useSyncExternalStore(noSubscribe, tbEditEl, () => null);
+  const navAdd = useSyncExternalStore(noSubscribe, navAddEl, () => null);
   const t = useTranslations('home');
   const router = useRouter();
   const toast = useToast();
@@ -98,6 +113,10 @@ export function HomeGrid({ data, layouts: initial, kind }: Props) {
   const [gallery, setGallery] = useState(false);
   /** The widget whose size picker is open (Edit Home). */
   const [selected, setSelected] = useState<string | null>(null);
+  /** A widget's menu (Edit Home · Change size · Remove widget). */
+  const [menu, setMenu] = useState<WidgetMenu | null>(null);
+  /** The widget picked in Add a widget: its size, so the grid can mark where it would go. */
+  const [aiming, setAiming] = useState<{ w: number; h: number } | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const gridEl = useRef<HTMLDivElement>(null);
 
@@ -107,9 +126,18 @@ export function HomeGrid({ data, layouts: initial, kind }: Props) {
       setShort(isShort());
     };
     read();
+    // Edit Home from the account menu (/?edit=1): straight into edit mode.
+    const fromMenu = () => {
+      const url = new URL(window.location.href);
+      if (kind !== 'home' || url.searchParams.get('edit') !== '1') return;
+      url.searchParams.delete('edit');
+      window.history.replaceState(null, '', url.pathname + url.search);
+      setEditing(true);
+    };
+    fromMenu();
     window.addEventListener('resize', read);
     return () => window.removeEventListener('resize', read);
-  }, []);
+  }, [kind]);
 
   // The greeting above the grid lines up with it: the page is told how wide the grid is.
   useEffect(() => {
@@ -171,6 +199,8 @@ export function HomeGrid({ data, layouts: initial, kind }: Props) {
   const setEdit = (on: boolean) => {
     setEditing(on);
     setSelected(null);
+    setMenu(null);
+    setAiming(null);
     if (!on && layout) update({ ...layout, pages: layout.pages.filter((p) => p.length) });
   };
   const remove = (id: string) => {
@@ -198,6 +228,7 @@ export function HomeGrid({ data, layouts: initial, kind }: Props) {
     const next = normalise(pages, cols, rows);
     update({ ...layout, pages: next });
     setGallery(false);
+    setAiming(null);
     const at = locate(next, id);
     if (at) setTimeout(() => goPage(at.p), 50);
   };
@@ -219,6 +250,17 @@ export function HomeGrid({ data, layouts: initial, kind }: Props) {
 
   // Keyboard: arrows move a focused widget one block; Delete removes it.
   const onKey = (e: KeyboardEvent<HTMLElement>, it: Placed, p: number) => {
+    // The menu key, or Shift+F10, on a focused widget opens its menu (SCOPE-shell.md §8 Q8).
+    if (
+      kind === 'home' &&
+      e.target === e.currentTarget &&
+      (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10'))
+    ) {
+      e.preventDefault();
+      const r = e.currentTarget.getBoundingClientRect();
+      setMenu({ id: it.id, x: r.right - 12, y: r.top + 12 });
+      return;
+    }
     if (!editing || !layout) return;
     const dirs: Record<string, [number, number]> = {
       ArrowLeft: [0, -1],
@@ -272,6 +314,8 @@ export function HomeGrid({ data, layouts: initial, kind }: Props) {
     moved: boolean;
   } | null>(null);
   const press = useRef<{ x: number; y: number; t: number } | null>(null);
+  /** A press and hold that opened a widget's menu: moving on from it starts Edit Home with that widget lifted. */
+  const held = useRef<{ id: string; x: number; y: number; pointerId: number } | null>(null);
   const layoutRef = useRef(layout);
   const packedRef = useRef(packed);
   useEffect(() => {
@@ -331,14 +375,10 @@ export function HomeGrid({ data, layouts: initial, kind }: Props) {
         y,
         t: window.setTimeout(() => {
           press.current = null;
-          setEditing(true);
-          // Start the drag once the widgets have their edit chrome.
-          setTimeout(() => {
-            const w = gridEl.current?.querySelector<HTMLElement>(
-              `.widget[data-wid="${el.dataset.wid}"]`,
-            );
-            if (w) startDrag(w, x, y, pointerId);
-          }, 30);
+          if (kind !== 'home') return;
+          // Press and hold: the widget's menu (SCOPE-shell.md §3f).
+          setMenu({ id: el.dataset.wid!, x, y });
+          held.current = { id: el.dataset.wid!, x, y, pointerId };
         }, 520),
       };
       return;
@@ -350,6 +390,19 @@ export function HomeGrid({ data, layouts: initial, kind }: Props) {
     if (press.current && Math.hypot(e.clientX - press.current.x, e.clientY - press.current.y) > 6) {
       clearTimeout(press.current.t);
       press.current = null;
+    }
+    // Held, then moved: into Edit Home, carrying the widget (as on an iPhone).
+    const h = held.current;
+    if (h && Math.hypot(e.clientX - h.x, e.clientY - h.y) > 10) {
+      held.current = null;
+      setMenu(null);
+      setEditing(true);
+      const { clientX: x, clientY: y } = e;
+      setTimeout(() => {
+        const w = gridEl.current?.querySelector<HTMLElement>(`.widget[data-wid="${h.id}"]`);
+        if (w) startDrag(w, x, y, h.pointerId);
+      }, 30);
+      return;
     }
     const d = drag.current;
     if (!d) return;
@@ -384,6 +437,7 @@ export function HomeGrid({ data, layouts: initial, kind }: Props) {
     }
   };
   const endDrag = () => {
+    held.current = null;
     if (press.current) {
       clearTimeout(press.current.t);
       press.current = null;
@@ -441,6 +495,32 @@ export function HomeGrid({ data, layouts: initial, kind }: Props) {
     const [c, r] = gridFor(device, k, kind, short);
     return { value: k, label: `${c}×${r}` };
   });
+  // On a desktop Edit Home uses the frame: its bar in the top line, Add a widget in the menu.
+  const desk = kind === 'home' && device === 'desktop' && !!tbEdit && !!navAdd;
+  // Where a picked widget would go: the first free block on this page it fits in.
+  const aimAt = (() => {
+    if (!editing || !aiming) return -1;
+    const occ = Array.from({ length: rows }, () => Array<boolean>(cols).fill(false));
+    for (const it of packed[page] ?? [])
+      for (let y = it.r; y < it.r + it.ph; y++)
+        for (let x = it.c; x < it.c + it.pw; x++) occ[y]![x] = true;
+    for (let r = 0; r + aiming.h <= rows; r++)
+      for (let c = 0; c + aiming.w <= cols; c++) {
+        let free = true;
+        for (let y = r; y < r + aiming.h && free; y++)
+          for (let x = c; x < c + aiming.w && free; x++) if (occ[y]![x]) free = false;
+        if (free) return r * cols + c;
+      }
+    return -1;
+  })();
+  const menuIt = menu ? packed.flat().find((x) => x.id === menu.id) : undefined;
+  const menuSizes = menuIt
+    ? SIZES.filter((x) =>
+        sizesOn(byId.get(menuIt.id)?.sizes ?? [], cols, rows).some(
+          ([w, h]) => w === x.w && h === x.h,
+        ),
+      )
+    : [];
   const onGrid = new Set(layout.pages.flat().map((x) => x.id));
   // Heads-up, the instalment plan and the season ahead are offered only while they have something to show.
   const galleryItems = catalog.filter(
@@ -456,32 +536,39 @@ export function HomeGrid({ data, layouts: initial, kind }: Props) {
       data-editing={editing}
       style={{ ['--cols' as string]: cols, ['--rows' as string]: rows }}
     >
-      {editing && (
-        <div className="home-edit">
-          <div className="home-edit-t">
-            <b>{t('edit.title')}</b>
-            <span>{t('edit.hint')}</span>
-          </div>
-          {kind === 'home' && (
-            <Segmented
-              small
-              items={densities}
-              value={layout.density}
-              label={t('edit.grid')}
-              onChange={(v) => setDensity(v as Density)}
-            />
-          )}
-          <Button variant="secondary" size="sm" onClick={reset}>
-            {t('edit.reset')}
-          </Button>
-          <Button variant="secondary" size="sm" icon="plus" onClick={() => setGallery(true)}>
-            {t('edit.add')}
-          </Button>
-          <Button size="sm" icon="check" onClick={() => setEdit(false)}>
-            {t('edit.done')}
-          </Button>
-        </div>
-      )}
+      {editing &&
+        (() => {
+          const bar = (
+            <div className={desk ? 'home-edit on-frame' : 'home-edit'}>
+              <div className="home-edit-t">
+                <b>{t('edit.title')}</b>
+                <span>{t('edit.hint')}</span>
+              </div>
+              {kind === 'home' && (
+                <Segmented
+                  small
+                  items={densities}
+                  value={layout.density}
+                  label={t('edit.grid')}
+                  onChange={(v) => setDensity(v as Density)}
+                />
+              )}
+              <Button variant="secondary" size="sm" onClick={reset}>
+                {t('edit.reset')}
+              </Button>
+              {/* On a desktop the menu itself is Add a widget while editing (SCOPE-shell.md S-D8). */}
+              {!desk && (
+                <Button variant="secondary" size="sm" icon="plus" onClick={() => setGallery(true)}>
+                  {t('edit.add')}
+                </Button>
+              )}
+              <Button size="sm" icon="check" onClick={() => setEdit(false)}>
+                {t('edit.done')}
+              </Button>
+            </div>
+          );
+          return desk ? createPortal(bar, tbEdit!) : bar;
+        })()}
       <div className="hg-scroller" ref={scroller} onScroll={onScroll}>
         <div
           className="hg"
@@ -499,9 +586,27 @@ export function HomeGrid({ data, layouts: initial, kind }: Props) {
           onPointerMove={onPointerMove}
           onPointerUp={endDrag}
           onPointerCancel={endDrag}
+          onContextMenu={(e) => {
+            if (kind !== 'home' || editing) return;
+            const el = (e.target as Element).closest<HTMLElement>('.widget');
+            if (!el) return;
+            e.preventDefault();
+            if (press.current) {
+              clearTimeout(press.current.t);
+              press.current = null;
+            }
+            setMenu({ id: el.dataset.wid!, x: e.clientX, y: e.clientY });
+          }}
         >
           {Array.from({ length: pageCount }, (_, p) => (
-            <PageSlots key={p} p={p} cols={cols} rows={rows} label={t('edit.drop')} />
+            <PageSlots
+              key={p}
+              p={p}
+              cols={cols}
+              rows={rows}
+              label={t('edit.drop')}
+              aim={p === page ? aimAt : -1}
+            />
           ))}
           {packed.slice(0, pageCount).map((pg, p) =>
             pg.map((it) => {
@@ -515,7 +620,13 @@ export function HomeGrid({ data, layouts: initial, kind }: Props) {
               return (
                 <section
                   key={it.id}
-                  className={selected === it.id ? 'widget glass sel' : 'widget glass'}
+                  className={
+                    selected === it.id
+                      ? 'widget glass sel'
+                      : menu?.id === it.id
+                        ? 'widget glass held'
+                        : 'widget glass'
+                  }
                   data-wid={it.id}
                   data-w={it.pw}
                   data-h={it.ph}
@@ -523,7 +634,7 @@ export function HomeGrid({ data, layouts: initial, kind }: Props) {
                   aria-label={t(`widgets.${def.id.startsWith('svc-') ? 'service' : def.id}.name`, {
                     service: data.services.find((s) => `svc-${s.id}` === def.id)?.name ?? '',
                   })}
-                  tabIndex={editing ? 0 : undefined}
+                  tabIndex={editing || kind === 'home' ? 0 : undefined}
                   onKeyDown={(e) => onKey(e, it, p)}
                 >
                   <div className="wg-in">{renderWidget(def, it.pw, it.ph)}</div>
@@ -571,35 +682,78 @@ export function HomeGrid({ data, layouts: initial, kind }: Props) {
             />
           ))}
         </div>
-        {!editing &&
-          (() => {
-            const button = (
-              <button type="button" className="hg-edit" onClick={() => setEdit(true)}>
-                <span>{t('edit.title')}</span>
-              </button>
-            );
-            // On Home it sits at the grid's top right, on the date's line (owner, 2026-10-03).
-            return editSlot ? createPortal(button, editSlot) : kind === 'home' ? null : button;
-          })()}
+        {/* Home has no Edit Home button (SCOPE-shell.md §3f); the wall keeps its own. */}
+        {!editing && kind !== 'home' && (
+          <button type="button" className="hg-edit" onClick={() => setEdit(true)}>
+            <span>{t('edit.title')}</span>
+          </button>
+        )}
       </div>
 
-      <Sheet
-        open={gallery}
-        onClose={() => setGallery(false)}
-        eyebrow={t('edit.homeEyebrow')}
-        title={t('edit.addTitle')}
-        className="gallery-sheet"
-      >
-        <AddPanel
-          items={galleryItems}
-          cols={cols}
-          rows={rows}
-          render={renderWidget}
-          onAdd={add}
-          t={t}
-          data={data}
-        />
-      </Sheet>
+      {desk ? (
+        editing &&
+        createPortal(
+          <div className="glass st-card add-card">
+            <h2>{t('edit.addTitle')}</h2>
+            <AddPanel
+              items={galleryItems}
+              cols={cols}
+              rows={rows}
+              render={renderWidget}
+              onAdd={add}
+              onPick={setAiming}
+              t={t}
+              data={data}
+            />
+          </div>,
+          navAdd!,
+        )
+      ) : (
+        <Sheet
+          open={gallery}
+          onClose={() => {
+            setGallery(false);
+            setAiming(null);
+          }}
+          eyebrow={t('edit.homeEyebrow')}
+          title={t('edit.addTitle')}
+          className="gallery-sheet"
+        >
+          <AddPanel
+            items={galleryItems}
+            cols={cols}
+            rows={rows}
+            render={renderWidget}
+            onAdd={add}
+            onPick={setAiming}
+            t={t}
+            data={data}
+          />
+        </Sheet>
+      )}
+      {menu &&
+        menuIt &&
+        createPortal(
+          <WidgetMenuPanel
+            at={menu}
+            onClose={() => setMenu(null)}
+            labels={{
+              menu: t('menu.label'),
+              edit: t('edit.title'),
+              size: t('edit.size'),
+              remove: t('menu.remove'),
+            }}
+            size={sizeName(menuIt.pw, menuIt.ph)}
+            sizes={menuSizes.map((x) => ({ value: x.size, label: t(`edit.sizes.${x.size}`) }))}
+            onEdit={() => setEdit(true)}
+            onSize={(v) => setSize(menuIt.id, v)}
+            onRemove={() => {
+              setMenu(null);
+              remove(menuIt.id);
+            }}
+          />,
+          document.body,
+        )}
     </div>
   );
 }
@@ -610,11 +764,14 @@ function PageSlots({
   cols,
   rows,
   label,
+  aim,
 }: {
   p: number;
   cols: number;
   rows: number;
   label: string;
+  /** The block a picked widget would go in (Add a widget), marked; -1 for none. */
+  aim: number;
 }) {
   return (
     <>
@@ -625,7 +782,7 @@ function PageSlots({
       {Array.from({ length: rows * cols }, (_, i) => (
         <span
           key={i}
-          className="hg-slot"
+          className={i === aim ? 'hg-slot aim' : 'hg-slot'}
           style={{
             gridColumn: p * (cols + 1) + (i % cols) + 1,
             gridRow: Math.floor(i / cols) + 1,
@@ -670,6 +827,7 @@ function AddPanel({
   rows,
   render,
   onAdd,
+  onPick,
   t,
   data,
 }: {
@@ -678,6 +836,8 @@ function AddPanel({
   rows: number;
   render: (def: WidgetDef, w: number, h: number) => ReactNode;
   onAdd: (id: string, w: number, h: number) => void;
+  /** The picked widget's blocks (or null), so the grid can mark where it would go. */
+  onPick?: (dims: { w: number; h: number } | null) => void;
   t: WidgetCtx['t'];
   data: HomeData;
 }) {
@@ -690,9 +850,16 @@ function AddPanel({
     t(`widgets.${key(def)}.name`, { service: service(def)?.name ?? '' });
   const words = q.trim().toLowerCase().split(/\s+/).filter(Boolean);
   const shown = items.filter((w) => words.every((x) => name(w).toLowerCase().includes(x)));
-  const picked = shown.find((w) => w.id === pickedId) ?? shown[0] ?? null;
+  // Nothing is picked until someone picks (the design canvas, board Z8): a hint until then.
+  const picked = shown.find((w) => w.id === pickedId) ?? null;
   const fits = SIZES.filter((x) => x.w <= cols && x.h <= rows);
   const dims = fits.find((x) => x.size === size) ?? fits[0]!;
+  const pick = (id: string | null, sz: WidgetSize = size) => {
+    setPickedId(id);
+    setSize(sz);
+    const d = fits.find((x) => x.size === sz) ?? fits[0]!;
+    onPick?.(id ? { w: d.w, h: d.h } : null);
+  };
   if (items.length === 0) return <p className="muted">{t('edit.allOn')}</p>;
   return (
     <div className="add">
@@ -713,7 +880,7 @@ function AddPanel({
             type="button"
             className="add-pick"
             aria-pressed={picked?.id === w.id}
-            onClick={() => setPickedId(w.id)}
+            onClick={() => pick(w.id)}
           >
             <Icon name={w.icon} width={16} height={16} />
             <span>{name(w)}</span>
@@ -733,7 +900,7 @@ function AddPanel({
             label={t('edit.size')}
             value={dims.size}
             items={fits.map((x) => ({ value: x.size, label: t(`edit.sizes.${x.size}`) }))}
-            onChange={(v) => setSize(v as WidgetSize)}
+            onChange={(v) => pick(picked.id, v as WidgetSize)}
           />
           <div className="add-prev">
             <section
@@ -750,6 +917,99 @@ function AddPanel({
           </Button>
         </>
       )}
+      {!picked && shown.length > 0 && <p className="add-hint muted small">{t('edit.pickHint')}</p>}
+    </div>
+  );
+}
+
+/**
+ * A widget's menu (SCOPE-shell.md §3f): Edit Home, Change size, Remove
+ * widget in red. Opens where it was asked for (the pointer, or the widget's
+ * corner from the keyboard), kept on the screen; Escape, a press elsewhere
+ * or scrolling closes it, and focus starts on its first item.
+ */
+function WidgetMenuPanel({
+  at,
+  onClose,
+  labels,
+  size,
+  sizes,
+  onEdit,
+  onSize,
+  onRemove,
+}: {
+  at: WidgetMenu;
+  onClose: () => void;
+  labels: { menu: string; edit: string; size: string; remove: string };
+  size: WidgetSize;
+  sizes: { value: WidgetSize; label: string }[];
+  onEdit: () => void;
+  onSize: (size: WidgetSize) => void;
+  onRemove: () => void;
+}) {
+  const box = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState({ left: at.x, top: at.y });
+  useEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const fit = {
+      left: Math.max(12, Math.min(at.x, window.innerWidth - r.width - 12)),
+      top: Math.max(12, Math.min(at.y, window.innerHeight - r.height - 12)),
+    };
+    if (fit.left !== pos.left || fit.top !== pos.top) setPos(fit);
+    el.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
+  }, [at, pos]);
+  useEffect(() => {
+    const away = (e: Event) => {
+      if (!box.current?.contains(e.target as Node)) onClose();
+    };
+    const key = (e: globalThis.KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('pointerdown', away);
+    document.addEventListener('keydown', key);
+    window.addEventListener('scroll', onClose, true);
+    window.addEventListener('resize', onClose);
+    return () => {
+      document.removeEventListener('pointerdown', away);
+      document.removeEventListener('keydown', key);
+      window.removeEventListener('scroll', onClose, true);
+      window.removeEventListener('resize', onClose);
+    };
+  }, [onClose]);
+  return (
+    <div
+      ref={box}
+      className="wg-menu"
+      role="menu"
+      aria-label={labels.menu}
+      style={{ left: pos.left, top: pos.top }}
+    >
+      <button type="button" role="menuitem" className="wg-menu-i" onClick={onEdit}>
+        <Icon name="grid" width={16} height={16} />
+        <span>{labels.edit}</span>
+      </button>
+      {sizes.length > 1 && (
+        <div className="wg-menu-size">
+          <span>
+            <Icon name="resize" width={16} height={16} />
+            {labels.size}
+          </span>
+          <Segmented
+            small
+            label={labels.size}
+            value={size}
+            items={sizes}
+            onChange={(v) => onSize(v as WidgetSize)}
+          />
+        </div>
+      )}
+      <hr />
+      <button type="button" role="menuitem" className="wg-menu-i bad" onClick={onRemove}>
+        <Icon name="minus" width={16} height={16} />
+        <span>{labels.remove}</span>
+      </button>
     </div>
   );
 }

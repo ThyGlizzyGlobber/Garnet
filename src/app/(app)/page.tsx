@@ -8,7 +8,6 @@ import { homeData } from '@/lib/home-data';
 import { layoutsFor } from '@/lib/home-layout';
 import { latestRegionalChoice, regionalEnabled } from '@/lib/regional';
 import { isAdmin } from '@/lib/roles';
-import { weatherCodeKey } from '@/lib/weather-codes';
 import { acknowledgeSharingAction, setHouseholdTypeAction } from './settings/actions';
 import { HOUSEHOLD_TYPES } from '@/db/schema';
 import { typeIcon } from '@/lib/household-types';
@@ -16,15 +15,14 @@ import { allowanceView } from '@/lib/allowance';
 import { AllowanceCard } from '@/components/app/allowance-card';
 
 /**
- * Home: a greeting, then the widget grid (BRAND.md §9). Every number comes
- * from homeData(); the grid and its widgets only lay them out, and each
- * person's arrangement is theirs (home_layout).
+ * Home: the widget grid (BRAND.md §9), with no greeting (SCOPE-shell.md §3d:
+ * the wall keeps its clock and date). Every number comes from homeData();
+ * the grid and its widgets only lay them out, and each person's arrangement
+ * is theirs (home_layout). One-time notices sit above the first row.
  */
 export default async function HomePage() {
   const { hh, me, today } = await pageContext();
-  const t = await getTranslations('home');
   const tsh = await getTranslations('sharing');
-  const tw = await getTranslations('weather');
   const tt = await getTranslations('householdTypes');
   const tp = await getTranslations('allowancePeriods');
   const allowance = allowanceView(hh, today);
@@ -35,21 +33,6 @@ export default async function HomePage() {
     fresh: data.fresh,
     services: data.services.map((s) => s.id),
   });
-  const dateLine = new Intl.DateTimeFormat(hh.locale, {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    timeZone: 'UTC',
-  }).format(new Date(`${today}T00:00:00Z`));
-  const wx = data.weather?.days[0];
-  const weatherLine =
-    wx && data.weather?.place
-      ? t('head.weather', {
-          place: data.weather.place,
-          temp: wx.hi ?? '–',
-          sky: tw(`code.${weatherCodeKey(wx.code)}`).toLowerCase(),
-        })
-      : null;
   // Households from before area comparisons: tell an admin once that it's on.
   const sharingNotice =
     isAdmin(me) &&
@@ -60,19 +43,6 @@ export default async function HomePage() {
 
   return (
     <>
-      <div className="hh d6-hh">
-        <div>
-          <h1>{t('head.hey', { name: me.name })}</h1>
-          {/* The date and weather, and at the right Edit Home (placed by the grid). */}
-          <div className="d6-line">
-            <p>
-              {dateLine}
-              {weatherLine && ` · ${weatherLine}`}
-            </p>
-            <span id="home-edit-slot" className="d6-edit" />
-          </div>
-        </div>
-      </div>
       {allowance && (
         <AllowanceCard view={allowance} locale={hh.locale} periodWord={tp(hh.allowancePeriod)} />
       )}

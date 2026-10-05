@@ -284,6 +284,8 @@ export function AppShell({
           <GarnetMark size={30} />
           <span>{labels.product}</span>
         </Link>
+        {/* Edit Home puts Add a widget here, in the cards' place (SCOPE-shell.md §3g). */}
+        {!account && <div id="nav-add" className="nav-add" />}
         <div className="glass st-card st-hh">
           <HouseholdSwitcher
             place="column"
@@ -414,6 +416,8 @@ export function AppShell({
             <Avatar name={view.me.name} colour={view.me.colour} photo={view.me.photo} />
           </AccountMenu>
         </div>
+        {/* Edit Home's bar takes over the top line here (SCOPE-shell.md §3g). */}
+        <div id="tb-edit" className="tb-edit" />
       </header>
 
       <main className="main">

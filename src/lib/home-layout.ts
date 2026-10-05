@@ -5,6 +5,7 @@ import {
   DEVICES,
   defaultLayout,
   parseLayout,
+  toFourByThree,
   type Device,
   type HouseholdFacts,
   type Layout,
@@ -92,4 +93,24 @@ export function resetLayout(
       ),
     )
     .run();
+}
+
+/**
+ * Every saved desktop and iPad-landscape Home moved onto four by three
+ * (SCOPE-shell.md §8 Q9: the owner chose to move everyone). Run once per install.
+ */
+export function moveLayoutsToFourByThree(db: Db = getDb()): number {
+  let n = 0;
+  for (const row of db.select().from(homeLayout).all()) {
+    const now = parseLayout({ density: row.density, pages: row.pages });
+    if (!now) continue;
+    const next = toFourByThree(row.device as Device, row.kind as LayoutKind, now);
+    if (next === now) continue;
+    db.update(homeLayout)
+      .set({ density: next.density, pages: next.pages, updatedAt: new Date().toISOString() })
+      .where(eq(homeLayout.id, row.id))
+      .run();
+    n += 1;
+  }
+  return n;
 }

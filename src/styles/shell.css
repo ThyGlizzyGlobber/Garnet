@@ -1512,3 +1512,38 @@
 .nc-email {
   display: none;
 }
+
+/* ---------- Edit Home on the frame (SCOPE-shell.md §3g) ---------- */
+/*
+  While Home is being edited on a desktop, its bar fills the top line in
+  place of the page's buttons, and Add a widget fills the menu in place of
+  its cards (the grid portals both in; empty slots take no room).
+*/
+.tb-edit:empty,
+.nav-add:empty {
+  display: none;
+}
+@media (min-width: 1200px) {
+  .topbar {
+    position: relative;
+  }
+  .tb-edit {
+    position: absolute;
+    inset: var(--frame) var(--gut) 0 calc(var(--gut) + var(--in-l));
+    display: flex;
+    align-items: center;
+  }
+  .topbar:has(.tb-edit:not(:empty)) > .tb-l,
+  .topbar:has(.tb-edit:not(:empty)) > .tb-r {
+    visibility: hidden;
+  }
+  .nav.column:has(.nav-add:not(:empty)) > :not(.nc-logo, .nav-add) {
+    display: none;
+  }
+  .nav-add {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+}

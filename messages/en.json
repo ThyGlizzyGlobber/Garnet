@@ -2176,9 +2176,9 @@
     "lede": "The pack, drawn with the same pieces the screens use. Fictional figures."
   },
   "home": {
-    "head": {
-      "hey": "Hey, {name}.",
-      "weather": "{place}, {temp}° and {sky}"
+    "menu": {
+      "label": "Widget options",
+      "remove": "Remove widget"
     },
     "you": "You",
     "youLow": "you",
@@ -2523,7 +2523,8 @@
         "large": "Large"
       },
       "hint": "Drag to move · tap a widget to change its size",
-      "drop": "Drop a widget here"
+      "drop": "Drop a widget here",
+      "pickHint": "Pick a widget to see it here, choose its size, then add it to Home."
     },
     "wx": {
       "paid": "Paid",
