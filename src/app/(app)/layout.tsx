@@ -28,7 +28,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       view={view}
       locale={hh.locale}
       money={(minor, currency, locale) => formatMoney(minor, currency, locale, { whole: true })}
-      labels={await shellLabels(hh.name)}
+      labels={await shellLabels()}
       switchAction={switchHouseholdAction}
     >
       {children}

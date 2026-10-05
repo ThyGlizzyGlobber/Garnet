@@ -52,7 +52,7 @@ export default async function AccountLayout({ children }: { children: ReactNode 
       variant="account"
       locale="en"
       money={(minor, currency, locale) => formatMoney(minor, currency, locale, { whole: true })}
-      labels={await shellLabels(ta('name'))}
+      labels={await shellLabels()}
       switchAction={switchHouseholdAction}
     >
       {children}

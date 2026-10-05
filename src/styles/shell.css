@@ -223,10 +223,6 @@
   flex-direction: column;
   gap: 12px;
 }
-/* A full-height panel has no floating card's lit rim. */
-.nav.column::before {
-  display: none;
-}
 /*
   The rail (an iPad) is graphite in both themes (owner, 2026-10-02), at 75%
   so the scene shows faintly through a blur. It sets its own dark tokens, so

@@ -4,7 +4,7 @@ _Drafted and finalised 2026-10-05 from the design canvas the owner and the assis
 through that day ("Garnet Home Widgets",
 https://claude.ai/artifact/8eR7HgonFF1rQXzV3qXyDt; boards Z6 to Z9 and AH are
 the settled design, Q to Z5 the rounds that led there, including a top header
-that was tried on boards S to Y and dropped). **Being built from 2026-10-05: F1 to F4 done.** The owner's
+that was tried on boards S to Y and dropped). **Built 2026-10-05, stages F1 to F5** (see the decisions log in CLAUDE.md for what each did). The owner's
 decisions are in §5 and their answers to the questions in §8 (two are still
 open: notifications and the account area's menu); the build order is §7._
 

@@ -38,7 +38,6 @@ export interface ShellLabels {
     members: string;
     inbox: string;
   };
-  settings: string;
   search: string;
   /** Under the household's name: "3 Members" (owner's wording). */
   people: (count: number) => string;
@@ -68,7 +67,6 @@ export interface ShellLabels {
   hideSubs: string;
   /** The product's name, under the household's on a phone's Home. */
   product: string;
-  householdHome: string;
   /** The Account Dashboard's nav (the account variant). */
   households: string;
   account: string;
@@ -95,8 +93,6 @@ export interface ShellLabels {
   };
   accountMenu: {
     open: string;
-    dashboard: string;
-    settings: string;
     notifications: string;
     appearance: string;
     profile: string;

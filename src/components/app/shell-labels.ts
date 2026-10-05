@@ -2,7 +2,7 @@ import { getTranslations } from 'next-intl/server';
 import type { ShellLabels } from './shell';
 
 /** The shell's words, for the household frame and the Account Dashboard's. */
-export async function shellLabels(householdName: string): Promise<ShellLabels> {
+export async function shellLabels(): Promise<ShellLabels> {
   const t = await getTranslations('nav');
   const ta = await getTranslations('app');
   const tm = await getTranslations('main');
@@ -18,7 +18,6 @@ export async function shellLabels(householdName: string): Promise<ShellLabels> {
       members: t('members'),
       inbox: t('inbox'),
     },
-    settings: t('settings'),
     search: t('search'),
     people: (count) => t('people', { count }),
     admin: t('admin'),
@@ -51,7 +50,6 @@ export async function shellLabels(householdName: string): Promise<ShellLabels> {
       home: tm('main.home'),
     },
     product: ta('name'),
-    householdHome: t('householdHome', { household: householdName }),
     households: t('households'),
     account: t('accountShort'),
     console: t('console'),
@@ -75,8 +73,6 @@ export async function shellLabels(householdName: string): Promise<ShellLabels> {
     },
     accountMenu: {
       open: tam('open'),
-      dashboard: tam('dashboard'),
-      settings: tam('settings'),
       notifications: tam('notifications'),
       appearance: tam('appearance'),
       profile: tam('profile'),
