@@ -6,6 +6,7 @@ import { listAssets } from '@/lib/assets';
 import { listBills } from '@/lib/bills';
 import { dueParts } from '@/lib/instalments';
 import { listActiveMembers } from '@/lib/members';
+import { monthDue, type MonthDue } from '@/lib/month-due';
 import { monthBounds } from '@/lib/periods';
 import { documentCounts } from '@/lib/review';
 import { billsAddress } from '@/lib/bills-address';
@@ -74,6 +75,12 @@ export interface ShellView {
   household: { name: string; members: string[]; type: HouseholdType | null };
   /** Every household this person belongs to, for the switcher (SCOPE-accounts.md §3b). */
   households: HouseholdTile[];
+  /**
+   * The household's month, for its card in the menu: the bills due this month
+   * in all, and how much of what's due the providers have. None in the
+   * account area.
+   */
+  month?: MonthDue & { month: string; totalMinor: number };
   /** The household's currency, for the nav's figures. */
   currency: string;
   split: boolean;
@@ -107,7 +114,8 @@ export function shellView(hh: Household, me: Member, today: string, db: Db = get
   const month = totalsForRange(hh.id, start, end, db, scope);
   const due = new Map(month.byService.map((t) => [t.service.id, t.minor]));
   // Vehicles, each with what's due on it this month.
-  const vehicleBills = listBills(hh.id, scope, db).filter((b) => b.assetId);
+  const bills = listBills(hh.id, scope, db);
+  const vehicleBills = bills.filter((b) => b.assetId);
   const vehicles = (owner: string | null): ShellService[] =>
     listAssets(hh.id, owner ? { kind: 'vehicle', owner } : { kind: 'vehicle' }, db).map((a) => ({
       id: a.id,
@@ -136,6 +144,11 @@ export function shellView(hh: Household, me: Member, today: string, db: Db = get
       type: hh.type,
     },
     households: householdTiles(me, null, db),
+    month: {
+      month: today.slice(0, 7),
+      totalMinor: totalsForRange(hh.id, start, end, db).total,
+      ...monthDue(bills, start, end),
+    },
     currency: hh.currency,
     split: hh.splitMode === 'shared',
     sections: arrange(all, (e) => e.key, layout, essential),

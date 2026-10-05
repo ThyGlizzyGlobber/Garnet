@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { Avatar } from '@/components/ui/colour';
 import { IconButton } from '@/components/ui/controls';
+import { formatMoney, formatMoneyParts, formatMonth } from '@/lib/format';
 import { colourCss } from '@/lib/palette';
 import type { ShellEntry, ShellView } from '@/lib/shell';
 import { logout } from '@/app/login/actions';
@@ -18,12 +19,14 @@ import { HouseholdSwitcher, type SwitcherLabels, type SwitcherRow } from './hous
 import { roleKey, typeIcon } from '@/lib/household-types';
 
 /**
- * The app's frame (BRAND.md §9): the scene behind, a nav column down the
- * whole left edge (a rail of icons on an iPad, a bottom bar on a phone),
- * and a simple top bar: the page's way back on the left; search and Add bill
- * on the right (the Inbox is in the nav). The household at the top of the
- * column drops down the switcher; the person at its foot opens the account
- * menu. Layout in src/styles/shell.css; the numbers come from shellView().
+ * The app's frame (BRAND.md §9, SCOPE-shell.md): the scene behind, and on a
+ * desktop one frame shared by the menu and the page. The menu is a stack of
+ * glass cards (the household with its month ring, the links as tiles, the
+ * services, your own services, you); a rail of icons on an iPad and a bottom
+ * bar on a phone for now. The top line holds the page's way back on the left
+ * and search and Add bill on the right. The household card drops down the
+ * switcher; your card opens the account menu. Layout in
+ * src/styles/shell.css; the numbers come from shellView().
  */
 export interface ShellLabels {
   nav: {
@@ -42,6 +45,14 @@ export interface ShellLabels {
   member: string;
   /** Role names by roleKey (Admin, Owner/Landlord, Tenant…). */
   roles: Record<string, string>;
+  /** The household card's words (the desktop menu). */
+  card: {
+    toPay: (amount: string) => string;
+    allPaid: string;
+    nothingDue: string;
+    /** The ring, for screen readers: "12% of this month's bills paid". */
+    ring: (percent: string) => string;
+  };
   servicesHead: string;
   thisMonth: string;
   /** The services in no group, once there are groups. */
@@ -181,11 +192,13 @@ export function AppShell({
     <>
       <i aria-hidden="true" />
       <span>{s.name}</span>
-      <b>{money(s.minor, view.currency, locale)}</b>
+      {/* Nothing due on it this month: a dash, not a zero. */}
+      <b>{s.minor ? money(s.minor, view.currency, locale) : '—'}</b>
     </>
   );
   const nameOf = (s: ShellEntry) =>
     s.kind === 'group' && s.category ? (labels.main[s.category] ?? s.name) : s.name;
+  const card = account || !view.month ? null : householdCard(view, labels, locale);
   const anyServices = [...view.sections, ...view.mine].some((sec) => sec.entries.length > 0);
   const asSections = (secs: ShellView['sections']) =>
     secs.map((sec) => ({
@@ -234,22 +247,25 @@ export function AppShell({
     <div className="app">
       {/* The same column everywhere (owner, 2026-10-02): the brand, where you
           are (the switcher), the main links, headed sections, and you. */}
-      <nav className="nav glass-strong vertical column" aria-label="Main">
+      <nav className="nav vertical column" aria-label="Main">
         <Link href={account ? '/account/overview' : '/'} className="nc-logo">
           <GarnetMark size={30} />
           <span>{labels.product}</span>
         </Link>
-        <HouseholdSwitcher
-          place="column"
-          icon={brandIcon}
-          title={brandTitle}
-          sub={account ? labels.householdCount(view.households.length) : who}
-          rows={rows}
-          labels={labels.switcher}
-          action={switchAction}
-        />
+        <div className="glass st-card st-hh">
+          <HouseholdSwitcher
+            place="column"
+            icon={brandIcon}
+            title={brandTitle}
+            sub={account ? labels.householdCount(view.households.length) : who}
+            rows={rows}
+            labels={labels.switcher}
+            action={switchAction}
+            card={card}
+          />
+        </div>
         {account ? (
-          <div className="nav-items nc-acct-top">
+          <div className="nav-items nc-acct-top glass st-card">
             <NavItems items={[overview]} among={allAccountItems} />
             <NavHouseholds
               label={labels.households}
@@ -269,10 +285,12 @@ export function AppShell({
             />
           </div>
         ) : (
-          <NavItems items={items} />
+          <div className="glass st-card st-links">
+            <NavItems items={items} />
+          </div>
         )}
         {account && (
-          <div className="nc-acct">
+          <div className="nc-acct glass st-card">
             <div className="nav-sec">{labels.acct.myAccount}</div>
             <NavItems items={accountItems} among={allAccountItems} />
             {developerItems.length > 0 && (
@@ -307,27 +325,29 @@ export function AppShell({
               />
             </>
           ) : (
-            <>
+            <div className="glass st-card">
               <div className="nav-sec">{labels.servicesHead}</div>
               <p className="nc-empty">{labels.noServices}</p>
-            </>
+            </div>
           )}
         </div>
-        <AccountMenu
-          place="column"
-          me={menuMe}
-          groups={menuGroups}
-          signOutLabel={am.signOut}
-          signOut={logout}
-          openLabel={`${view.me.name} · ${am.open}`}
-        >
-          <Avatar name={view.me.name} colour={view.me.colour} photo={view.me.photo} />
-          <span className="nc-bt">
-            <b>{view.me.name}</b>
-            <span>{account ? labels.account : myRole}</span>
-          </span>
-          <Icon name="more" width={18} height={18} />
-        </AccountMenu>
+        <div className="glass st-card st-me">
+          <AccountMenu
+            place="column"
+            me={menuMe}
+            groups={menuGroups}
+            signOutLabel={am.signOut}
+            signOut={logout}
+            openLabel={`${view.me.name} · ${am.open}`}
+          >
+            <Avatar name={view.me.name} colour={view.me.colour} photo={view.me.photo} />
+            <span className="nc-bt">
+              <b>{view.me.name}</b>
+              <span>{account ? labels.account : myRole}</span>
+            </span>
+            <Icon name="more" width={18} height={18} />
+          </AccountMenu>
+        </div>
       </nav>
 
       <header className="topbar">
@@ -381,5 +401,60 @@ export function AppShell({
         />
       </nav>
     </div>
+  );
+}
+
+/**
+ * The household as a card (SCOPE-shell.md §3b): the month's ring (bills paid
+ * of bills due this month), the household and month, the month's total as
+ * the figure, and what is left to pay.
+ */
+function householdCard(view: ShellView, labels: ShellLabels, locale: string): ReactNode {
+  const m = view.month!;
+  const pct = m.dueMinor > 0 ? Math.min(1, m.paidMinor / m.dueMinor) : 0;
+  const allPaid = m.bills > 0 && m.paidBills === m.bills;
+  const percent = `${Math.round(pct * 100)}%`;
+  const fig = formatMoneyParts(m.totalMinor, view.currency, locale);
+  const left = m.dueMinor - m.paidMinor;
+  const r = 42;
+  const c = 2 * Math.PI * r;
+  return (
+    <>
+      <span className="st-ring" role="img" aria-label={labels.card.ring(percent)}>
+        <svg viewBox="0 0 100 100" aria-hidden="true">
+          <circle cx="50" cy="50" r={r} className="st-ring-track" />
+          {pct > 0 && (
+            <circle
+              cx="50"
+              cy="50"
+              r={r}
+              className="st-ring-fill"
+              strokeDasharray={`${(c * pct).toFixed(1)} ${c.toFixed(1)}`}
+              transform="rotate(-90 50 50)"
+            />
+          )}
+        </svg>
+        <span aria-hidden="true">
+          {allPaid ? <Icon name="check" width={18} height={18} /> : m.bills > 0 ? percent : null}
+        </span>
+      </span>
+      <span className="st-hh-t">
+        <span>
+          {view.household.name} · {formatMonth(m.month, locale)}
+        </span>
+        <b>
+          {fig.main}
+          <small>{fig.minor}</small>
+          {fig.tail}
+        </b>
+        <span>
+          {allPaid
+            ? labels.card.allPaid
+            : left > 0
+              ? labels.card.toPay(formatMoney(left, view.currency, locale))
+              : labels.card.nothingDue}
+        </span>
+      </span>
+    </>
   );
 }

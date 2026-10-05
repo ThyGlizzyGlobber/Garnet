@@ -377,14 +377,17 @@ export function NavServices({
       }}
       onDrop={onDrop}
     >
-      <div className="nav-sec nc-head">
-        <b>{labels.head}</b>
-        <span>{labels.thisMonth}</span>
+      {/* The household's services and the person's own: a card each where the menu is a stack. */}
+      <div className="nc-house glass st-card">
+        <div className="nav-sec nc-head">
+          <b>{labels.head}</b>
+          <span>{labels.thisMonth}</span>
+        </div>
+        {part('household', groups, loose, null, { label: t('newGroup'), example })}
       </div>
-      {part('household', groups, loose, null, { label: t('newGroup'), example })}
 
       {mine.length + mineGroups.length > 0 && (
-        <div className="nc-mine">
+        <div className="nc-mine glass st-card">
           <div className="nav-sec nc-head">
             <b>{labels.mine}</b>
           </div>

@@ -38,6 +38,7 @@ export function HouseholdSwitcher({
   rows,
   labels,
   action,
+  card,
 }: {
   place: 'column' | 'topbar';
   icon?: string;
@@ -46,6 +47,11 @@ export function HouseholdSwitcher({
   rows: SwitcherRow[];
   labels: SwitcherLabels;
   action: (fd: FormData) => Promise<void>;
+  /**
+   * The household as a card (the desktop menu): its month ring and figures.
+   * Shown in place of the mark and name where the menu is a stack of cards.
+   */
+  card?: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
@@ -69,7 +75,7 @@ export function HouseholdSwitcher({
     <div ref={box} className={cx('sw', column ? 'sw-column' : 'sw-topbar')}>
       <button
         type="button"
-        className={cx(column ? 'nc-brand' : 'brand', 'sw-btn')}
+        className={cx(column ? 'nc-brand' : 'brand', 'sw-btn', card ? 'has-card' : undefined)}
         aria-label={labels.open}
         aria-expanded={open}
         aria-haspopup="menu"
@@ -85,6 +91,7 @@ export function HouseholdSwitcher({
           </b>
           <span>{sub}</span>
         </span>
+        {card && <span className="sw-card">{card}</span>}
         {/* In the column the arrow sits at the far edge, the name taking the width. */}
         {column && <Icon name="chevron-down" width={16} height={16} className="sw-chev" />}
       </button>

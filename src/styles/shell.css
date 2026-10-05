@@ -1,10 +1,10 @@
 /*
-  The app's frame (BRAND.md §9): a nav column down the whole left edge on
-  wide screens (owner, 2026-10-02: full height, not a floating card, and
-  wider), a rail of icons on an iPad (also full height), a floating bottom
-  bar on a phone; a simple top bar; the page beside the column. The document
-  scrolls, so the column and the bar are fixed to the viewport. Breakpoints:
-  the column from 1200 px, the rail from 640 px.
+  The app's frame (BRAND.md §9, SCOPE-shell.md): on a desktop (from 1200 px)
+  one frame for the whole screen, a stack of glass cards for the menu and the
+  page beside it, sharing a top line (the rules at the end of this file); a
+  graphite rail of icons on an iPad (640 to 1199 px), a floating bottom bar
+  on a phone; a simple top bar. The document scrolls, so the menu and the bar
+  are fixed to the viewport.
 */
 .app {
   --gut: 28px;
@@ -222,38 +222,59 @@
   display: none;
 }
 /*
-  The side menu is graphite in both themes (owner, 2026-10-02), at 75% so
-  the scene shows faintly through a blur rather than a solid slab. It sets its own dark tokens, so everything in it, the household and
-  account menus included, reads light on dark without rules of its own.
+  The rail (an iPad) is graphite in both themes (owner, 2026-10-02), at 75%
+  so the scene shows faintly through a blur. It sets its own dark tokens, so
+  everything in it, the household and account menus included, reads light on
+  dark without rules of its own. A desktop's menu is glass cards instead and
+  follows the theme.
 */
-.app > .nav.column {
-  background: var(--side-bg);
-  -webkit-backdrop-filter: blur(24px) saturate(120%);
-  backdrop-filter: blur(24px) saturate(120%);
-  box-shadow: none;
-}
 .nav.column {
-  color-scheme: dark;
-  color: #f5f5f5;
-  --p-fg: #f5f5f5;
-  --p-fg2: rgba(245, 245, 245, 0.66);
-  --p-fg3: rgba(245, 245, 245, 0.45);
-  --p-accent: #d6d6d6;
-  --p-accent2: #b8b8b8;
-  --p-on-accent: #1c1c1c;
-  --line: rgba(255, 255, 255, 0.1);
-  --line-2: rgba(255, 255, 255, 0.16);
-  --inset: rgba(255, 255, 255, 0.07);
-  --inset-2: rgba(255, 255, 255, 0.1);
-  --ctl-rim: rgba(255, 255, 255, 0.14);
-  --g-hi: rgba(255, 255, 255, 0.08);
-  --nav-on-bg: rgba(255, 255, 255, 0.13);
-  --nav-on-fg: #ffffff;
-  --nav-on-ic: #ffffff;
-  --tip-bg: #2e2e2e;
-  --bad: #ea868b;
   /* Where a dragged service lands: iOS blue. */
   --drop-line: #0a84ff;
+}
+@media (max-width: 1199px) {
+  .app > .nav.column {
+    background: var(--side-bg);
+    -webkit-backdrop-filter: blur(24px) saturate(120%);
+    backdrop-filter: blur(24px) saturate(120%);
+    box-shadow: none;
+  }
+  .nav.column {
+    color-scheme: dark;
+    color: #f5f5f5;
+    --p-fg: #f5f5f5;
+    --p-fg2: rgba(245, 245, 245, 0.66);
+    --p-fg3: rgba(245, 245, 245, 0.45);
+    --p-accent: #d6d6d6;
+    --p-accent2: #b8b8b8;
+    --p-on-accent: #1c1c1c;
+    --line: rgba(255, 255, 255, 0.1);
+    --line-2: rgba(255, 255, 255, 0.16);
+    --inset: rgba(255, 255, 255, 0.07);
+    --inset-2: rgba(255, 255, 255, 0.1);
+    --ctl-rim: rgba(255, 255, 255, 0.14);
+    --g-hi: rgba(255, 255, 255, 0.08);
+    --nav-on-bg: rgba(255, 255, 255, 0.13);
+    --nav-on-fg: #ffffff;
+    --nav-on-ic: #ffffff;
+    --tip-bg: #2e2e2e;
+    --bad: #ea868b;
+  }
+  /* The stack's cards are a desktop's: on the rail their contents sit bare. */
+  .nav.column .st-card {
+    display: contents;
+  }
+  .nav.column .st-card::before {
+    display: none;
+  }
+  .nav.column .mark {
+    background: rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+    box-shadow: none;
+  }
+  .nav.column .nc-logo {
+    color: #ffffff;
+  }
 }
 /*
   The brand at the top of the column on every page (owner, 2026-10-02): the
@@ -264,7 +285,7 @@
   align-items: center;
   gap: 12px;
   padding: 10px 12px 26px;
-  color: #ffffff;
+  color: var(--p-fg);
   text-decoration: none;
 }
 .nc-logo span {
@@ -301,12 +322,6 @@
   font-weight: 650;
   font-size: 14px;
   letter-spacing: 0;
-}
-/* The household's mark: a light tile on the graphite. */
-.nav.column .mark {
-  background: rgba(255, 255, 255, 0.12);
-  color: #ffffff;
-  box-shadow: none;
 }
 .nav.column .nav-i[aria-current='page'] {
   box-shadow: none;
@@ -940,6 +955,10 @@
 .sw-column .nc-brand .nc-bt {
   flex: 1;
 }
+/* The household as a card: a desktop's (the rules at the end of this file). */
+.sw-card {
+  display: none;
+}
 .sw-column .nc-brand > .sw-chev {
   flex: none;
   margin: 0 2px 0 0;
@@ -1092,5 +1111,227 @@
     left: calc(100% + 12px);
     bottom: 0;
     width: 280px;
+  }
+}
+
+/* ---------- a desktop: one frame, the menu a stack of glass cards ---------- */
+/*
+  SCOPE-shell.md §3a and §3b. A 24 px margin all round, the menu 316 px wide,
+  a 24 px gutter, then the page. The top line is 56 px: the brand on the
+  left (in the menu's column), the page's own controls on the right. Under
+  it the menu's first card and the page start on the same line.
+*/
+@media (min-width: 1200px) {
+  .app {
+    --gut: 24px;
+    --frame: 24px;
+    --top-line: 56px;
+    --nav-wv: 316px;
+    --in-l: calc(var(--nav-wv) + var(--frame));
+  }
+  .topbar {
+    min-height: calc(var(--frame) + var(--top-line));
+    padding: var(--frame) var(--gut) 0 calc(var(--gut) + var(--in-l));
+  }
+  .main-in {
+    padding-top: 16px;
+  }
+  .nav.column {
+    left: var(--frame);
+    top: calc(var(--safe-t) + var(--frame));
+    bottom: calc(var(--safe-b) + var(--frame));
+    padding: 0;
+    gap: 16px;
+    background: none;
+  }
+  .nav.column .nc-logo {
+    flex: none;
+    height: var(--top-line);
+    padding: 0 6px;
+  }
+  .nav.column .nc-logo span {
+    font-size: 23px;
+  }
+  .nav.column .st-card {
+    flex: none;
+    padding: 12px 10px;
+    border-radius: 24px;
+  }
+  /* A card whose menu opens over the cards after it. */
+  .nav.column .st-hh,
+  .nav.column .st-me {
+    z-index: 3;
+  }
+
+  /* The household: its month ring, the month's total, what's left to pay. */
+  .nav.column .sw-column {
+    margin: 0;
+  }
+  .nav.column .st-hh .sw-column .nc-brand {
+    gap: 12px;
+    padding: 2px 6px;
+    border-radius: 16px;
+    background: none;
+  }
+  .nav.column .nc-brand.has-card > .mark,
+  .nav.column .nc-brand.has-card > .nc-bt {
+    display: none;
+  }
+  .nav.column .sw-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+  }
+  .st-ring {
+    position: relative;
+    flex: none;
+    width: 56px;
+    height: 56px;
+  }
+  .st-ring svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+  .st-ring circle {
+    fill: none;
+    stroke-width: 12.5;
+    stroke-linecap: round;
+  }
+  .st-ring-track {
+    stroke: var(--inset-2);
+  }
+  .st-ring-fill {
+    stroke: var(--p-accent);
+  }
+  .st-ring > span {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--p-fg);
+  }
+  .st-hh-t {
+    display: grid;
+    min-width: 0;
+    line-height: 1.25;
+  }
+  .st-hh-t > span {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--p-fg3);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .st-hh-t > b {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 24px;
+    line-height: 28px;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+    color: var(--p-fg);
+  }
+  .st-hh-t > b small {
+    font-size: 0.55em;
+    font-weight: 600;
+    color: var(--p-fg2);
+    letter-spacing: 0;
+  }
+  .nav.column .st-hh .sw-menu {
+    top: calc(100% + 20px);
+    left: -10px;
+    right: -10px;
+    width: auto;
+  }
+
+  /* The links: tiles, three across, the current one filled with the accent. */
+  .nav.column .st-links {
+    padding: 10px;
+  }
+  .nav.column .st-links .nav-items {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .nav.column .st-links .nav-i {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0;
+    height: 56px;
+    padding: 9px 10px;
+    border-radius: 14px;
+    background: var(--inset-2);
+    color: var(--p-fg);
+    font-size: 11.5px;
+    font-weight: 700;
+  }
+  .nav.column .st-links .nav-i .ic {
+    width: 20px;
+    height: 20px;
+    color: var(--p-fg2);
+  }
+  .nav.column .st-links .nav-i[aria-current='page'] {
+    background: var(--p-accent);
+    color: var(--p-on-accent);
+  }
+  .nav.column .st-links .nav-i[aria-current='page'] .ic {
+    color: inherit;
+  }
+  .nav.column .st-links .nav-i .badge {
+    top: 7px;
+    right: 7px;
+    transform: none;
+  }
+
+  /*
+    Services and My Services: a card each, scrolling together between the
+    links and your card. The scroller is wider than the cards so their
+    shadows aren't cut off at its edges.
+  */
+  .nc-svcs {
+    margin: 0 calc(var(--frame) * -1) -8px;
+    padding: 0 var(--frame) 8px;
+  }
+  .nc-svcs-in {
+    gap: 16px;
+  }
+  .nav.column .nc-mine {
+    margin-top: 0;
+    padding-top: 12px;
+    border-top: 0;
+  }
+  .nav.column .nc-house,
+  .nav.column .nc-mine {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+  .nc-svcs .nav-sec {
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 11.5px;
+    color: var(--p-fg3);
+  }
+
+  /* You, at the foot. */
+  .nav.column .st-me {
+    padding: 6px;
+  }
+  .nav.column .am-column {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 0;
+  }
+  .nav.column .st-me .am-menu {
+    left: -6px;
+    bottom: calc(100% + 14px);
+    width: calc(100% + 12px);
   }
 }

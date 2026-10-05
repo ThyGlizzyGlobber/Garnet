@@ -31,6 +31,12 @@ export async function shellLabels(householdName: string): Promise<ShellLabels> {
       tenant: tr('tenant'),
       boarder: tr('boarder'),
     },
+    card: {
+      toPay: (amount) => t('card.toPay', { amount }),
+      allPaid: t('card.allPaid'),
+      nothingDue: t('card.nothingDue'),
+      ring: (percent) => t('card.ring', { percent }),
+    },
     servicesHead: t('servicesHead'),
     thisMonth: t('thisMonth'),
     otherServices: t('otherServices'),

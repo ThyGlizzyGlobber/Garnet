@@ -10,6 +10,7 @@ import { householdUsage } from '@/lib/consumption';
 import { addDays, daysBetween, daysInclusive } from '@/lib/dates';
 import { canChoosePlan, dueNow, paysByInstalments, planUndecided } from '@/lib/instalments';
 import { hasHousemates, listActiveMembers, listMembers } from '@/lib/members';
+import { monthDue } from '@/lib/month-due';
 import { ownershipQuestions } from '@/lib/ownership';
 import { addMonths, lastMonths, monthBounds } from '@/lib/periods';
 import { nextMonth, projectMonth } from '@/lib/projections';
@@ -283,18 +284,7 @@ export function homeData(hh: Household, me: Member, today: string, db: Db = getD
   const yourMinor = projected?.setAside.find((s) => s.member.id === me.id)?.minor ?? null;
 
   // The household's bills and instalments due this month, and which the provider has.
-  const dueThisMonth = bills
-    .filter((b) => !b.ownerMemberId)
-    .flatMap((b) =>
-      paysByInstalments(b)
-        ? b.instalments.map((i) => ({
-            dueDate: i.dueDate,
-            minor: i.amountMinor,
-            paid: !!i.paidToProviderAt,
-          }))
-        : [{ dueDate: b.dueDate, minor: b.amountMinor, paid: !!b.paidToProviderAt }],
-    )
-    .filter((x) => x.dueDate >= mStart && x.dueDate <= mEnd);
+  const dueThisMonth = monthDue(bills, mStart, mEnd);
 
   // What the viewer pays next (a month ahead).
   const upcoming: Upcoming[] = [];
@@ -617,10 +607,7 @@ export function homeData(hh: Household, me: Member, today: string, db: Db = getD
       day: Number(today.slice(8, 10)),
       days: daysInclusive(mStart, mEnd),
       knownMinor: thisMonth.total,
-      bills: dueThisMonth.length,
-      paidBills: dueThisMonth.filter((x) => x.paid).length,
-      dueMinor: dueThisMonth.reduce((s, x) => s + x.minor, 0),
-      paidMinor: dueThisMonth.filter((x) => x.paid).reduce((s, x) => s + x.minor, 0),
+      ...dueThisMonth,
       projectedMinor: Math.max(projected?.totalMinor ?? thisMonth.total, thisMonth.total),
       vsLastMonth: lastMonthTotal > 0 ? (thisMonth.total - lastMonthTotal) / lastMonthTotal : null,
       byService: thisMonth.byService.map((t) => ({ id: t.service.id, minor: t.minor })),

@@ -19,6 +19,12 @@
     "people": "{count, plural, one {# Member} other {# Members}}",
     "admin": "Admin",
     "member": "Member",
+    "card": {
+      "toPay": "{amount} to pay",
+      "allPaid": "All paid",
+      "nothingDue": "Nothing due this month",
+      "ring": "{percent} of this month's bills paid"
+    },
     "servicesHead": "Services",
     "thisMonth": "this month",
     "otherServices": "Other Services",
