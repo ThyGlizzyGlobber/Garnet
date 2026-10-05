@@ -1,10 +1,16 @@
 /*
-  The app's frame (BRAND.md §9, SCOPE-shell.md): on a desktop (from 1200 px)
-  one frame for the whole screen, a stack of glass cards for the menu and the
-  page beside it, sharing a top line (the rules at the end of this file); a
-  graphite rail of icons on an iPad (640 to 1199 px), a floating bottom bar
-  on a phone; a simple top bar. The document scrolls, so the menu and the bar
-  are fixed to the viewport.
+  The app's frame (BRAND.md §9, SCOPE-shell.md). Three layouts, by shape:
+  - the stack: on a desktop, and any landscape screen 900 px wide or more
+    (an iPad on its side, §8 Q5): one frame for the whole screen, a stack of
+    glass cards for the menu and the page beside it, sharing a top line;
+    (min-width: 1200px), (min-width: 900px) and (orientation: landscape)
+  - the phone's: on a phone, and any portrait screen under 1200 px (an iPad
+    upright, §8 Q5–Q6): the household card across the top, the links in a
+    glass bar along the bottom;
+    (max-width: 639px), (max-width: 1199px) and (orientation: portrait)
+  - a graphite rail of icons on what's left (a landscape screen 640 to 899
+    px wide).
+  The document scrolls, so the menu and the bar are fixed to the viewport.
 */
 .app {
   --gut: 28px;
@@ -19,13 +25,13 @@
   flex-direction: column;
   padding-top: var(--safe-t);
 }
-@media (max-width: 1199px) {
+@media (max-width: 1199px) and (orientation: portrait), (max-width: 899px) {
   .app {
     --gut: 22px;
     --nav-wv: 92px;
   }
 }
-@media (max-width: 639px) {
+@media (max-width: 639px), (max-width: 1199px) and (orientation: portrait) {
   .app {
     --gut: 16px;
     --nav-wv: 0px;
@@ -104,7 +110,7 @@
 .tb-me {
   display: none;
 }
-@media (max-width: 639px) {
+@media (max-width: 639px), (max-width: 1199px) and (orientation: portrait) {
   .topbar {
     padding-top: 8px;
     gap: 8px;
@@ -232,7 +238,7 @@
   /* Where a dragged service lands: iOS blue. */
   --drop-line: #0a84ff;
 }
-@media (max-width: 1199px) {
+@media (max-width: 1199px) and (orientation: portrait), (max-width: 899px) {
   .app > .nav.column {
     background: var(--side-bg);
     -webkit-backdrop-filter: blur(24px) saturate(120%);
@@ -547,7 +553,7 @@
 .nc-me .nc-bt b {
   color: var(--p-fg);
 }
-@media (max-width: 1199px) {
+@media (max-width: 1199px) and (orientation: portrait), (max-width: 899px) {
   .nav.column {
     padding: calc(var(--safe-t) + 12px) 8px calc(var(--safe-b) + 12px);
     align-items: stretch;
@@ -591,7 +597,7 @@
     padding: 8px 0;
   }
 }
-@media (max-width: 639px) {
+@media (max-width: 639px), (max-width: 1199px) and (orientation: portrait) {
   .nav.column {
     display: none;
   }
@@ -620,7 +626,7 @@
   font-size: 10.5px;
   height: 100%;
 }
-@media (max-width: 639px) {
+@media (max-width: 639px), (max-width: 1199px) and (orientation: portrait) {
   .nav.bar {
     display: flex;
   }
@@ -1100,7 +1106,7 @@
 .am-out > .ic {
   color: var(--bad);
 }
-@media (max-width: 1199px) {
+@media (max-width: 1199px) and (orientation: portrait), (max-width: 899px) {
   /* The rail is narrow: the menus open beside it. */
   .nav.column .sw-menu {
     left: calc(100% + 12px);
@@ -1114,6 +1120,145 @@
   }
 }
 
+/* ---------- the household as a card, and its switcher's cards (shared) ---------- */
+/* The month ring, the figures, and the other households' cards: the desktop
+   menu's and the phone's top bar's (SCOPE-shell.md §3b, §3h, §8 Q6). */
+.st-ring {
+  position: relative;
+  flex: none;
+  width: 56px;
+  height: 56px;
+}
+.st-ring svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.st-ring circle {
+  fill: none;
+  stroke-width: 12.5;
+  stroke-linecap: round;
+}
+.st-ring-track {
+  stroke: var(--inset-2);
+}
+.st-ring-fill {
+  stroke: var(--p-accent);
+}
+.st-ring > span {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--p-fg);
+}
+.st-hh-t {
+  display: grid;
+  min-width: 0;
+  line-height: 1.25;
+}
+.st-hh-t > span {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--p-fg3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.st-hh-t > b {
+  font-family: var(--f-display);
+  font-weight: 600;
+  font-size: 24px;
+  line-height: 28px;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--p-fg);
+}
+.st-hh-t > b small {
+  font-size: 0.55em;
+  font-weight: 600;
+  color: var(--p-fg2);
+  letter-spacing: 0;
+}
+.sw-hcard {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--menu-well);
+  color: var(--p-fg);
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+.sw-hcard .st-hh-t > b {
+  font-size: 20px;
+  line-height: 24px;
+}
+.sw-hcard:hover,
+.sw-hcard:focus-visible {
+  background: var(--p-accent);
+  color: var(--p-on-accent);
+  outline: none;
+}
+.sw-hcard:hover .st-hh-t > span,
+.sw-hcard:hover .st-hh-t > b small,
+.sw-hcard:hover .sw-go,
+.sw-hcard:focus-visible .st-hh-t > span,
+.sw-hcard:focus-visible .st-hh-t > b small {
+  color: inherit;
+  opacity: 0.72;
+}
+.sw-hcard:hover .st-hh-t > b,
+.sw-hcard:hover .st-ring > span {
+  color: inherit;
+}
+.sw-hcard:hover .st-ring-fill {
+  stroke: var(--p-on-accent);
+}
+.sw-hcard:hover .st-ring-track {
+  stroke: color-mix(in srgb, var(--p-on-accent) 22%, transparent);
+}
+.st-ring.sm {
+  width: 44px;
+  height: 44px;
+}
+.st-ring.sm > span {
+  font-size: 10.5px;
+}
+.sw-go {
+  flex: none;
+  margin-left: auto;
+  color: var(--p-fg3);
+}
+.sw-dash {
+  min-height: 60px;
+}
+.sw-dash > b {
+  font-family: var(--f-display);
+  font-weight: 600;
+  font-size: 20px;
+  letter-spacing: -0.02em;
+}
+.sw-dash-i {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--inset-2);
+}
+.sw-dash:hover .sw-dash-i {
+  background: color-mix(in srgb, var(--p-on-accent) 14%, transparent);
+}
+
 /* ---------- a desktop: one frame, the menu a stack of glass cards ---------- */
 /*
   SCOPE-shell.md §3a and §3b. A 24 px margin all round, the menu 316 px wide,
@@ -1121,7 +1266,7 @@
   left (in the menu's column), the page's own controls on the right. Under
   it the menu's first card and the page start on the same line.
 */
-@media (min-width: 1200px) {
+@media (min-width: 1200px), (min-width: 900px) and (orientation: landscape) {
   .app {
     --gut: 24px;
     --frame: 24px;
@@ -1183,65 +1328,6 @@
     gap: 12px;
     flex: 1;
     min-width: 0;
-  }
-  .st-ring {
-    position: relative;
-    flex: none;
-    width: 56px;
-    height: 56px;
-  }
-  .st-ring svg {
-    display: block;
-    width: 100%;
-    height: 100%;
-  }
-  .st-ring circle {
-    fill: none;
-    stroke-width: 12.5;
-    stroke-linecap: round;
-  }
-  .st-ring-track {
-    stroke: var(--inset-2);
-  }
-  .st-ring-fill {
-    stroke: var(--p-accent);
-  }
-  .st-ring > span {
-    position: absolute;
-    inset: 0;
-    display: grid;
-    place-items: center;
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--p-fg);
-  }
-  .st-hh-t {
-    display: grid;
-    min-width: 0;
-    line-height: 1.25;
-  }
-  .st-hh-t > span {
-    font-size: 11.5px;
-    font-weight: 600;
-    color: var(--p-fg3);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .st-hh-t > b {
-    font-family: var(--f-display);
-    font-weight: 600;
-    font-size: 24px;
-    line-height: 28px;
-    letter-spacing: -0.02em;
-    font-variant-numeric: tabular-nums;
-    color: var(--p-fg);
-  }
-  .st-hh-t > b small {
-    font-size: 0.55em;
-    font-weight: 600;
-    color: var(--p-fg2);
-    letter-spacing: 0;
   }
 
   /* The links: tiles, three across, the current one filled with the accent. */
@@ -1380,82 +1466,6 @@
   }
 
   /* The other households: cards like the household's own, ending in an arrow. */
-  .sw-hcard {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    width: 100%;
-    padding: 8px;
-    border: 0;
-    border-radius: 16px;
-    background: var(--menu-well);
-    color: var(--p-fg);
-    font: inherit;
-    text-align: left;
-    text-decoration: none;
-    cursor: pointer;
-  }
-  .sw-hcard .st-hh-t > b {
-    font-size: 20px;
-    line-height: 24px;
-  }
-  .sw-hcard:hover,
-  .sw-hcard:focus-visible {
-    background: var(--p-accent);
-    color: var(--p-on-accent);
-    outline: none;
-  }
-  .sw-hcard:hover .st-hh-t > span,
-  .sw-hcard:hover .st-hh-t > b small,
-  .sw-hcard:hover .sw-go,
-  .sw-hcard:focus-visible .st-hh-t > span,
-  .sw-hcard:focus-visible .st-hh-t > b small {
-    color: inherit;
-    opacity: 0.72;
-  }
-  .sw-hcard:hover .st-hh-t > b,
-  .sw-hcard:hover .st-ring > span {
-    color: inherit;
-  }
-  .sw-hcard:hover .st-ring-fill {
-    stroke: var(--p-on-accent);
-  }
-  .sw-hcard:hover .st-ring-track {
-    stroke: color-mix(in srgb, var(--p-on-accent) 22%, transparent);
-  }
-  .st-ring.sm {
-    width: 44px;
-    height: 44px;
-  }
-  .st-ring.sm > span {
-    font-size: 10.5px;
-  }
-  .sw-go {
-    flex: none;
-    margin-left: auto;
-    color: var(--p-fg3);
-  }
-  .sw-dash {
-    min-height: 60px;
-  }
-  .sw-dash > b {
-    font-family: var(--f-display);
-    font-weight: 600;
-    font-size: 20px;
-    letter-spacing: -0.02em;
-  }
-  .sw-dash-i {
-    display: grid;
-    place-items: center;
-    flex: none;
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    background: var(--inset-2);
-  }
-  .sw-dash:hover .sw-dash-i {
-    background: color-mix(in srgb, var(--p-on-accent) 14%, transparent);
-  }
 
   /* The account menu's main places as tiles, three across. */
   .am-tiles {
@@ -1523,7 +1533,7 @@
 .nav-add:empty {
   display: none;
 }
-@media (min-width: 1200px) {
+@media (min-width: 1200px), (min-width: 900px) and (orientation: landscape) {
   .topbar {
     position: relative;
   }
@@ -1545,5 +1555,101 @@
     min-height: 0;
     display: flex;
     flex-direction: column;
+  }
+}
+
+/* ---------- the phone's layout (a phone, or an upright iPad) ---------- */
+/*
+  SCOPE-shell.md §8 Q5–Q6: the household as a glass card across the top
+  (its ring, name and total; it opens the switcher), search, Add bill and you
+  beside it; the links in one glass card along the bottom.
+*/
+@media (max-width: 639px), (max-width: 1199px) and (orientation: portrait) {
+  .tb-l {
+    gap: 8px;
+  }
+  .tb-hh {
+    min-width: 0;
+    flex: 0 1 auto;
+  }
+  .tb-hh.glass {
+    padding: 6px 12px 6px 6px;
+    border-radius: 18px;
+  }
+  .sw-topbar .sw-btn.has-card > .mark,
+  .sw-topbar .sw-btn.has-card > .brand-t {
+    display: none;
+  }
+  .sw-topbar .sw-btn.has-card {
+    min-width: 0;
+  }
+  .sw-topbar .sw-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+  .sw-topbar .st-ring {
+    width: 42px;
+    height: 42px;
+  }
+  .sw-topbar .st-ring > span {
+    font-size: 10px;
+  }
+  .sw-topbar .st-hh-t > b {
+    font-size: 18px;
+    line-height: 21px;
+  }
+  .sw-topbar .st-hh-t > span {
+    font-size: 10.5px;
+  }
+  /* The switcher drops as one solid panel of household cards. */
+  .sw-topbar .sw-panel {
+    left: -6px;
+    top: calc(100% + 12px);
+    width: min(340px, calc(100vw - 2 * var(--gut)));
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 6px;
+    border-radius: 20px;
+    background: var(--menu-bg);
+    box-shadow: 0 24px 48px -16px rgba(0, 0, 0, 0.55);
+  }
+  /* The links: one glass card. */
+  .nav.bar {
+    border-radius: 24px;
+  }
+}
+@media (min-width: 640px) and (max-width: 1199px) and (orientation: portrait) {
+  /* An upright iPad: the phone's layout, a size up. */
+  .app {
+    --nav-h: 68px;
+  }
+  .tb-hh.glass {
+    padding: 8px 16px 8px 8px;
+    border-radius: 22px;
+  }
+  .sw-topbar .st-ring {
+    width: 52px;
+    height: 52px;
+  }
+  .sw-topbar .st-hh-t > b {
+    font-size: 22px;
+    line-height: 26px;
+  }
+  .nav.bar {
+    width: min(560px, calc(100% - var(--gut) * 2));
+  }
+  .nav.bar .nav-i {
+    font-size: 12px;
+  }
+  /* Room for Add bill's words again. */
+  .tb-add {
+    width: auto;
+    padding: 0 16px;
+  }
+  .tb-add span {
+    display: inline;
   }
 }

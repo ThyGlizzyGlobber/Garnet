@@ -24,6 +24,7 @@ import { useToast } from '@/components/ui/toast';
 import type { HomeData } from '@/lib/home-data';
 import {
   DENSITIES,
+  STACK_MEDIA,
   available,
   defaultLayout,
   deviceFor,
@@ -107,6 +108,8 @@ export function HomeGrid({ data, layouts: initial, kind }: Props) {
 
   const [device, setDevice] = useState<Device | null>(null);
   const [short, setShort] = useState(false);
+  /** Whether the menu is the stack of cards (a desktop, or an iPad on its side). */
+  const [stack, setStack] = useState(false);
   const [layouts, setLayouts] = useState(initial);
   const [editing, setEditing] = useState(false);
   const [page, setPage] = useState(0);
@@ -124,6 +127,7 @@ export function HomeGrid({ data, layouts: initial, kind }: Props) {
     const read = () => {
       setDevice(deviceFor(window.innerWidth, window.innerHeight));
       setShort(isShort());
+      setStack(window.matchMedia(STACK_MEDIA).matches);
     };
     read();
     // Edit Home from the account menu (/?edit=1): straight into edit mode.
@@ -496,7 +500,7 @@ export function HomeGrid({ data, layouts: initial, kind }: Props) {
     return { value: k, label: `${c}×${r}` };
   });
   // On a desktop Edit Home uses the frame: its bar in the top line, Add a widget in the menu.
-  const desk = kind === 'home' && device === 'desktop' && !!tbEdit && !!navAdd;
+  const desk = kind === 'home' && stack && !!tbEdit && !!navAdd;
   // Where a picked widget would go: the first free block on this page it fits in.
   const aimAt = (() => {
     if (!editing || !aiming) return -1;

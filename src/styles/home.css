@@ -574,7 +574,7 @@
   small in that margin. Edit Home's bar is on the frame's top line and Add a
   widget is in the menu's place.
 */
-@media (min-width: 1200px) {
+@media (min-width: 1200px), (min-width: 900px) and (orientation: landscape) {
   .app:has(.home) .main-in {
     padding-bottom: var(--frame);
   }

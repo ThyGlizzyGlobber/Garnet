@@ -53,7 +53,14 @@ const WALL_GRID: Record<Device, [number, number]> = {
   phone: [2, 3],
 };
 
-/** Which kind of screen a viewport is: the column from 1200 px, the rail to 640, a phone below. */
+/**
+ * When the menu is the stack of cards on the frame (src/styles/shell.css): a
+ * desktop, or any landscape screen 900 px wide or more. Edit Home then uses
+ * the frame (its bar on the top line, Add a widget in the menu's place).
+ */
+export const STACK_MEDIA = '(min-width: 1200px), (min-width: 900px) and (orientation: landscape)';
+
+/** Which kind of screen a viewport is, for its grid: a desktop from 1200 px, an iPad either way to 640, a phone below. */
 export function deviceFor(width: number, height: number): Device {
   if (width >= 1200) return 'desktop';
   if (width >= 640) return height > width ? 'tabletP' : 'tabletL';

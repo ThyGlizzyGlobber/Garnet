@@ -389,15 +389,19 @@ export function AppShell({
 
       <header className="topbar">
         <div className="tb-l">
-          <HouseholdSwitcher
-            place="topbar"
-            icon={brandIcon}
-            title={brandTitle}
-            sub={<SectionName items={items} fallback={labels.product} />}
-            rows={rows}
-            labels={switcherLabels}
-            action={switchAction}
-          />
+          {/* On a phone or an upright iPad, the household as a card across the top (§8 Q6). */}
+          <div className={card ? 'tb-hh glass' : 'tb-hh'}>
+            <HouseholdSwitcher
+              place="topbar"
+              icon={brandIcon}
+              title={brandTitle}
+              sub={<SectionName items={items} fallback={labels.product} />}
+              rows={rows}
+              labels={switcherLabels}
+              action={switchAction}
+              card={card}
+            />
+          </div>
           {/* A page's way back lands here (TopBack). */}
           <span id="tb-back" className="tb-back" />
         </div>
@@ -430,7 +434,7 @@ export function AppShell({
       </main>
 
       {/* A phone's bar keeps five: Members is reached from Settings there. */}
-      <nav className="nav glass-strong horizontal bar" aria-label="Main">
+      <nav className="nav glass horizontal bar" aria-label="Main">
         <NavItems
           items={
             account
