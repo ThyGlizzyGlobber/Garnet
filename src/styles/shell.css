@@ -1243,12 +1243,6 @@
     color: var(--p-fg2);
     letter-spacing: 0;
   }
-  .nav.column .st-hh .sw-menu {
-    top: calc(100% + 20px);
-    left: -10px;
-    right: -10px;
-    width: auto;
-  }
 
   /* The links: tiles, three across, the current one filled with the accent. */
   .nav.column .st-links {
@@ -1334,4 +1328,187 @@
     bottom: calc(100% + 14px);
     width: calc(100% + 12px);
   }
+
+  /*
+    The two dropdowns (SCOPE-shell.md §3h): an open card and its menu are one
+    solid panel. The household card becomes its top, the list hanging under
+    it; your card becomes its foot, the menu rising above it.
+  */
+  .nav.column .st-hh:has(.sw-btn[aria-expanded='true']),
+  .nav.column .st-me:has(.am-trigger[aria-expanded='true']) {
+    background: var(--menu-bg);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    box-shadow: 0 24px 48px -16px rgba(0, 0, 0, 0.5);
+  }
+  .nav.column .st-hh:has(.sw-btn[aria-expanded='true'])::before,
+  .nav.column .st-me:has(.am-trigger[aria-expanded='true'])::before {
+    display: none;
+  }
+  .nav.column .st-hh:has(.sw-btn[aria-expanded='true']) {
+    border-radius: 24px 24px 0 0;
+  }
+  .nav.column .st-me:has(.am-trigger[aria-expanded='true']) {
+    border-radius: 0 0 24px 24px;
+  }
+  .nav.column .sw-btn[aria-expanded='true'] > .sw-chev {
+    transform: rotate(180deg);
+  }
+  .nav.column .st-hh .sw-panel {
+    top: calc(100% + 12px);
+    left: -10px;
+    right: -10px;
+    width: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 0 6px 6px;
+    border-radius: 0 0 24px 24px;
+    background: var(--menu-bg);
+    box-shadow: 0 30px 48px -18px rgba(0, 0, 0, 0.55);
+  }
+  .nav.column .st-me .am-panel {
+    left: -6px;
+    right: -6px;
+    bottom: calc(100% + 6px);
+    width: auto;
+    min-width: 0;
+    padding: 8px 8px 0;
+    border-radius: 24px 24px 0 0;
+    background: var(--menu-bg);
+    box-shadow: 0 -20px 40px -24px rgba(0, 0, 0, 0.5);
+  }
+
+  /* The other households: cards like the household's own, ending in an arrow. */
+  .sw-hcard {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 8px;
+    border: 0;
+    border-radius: 16px;
+    background: var(--menu-well);
+    color: var(--p-fg);
+    font: inherit;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .sw-hcard .st-hh-t > b {
+    font-size: 20px;
+    line-height: 24px;
+  }
+  .sw-hcard:hover,
+  .sw-hcard:focus-visible {
+    background: var(--p-accent);
+    color: var(--p-on-accent);
+    outline: none;
+  }
+  .sw-hcard:hover .st-hh-t > span,
+  .sw-hcard:hover .st-hh-t > b small,
+  .sw-hcard:hover .sw-go,
+  .sw-hcard:focus-visible .st-hh-t > span,
+  .sw-hcard:focus-visible .st-hh-t > b small {
+    color: inherit;
+    opacity: 0.72;
+  }
+  .sw-hcard:hover .st-hh-t > b,
+  .sw-hcard:hover .st-ring > span {
+    color: inherit;
+  }
+  .sw-hcard:hover .st-ring-fill {
+    stroke: var(--p-on-accent);
+  }
+  .sw-hcard:hover .st-ring-track {
+    stroke: color-mix(in srgb, var(--p-on-accent) 22%, transparent);
+  }
+  .st-ring.sm {
+    width: 44px;
+    height: 44px;
+  }
+  .st-ring.sm > span {
+    font-size: 10.5px;
+  }
+  .sw-go {
+    flex: none;
+    margin-left: auto;
+    color: var(--p-fg3);
+  }
+  .sw-dash {
+    min-height: 60px;
+  }
+  .sw-dash > b {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 20px;
+    letter-spacing: -0.02em;
+  }
+  .sw-dash-i {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--inset-2);
+  }
+  .sw-dash:hover .sw-dash-i {
+    background: color-mix(in srgb, var(--p-on-accent) 14%, transparent);
+  }
+
+  /* The account menu's main places as tiles, three across. */
+  .am-tiles {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    padding-bottom: 8px;
+  }
+  .am-tile {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: space-between;
+    height: 58px;
+    padding: 9px 10px;
+    border-radius: 14px;
+    background: var(--menu-well);
+    color: var(--p-fg);
+    font-size: 11.5px;
+    font-weight: 700;
+    text-decoration: none;
+  }
+  .am-tile .ic {
+    color: var(--p-fg2);
+  }
+  .am-tile:hover,
+  .am-tile:focus-visible {
+    background: var(--p-accent);
+    color: var(--p-on-accent);
+    outline: none;
+  }
+  .am-tile:hover .ic,
+  .am-tile:focus-visible .ic {
+    color: inherit;
+  }
+  .am-panel .am-group {
+    padding: 6px 0;
+  }
+  .am-panel .am-group:last-child {
+    padding-bottom: 8px;
+  }
+  /* The open card is part of the panel: no grey of its own. */
+  .nav.column .st-me .nc-me[aria-expanded='true'] {
+    background: none;
+  }
+  /* Your card says your role; while its menu is open, your email. */
+  .nav.column .st-me:has(.am-trigger[aria-expanded='true']) .nc-role {
+    display: none;
+  }
+  .nav.column .st-me:has(.am-trigger[aria-expanded='true']) .nc-email {
+    display: block;
+  }
+}
+.nc-email {
+  display: none;
 }

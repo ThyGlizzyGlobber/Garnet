@@ -128,7 +128,7 @@ describe('shellView', () => {
     });
   });
 
-  it('arranges the services in the viewer’s own groups and order', () => {
+  it('arranges the services in the household’s groups and order', () => {
     const hh = createHousehold(
       {
         name: 'Arranged',
@@ -158,7 +158,7 @@ describe('shellView', () => {
     // Kim groups power and gas, unnamed (it takes the suggested name); the rest follow it.
     const { lines } = shellView(hh, kim, '2026-09-29', db);
     saveNavLayout(
-      kim.id,
+      kim,
       {
         loose: ['c:lifestyle', `s:${water.id}`],
         groups: [{ id: 'g1', name: '', items: [`s:${gas.id}`, `s:${power.id}`] }],
@@ -166,6 +166,7 @@ describe('shellView', () => {
         mineGroups: [],
       },
       lines,
+      true,
       db,
     );
     expect(names()).toEqual([
@@ -183,11 +184,78 @@ describe('shellView', () => {
       .find((e) => e.key === 'c:lifestyle');
     expect(gymId?.kind === 'group' && gymId.children.map((c) => c.name)).toEqual(['Gym', 'Yoga']);
     const gym = gymId?.kind === 'group' ? gymId.children[0]!.id : '';
-    saveNavChildren(kim.id, 'c:lifestyle', [yoga.id, gym], db);
-    saveNavLayout(kim.id, { ...getNavLayout(kim.id, db)!, groups: [] }, lines, db);
+    saveNavChildren(kim, 'c:lifestyle', [yoga.id, gym], true, db);
+    saveNavLayout(kim, { ...getNavLayout(kim, db)!, groups: [] }, lines, true, db);
     const after = shellView(hh, kim, '2026-09-29', db)
       .sections.flatMap((x) => x.entries)
       .find((e) => e.key === 'c:lifestyle');
     expect(after?.kind === 'group' && after.children.map((c) => c.name)).toEqual(['Yoga', 'Gym']);
+  });
+
+  it('shares the household’s groups with everyone, and only admins change them', () => {
+    const hh = createHousehold(
+      {
+        name: 'Shared groups',
+        currency: 'AUD',
+        locale: 'en-AU',
+        timezone: 'Australia/Melbourne',
+        fiscalYearStartMonth: 7,
+        splitMode: 'shared',
+      },
+      db,
+    );
+    const ann = createMember(hh.id, { name: 'Ann', role: 'owner', activeFrom: '2026-01-01' }, db);
+    const ben = createMember(hh.id, { name: 'Ben', role: 'member', activeFrom: '2026-01-01' }, db);
+    const water = createService(
+      hh.id,
+      { typeSlug: 'water', name: 'Water', provider: 'Water Co', payerMemberId: ann.id },
+      db,
+    );
+    const power = createService(
+      hh.id,
+      { typeSlug: 'electricity', name: 'Power', provider: 'Power Co', payerMemberId: ann.id },
+      db,
+    );
+    const benGym = createService(
+      hh.id,
+      {
+        typeSlug: 'gym',
+        name: 'Ben gym',
+        provider: 'Gym Co',
+        payerMemberId: ben.id,
+        ownerMemberId: ben.id,
+      },
+      db,
+    );
+    const groupsOf = (m: typeof ann) =>
+      shellView(hh, m, '2026-09-29', db).sections.map((x) => x.group?.name ?? null);
+    const grouped = {
+      loose: [`s:${power.id}`],
+      groups: [{ id: 'g1', name: 'Bills', items: [`s:${water.id}`] }],
+      mine: [],
+      mineGroups: [],
+    };
+    // Ben is not an admin: his grouping of the household's services is not kept.
+    saveNavLayout(ben, grouped, shellView(hh, ben, '2026-09-29', db).lines, false, db);
+    expect(groupsOf(ann)).toEqual([null]);
+    // Ann is: everyone sees her groups.
+    saveNavLayout(ann, grouped, shellView(hh, ann, '2026-09-29', db).lines, true, db);
+    expect(groupsOf(ann)).toEqual(['Bills', null]);
+    expect(groupsOf(ben)).toEqual(['Bills', null]);
+    // Ben still arranges his own: a group of his own under My Services.
+    saveNavLayout(
+      ben,
+      { ...grouped, mineGroups: [{ id: 'm1', name: 'Me', items: [`mc:lifestyle`] }] },
+      shellView(hh, ben, '2026-09-29', db).lines,
+      false,
+      db,
+    );
+    const benView = shellView(hh, ben, '2026-09-29', db);
+    expect(benView.mine[0]?.group?.name).toBe('Me');
+    expect(shellView(hh, ann, '2026-09-29', db).mine).toEqual([{ group: null, entries: [] }]);
+    expect(benGym.id).toBeTruthy();
+    // The order inside the household's main services is an admin's too.
+    saveNavChildren(ben, 'c:lifestyle', ['x'], false, db);
+    expect(getNavLayout(ann, db)!.children['c:lifestyle']).toBeUndefined();
   });
 });

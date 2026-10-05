@@ -66,7 +66,8 @@ const looseOf = (secs: NavServicesSection[]) => secs.find((s) => s.id === null)?
  * double-click of its heading and goes with its ×. The person's own services
  * stay under My Services and the household's under Services. Every change is
  * saved at once; the Services page follows it. Services inside a main
- * service are reordered by NavGroup.
+ * service are reordered by NavGroup. The household's part is everyone's and
+ * only admins arrange it; My Services is each person's.
  */
 export function NavServices({
   sections,
@@ -74,6 +75,7 @@ export function NavServices({
   rows,
   lines,
   labels,
+  admin,
 }: {
   sections: NavServicesSection[];
   /** My Services: the person's own groups, then their own in no group. */
@@ -81,6 +83,12 @@ export function NavServices({
   rows: NavServicesRow[];
   lines: NavLine[];
   labels: { head: string; thisMonth: string; other: string; mine: string };
+  /**
+   * The household's groups and order are the household's, set by admins
+   * (SCOPE-shell.md §8 Q1): only an admin drags, groups, renames or removes
+   * them. Everyone arranges their own My Services.
+   */
+  admin: boolean;
 }) {
   const t = useTranslations('navEdit');
   const [, start] = useTransition();
@@ -124,6 +132,8 @@ export function NavServices({
   const mineIds = new Set(mineGroups.map((g) => g.id));
   const areaOfGroup = (id: string): Area => (mineIds.has(id) ? 'mine' : 'household');
   const isMineSec = (sec: string | null) => sec === MINE || (sec !== null && mineIds.has(sec));
+  /** Whether this person may arrange a part: their own always, the household's only as an admin. */
+  const may = (area: Area) => area === 'mine' || admin;
 
   const commit = (next: Arrangement) => {
     setSaved(next);
@@ -250,7 +260,7 @@ export function NavServices({
       <div
         key={key}
         className="nc-dnd"
-        draggable
+        draggable={may(isMine(key) ? 'mine' : 'household')}
         data-drop={mark}
         data-dragging={drag?.kind === 'entry' && drag.key === key ? '' : undefined}
         onDragStart={startDrag({ kind: 'entry', key })}
@@ -293,46 +303,58 @@ export function NavServices({
     newGroup: { label: string; example: string },
   ) => (
     <>
-      {gs.map((g, gi) => (
-        <Group
-          key={g.id}
-          foldId={`grp-${g.id}`}
-          name={g.name}
-          dropMark={groupMark(area, gi, gs.length)}
-          dragging={drag?.kind === 'group' && drag.id === g.id}
-          onDragOver={groupOver(area, (e) => gi + (lowerHalf(e) ? 1 : 0))}
-          onHeadOver={intoGroup(g.id, g.items.length)}
-          headInto={drop?.kind === 'entry' && drop.sec === g.id && drop.index === g.items.length}
-          labels={{ show: t('show'), hide: t('hide'), rename: t('renameHint') }}
-          drag={{ onDragStart: startDrag({ kind: 'group', id: g.id }), onDragEnd: endDrag }}
-          onRename={() => setRenaming({ id: g.id, value: g.name })}
-          renameField={
-            renaming?.id === g.id && (
-              <input
-                className="nc-gname"
-                autoFocus
-                value={renaming.value}
-                maxLength={40}
-                aria-label={t('groupName')}
-                onChange={(e) => setRenaming({ id: g.id, value: e.target.value })}
-                onBlur={() => rename(g.id, renaming.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') rename(g.id, renaming.value);
-                  if (e.key === 'Escape') setRenaming(null);
-                }}
-              />
-            )
-          }
-          remove={{
-            label: t('remove', { name: g.name }),
-            onRemove: () => removeGroup(g.id),
-          }}
-        >
-          {g.items.length
-            ? g.items.map((k, i) => entry(k, g.id, i, g.items.length))
-            : emptyDrop(g.id)}
-        </Group>
-      ))}
+      {/* An empty group is a place to drag services into: only for whoever can. */}
+      {gs
+        .filter((g) => may(area) || g.items.length > 0)
+        .map((g, gi) => (
+          <Group
+            key={g.id}
+            foldId={`grp-${g.id}`}
+            name={g.name}
+            dropMark={groupMark(area, gi, gs.length)}
+            dragging={drag?.kind === 'group' && drag.id === g.id}
+            onDragOver={groupOver(area, (e) => gi + (lowerHalf(e) ? 1 : 0))}
+            onHeadOver={intoGroup(g.id, g.items.length)}
+            headInto={drop?.kind === 'entry' && drop.sec === g.id && drop.index === g.items.length}
+            labels={{
+              show: t('show'),
+              hide: t('hide'),
+              rename: may(area) ? t('renameHint') : undefined,
+            }}
+            drag={
+              may(area)
+                ? { onDragStart: startDrag({ kind: 'group', id: g.id }), onDragEnd: endDrag }
+                : undefined
+            }
+            onRename={may(area) ? () => setRenaming({ id: g.id, value: g.name }) : undefined}
+            renameField={
+              renaming?.id === g.id && (
+                <input
+                  className="nc-gname"
+                  autoFocus
+                  value={renaming.value}
+                  maxLength={40}
+                  aria-label={t('groupName')}
+                  onChange={(e) => setRenaming({ id: g.id, value: e.target.value })}
+                  onBlur={() => rename(g.id, renaming.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') rename(g.id, renaming.value);
+                    if (e.key === 'Escape') setRenaming(null);
+                  }}
+                />
+              )
+            }
+            remove={
+              may(area)
+                ? { label: t('remove', { name: g.name }), onRemove: () => removeGroup(g.id) }
+                : undefined
+            }
+          >
+            {g.items.length
+              ? g.items.map((k, i) => entry(k, g.id, i, g.items.length))
+              : emptyDrop(g.id)}
+          </Group>
+        ))}
 
       {gs.length > 0 ? (
         <Group
@@ -355,7 +377,7 @@ export function NavServices({
         </div>
       )}
 
-      {gs.length < MAX_GROUPS && (
+      {may(area) && gs.length < MAX_GROUPS && (
         <NewGroup
           label={newGroup.label}
           placeholder={t('newPlaceholder', { name: newGroup.example })}

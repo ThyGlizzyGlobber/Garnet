@@ -139,6 +139,9 @@
   --track: rgba(28, 28, 28, 0.09);
   --hatch: rgba(28, 28, 28, 0.3);
   --tip-bg: #fafafa;
+  /* A dropdown joined to its card (SCOPE-shell.md §3h), and the tiles in it. */
+  --menu-bg: #ffffff;
+  --menu-well: rgba(28, 28, 28, 0.05);
   --paper: #fdfcf9;
   --paper-ink: #25231f;
 
@@ -241,6 +244,8 @@
   --track: rgba(255, 255, 255, 0.11);
   --hatch: rgba(255, 255, 255, 0.32);
   --tip-bg: #242424;
+  --menu-bg: #1b1b1b;
+  --menu-well: rgba(255, 255, 255, 0.06);
   --paper: #f3f1ec;
   --paper-ink: #23211d;
 
@@ -342,6 +347,8 @@
     --track: rgba(255, 255, 255, 0.11);
     --hatch: rgba(255, 255, 255, 0.32);
     --tip-bg: #242424;
+    --menu-bg: #1b1b1b;
+    --menu-well: rgba(255, 255, 255, 0.06);
     --paper: #f3f1ec;
     --paper-ink: #23211d;
 

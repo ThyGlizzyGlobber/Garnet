@@ -13,15 +13,18 @@ export interface AccountMenuItem {
 }
 
 /**
- * The account menu (owner, 2026-10-02): the person at the foot of the nav
- * column opens a menu of their name and email, the Account Dashboard, the
- * household's settings and the rest, and Sign out in red. A click, tap or
- * Enter opens it (owner: clickable, not on hover); Escape or a click
- * elsewhere closes it.
+ * The account menu (owner, 2026-10-02): the person at the foot of the menu
+ * opens the Account Dashboard, the household's settings and the rest, and
+ * Sign out in red. A click, tap or Enter opens it (owner: clickable, not on
+ * hover); Escape or a click elsewhere closes it. In the desktop menu your
+ * card becomes the foot of one dark panel (SCOPE-shell.md §3h): the main
+ * places as tiles, the rest as rows. On a phone it drops from the avatar
+ * with your name and email on top, everything as rows.
  */
 export function AccountMenu({
   place,
   me,
+  tiles = [],
   groups,
   signOutLabel,
   signOut,
@@ -31,6 +34,8 @@ export function AccountMenu({
   /** The nav column's foot (the menu rises beside it), or the phone top bar's avatar (it drops). */
   place: 'column' | 'topbar';
   me: { name: string; colour: string; sub: string; photo?: string | null };
+  /** The main places: tiles in the desktop menu, the first rows elsewhere. */
+  tiles?: AccountMenuItem[];
   /** Groups of links, divided by a line. */
   groups: AccountMenuItem[][];
   signOutLabel: string;
@@ -41,6 +46,7 @@ export function AccountMenu({
 }) {
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
+  const column = place === 'column';
   useEffect(() => {
     if (!open) return;
     const onClick = (e: MouseEvent) => {
@@ -71,15 +77,36 @@ export function AccountMenu({
         {children}
       </button>
       {open && (
-        <div className="am-menu" role="menu" aria-label={openLabel}>
-          <div className="am-who">
-            <Avatar name={me.name} colour={me.colour} photo={me.photo} size="lg" />
-            <span>
-              <b>{me.name}</b>
-              <span>{me.sub}</span>
-            </span>
-          </div>
-          {groups
+        <div
+          className={cx('am-menu', column && tiles.length > 0 && 'am-panel')}
+          role="menu"
+          aria-label={openLabel}
+        >
+          {column && tiles.length > 0 ? (
+            <div className="am-tiles">
+              {tiles.map((it) => (
+                <Link
+                  key={it.href}
+                  href={it.href}
+                  role="menuitem"
+                  className="am-tile"
+                  onClick={() => setOpen(false)}
+                >
+                  <Icon name={it.icon} width={20} height={20} />
+                  <span>{it.label}</span>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="am-who">
+              <Avatar name={me.name} colour={me.colour} photo={me.photo} size="lg" />
+              <span>
+                <b>{me.name}</b>
+                <span>{me.sub}</span>
+              </span>
+            </div>
+          )}
+          {(column ? groups : [tiles, ...groups])
             .filter((g) => g.length > 0)
             .map((g, i) => (
               <div key={i} className="am-group">

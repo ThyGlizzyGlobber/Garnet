@@ -26,7 +26,7 @@ export default async function ServiceGroupPage({ params }: { params: Promise<{ t
   const ctx = await pageContext();
   const t = await getTranslations('services');
   // In the order the person gave them in the side menu.
-  const layout = getNavLayout(ctx.me.id);
+  const layout = getNavLayout(ctx.me);
   const keys = [`t:${type.slug}`, `mt:${type.slug}`];
   const inOrder = (v: ServiceCardsView): ServiceCardsView => ({
     ...v,

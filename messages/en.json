@@ -2892,7 +2892,8 @@
   "switcher": {
     "title": "Your households",
     "open": "Switch household",
-    "dashboard": "Dashboard"
+    "dashboard": "Dashboard",
+    "ring": "{name}: {percent} of this month's bills paid"
   },
   "accountMenu": {
     "open": "Account menu",
@@ -2903,7 +2904,10 @@
     "wall": "Wall display",
     "backend": "Backend management",
     "signOut": "Sign out",
-    "profile": "Profile"
+    "profile": "Profile",
+    "settingsShort": "Settings",
+    "dashboardShort": "Dashboard",
+    "editHome": "Edit Home"
   },
   "account": {
     "title": "Hey, {name}.",

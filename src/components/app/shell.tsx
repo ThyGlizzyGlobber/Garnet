@@ -14,6 +14,7 @@ import { NavGroup } from './nav-group';
 import { NavHouseholds } from './nav-households';
 import { NavServices } from './nav-services';
 import { OfflineBar } from './offline-bar';
+import { StackRing } from './stack-ring';
 import { NavItems, SectionName, type NavItem } from './nav-items';
 import { HouseholdSwitcher, type SwitcherLabels, type SwitcherRow } from './household-switcher';
 import { roleKey, typeIcon } from '@/lib/household-types';
@@ -88,7 +89,10 @@ export interface ShellLabels {
     /** Beside the primary household in the menu. */
     primary: string;
   };
-  switcher: SwitcherLabels;
+  switcher: SwitcherLabels & {
+    /** A household's ring, for screen readers: "Maple Street: 64% of this month's bills paid". */
+    ring: (name: string, percent: string) => string;
+  };
   accountMenu: {
     open: string;
     dashboard: string;
@@ -99,6 +103,10 @@ export interface ShellLabels {
     wall: string;
     backend: string;
     signOut: string;
+    /** The tiles' shorter names. */
+    dashboardShort: string;
+    settingsShort: string;
+    editHome: string;
   };
 }
 
@@ -151,12 +159,33 @@ export function AppShell({
         { href: '/members', label: labels.nav.members, icon: 'people' },
         { href: '/inbox', label: labels.nav.inbox, icon: 'inbox', badge: view.inboxCount },
       ];
-  const rows: SwitcherRow[] = view.households.map((h) => ({
-    memberId: h.memberId,
-    name: h.name,
-    current: h.current,
-    icon: typeIcon(h.type),
-  }));
+  // Only words go to the client; the ring's wording is used here.
+  const { ring: ringLabel, ...switcherLabels } = labels.switcher;
+  const rows: SwitcherRow[] = view.households.map((h) => {
+    const pct = h.due.dueMinor > 0 ? Math.min(1, h.due.paidMinor / h.due.dueMinor) : 0;
+    const percent = `${Math.round(pct * 100)}%`;
+    const left = h.due.dueMinor - h.due.paidMinor;
+    const allPaid = h.due.bills > 0 && h.due.paidBills === h.due.bills;
+    return {
+      memberId: h.memberId,
+      name: h.name,
+      current: h.current,
+      icon: typeIcon(h.type),
+      card: {
+        pct,
+        allPaid,
+        percent: h.due.bills > 0 ? percent : '',
+        title: `${h.name} · ${formatMonth(h.due.month, h.locale)}`,
+        figure: formatMoneyParts(h.monthMinor, h.currency, h.locale),
+        sub: allPaid
+          ? labels.card.allPaid
+          : left > 0
+            ? labels.card.toPay(formatMoney(left, h.currency, h.locale))
+            : labels.card.nothingDue,
+        ringLabel: ringLabel(h.name, percent),
+      },
+    };
+  });
   // The switcher names where you are: a household, or (the account area) all of them.
   const brandTitle = account ? labels.yourHouseholds : view.household.name;
   const brandIcon = account ? 'dashboard' : typeIcon(view.household.type);
@@ -165,18 +194,20 @@ export function AppShell({
     (view.me.admin ? labels.admin : labels.member);
   const who = labels.people(view.household.members.length);
   const am = labels.accountMenu;
+  // The main places (tiles in the desktop menu, SCOPE-shell.md §3h), then the rest as rows.
+  const menuTiles: AccountMenuItem[] = [
+    { href: '/account', label: am.dashboardShort, icon: 'dashboard' },
+    ...(account
+      ? []
+      : [
+          { href: '/settings', label: am.settingsShort, icon: 'sliders' },
+          { href: '/account/notifications', label: am.notifications, icon: 'bell' },
+        ]),
+    { href: '/account/profile', label: am.profile, icon: 'user' },
+    { href: '/account/appearance', label: am.appearance, icon: 'sun' },
+    ...(account ? [] : [{ href: '/?edit=1', label: am.editHome, icon: 'pencil' }]),
+  ];
   const menuGroups: AccountMenuItem[][] = [
-    [
-      { href: '/account', label: am.dashboard, icon: 'dashboard' },
-      ...(account
-        ? []
-        : [
-            { href: '/settings', label: am.settings, icon: 'sliders' },
-            { href: '/account/notifications', label: am.notifications, icon: 'bell' },
-          ]),
-      { href: '/account/profile', label: am.profile, icon: 'user' },
-      { href: '/account/appearance', label: am.appearance, icon: 'sun' },
-    ],
     [
       ...(account ? [] : [{ href: '/wall', label: am.wall, icon: 'wall' }]),
       ...(view.developer ? [{ href: '/console', label: am.backend, icon: 'shield' }] : []),
@@ -212,6 +243,7 @@ export function AppShell({
         key={s.key}
         href={s.href}
         groupKey={s.key}
+        arrange={view.me.admin || s.key.startsWith('m')}
         label={nameOf(s)}
         showLabel={labels.showSubs}
         hideLabel={labels.hideSubs}
@@ -259,7 +291,7 @@ export function AppShell({
             title={brandTitle}
             sub={account ? labels.householdCount(view.households.length) : who}
             rows={rows}
-            labels={labels.switcher}
+            labels={switcherLabels}
             action={switchAction}
             card={card}
           />
@@ -316,6 +348,7 @@ export function AppShell({
                     node: row(e),
                   }))}
                 lines={view.lines}
+                admin={view.me.admin}
                 labels={{
                   head: labels.servicesHead,
                   thisMonth: labels.thisMonth,
@@ -335,6 +368,7 @@ export function AppShell({
           <AccountMenu
             place="column"
             me={menuMe}
+            tiles={menuTiles}
             groups={menuGroups}
             signOutLabel={am.signOut}
             signOut={logout}
@@ -343,7 +377,8 @@ export function AppShell({
             <Avatar name={view.me.name} colour={view.me.colour} photo={view.me.photo} />
             <span className="nc-bt">
               <b>{view.me.name}</b>
-              <span>{account ? labels.account : myRole}</span>
+              <span className="nc-role">{account ? labels.account : myRole}</span>
+              {view.me.email && <span className="nc-email">{view.me.email}</span>}
             </span>
             <Icon name="more" width={18} height={18} />
           </AccountMenu>
@@ -358,7 +393,7 @@ export function AppShell({
             title={brandTitle}
             sub={<SectionName items={items} fallback={labels.product} />}
             rows={rows}
-            labels={labels.switcher}
+            labels={switcherLabels}
             action={switchAction}
           />
           {/* A page's way back lands here (TopBack). */}
@@ -370,6 +405,7 @@ export function AppShell({
           <AccountMenu
             place="topbar"
             me={menuMe}
+            tiles={menuTiles}
             groups={menuGroups}
             signOutLabel={am.signOut}
             signOut={logout}
@@ -416,28 +452,11 @@ function householdCard(view: ShellView, labels: ShellLabels, locale: string): Re
   const percent = `${Math.round(pct * 100)}%`;
   const fig = formatMoneyParts(m.totalMinor, view.currency, locale);
   const left = m.dueMinor - m.paidMinor;
-  const r = 42;
-  const c = 2 * Math.PI * r;
   return (
     <>
-      <span className="st-ring" role="img" aria-label={labels.card.ring(percent)}>
-        <svg viewBox="0 0 100 100" aria-hidden="true">
-          <circle cx="50" cy="50" r={r} className="st-ring-track" />
-          {pct > 0 && (
-            <circle
-              cx="50"
-              cy="50"
-              r={r}
-              className="st-ring-fill"
-              strokeDasharray={`${(c * pct).toFixed(1)} ${c.toFixed(1)}`}
-              transform="rotate(-90 50 50)"
-            />
-          )}
-        </svg>
-        <span aria-hidden="true">
-          {allPaid ? <Icon name="check" width={18} height={18} /> : m.bills > 0 ? percent : null}
-        </span>
-      </span>
+      <StackRing pct={pct} label={labels.card.ring(percent)}>
+        {allPaid ? <Icon name="check" width={18} height={18} /> : m.bills > 0 ? percent : null}
+      </StackRing>
       <span className="st-hh-t">
         <span>
           {view.household.name} · {formatMonth(m.month, locale)}

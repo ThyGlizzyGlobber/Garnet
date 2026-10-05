@@ -130,7 +130,7 @@ export function shellView(hh: Household, me: Member, today: string, db: Db = get
     }));
   const minor = (s: ServiceWithType) => due.get(s.id) ?? 0;
   // The household's services, arranged in the viewer's groups; then My Services, their own.
-  const layout = getNavLayout(me.id, db);
+  const layout = getNavLayout(me, db);
   const groups = groupServices(listServices(hh.id, {}, db));
   const all = entries(groups, minor, vehicles(null), false, layout);
   const ownGroups = groupServices(listServices(hh.id, { owner: me.id }, db));

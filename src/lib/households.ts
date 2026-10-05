@@ -73,6 +73,7 @@ export function createHousehold(input: HouseholdInput, db: Db = getDb()): Househ
     locationUpdatedAt: null,
     shareRegional: input.shareRegional ?? true,
     membersCanExport: input.membersCanExport ?? true,
+    navLayout: null,
     createdAt: now,
     updatedAt: now,
   };

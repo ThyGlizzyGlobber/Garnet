@@ -351,6 +351,13 @@
       "when": 1791002063302,
       "tag": "0049_drop_glass",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "6",
+      "when": 1791183642268,
+      "tag": "0050_household_nav_layout",
+      "breakpoints": true
     }
   ]
 }

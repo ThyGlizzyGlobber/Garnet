@@ -24,6 +24,7 @@ export function NavGroup({
   showLabel,
   hideLabel,
   row,
+  arrange = true,
 }: {
   href: string;
   /** The main service's key in the person's arrangement ("c:vehicle", "mt:donations"). */
@@ -37,6 +38,8 @@ export function NavGroup({
   hideLabel: string;
   /** The main service's own line: dot, name, figure. */
   row: ReactNode;
+  /** Whether this person may reorder its services: the household's an admin's, their own always. */
+  arrange?: boolean;
 }) {
   const pathname = usePathname();
   // Open on the main service's page or a sub-service's (their links may carry ?open=).
@@ -115,7 +118,7 @@ export function NavGroup({
             <div
               key={id}
               className="nc-dnd"
-              draggable={ids.length > 1}
+              draggable={arrange && ids.length > 1}
               data-drop={
                 drop === i
                   ? 'before'

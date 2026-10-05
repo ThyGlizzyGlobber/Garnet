@@ -216,7 +216,7 @@ export default async function ServicesPage({
 
   // The same groups, in the same order, as the viewer's side menu.
   const isEveryday = (e: MonthEntry) => e.kind === 'service' && isEssential(e.item.service.type);
-  const layout = getNavLayout(me.id);
+  const layout = getNavLayout(me);
   const sections = arrange(
     view.entries.filter((e) => !e.mine),
     (e) => e.key,

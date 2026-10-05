@@ -8,6 +8,7 @@ import { todayIn } from '@/lib/dates';
 import { getHousehold } from '@/lib/households';
 import { isActiveOn, listMembers } from '@/lib/members';
 import { moneyView } from '@/lib/money';
+import { monthDue, type MonthDue } from '@/lib/month-due';
 import { monthBounds } from '@/lib/periods';
 import { documentCounts } from '@/lib/review';
 import { isAdmin } from '@/lib/roles';
@@ -40,6 +41,8 @@ export interface HouseholdTile {
   oweMinor: number;
   /** Bills due this month, in full. */
   monthMinor: number;
+  /** This month's bills due and what the providers have: the switcher's ring and "to pay". */
+  due: MonthDue & { month: string };
   waiting: number;
   overdue: number;
   /** When the household splits bills (Money exists). */
@@ -122,6 +125,7 @@ function householdTile(
     locale: hh.locale,
     oweMinor: money?.youOweMinor ?? 0,
     monthMinor: totalsForRange(hh.id, start, end, db).total,
+    due: { month: today.slice(0, 7), ...monthDue(bills, start, end) },
     waiting: documentCounts(hh.id, { viewer: m.id }, db).needs_review,
     overdue,
     split,

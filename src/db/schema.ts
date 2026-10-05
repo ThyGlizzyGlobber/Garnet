@@ -83,6 +83,13 @@ export const household = sqliteTable(
      */
     billsAlias: text('bills_alias'),
     /**
+     * How the household's services are arranged in the side menu (and on the
+     * Services page): its groups and their order, set by admins
+     * (SCOPE-shell.md §8 Q1). JSON from src/lib/nav-layout.ts; each person's
+     * own services stay on member.nav_layout. Null = the default order.
+     */
+    navLayout: text('nav_layout'),
+    /**
      * Where the household is, to the postcode and never finer (scope S2):
      * seasons, hemisphere and (later) weather come from it. Country is ISO
      * 3166-1 alpha-2; latitude/longitude are the postcode's map point.
@@ -189,8 +196,9 @@ export const member = sqliteTable(
     /** The account's home of residence: first in the switcher, and where the app opens (D7). One per account. */
     isPrimary: integer('is_primary', { mode: 'boolean' }).notNull().default(false),
     /**
-     * How this person arranged the services in the side menu (and so on the
-     * Services page): JSON from src/lib/nav-layout.ts. Null = the default order.
+     * How this person arranged their own services in the side menu (My
+     * Services, and the order inside their own main services): JSON from
+     * src/lib/nav-layout.ts. The household's part lives on household.nav_layout.
      */
     navLayout: text('nav_layout'),
     createdAt: text('created_at').notNull(),

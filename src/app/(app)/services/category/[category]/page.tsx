@@ -18,7 +18,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ categ
   const ctx = await pageContext();
   const t = await getTranslations('main');
   // In the order the person gave them in the side menu.
-  const layout = getNavLayout(ctx.me.id);
+  const layout = getNavLayout(ctx.me);
   const keys = [`c:${category}`, `mc:${category}`];
   if (category === 'vehicle') {
     const v = vehiclesView(ctx.hh, ctx.me, ctx.today);

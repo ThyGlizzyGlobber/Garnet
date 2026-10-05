@@ -71,6 +71,7 @@ export async function shellLabels(householdName: string): Promise<ShellLabels> {
       title: ts('title'),
       open: ts('open'),
       dashboard: ts('dashboard'),
+      ring: (name, percent) => ts('ring', { name, percent }),
     },
     accountMenu: {
       open: tam('open'),
@@ -82,6 +83,9 @@ export async function shellLabels(householdName: string): Promise<ShellLabels> {
       wall: tam('wall'),
       backend: tam('backend'),
       signOut: tam('signOut'),
+      dashboardShort: tam('dashboardShort'),
+      settingsShort: tam('settingsShort'),
+      editHome: tam('editHome'),
     },
   };
 }
