@@ -385,21 +385,31 @@ export function AppShell({
 
       <header className="topbar">
         <div className="tb-l">
-          {/* On a phone or an upright iPad, the household as a card across the top (§8 Q6). */}
-          <div className={card ? 'tb-hh glass' : 'tb-hh'}>
-            <HouseholdSwitcher
-              place="topbar"
-              icon={brandIcon}
-              title={brandTitle}
-              sub={<SectionName items={items} fallback={labels.product} />}
-              rows={rows}
-              labels={switcherLabels}
-              action={switchAction}
-              card={card}
-            />
+          {/* On the stack the header runs the full width (owner, 2026-10-05): the
+              brand and the household together on the left, then the page's way back. */}
+          <div className="tb-start">
+            <Link href={account ? '/account/overview' : '/'} className="tb-logo">
+              <GarnetMark size={30} />
+              <span>{labels.product}</span>
+            </Link>
+            {/* The household: beside the brand on the stack, its icon and name
+                (owner, 2026-10-05); as a card across the top on a phone or an
+                upright iPad (§8 Q6). */}
+            <div className="tb-hh glass">
+              <HouseholdSwitcher
+                place="topbar"
+                icon={brandIcon}
+                title={brandTitle}
+                sub={<SectionName items={items} fallback={labels.product} />}
+                rows={rows}
+                labels={switcherLabels}
+                action={switchAction}
+                card={card}
+              />
+            </div>
+            {/* A page's way back lands here (TopBack). */}
+            <span id="tb-back" className="tb-back" />
           </div>
-          {/* A page's way back lands here (TopBack). */}
-          <span id="tb-back" className="tb-back" />
         </div>
         <div className="tb-r">
           {!account && <IconButton icon="search" label={labels.search} href="/bills?find=1" />}

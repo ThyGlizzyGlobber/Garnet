@@ -578,6 +578,10 @@
   .app:has(.home) .main-in {
     padding-bottom: var(--frame);
   }
+  /* Home takes the page's whole width: its columns follow the room it has. */
+  .app:has(.home) .main-in > .page {
+    max-width: none;
+  }
   .app .home .hg-foot {
     position: absolute;
     left: 0;

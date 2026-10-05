@@ -24,6 +24,8 @@ import { useToast } from '@/components/ui/toast';
 import type { HomeData } from '@/lib/home-data';
 import {
   DENSITIES,
+  flow,
+  stackGrid,
   STACK_MEDIA,
   available,
   defaultLayout,
@@ -162,8 +164,42 @@ export function HomeGrid({ data, layouts: initial, kind }: Props) {
     };
   }, [device]);
 
+  // On the stack the grid fits its room: rows by density, as many square columns as fit.
+  const homeEl = useRef<HTMLDivElement>(null);
+  const [room, setRoom] = useState<{ w: number; h: number; gap: number } | null>(null);
+  const fitted = kind === 'home' && stack && (device === 'desktop' || device === 'tabletL');
+  useEffect(() => {
+    const el = homeEl.current;
+    if (!el) return;
+    const read = () => {
+      const gap = parseFloat(getComputedStyle(el).getPropertyValue('--gap')) || 14;
+      setRoom((r) =>
+        r && r.w === el.clientWidth && r.h === el.clientHeight && r.gap === gap
+          ? r
+          : { w: el.clientWidth, h: el.clientHeight, gap },
+      );
+    };
+    read();
+    const ro = new ResizeObserver(read);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [device]);
+  const gridOf = (density: Density): [number, number] =>
+    !device
+      ? [1, 1]
+      : fitted && room
+        ? stackGrid(density, room.w, room.h, room.gap)
+        : gridFor(device, density, kind, short);
+
   const layout = device ? layouts[device] : null;
-  const [cols, rows] = device && layout ? gridFor(device, layout.density, kind, short) : [1, 1];
+  const [cols, rows] = layout ? gridOf(layout.density) : [1, 1];
+  // When the grid's size changes, the widgets flow onto its pages again, in their order.
+  const fitKey = fitted && room ? `${device}:${cols}x${rows}` : '';
+  const [flowed, setFlowed] = useState('');
+  if (fitKey && flowed !== fitKey && device && layout) {
+    setFlowed(fitKey);
+    setLayouts((l) => ({ ...l, [device]: { ...layout, pages: flow(layout.pages, cols, rows) } }));
+  }
 
   const update = useCallback(
     (next: Layout) => {
@@ -239,7 +275,11 @@ export function HomeGrid({ data, layouts: initial, kind }: Props) {
   const setDensity = (density: Density) => layout && update({ ...layout, density });
   const reset = () => {
     if (!device) return;
-    setLayouts((l) => ({ ...l, [device]: defaultLayout(device, kind, facts) }));
+    const fresh = defaultLayout(device, kind, facts);
+    setLayouts((l) => ({
+      ...l,
+      [device]: fitted ? { ...fresh, pages: flow(fresh.pages, cols, rows) } : fresh,
+    }));
     startTransition(() => {
       void resetHomeLayoutAction(device, kind);
     });
@@ -250,6 +290,7 @@ export function HomeGrid({ data, layouts: initial, kind }: Props) {
   if (seen !== initial) {
     setSeen(initial);
     setLayouts(initial);
+    setFlowed('');
   }
 
   // Keyboard: arrows move a focused widget one block; Delete removes it.
@@ -496,7 +537,7 @@ export function HomeGrid({ data, layouts: initial, kind }: Props) {
   if (!device || !layout) return <div className="home home-skeleton" aria-busy="true" />;
 
   const densities = DENSITIES.map((k) => {
-    const [c, r] = gridFor(device, k, kind, short);
+    const [c, r] = gridOf(k);
     return { value: k, label: `${c}×${r}` };
   });
   // On a desktop Edit Home uses the frame: its bar in the top line, Add a widget in the menu.
@@ -536,6 +577,7 @@ export function HomeGrid({ data, layouts: initial, kind }: Props) {
 
   return (
     <div
+      ref={homeEl}
       className="home"
       data-editing={editing}
       style={{ ['--cols' as string]: cols, ['--rows' as string]: rows }}

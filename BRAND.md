@@ -330,16 +330,19 @@ screen's shape, written out in `src/styles/shell.css`'s header:
 - **The stack (a desktop, and any landscape screen 900 px wide or more,
   such as an iPad on its side).** One frame for the whole screen: a 24 px
   margin all round, the menu 316 px wide, a 24 px gutter, then the page. A
-  56 px **top line** runs across both and has no background or border: the
-  Garnet mark and name on the left, over the menu; on the right the page's
-  way back and title (beside the menu) and, at the far right, search and Add
-  bill with its words. Under it the menu's first card and the page start on
+  56 px **header** runs the full width and has no background or border: the
+  Garnet mark and name on the left with the household beside them, then the page's way back and title; nothing in the middle; search, Add bill with
+  its words and the avatar at the right. The menu starts under it. Under it the menu's first card and the page start on
   the same line, and the menu's last card and Home's grid end on the same
   line. No greeting: only the wall shows a clock and the date.
 - **The menu is a stack of glass cards**, 16 px apart, in the widgets' glass:
-  1. **The household**: this month's ring (bills paid of bills due this
-     month, `monthDue()`, the same rule as the This month widget), the
-     household and month, the month's total, what is left to pay.
+  1. **The household** is not in the menu: in the header it sits beside the
+     brand, after a thin rule, as its type's icon and its name with the
+     switcher's arrow (owner, 2026-10-05, to give the services room). On a
+     phone it is a card:
+     this month's ring (bills paid of bills due this month, `monthDue()`, the
+     same rule as the This month widget), the household and month, the
+     month's total, what is left to pay.
   2. **The links** as six tiles, three across (Home, Services, Bills, Money
      when bills are split, Members, Inbox with its count); the current one is
      filled with the accent.
@@ -348,8 +351,8 @@ screen's shape, written out in `src/styles/shell.css`'s header:
      main service's arrow folds out its parts.
   4. **My Services**: the person's own, the same rows.
   5. **You**: avatar, name and role, and the three dots of the account menu.
-     The household card, the links and you never move; Services and My
-     Services scroll together between them.
+     The links and you never move; Services and My Services scroll together
+     between them.
 - **Service groups are the household's** and only admins arrange them, by
   dragging (no edit mode): a service or a whole group is dragged where an
   iOS-blue line shows (`--drop-line`); "New Service Group" opens a name
@@ -359,11 +362,10 @@ screen's shape, written out in `src/styles/shell.css`'s header:
   the same order.
 - **The two dropdowns are one panel with their card** (`--menu-bg`, near
   black in dark and white in light; tiles and rows in `--menu-well`):
-  - **The household switcher**: the household card becomes the top of the
-    panel; under it each other household is a card with its ring, total and
-    what's left to pay, ending in an arrow (the accent fills it under the
-    pointer), then a **Dashboard** card. It overlays the links: nothing
-    moves.
+  - **The household switcher** is an extension of its button: open, the
+    button and its list are one solid surface; each other household is a row
+    shaped like the button (its icon on a small tile and its name), then
+    **Dashboard**. It drops over the page and the menu: nothing moves.
   - **The account menu**: your card becomes the foot of the panel and shows
     your email; above it six tiles (Dashboard, Settings, Notifications,
     Profile, Appearance, Edit Home), then Wall display and Backend

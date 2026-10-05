@@ -60,6 +60,38 @@ const WALL_GRID: Record<Device, [number, number]> = {
  */
 export const STACK_MEDIA = '(min-width: 1200px), (min-width: 900px) and (orientation: landscape)';
 
+/**
+ * Home's grid on the stack (a desktop, or an iPad on its side) follows the
+ * room it has (owner, 2026-10-05). Blocks stay square; the density is a
+ * block size (large, medium or small), so the rows are as many blocks of
+ * that size as the height fits, a block's side is then what the height
+ * allows for those rows, and the columns are as many as the width fits,
+ * rounded to the nearest (half a column or more to spare adds one, the
+ * blocks narrowing to fit). Two to six rows, three to ten columns. A bigger
+ * window shows more widgets at the same size, a smaller one fewer.
+ */
+const STACK_BLOCK: Record<Density, number> = { comfy: 260, standard: 200, dense: 150 };
+const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n));
+export function stackGrid(
+  density: Density,
+  width: number,
+  height: number,
+  gap: number,
+): [number, number] {
+  const rows = clamp(Math.round((height + gap) / (STACK_BLOCK[density] + gap)), 2, 6);
+  const side = (height - (rows - 1) * gap) / rows;
+  const cols = side > 0 ? clamp(Math.round((width + gap) / (side + gap)), 3, 10) : 4;
+  return [cols, rows];
+}
+
+/**
+ * A layout's widgets flowed onto pages of a grid, in their order, each page
+ * filled before the next: how a stack's Home follows its column count.
+ */
+export function flow(pages: Pages, cols: number, rows: number): Pages {
+  return normalise([pages.flat()], cols, rows);
+}
+
 /** Which kind of screen a viewport is, for its grid: a desktop from 1200 px, an iPad either way to 640, a phone below. */
 export function deviceFor(width: number, height: number): Device {
   if (width >= 1200) return 'desktop';

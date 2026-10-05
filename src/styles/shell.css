@@ -1539,7 +1539,6 @@
     display: flex;
     align-items: center;
   }
-  .topbar:has(.tb-edit:not(:empty)) > .tb-l,
   .topbar:has(.tb-edit:not(:empty)) > .tb-r {
     visibility: hidden;
   }
@@ -1648,4 +1647,237 @@
   .tb-add span {
     display: inline;
   }
+}
+
+/* ---------- the header (the stack) ---------- */
+/*
+  Owner, 2026-10-05: on the stack the top line is a header of its own across
+  the full width: the brand on the left, as wide as the menu below it, then
+  the page's way back; the household card in the middle (moved out of the
+  menu to give the services its room); search, Add bill and you on the right.
+  The menu starts under it. The household's switcher hangs under its card as
+  one panel, as it did in the menu.
+*/
+.tb-start {
+  display: contents;
+}
+.tb-logo {
+  display: none;
+}
+@media (max-width: 639px), (max-width: 1199px) and (orientation: portrait) {
+  /* The phone's layout: the household first, the way back after it. */
+  .tb-start {
+    display: flex;
+    align-items: center;
+    order: 2;
+  }
+}
+@media (min-width: 1200px), (min-width: 900px) and (orientation: landscape) {
+  .topbar {
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    padding: var(--frame) var(--frame) 0;
+    /* Above the menu, so the household's switcher drops over its cards. */
+    z-index: 50;
+  }
+  .tb-l {
+    display: contents;
+  }
+  .tb-start {
+    grid-column: 1;
+    grid-row: 1;
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    height: var(--top-line);
+  }
+  .tb-logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: none;
+    padding: 0 12px 0 6px;
+    box-sizing: border-box;
+    color: var(--p-fg);
+    text-decoration: none;
+  }
+  .tb-logo span {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 23px;
+    letter-spacing: -0.015em;
+    line-height: 1;
+  }
+  .tb-logo .mark-gem {
+    flex: none;
+    filter: drop-shadow(0 4px 10px rgba(168, 20, 31, 0.45));
+  }
+  .tb-r {
+    grid-column: 3;
+    grid-row: 1;
+    justify-self: end;
+    height: var(--top-line);
+  }
+  /* The menu starts under the header; its own brand gives way to the header's. */
+  .nav.column {
+    top: calc(var(--safe-t) + var(--frame) + var(--top-line) + 16px);
+  }
+  .nav.column > .nc-logo,
+  .nav.column .st-hh {
+    display: none;
+  }
+  /*
+    The household beside the brand, after a thin rule: its type's icon and its
+    name, and the arrow of its switcher (owner, 2026-10-05: one lockup with
+    the brand, nothing in the middle of the header). No glass, no figures.
+  */
+  .topbar .tb-hh {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    height: var(--top-line);
+    margin-left: 4px;
+    padding: 0 0 0 16px;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  .topbar .tb-hh::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 1px;
+    height: 24px;
+    margin-top: -12px;
+    padding: 0;
+    background: var(--line-2);
+    -webkit-mask: none;
+    mask: none;
+    z-index: 0;
+  }
+  .topbar:has(.tb-edit:not(:empty)) .tb-hh,
+  .topbar:has(.tb-edit:not(:empty)) .tb-back {
+    visibility: hidden;
+  }
+  .tb-hh .sw {
+    min-width: 0;
+  }
+  .tb-hh .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 44px;
+    padding: 0 10px 0 6px;
+    border-radius: 14px;
+  }
+  .tb-hh .brand:hover,
+  .tb-hh .brand[aria-expanded='true'] {
+    background: var(--inset);
+  }
+  .tb-hh .sw-card,
+  .tb-hh .brand-t > span,
+  .tb-hh .brand-t b > .sw-chev {
+    display: none;
+  }
+  .tb-hh .sw-btn > .mark {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    background: var(--inset-2);
+    color: var(--p-fg);
+    box-shadow: none;
+  }
+  .tb-hh .brand-t b {
+    font-family: var(--f-body);
+    font-weight: 650;
+    font-size: 15px;
+    letter-spacing: 0;
+    max-width: 260px;
+  }
+  .tb-hh .sw-btn > .sw-chev {
+    flex: none;
+    margin-left: auto;
+    color: var(--p-fg2);
+    transition: transform 0.18s ease;
+  }
+  .tb-hh .sw-btn[aria-expanded='true'] > .sw-chev {
+    transform: rotate(180deg);
+  }
+  /*
+    The switcher is an extension of the button (owner, 2026-10-05): open,
+    the button and its list are one solid surface, the list's rows shaped
+    like the button (the household's icon and name), then Dashboard.
+  */
+  .tb-hh .brand[aria-expanded='true'] {
+    background: var(--menu-bg);
+    border-radius: 14px 14px 0 0;
+  }
+  .tb-hh .sw-menu {
+    top: 100%;
+    left: 0;
+    /* Exactly the button's width, so the two meet edge to edge. */
+    width: 100%;
+    min-width: 0;
+    padding: 0 4px 4px;
+    gap: 2px;
+    border-radius: 0 0 14px 14px;
+    background: var(--menu-bg);
+    box-shadow: 0 24px 48px -16px rgba(0, 0, 0, 0.5);
+  }
+  /* Rows round like the button; their icons line up with its icon. */
+  .tb-hh .sw-item {
+    height: 44px;
+    min-height: 0;
+    gap: 10px;
+    padding: 0 12px 0 2px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .tb-hh .sw-item:hover,
+  .tb-hh .sw-item:focus-visible {
+    background: var(--menu-well);
+  }
+  .tb-hh .sw-sep {
+    margin: 4px 10px;
+  }
+}
+
+/* The plain switcher's rows: the household's icon on a small tile, like its button. */
+.sw-ic {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: var(--inset-2);
+  color: var(--p-fg);
+}
+
+/* The household's name in its button: as wide as the longest of the person's
+   households' names, at most 24 characters, then an ellipsis. */
+.sw-fit {
+  display: inline-grid;
+  min-width: 0;
+  max-width: 24ch;
+  vertical-align: bottom;
+}
+.sw-fit > span {
+  grid-area: 1 / 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.sw-ghost {
+  visibility: hidden;
+  height: 0;
+}
+/* The name keeps the button's type (the subtitle's smaller rule is for spans under it). */
+.brand-t b .sw-fit,
+.brand-t b .sw-fit > span {
+  font: inherit;
+  color: inherit;
 }

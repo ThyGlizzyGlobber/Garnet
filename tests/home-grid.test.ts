@@ -15,6 +15,8 @@ import {
   normalise,
   pack,
   toFourByThree,
+  stackGrid,
+  flow,
   parseLayout,
   SIZE_LIST,
   sizeName,
@@ -454,5 +456,40 @@ describe('a saved layout brought up to date', () => {
           expect(it.id).not.toBe('settled');
           expect(SIZE_LIST).toContainEqual([it.w, it.h]);
         }
+  });
+
+  it('fits its grid to the room on the stack: rows from the height, columns from the width', () => {
+    // 1,440 × 900 (Home 1,052 × 780, 14 px gaps): large blocks, four by three.
+    expect(stackGrid('comfy', 1052, 780, 14)).toEqual([4, 3]);
+    // A 16-inch MacBook Pro (Home about 1,340 × 880): five by three.
+    expect(stackGrid('comfy', 1340, 880, 14)).toEqual([5, 3]);
+    expect(stackGrid('comfy', 1100, 780, 14)).toEqual([4, 3]);
+    // A big monitor: more rows and columns of blocks the same size.
+    expect(stackGrid('comfy', 2172, 1280, 14)).toEqual([8, 5]);
+    // Medium and small blocks at 1,440 × 900.
+    expect(stackGrid('standard', 1052, 780, 14)).toEqual([5, 4]);
+    expect(stackGrid('dense', 1052, 780, 14)).toEqual([7, 5]);
+    // Never fewer than two rows or three columns, never more than six or ten.
+    expect(stackGrid('comfy', 600, 860, 14)).toEqual([3, 3]);
+    expect(stackGrid('comfy', 900, 300, 14)[1]).toBe(2);
+    expect(stackGrid('dense', 4000, 500, 14)).toEqual([10, 3]);
+  });
+
+  it('flows a layout onto wider pages in its order, each page filled first', () => {
+    const l = defaultLayout('desktop', 'home', facts);
+    const five = flow(l.pages, 5, 3);
+    expect(
+      five
+        .flat()
+        .map((x) => x.id)
+        .sort(),
+    ).toEqual(
+      l.pages
+        .flat()
+        .map((x) => x.id)
+        .sort(),
+    );
+    expect(five[0]!.reduce((a, x) => a + x.w * x.h, 0)).toBeGreaterThan(12);
+    expect(flow(l.pages, 4, 3)[0]!.map((x) => x.id)).toEqual(l.pages[0]!.map((x) => x.id));
   });
 });

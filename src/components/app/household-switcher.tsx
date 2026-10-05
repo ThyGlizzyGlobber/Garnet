@@ -70,7 +70,9 @@ export function HouseholdSwitcher({
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   const column = place === 'column';
-  const panel = !!card && rows.some((r) => r.card);
+  // The desktop menu's card drops a panel of household cards; in the header (and
+  // on a phone) the list is plain, an extension of the button (owner, 2026-10-05).
+  const panel = column && !!card && rows.some((r) => r.card);
   useEffect(() => {
     if (!open) return;
     const onClick = (e: MouseEvent) => {
@@ -101,14 +103,29 @@ export function HouseholdSwitcher({
         </span>
         <span className={column ? 'nc-bt' : 'brand-t'}>
           <b>
-            {title}
+            {column ? (
+              title
+            ) : (
+              // As wide as the longest household's name (the others laid over it,
+              // unseen), so the button keeps one width as you switch (owner, 2026-10-05).
+              <span className="sw-fit">
+                <span className="sw-name">{title}</span>
+                {rows.map((r) => (
+                  <span key={r.memberId} className="sw-ghost" aria-hidden="true">
+                    {r.name}
+                  </span>
+                ))}
+              </span>
+            )}
             {!column && <Icon name="chevron-down" width={14} height={14} className="sw-chev" />}
           </b>
           <span>{sub}</span>
         </span>
         {card && <span className="sw-card">{card}</span>}
-        {/* In the column the arrow sits at the far edge, the name taking the width. */}
-        {column && <Icon name="chevron-down" width={16} height={16} className="sw-chev" />}
+        {/* In the column, and as a card, the arrow sits at the far edge. */}
+        {(column || card) && (
+          <Icon name="chevron-down" width={16} height={16} className="sw-chev" />
+        )}
       </button>
       {open && panel && (
         <div className="sw-menu sw-panel" role="menu" aria-label={labels.title}>
@@ -154,24 +171,31 @@ export function HouseholdSwitcher({
       )}
       {open && !panel && (
         <div className="sw-menu" role="menu" aria-label={labels.title}>
-          {rows.map((r) => (
-            <form key={r.memberId} action={action}>
-              <input type="hidden" name="memberId" value={r.memberId} />
-              <button
-                type="submit"
-                role="menuitem"
-                className={cx('sw-item', r.current && 'on')}
-                aria-current={r.current ? 'true' : undefined}
-              >
-                <Icon name={r.icon} width={17} height={17} />
-                <span>{r.name}</span>
-                {r.current && <Icon name="check" width={16} height={16} className="sw-tick" />}
-              </button>
-            </form>
-          ))}
+          {/* In the header the button is the current household: the list is the others. */}
+          {rows
+            .filter((r) => column || !r.current)
+            .map((r) => (
+              <form key={r.memberId} action={action}>
+                <input type="hidden" name="memberId" value={r.memberId} />
+                <button
+                  type="submit"
+                  role="menuitem"
+                  className={cx('sw-item', r.current && 'on')}
+                  aria-current={r.current ? 'true' : undefined}
+                >
+                  <span className="sw-ic">
+                    <Icon name={r.icon} width={17} height={17} />
+                  </span>
+                  <span>{r.name}</span>
+                  {r.current && <Icon name="check" width={16} height={16} className="sw-tick" />}
+                </button>
+              </form>
+            ))}
           <div className="sw-sep" role="separator" />
           <Link href="/account" role="menuitem" className="sw-item" onClick={() => setOpen(false)}>
-            <Icon name="dashboard" width={17} height={17} />
+            <span className="sw-ic">
+              <Icon name="dashboard" width={17} height={17} />
+            </span>
             <span>{labels.dashboard}</span>
           </Link>
         </div>
