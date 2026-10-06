@@ -1289,9 +1289,10 @@
     transform: rotate(180deg);
   }
   /*
-    The dropdowns are an extension of the bar (owner, 2026-10-06): the same
-    glass, a stronger tint so their rows have a steady ground, hanging off
-    the bar's bottom edge with no gap. The open button sits in the bar's well.
+    The dropdowns are rounded cards in the bar's glass (owner, 2026-10-07: a
+    little space between them and the bar, not sat against it): the same
+    glass with a stronger tint so their rows have a steady ground, 10 px
+    under the bar's edge. The open button sits in the bar's well.
   */
   .tb-hh .brand[aria-expanded='true'],
   .tb-r .am-trigger[aria-expanded='true'] {
@@ -1300,7 +1301,7 @@
   }
   .tb-hh .sw-menu,
   .am-topbar .am-menu {
-    border-radius: 0 0 20px 20px;
+    border-radius: 20px;
     background: var(--dd-bg);
     -webkit-backdrop-filter: blur(var(--g-blur)) saturate(var(--g-sat));
     backdrop-filter: blur(var(--g-blur)) saturate(var(--g-sat));
@@ -1311,8 +1312,8 @@
     --p-fg3: var(--dd-fg3);
   }
   .tb-hh .sw-menu {
-    /* From the button's bottom to the bar's: the two meet edge to edge. */
-    top: calc(100% + 8px);
+    /* The button's bottom is 8 px above the bar's edge; 10 px of air after that. */
+    top: calc(100% + 18px);
     left: -8px;
     width: calc(100% + 16px);
     min-width: 260px;
@@ -1336,7 +1337,7 @@
     margin: 4px 10px;
   }
   .am-topbar .am-menu {
-    top: calc(100% + 12px);
+    top: calc(100% + 24px);
     right: -12px;
     width: 300px;
     padding: 6px 8px 6px;
@@ -1481,14 +1482,14 @@
   .sp {
     position: absolute;
     z-index: 60;
-    top: calc(100% + 11px);
+    top: calc(100% + 21px);
     left: 50%;
     transform: translateX(-50%);
     width: 820px;
     max-width: calc(100vw - 2 * var(--gut) - 24px);
     box-sizing: border-box;
     padding: 14px 14px 10px;
-    border-radius: 0 0 24px 24px;
+    border-radius: 24px;
     background: var(--dd-bg);
     -webkit-backdrop-filter: blur(var(--g-blur)) saturate(var(--g-sat));
     backdrop-filter: blur(var(--g-blur)) saturate(var(--g-sat));

@@ -341,9 +341,9 @@ picks one of two layouts by the screen's shape, written out in
   hairline. No greeting: only the wall shows a clock and the date.
 - **A site-wide width cap of 1600 px**: the bar and every page stop there and
   sit centred, the scene filling the rest.
-- **The dropdowns are an extension of the bar**: the same glass with a
-  stronger tint (`--dd-bg`) and darker secondary text in light, hanging off
-  the bar's bottom edge with no gap, the opener lit in the bar's well; the
+- **The dropdowns are rounded cards under the bar**: the same glass with a
+  stronger tint (`--dd-bg`) and darker secondary text in light, 10 px of
+  air between them and the bar's edge, the opener lit in the bar's well; the
   page dims behind them. They open on a click and close on a second click,
   a click elsewhere, Escape or choosing a row; arrow keys move through the
   rows and Down on the opener opens it.
