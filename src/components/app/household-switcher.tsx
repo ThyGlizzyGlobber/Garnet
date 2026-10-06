@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { cx } from '@/components/ui/cx';
 import { Icon } from './icons';
+import { focusFirst, menuKeys } from './menu-keys';
 import { StackRing } from './stack-ring';
 
 /** One household in the switcher. */
@@ -89,7 +90,11 @@ export function HouseholdSwitcher({
     };
   }, [open]);
   return (
-    <div ref={box} className={cx('sw', column ? 'sw-column' : 'sw-topbar')}>
+    <div
+      ref={box}
+      className={cx('sw', column ? 'sw-column' : 'sw-topbar')}
+      onKeyDown={(e) => open && menuKeys(e)}
+    >
       <button
         type="button"
         className={cx(column ? 'nc-brand' : 'brand', 'sw-btn', card ? 'has-card' : undefined)}
@@ -97,6 +102,12 @@ export function HouseholdSwitcher({
         aria-expanded={open}
         aria-haspopup="menu"
         onClick={() => setOpen((o) => !o)}
+        onKeyDown={(e) => {
+          if (e.key !== 'ArrowDown') return;
+          e.preventDefault();
+          setOpen(true);
+          setTimeout(() => focusFirst(box.current?.querySelector('.sw-menu')), 0);
+        }}
       >
         <span className="mark">
           <Icon name={icon} width={17} height={17} />

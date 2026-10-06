@@ -35,6 +35,7 @@ export default async function ConsoleLayout({ children }: { children: ReactNode 
     lines: [],
     inboxCount: 0,
     toPayWeek: 0,
+    owedBy: 0,
     address: null,
     me: {
       name,

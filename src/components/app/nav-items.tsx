@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { createContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { cx } from '@/components/ui/cx';
 import { Icon } from './icons';
+import { focusFirst, menuKeys } from './menu-keys';
 
 /** Closes the dropdown a panel sits in (the panel's links call it). */
 export const PanelClose = createContext<() => void>(() => {});
@@ -113,7 +114,7 @@ function NavPill({
     };
   }, [open]);
   return (
-    <div ref={box} className="nav-dd">
+    <div ref={box} className="nav-dd" onKeyDown={(e) => open && menuKeys(e)}>
       <button
         type="button"
         className={cx('nav-i nav-pill')}
@@ -121,6 +122,13 @@ function NavPill({
         aria-expanded={open}
         aria-haspopup="dialog"
         onClick={() => setOpen((o) => !o)}
+        onKeyDown={(e) => {
+          // Down opens it and lands on its first row.
+          if (e.key !== 'ArrowDown') return;
+          e.preventDefault();
+          setOpen(true);
+          setTimeout(() => focusFirst(box.current?.querySelector('.sp')), 0);
+        }}
       >
         <Icon name={item.icon} width={iconSize} height={iconSize} />
         <span>{item.label}</span>

@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Avatar } from '@/components/ui/colour';
 import { cx } from '@/components/ui/cx';
 import { Icon } from './icons';
+import { focusFirst, menuKeys } from './menu-keys';
 
 export interface AccountMenuItem {
   href: string;
@@ -65,7 +66,11 @@ export function AccountMenu({
     };
   }, [open]);
   return (
-    <div ref={box} className={cx('am', place === 'column' ? 'am-column' : 'am-topbar')}>
+    <div
+      ref={box}
+      className={cx('am', place === 'column' ? 'am-column' : 'am-topbar')}
+      onKeyDown={(e) => open && menuKeys(e)}
+    >
       <button
         type="button"
         className={cx('am-trigger', place === 'column' ? 'nc-me' : 'me tb-me')}
@@ -73,6 +78,12 @@ export function AccountMenu({
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
+        onKeyDown={(e) => {
+          if (e.key !== 'ArrowDown') return;
+          e.preventDefault();
+          setOpen(true);
+          setTimeout(() => focusFirst(box.current?.querySelector('.am-menu')), 0);
+        }}
       >
         {children}
       </button>

@@ -237,6 +237,8 @@ describe('shellView', () => {
     });
     // Overdue counts as to pay this week; next week's bill does too once it is within seven days.
     expect(view.toPayWeek).toBe(2);
+    // Kim lives alone: nobody owes her a share.
+    expect(view.owedBy).toBe(0);
   });
 
   it('shares the household’s groups with everyone, and only admins change them', () => {

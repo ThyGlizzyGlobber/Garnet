@@ -103,6 +103,8 @@ export interface ShellView {
   inboxCount: number;
   /** Bills (and instalments) still to pay that are due within a week or overdue, for the panel's foot. */
   toPayWeek: number;
+  /** Housemates who owe the viewer a share, for Money's badge (SCOPE-header.md H-D8). */
+  owedBy: number;
   /** The household's bills address, for the Add bill sheet. */
   address: string | null;
   me: {
@@ -161,6 +163,13 @@ export function shellView(hh: Household, me: Member, today: string, db: Db = get
   const all = entries(groups, minor, statusOf, vehicles(null, vehicleStatus), false, layout);
   const ownGroups = groupServices(listServices(hh.id, { owner: me.id }, db));
   const own = entries(ownGroups, minor, statusOf, vehicles(me.id, vehicleStatus), true, layout);
+  // Housemates with a share still to pay back on a bill the viewer pays.
+  const owedBy = new Set(
+    bills
+      .filter((b) => b.service.payerMemberId === me.id)
+      .flatMap((b) => b.shares.filter((x) => !x.paidAt && x.memberId !== me.id))
+      .map((x) => x.memberId),
+  ).size;
   const toPayWeek = bills
     .flatMap((b) => dueParts(b))
     .filter((p) => !p.paidAt && billStatus(null, p.dueDate, today).days <= 7).length;
@@ -185,6 +194,7 @@ export function shellView(hh: Household, me: Member, today: string, db: Db = get
     lines: [...navLines(groups), ...navLines(ownGroups, true)],
     inboxCount: documentCounts(hh.id, { viewer: me.id }, db).needs_review,
     toPayWeek,
+    owedBy,
     address: billsAddress(hh, db),
     me: { name: me.name, colour: me.colour, admin: isAdmin(me), role: me.role },
     developer: false,

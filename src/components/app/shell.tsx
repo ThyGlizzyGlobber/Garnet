@@ -9,6 +9,7 @@ import { ServicesPanel, type PanelRow, type PanelSection } from './services-pane
 import { logout } from '@/app/login/actions';
 import { AccountMenu, type AccountMenuItem } from './account-menu';
 import { AddBillButton } from './add-bill';
+import { BarScroll } from './bar-scroll';
 import { GarnetMark } from './garnet-mark';
 import { Icon } from './icons';
 import { OfflineBar } from './offline-bar';
@@ -141,7 +142,9 @@ export function AppShell({
         { href: '/', label: labels.nav.home, icon: 'home' },
         { href: '/services', label: labels.nav.services, icon: 'services' },
         { href: '/bills', label: labels.nav.bills, icon: 'bills' },
-        ...(view.split ? [{ href: '/money', label: labels.nav.money, icon: 'money' }] : []),
+        ...(view.split
+          ? [{ href: '/money', label: labels.nav.money, icon: 'money', badge: view.owedBy }]
+          : []),
         { href: '/members', label: labels.nav.members, icon: 'people' },
         { href: '/inbox', label: labels.nav.inbox, icon: 'inbox', badge: view.inboxCount },
       ];
@@ -211,6 +214,7 @@ export function AppShell({
       {/* The bar (SCOPE-header.md §3a); on a phone the household card and the
           buttons beside it, with the links in the bar along the bottom. */}
       <header className="topbar">
+        <BarScroll />
         <div className="tb-in">
           <div className="tb-start">
             <Link href={account ? '/account/overview' : '/'} className="tb-logo">
