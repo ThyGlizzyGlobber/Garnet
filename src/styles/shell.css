@@ -257,11 +257,6 @@
   padding: 14px 12px;
   margin-bottom: var(--gap);
 }
-.arr-head {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 10px;
-}
 .nav-sec {
   padding: 8px 12px 4px;
   font-size: 11px;

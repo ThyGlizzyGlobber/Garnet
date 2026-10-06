@@ -1,17 +1,19 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import type { Household, Member } from '@/db/schema';
-import { ArrangeServices } from '@/components/app/arrange-services';
 import { NavGroup } from '@/components/app/nav-group';
+import { NavServices } from '@/components/app/nav-services';
 import { formatMoney } from '@/lib/format';
 import { colourCss } from '@/lib/palette';
 import { shellView, type ShellEntry, type ShellView } from '@/lib/shell';
 
 /**
- * The Services page's Arrange card (SCOPE-header.md H-D3): the household's
- * groups and My Services as the lines the side menu used to draw (a colour
- * dot, the name, this month's figure; a main service with its parts under an
- * arrow), dragged into groups and order. The numbers come from shellView().
+ * The Services page's Arrange card (SCOPE-header.md H-D3), shown while
+ * ?arrange=1 (the button is in the page's title row): the household's groups
+ * and My Services as the lines the side menu used to draw (a colour dot, the
+ * name, this month's figure; a main service with its parts under an arrow),
+ * dragged into groups and order; every change saves at once. The numbers
+ * come from shellView().
  */
 export async function ServicesArrange({
   hh,
@@ -24,7 +26,6 @@ export async function ServicesArrange({
 }) {
   const view = shellView(hh, me, today);
   const t = await getTranslations('nav');
-  const ts = await getTranslations('services');
   const tmain = await getTranslations('main');
   const money = (minor: number) => formatMoney(minor, view.currency, hh.locale, { whole: true });
   const line = (s: { name: string; minor: number }) => (
@@ -82,22 +83,22 @@ export async function ServicesArrange({
       keys: sec.entries.map((e) => e.key),
     }));
   return (
-    <ArrangeServices
-      sections={asSections(view.sections)}
-      mine={asSections(view.mine)}
-      rows={[...view.sections, ...view.mine]
-        .flatMap((sec) => sec.entries)
-        .map((e) => ({ key: e.key, node: row(e) }))}
-      lines={view.lines}
-      admin={view.me.admin}
-      labels={{
-        open: ts('arrange'),
-        close: ts('arrangeDone'),
-        head: t('servicesHead'),
-        thisMonth: t('thisMonth'),
-        other: t('otherServices'),
-        mine: t('myServices'),
-      }}
-    />
+    <div className="glass arr-card rounded-card">
+      <NavServices
+        sections={asSections(view.sections)}
+        mine={asSections(view.mine)}
+        rows={[...view.sections, ...view.mine]
+          .flatMap((sec) => sec.entries)
+          .map((e) => ({ key: e.key, node: row(e) }))}
+        lines={view.lines}
+        admin={view.me.admin}
+        labels={{
+          head: t('servicesHead'),
+          thisMonth: t('thisMonth'),
+          other: t('otherServices'),
+          mine: t('myServices'),
+        }}
+      />
+    </div>
   );
 }

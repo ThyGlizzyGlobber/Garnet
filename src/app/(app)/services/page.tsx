@@ -27,7 +27,7 @@ const LENSES: Lens[] = ['month', 'year', 'fy'];
 export default async function ServicesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ lens?: string; m?: string; y?: string; fy?: string }>;
+  searchParams: Promise<{ lens?: string; m?: string; y?: string; fy?: string; arrange?: string }>;
 }) {
   const q = await searchParams;
   const ctx = await pageContext();
@@ -43,11 +43,19 @@ export default async function ServicesPage({
     year: /^\d{4}$/.test(q.y ?? '') && q.y! <= base.year ? q.y! : base.year,
     fy: /^\d{4}$/.test(q.fy ?? '') && q.fy! <= base.fy ? q.fy! : base.fy,
   };
-  const href = (o: { lens?: Lens; month?: string; year?: string; fy?: string }) => {
+  const arranging = q.arrange === '1';
+  const href = (o: {
+    lens?: Lens;
+    month?: string;
+    year?: string;
+    fy?: string;
+    arrange?: boolean;
+  }) => {
     const p = new URLSearchParams();
     const l = o.lens ?? lens;
     const next = { ...periods, ...o };
     if (l !== 'month') p.set('lens', l);
+    if (o.arrange ?? arranging) p.set('arrange', '1');
     if (next.month !== base.month) p.set('m', next.month);
     if (next.year !== base.year) p.set('y', next.year);
     if (next.fy !== base.fy) p.set('fy', next.fy);
@@ -102,9 +110,22 @@ export default async function ServicesPage({
           title={t('title')}
           lede={count ? undefined : t('ledeEmpty')}
           right={
-            <LinkButton href="/services/new" variant="secondary" size="sm" icon="plus">
-              {t('add')}
-            </LinkButton>
+            <>
+              {count > 0 && (
+                <LinkButton
+                  href={href({ arrange: !arranging })}
+                  variant="secondary"
+                  size="sm"
+                  icon={arranging ? 'check' : 'move'}
+                  aria-expanded={arranging}
+                >
+                  {arranging ? t('arrangeDone') : t('arrange')}
+                </LinkButton>
+              )}
+              <LinkButton href="/services/new" variant="secondary" size="sm" icon="plus">
+                {t('add')}
+              </LinkButton>
+            </>
           }
         />
         {count === 0 ? (
@@ -129,7 +150,7 @@ export default async function ServicesPage({
         ) : (
           <>
             {/* Arrange: the groups and order, dragged (SCOPE-header.md H-D3). */}
-            <ServicesArrange hh={hh} me={me} today={ctx.today} />
+            {arranging && <ServicesArrange hh={hh} me={me} today={ctx.today} />}
             {/* The household's groups, in their order (the Arrange card and the bar's panel show the same). */}
             {view.sections.map((sec, i) =>
               section(
