@@ -215,7 +215,7 @@ export default async function ServicesPage({
     });
   };
 
-  // The same groups, in the same order, as the viewer's side menu.
+  // The household's groups, in their order (the Arrange card and the bar's panel show the same).
   const isEveryday = (e: MonthEntry) => e.kind === 'service' && isEssential(e.item.service.type);
   const layout = getNavLayout(me);
   const sections = arrange(

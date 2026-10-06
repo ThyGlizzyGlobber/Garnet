@@ -45,7 +45,7 @@ export default async function ConsoleHealthPage() {
   );
   const households = listHouseholds();
   const card = (icon: string, title: string, chip: ReactNode, rows: [string, ReactNode][]) => (
-    <Card className="st-card">
+    <Card>
       <div className="st-h">
         <Disc icon={icon} colour={DISC} size="sm" />
         <b>{title}</b>

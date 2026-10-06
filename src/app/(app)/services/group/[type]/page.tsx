@@ -25,7 +25,7 @@ export default async function ServiceGroupPage({ params }: { params: Promise<{ t
   if (inMainCategory(type)) redirect(`/services/category/${type.category}`);
   const ctx = await pageContext();
   const t = await getTranslations('services');
-  // In the order the person gave them in the side menu.
+  // In the order the household gave them (the Arrange card).
   const layout = getNavLayout(ctx.me);
   const keys = [`t:${type.slug}`, `mt:${type.slug}`];
   const inOrder = (v: ServiceCardsView): ServiceCardsView => ({

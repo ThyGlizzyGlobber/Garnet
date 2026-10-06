@@ -502,7 +502,7 @@
 
 /*
   A widget's menu (SCOPE-shell.md §3f): Edit Home, Change size, Remove
-  widget, on the same solid panel as the side menu's dropdowns.
+  widget, on a solid panel like the bar's dropdowns.
 */
 .wg-menu {
   position: fixed;
@@ -569,7 +569,7 @@
 }
 
 /*
-  A desktop (SCOPE-shell.md §3e): the grid fills the page down to the
+  Under the bar (SCOPE-shell.md §3e, SCOPE-header.md §3h): the grid fills the page down to the
   frame's bottom margin, level with the account card, and the page dots sit
   small in that margin. Edit Home's bar is on the frame's top line and Add a
   widget is in the menu's place.

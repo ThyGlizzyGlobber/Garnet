@@ -7,7 +7,9 @@ once the page has scrolled), T10 (a main service's row growing into its
 parts) and N2 (the household and account dropdowns); N3 is the Services page
 on this layout, which the Services scope will take up. Boards Y, H1 to H5,
 S, T and U are the rounds that led there. The owner's decisions are in §5 and
-their answers to the questions in §8; the build order is §7._
+their answers to the questions in §8; the build order is §7. **Built
+2026-10-06, stages H1 to H5** (see the decisions log in CLAUDE.md for what
+each did)._
 
 ## 1. Goal
 

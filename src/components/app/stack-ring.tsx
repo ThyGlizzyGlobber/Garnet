@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
 
 /**
- * The menu's month ring (SCOPE-shell.md §3b): a thin ring, filled to the
+ * The household's month ring (SCOPE-shell.md §3b; the bar's panel uses it for
+ * each service too): a thin ring, filled to the
  * share of this month's bills paid, with a figure or a tick in the middle.
  * Plain SVG, so it draws on the server and in the switcher alike.
  */

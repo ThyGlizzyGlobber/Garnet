@@ -55,7 +55,8 @@ const groupsOf = (secs: NavServicesSection[]): NavGroup[] =>
 const looseOf = (secs: NavServicesSection[]) => secs.find((s) => s.id === null)?.keys ?? [];
 
 /**
- * The side menu's services, arranged by dragging (owner, 2026-10-02), in two
+ * The services arranged by dragging (owner, 2026-10-02; on the Services page's
+ * Arrange card since SCOPE-header.md H-D3), in two
  * parts under bold titles: Services (the household's) and, below a rule, My
  * Services (the person's own). Each part is laid out the same way: the
  * person's groups, then the services in none (under "Other Services" once
@@ -400,7 +401,7 @@ export function NavServices({
       onDrop={onDrop}
     >
       {/* The household's services and the person's own: a card each where the menu is a stack. */}
-      <div className="nc-house glass st-card">
+      <div className="nc-house">
         <div className="nav-sec nc-head">
           <b>{labels.head}</b>
           <span>{labels.thisMonth}</span>
@@ -409,7 +410,7 @@ export function NavServices({
       </div>
 
       {mine.length + mineGroups.length > 0 && (
-        <div className="nc-mine glass st-card">
+        <div className="nc-mine">
           <div className="nav-sec nc-head">
             <b>{labels.mine}</b>
           </div>

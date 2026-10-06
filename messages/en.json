@@ -39,15 +39,11 @@
     "console": "Backend management",
     "acct": {
       "overview": "Overview",
-      "myAccount": "My Account",
       "profile": "Profile",
       "notifications": "Notifications",
       "security": "Security & Access",
-      "appearance": "Appearance",
-      "developer": "Developer",
-      "primary": "Primary"
+      "appearance": "Appearance"
     },
-    "householdCount": "{count, plural, one {# Household} other {# Households}}",
     "panel": {
       "title": "Services",
       "all": "All services · {amount} this month",

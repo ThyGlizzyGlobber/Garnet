@@ -17,7 +17,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ categ
   if (!isGroupedCategory(category)) notFound();
   const ctx = await pageContext();
   const t = await getTranslations('main');
-  // In the order the person gave them in the side menu.
+  // In the order the household gave them (the Arrange card).
   const layout = getNavLayout(ctx.me);
   const keys = [`c:${category}`, `mc:${category}`];
   if (category === 'vehicle') {

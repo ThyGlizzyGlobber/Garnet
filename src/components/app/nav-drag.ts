@@ -1,7 +1,7 @@
 import type { DragEvent } from 'react';
 
 /**
- * While something is dragged in the side menu: near the top or bottom of
+ * While a service is dragged in the Arrange card: near the top or bottom of
  * the services list, scroll it, so a service can be taken anywhere in a
  * long list.
  */

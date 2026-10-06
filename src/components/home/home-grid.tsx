@@ -64,7 +64,7 @@ import {
  * hold starts it), tap a widget for its Small · Medium · Large picker,
  * remove, grid density, Reset, and Add a widget (search, a size and a live
  * preview). On a desktop the edit bar takes over the frame's top line and
- * Add a widget takes the side menu's place until Done; elsewhere the bar sits
+ * Add a widget takes a column at the page's left edge until Done; elsewhere the bar sits
  * over the grid and Add widget opens a sheet. Layouts are saved per person
  * and kind of screen. Keyboard: in edit mode arrow keys on a focused widget
  * move it and Delete removes it.
@@ -602,7 +602,7 @@ export function HomeGrid({ data, layouts: initial, kind }: Props) {
               <Button variant="secondary" size="sm" onClick={reset}>
                 {t('edit.reset')}
               </Button>
-              {/* On a desktop the menu itself is Add a widget while editing (SCOPE-shell.md S-D8). */}
+              {/* Under the bar, Add a widget is a column beside the grid while editing (SCOPE-header.md §3f). */}
               {!desk && (
                 <Button variant="secondary" size="sm" icon="plus" onClick={() => setGallery(true)}>
                   {t('edit.add')}
@@ -739,7 +739,7 @@ export function HomeGrid({ data, layouts: initial, kind }: Props) {
       {desk ? (
         editing &&
         createPortal(
-          <div className="glass st-card add-card">
+          <div className="glass add-card">
             <h2>{t('edit.addTitle')}</h2>
             <AddPanel
               items={galleryItems}

@@ -9,7 +9,7 @@ import { groupServices, listServices } from '@/lib/services';
 import { navLines } from '@/lib/shell';
 
 /**
- * Keep the side menu's arrangement (and so the Services page's): the
+ * Keep the services' arrangement (the Services page's Arrange card, the bar's panel): the
  * household's groups only from an admin, this person's own always.
  */
 export async function saveNavLayoutAction(layout: unknown): Promise<void> {

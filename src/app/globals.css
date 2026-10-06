@@ -139,7 +139,7 @@
   --track: rgba(28, 28, 28, 0.09);
   --hatch: rgba(28, 28, 28, 0.3);
   --tip-bg: #fafafa;
-  /* A dropdown joined to its card (SCOPE-shell.md §3h), and the tiles in it. */
+  /* A solid dropdown (a widget's menu, a phone's switcher), and the tiles in it. */
   --menu-bg: #ffffff;
   --menu-well: rgba(28, 28, 28, 0.05);
   --paper: #fdfcf9;
@@ -154,8 +154,6 @@
   --g-spec: rgba(255, 255, 255, 0.92);
   --g-shadow: 0 28px 56px -30px rgba(0, 0, 0, 0.3), 0 2px 8px -4px rgba(0, 0, 0, 0.08);
   --g-solid: #f7f7f7;
-  /* The side menu: graphite at 75% (owner, 2026-10-02: solid was jarring), darker in dark mode. */
-  --side-bg: rgba(36, 36, 36, 0.75);
   /* A switch that's on: iOS green (owner, 2026-10-02); iOS's dark-mode green in dark. */
   --toggle-on: #34c759;
   --ctl-bg: rgba(255, 255, 255, 0.42);
@@ -262,7 +260,6 @@
   --g-spec: rgba(255, 255, 255, 0.45);
   --g-shadow: 0 30px 60px -28px rgba(0, 0, 0, 0.7), 0 2px 8px -4px rgba(0, 0, 0, 0.3);
   --g-solid: #262626;
-  --side-bg: rgba(18, 18, 18, 0.75);
   --toggle-on: #30d158;
   --ctl-bg: rgba(255, 255, 255, 0.09);
   --ctl-rim: rgba(255, 255, 255, 0.16);
@@ -363,7 +360,6 @@
     --g-spec: rgba(255, 255, 255, 0.45);
     --g-shadow: 0 30px 60px -28px rgba(0, 0, 0, 0.7), 0 2px 8px -4px rgba(0, 0, 0, 0.3);
     --g-solid: #262626;
-    --side-bg: rgba(18, 18, 18, 0.75);
     --toggle-on: #30d158;
     --ctl-bg: rgba(255, 255, 255, 0.09);
     --ctl-rim: rgba(255, 255, 255, 0.16);

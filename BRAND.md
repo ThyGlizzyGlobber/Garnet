@@ -323,60 +323,67 @@ The studio's `.ring` is `.gauge` here (Tailwind owns `ring`):
 
 ## 9. Layout and navigation
 
-The frame and the side menu follow SCOPE-shell.md (the design canvas linked
-there, boards Z6–Z9 and AH). The shell picks one of three layouts by the
-screen's shape, written out in `src/styles/shell.css`'s header:
+The frame follows SCOPE-header.md (the design canvas linked there, boards
+T2, T5, T7, T10 and N2) over SCOPE-shell.md's widgets' language. The shell
+picks one of two layouts by the screen's shape, written out in
+`src/styles/shell.css`'s header:
 
-- **The stack (a desktop, and any landscape screen 900 px wide or more,
-  such as an iPad on its side).** One frame for the whole screen: a 24 px
-  margin all round, the menu 316 px wide, a 24 px gutter, then the page. A
-  56 px **header** runs the full width and has no background or border: the
-  Garnet mark and name on the left with the household beside them, then the page's way back and title; nothing in the middle; search, Add bill with
-  its words and the avatar at the right. The menu starts under it. Under it the menu's first card and the page start on
-  the same line, and the menu's last card and Home's grid end on the same
-  line. No greeting: only the wall shows a clock and the date.
-- **The menu is a stack of glass cards**, 16 px apart, in the widgets' glass:
-  1. **The household** is not in the menu: in the header it sits beside the
-     brand, after a thin rule, as its type's icon and its name with the
-     switcher's arrow (owner, 2026-10-05, to give the services room). On a
-     phone it is a card:
-     this month's ring (bills paid of bills due this month, `monthDue()`, the
-     same rule as the This month widget), the household and month, the
-     month's total, what is left to pay.
-  2. **The links** as six tiles, three across (Home, Services, Bills, Money
-     when bills are split, Members, Inbox with its count); the current one is
-     filled with the accent.
-  3. **Services**: the household's groups as small headings, each a quiet row
-     per service (a colour dot, the name, what's due this month or a dash); a
-     main service's arrow folds out its parts.
-  4. **My Services**: the person's own, the same rows.
-  5. **You**: avatar, name and role, and the three dots of the account menu.
-     The links and you never move; Services and My Services scroll together
-     between them.
-- **Service groups are the household's** and only admins arrange them, by
-  dragging (no edit mode): a service or a whole group is dragged where an
-  iOS-blue line shows (`--drop-line`); "New Service Group" opens a name
-  field; a group renames on a double-click and its × asks "Are you sure?" in
-  the heading itself. Everyone arranges their own My Services the same way,
-  in their own groups. The Services page and each main service's page show
-  the same order.
-- **The two dropdowns are one panel with their card** (`--menu-bg`, near
-  black in dark and white in light; tiles and rows in `--menu-well`):
-  - **The household switcher** is an extension of its button: open, the
-    button and its list are one solid surface; each other household is a row
-    shaped like the button (its icon on a small tile and its name), then
-    **Dashboard**. It drops over the page and the menu: nothing moves.
-  - **The account menu**: your card becomes the foot of the panel and shows
-    your email; above it six tiles (Dashboard, Settings, Notifications,
-    Profile, Appearance, Edit Home), then Wall display and Backend
-    management (developers) as rows, then Sign out in Pyrope red.
-- **The phone's layout (a phone, and any portrait screen under 1200 px, such
-  as an upright iPad, a size up).** The household as a glass card across the
-  top (its ring, name and total; it drops the same panel of household cards),
-  search, Add bill and your avatar beside it; the links in one glass card
-  along the bottom (five: Members is reached from Settings).
-- **The rail (a landscape screen 640–899 px wide).** The graphite column at
-  92 px, icons only, with its own dark tokens; its menus open beside it.
+- **The bar (a desktop, and any landscape screen 900 px wide or more, such as
+  an iPad on its side).** One glass bar, 60 px tall, 16 px in from the edges,
+  fixed to the top; the page has the whole width under it. Left: the Garnet
+  mark and name (on an iPad the mark alone), a hairline rule, the household
+  as its type's icon and its name with the switcher's arrow (capped at 24
+  characters). Middle: the six links as pills (Home, Services with a down
+  arrow, Bills, Money when bills are split, Members, Inbox), the current one
+  filled with the accent; Inbox carries its count and Money the number of
+  housemates who owe you. Right: search, Add bill with its words, your
+  avatar. Once the page has scrolled the bar takes a stronger tint and a
+  hairline. No greeting: only the wall shows a clock and the date.
+- **A site-wide width cap of 1600 px**: the bar and every page stop there and
+  sit centred, the scene filling the rest.
+- **The dropdowns are an extension of the bar**: the same glass with a
+  stronger tint (`--dd-bg`) and darker secondary text in light, hanging off
+  the bar's bottom edge with no gap, the opener lit in the bar's well; the
+  page dims behind them. They open on a click and close on a second click,
+  a click elsewhere, Escape or choosing a row; arrow keys move through the
+  rows and Down on the opener opens it.
+  - **The household switcher** hangs from the name: each other household as
+    a row shaped like the button (its icon on a small tile and its name),
+    then **Dashboard**.
+  - **The Services panel** hangs from its pill, 820 px wide and centred:
+    every service as a row, three across, led by a small ring that says
+    where it stands this month (filled by the days left, a tick when paid,
+    Pyrope when overdue, empty when nothing is due), its name, a status line
+    and this month's figure, in the household's groups with their totals,
+    then My Services. A main service's row carries an arrow and grows
+    downward into its parts on hover (the row and the list one piece, the
+    arrow turning down; a press on the arrow does the same for touch and
+    keyboards), ending in "Open …"; the row's name opens its page. The foot
+    says "All services · $X this month · N to pay this week" and holds Add
+    service.
+  - **The account menu** hangs from your avatar: your name and email, six
+    tiles (Dashboard, Settings, Notifications, Profile, Appearance, Edit
+    Home), then Wall display and Backend management (developers) as rows,
+    then Sign out in Pyrope red.
+- **Service groups are the household's** and only admins arrange them, on the
+  Services page: Arrange opens a glass card holding the groups and My
+  Services as draggable lines (a service or a whole group is dropped where an
+  iOS-blue line shows, `--drop-line`; "New Service Group" opens a name field;
+  a group renames on a double-click and its × asks "Are you sure?" in the
+  heading). Everyone arranges their own My Services the same way. The panel,
+  the Services page and each main service's page show the same order.
+- **The page's way back** ("← Bills") sits on the page above its title, never
+  in the bar. **Edit Home**'s bar takes over the bar, and Add a widget sits in
+  a column at the page's left edge until Done.
+- **The phone's layout (everything else: a phone, an upright iPad a size up,
+  a narrow landscape window).** The household as a glass card across the top
+  (its ring, name and total; it drops the plain list of households), search,
+  Add bill and your avatar beside it; the links in one glass card along the
+  bottom (five: Members is reached from Settings).
+- **The account area and the console** wear the same bar with their own
+  pills: Overview, Households, Profile, Notifications, Security & Access,
+  Appearance, and Backend management for developers; the switcher there reads
+  "Your households".
 - **Switches** are iOS green when on (`--toggle-on`: `#34c759` light,
   `#30d158` dark) and the pale track when off.
 - Money is hidden in households that don't split bills. Members live inside
@@ -384,7 +391,6 @@ screen's shape, written out in `src/styles/shell.css`'s header:
   `/review` redirect to `/money` and `/inbox`.
 - The frame lives in `src/components/app/shell.tsx` with its CSS in
   `src/styles/shell.css`; its numbers come from `shellView()` (`src/lib/shell.ts`).
-- Pages keep a reading width of 1240 px; very wide screens cap at about 1600.
 - **Home is a widget grid** (`src/components/home`, engine in `src/lib/home-grid.ts`;
   scope and decisions in SCOPE-widgets.md, the design canvas linked there).
   - **Blocks are square** and the grid keeps its ratio: a block's side is the
@@ -392,9 +398,10 @@ screen's shape, written out in `src/styles/shell.css`'s header:
     rows (desktop and iPad landscape 4×3 · 5×3 · 6×4, 4×3 by default, iPad
     portrait 3×4 · 4×5 · 4×6, phone 2×3 · 2×4 · 2×5 by density); pages scroll
     sideways with dots under them (in the frame's bottom margin on the
-    stack), and there is room around it for the cards' shadows. On the stack
-    four by three fills the page exactly, and the default Home is household
-    widgets only: every service is in the menu beside it.
+    bar's layout), and there is room around it for the cards' shadows. Under
+    the bar the grid follows the window in both directions (four by three on
+    a 13-inch laptop, more on a bigger screen), and the default Home is
+    household widgets only: every service is in the Services panel.
   - **Three sizes**, like Apple's: Small 1×1, Medium 2×1, Large 2×2. A saved
     layout with an older size takes the nearest.
   - **One instrument leads every widget** (`pieces.tsx`, `widgets.css`): a ring
@@ -422,9 +429,9 @@ screen's shape, written out in `src/styles/shell.css`'s header:
     Large), Remove widget in the overdue red. Moving on from a press and
     hold lifts the widget into Edit Home. There is no Edit Home button on
     Home; the account menu has Edit Home too.
-  - **Edit Home**: on the stack its bar takes over the top line ("Edit Home"
+  - **Edit Home**: under the bar its own bar takes over it ("Edit Home"
     and "Drag to move · tap a widget to change its size"; the grid density,
-    Reset, Done) and the menu becomes **Add a widget** until Done: search,
+    Reset, Done) and **Add a widget** takes a column at the page's left edge until Done: search,
     the list, a hint until one is picked, then its size, the widget as it
     will be, Add to Home, with the block it would go in marked on the grid.
     Elsewhere the bar sits over the grid with an Add widget button and the
