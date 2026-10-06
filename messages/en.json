@@ -832,7 +832,9 @@
       "open": "Open {name}",
       "otherServices": "Other Services",
       "myServices": "My Services"
-    }
+    },
+    "arrange": "Arrange",
+    "arrangeDone": "Done arranging"
   },
   "members": {
     "title": "Members",

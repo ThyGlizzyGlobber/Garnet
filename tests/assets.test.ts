@@ -5,7 +5,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { openDb, type Db } from '@/db/client';
 import { runMigrations } from '@/db/migrate';
-import { sourceDocument, type Household, type Member } from '@/db/schema';
+import { service, sourceDocument, type Household, type Member } from '@/db/schema';
 import { archiveDocument } from '@/ingest/archive';
 import { processDocument } from '@/ingest/pipeline';
 import { serviceCardsView, subscriptionsView, vehicleView, vehiclesView } from '@/lib/main-view';
@@ -513,6 +513,11 @@ describe('the pages', () => {
       { typeSlug: 'subscriptions', name: 'Cloud', provider: 'Cloud', cadence: 'annual' },
       db,
     );
+    // Recurring from a fixed day, not the clock, so the year ahead is the same every day.
+    db.update(service)
+      .set({ recurringSince: '2026-08-01T00:00:00.000Z' })
+      .where(eq(service.id, netflix.id))
+      .run();
     bill(hh, netflix.id, {
       amountMinor: 2299,
       periodStart: '2026-08-05',

@@ -6,7 +6,6 @@ import { shellLabels } from '@/components/app/shell-labels';
 import { householdTiles } from '@/lib/account';
 import { accountGivenName, isDeveloper } from '@/lib/accounts';
 import { authState, pathFor } from '@/lib/auth/session';
-import { formatMoney } from '@/lib/format';
 import { DEFAULT_COLOUR } from '@/lib/palette';
 import { avatarUrl } from '@/lib/profile';
 import type { ShellView } from '@/lib/shell';
@@ -51,7 +50,6 @@ export default async function AccountLayout({ children }: { children: ReactNode 
       view={view}
       variant="account"
       locale="en"
-      money={(minor, currency, locale) => formatMoney(minor, currency, locale, { whole: true })}
       labels={await shellLabels()}
       switchAction={switchHouseholdAction}
     >

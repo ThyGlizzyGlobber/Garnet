@@ -5,7 +5,6 @@ import type { ShellLabels } from './shell';
 export async function shellLabels(): Promise<ShellLabels> {
   const t = await getTranslations('nav');
   const ta = await getTranslations('app');
-  const tm = await getTranslations('main');
   const ts = await getTranslations('switcher');
   const tr = await getTranslations('roles');
   const tam = await getTranslations('accountMenu');
@@ -19,7 +18,6 @@ export async function shellLabels(): Promise<ShellLabels> {
       inbox: t('inbox'),
     },
     search: t('search'),
-    people: (count) => t('people', { count }),
     admin: t('admin'),
     member: t('member'),
     roles: {
@@ -36,34 +34,17 @@ export async function shellLabels(): Promise<ShellLabels> {
       nothingDue: t('card.nothingDue'),
       ring: (percent) => t('card.ring', { percent }),
     },
-    servicesHead: t('servicesHead'),
-    thisMonth: t('thisMonth'),
-    otherServices: t('otherServices'),
-    myServices: t('myServices'),
-    noServices: t('noServices'),
-    showSubs: t('showSubs'),
-    hideSubs: t('hideSubs'),
-    main: {
-      vehicle: tm('main.vehicle'),
-      health: tm('main.health'),
-      lifestyle: tm('main.lifestyle'),
-      home: tm('main.home'),
-    },
     product: ta('name'),
     households: t('households'),
     account: t('accountShort'),
     console: t('console'),
     yourHouseholds: t('yourHouseholds'),
-    householdCount: (count) => t('householdCount', { count }),
     acct: {
       overview: t('acct.overview'),
-      myAccount: t('acct.myAccount'),
       profile: t('acct.profile'),
       notifications: t('acct.notifications'),
       security: t('acct.security'),
       appearance: t('acct.appearance'),
-      developer: t('acct.developer'),
-      primary: t('acct.primary'),
     },
     switcher: {
       title: ts('title'),

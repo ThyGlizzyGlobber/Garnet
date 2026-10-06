@@ -27,6 +27,7 @@ import {
 } from '@/lib/services-month';
 import { listUnits } from '@/lib/units';
 import { createServiceTypeAction } from './actions';
+import { ServicesArrange } from './arrange';
 
 const SCOPES: MonthScope[] = ['all', 'household', 'mine'];
 
@@ -319,6 +320,8 @@ export default async function ServicesPage({
               ]}
             />
           </Card>
+          {/* Arrange: the groups and order, dragged (SCOPE-header.md H-D3). */}
+          <ServicesArrange hh={hh} me={me} today={ctx.today} />
           {/* Each of the viewer's groups, then the services in no group, then My Services. */}
           {sections.map((sec, i) => (
             <Fragment key={sec.group?.id ?? 'loose'}>
