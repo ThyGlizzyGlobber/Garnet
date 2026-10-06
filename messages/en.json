@@ -844,8 +844,8 @@
       "otherServices": "Other Services",
       "myServices": "My Services"
     },
-    "arrange": "Arrange",
-    "arrangeDone": "Done arranging",
+    "arrange": "Group",
+    "arrangeDone": "Done grouping",
     "lens": {
       "analytics": "Analytics",
       "month": "This month",

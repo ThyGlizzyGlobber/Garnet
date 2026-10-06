@@ -116,7 +116,7 @@ export default async function ServicesPage({
                   href={href({ arrange: !arranging })}
                   variant="secondary"
                   size="sm"
-                  icon={arranging ? 'check' : 'move'}
+                  icon={arranging ? 'check' : 'layers'}
                   aria-expanded={arranging}
                 >
                   {arranging ? t('arrangeDone') : t('arrange')}
