@@ -11,7 +11,7 @@ import { uncapDeveloperHouseholds } from '@/lib/console';
 import { adoptLegacyDemoFlag } from '@/lib/demo';
 import { getEnv } from '@/lib/env';
 import { ensureDataDirs } from '@/lib/paths';
-import { moveLayoutsToFourByThree } from '@/lib/home-layout';
+import { moveLayoutsToFourByThree, moveLayoutsToOnePage } from '@/lib/home-layout';
 import { markWaterFiguresForReread } from '@/lib/metrics';
 import { runOnce } from '@/lib/upgrades';
 
@@ -92,6 +92,12 @@ export async function prepareInstall(): Promise<void> {
     'home',
     runOnce('2026-10-05 home four by three', () => moveLayoutsToFourByThree()),
     'moved {n} saved Home layout(s) onto four by three',
+  );
+  // Home is one page (SCOPE-edit-home.md E-D5).
+  log(
+    'home',
+    runOnce('2026-10-07 home one page', () => moveLayoutsToOnePage()),
+    'folded {n} saved Home layout(s) onto one page',
   );
 
   if (dataKeyConfigured()) {

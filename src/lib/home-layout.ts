@@ -6,6 +6,7 @@ import {
   defaultLayout,
   parseLayout,
   toFourByThree,
+  toOnePage,
   type Device,
   type HouseholdFacts,
   type Layout,
@@ -108,6 +109,27 @@ export function moveLayoutsToFourByThree(db: Db = getDb()): number {
     if (next === now) continue;
     db.update(homeLayout)
       .set({ density: next.density, pages: next.pages, updatedAt: new Date().toISOString() })
+      .where(eq(homeLayout.id, row.id))
+      .run();
+    n += 1;
+  }
+  return n;
+}
+
+/**
+ * Every saved layout folded onto one page (SCOPE-edit-home.md E-D5: Home is
+ * one page): the same widgets, sizes and order; those the grid has no room
+ * for stay in the layout hidden. Run once per install.
+ */
+export function moveLayoutsToOnePage(db: Db = getDb()): number {
+  let n = 0;
+  for (const row of db.select().from(homeLayout).all()) {
+    const raw = row.pages as unknown;
+    if (!Array.isArray(raw) || raw.length < 2) continue;
+    const now = parseLayout({ density: row.density, pages: row.pages });
+    if (!now) continue;
+    db.update(homeLayout)
+      .set({ pages: toOnePage(now.pages), updatedAt: new Date().toISOString() })
       .where(eq(homeLayout.id, row.id))
       .run();
     n += 1;

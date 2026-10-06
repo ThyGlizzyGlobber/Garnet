@@ -2564,8 +2564,6 @@
       "add": "Add postcode"
     },
     "edit": {
-      "title": "Edit Home",
-      "add": "Add widget",
       "addTitle": "Add a widget",
       "homeEyebrow": "Home",
       "allOn": "Every widget is already on Home. Remove one to add it at another size.",
@@ -2573,9 +2571,7 @@
       "reset": "Reset",
       "resetDone": "Home is back to the default layout",
       "done": "Done",
-      "remove": "Remove",
       "size": "Change size",
-      "page": "Page {n}",
       "search": "Search widgets",
       "none": "No widget by that name.",
       "addToHome": "Add to Home",
@@ -2584,8 +2580,9 @@
         "medium": "Medium",
         "large": "Large"
       },
-      "hint": "Drag to move · tap a widget to change its size",
       "drop": "Drop a widget here",
+      "full": "Home is full · remove or shrink a widget first",
+      "notOnScreen": "{n, plural, one {Not on screen: {names}. It will show} other {Not on screen: {names}. They will show}} when there is room.",
       "pickHint": "Pick a widget to see it here, choose its size, then add it to Home."
     },
     "wx": {
@@ -2968,7 +2965,7 @@
     "profile": "Profile",
     "settingsShort": "Settings",
     "dashboardShort": "Dashboard",
-    "editHome": "Edit Home"
+    "addWidget": "Add a widget"
   },
   "account": {
     "title": "Hey, {name}.",

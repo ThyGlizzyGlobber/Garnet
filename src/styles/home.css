@@ -1,9 +1,10 @@
 /*
-  Home: the widget grid and the widgets (BRAND.md §9), from the studio's
-  app.css and more.css. The grid fills the screen (the app's frame turns into
-  a fixed-height column when a .home is on the page), pages scroll sideways
-  and snap, and edit mode shows the empty blocks, a remove button and a size
-  badge on every widget. Widgets are size containers; what is drawn inside them is
+  Home: the widget grid and the widgets (BRAND.md §9, SCOPE-edit-home.md),
+  from the studio's app.css and more.css. The grid is one page that fills the
+  screen (the app's frame turns into a fixed-height column when a .home is on
+  the page); there is no edit mode: a widget lifts when dragged, the empty
+  blocks show while something is dragged or the Add a widget sheet is open.
+  Widgets are size containers; what is drawn inside them is
   src/styles/widgets.css.
 */
 /* ---------- Home: the widget grid ---------- */
@@ -35,54 +36,15 @@
   /* The grid measures the room it has here to keep its blocks square. */
   container-type: size;
   position: relative;
-  --bar: 0px;
-}
-/* Edit Home's bar takes a line off the room for the grid (off the frame, on a desktop it doesn't). */
-.home[data-editing='true'] {
-  --bar: 58px;
-}
-.home-edit {
-  width: 100%;
-  max-width: var(--home-w, none);
-  align-self: center;
-  flex: none;
-  display: flex;
-  align-items: center;
-  gap: 8px 10px;
-  flex-wrap: wrap;
-  min-height: 50px;
-}
-.home-edit-t {
-  margin-right: auto;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-.home-edit-t b {
-  font-family: var(--f-display);
-  font-weight: var(--fw-display);
-  font-size: calc(var(--fs-h1) * 0.85);
-  line-height: 1.1;
-  letter-spacing: -0.02em;
-}
-.home-edit-t span {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--p-fg2);
-}
-@media (max-width: 639px) {
-  .home-edit-t span {
-    display: none;
-  }
 }
 /*
   Blocks are square (owner, 2026-10-03: the grid keeps its ratio, it doesn't
   stretch to the window). A block's side is the smaller of what the width and
   the height allow for this many columns and rows; the grid is exactly that
-  big and sits in the middle, with the dots straight under it.
+  big and sits in the middle.
 */
 .hg-scroller {
-  --room-h: calc(100cqh - 32px - var(--bar));
+  --room-h: calc(100cqh - 8px);
   --b: min(
     calc((100cqw - (var(--cols) - 1) * var(--gap)) / var(--cols)),
     calc((var(--room-h) - (var(--rows) - 1) * var(--gap)) / var(--rows))
@@ -91,28 +53,19 @@
   box-sizing: content-box;
   width: calc(var(--cols) * var(--b) + (var(--cols) - 1) * var(--gap));
   height: calc(var(--rows) * var(--b) + (var(--rows) - 1) * var(--gap));
-  overflow-x: auto;
-  overflow-y: hidden;
-  scroll-snap-type: x mandatory;
+  overflow: visible;
   container-type: size;
-  scrollbar-width: none;
+  position: relative;
   /* Room around the grid for the cards' shadows (owner, 2026-10-03 and -04:
      they were being cut off at the grid's edges): well below, where they fall
-     furthest, and at both sides. Pages sit a spacer track apart (--page-gap on
-     .hg) so the next page never shows in that side room. */
+     furthest, and at both sides. */
   --side: 44px;
   align-self: center;
   margin: calc(var(--gap) * -1) 0 -56px;
   padding: var(--gap) var(--side) 56px;
-  scroll-padding-inline: var(--side);
-  overscroll-behavior-x: contain;
-}
-.hg-scroller::-webkit-scrollbar {
-  display: none;
 }
 .hg {
   --colw: calc((100cqw - (var(--cols) - 1) * var(--gap)) / var(--cols));
-  --page-gap: calc(2 * var(--side) - 2 * var(--gap));
   display: grid;
   grid-template-rows: repeat(
     var(--rows),
@@ -122,11 +75,7 @@
   width: max-content;
   height: 100cqh;
 }
-.hg-page {
-  scroll-snap-align: start;
-  pointer-events: none;
-}
-/* An empty block in Edit Home: dashed, a plus, "Drop a widget here". */
+/* An empty block, while a widget is dragged or the sheet is open: dashed, a plus, "Drop a widget here". */
 .hg-slot {
   display: none;
   flex-direction: column;
@@ -142,41 +91,15 @@
   text-align: center;
   pointer-events: none;
 }
-.home[data-editing='true'] .hg-slot {
+.home[data-dragging] .hg-slot,
+.home[data-sheet] .hg-slot {
   display: flex;
 }
-.hg-foot {
-  flex: none;
-  position: relative;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 24px;
-}
-.hg-dots {
-  display: flex;
-  gap: 8px;
-  padding: 6px 10px;
-  border-radius: 99px;
-  background: var(--inset);
-}
-.hg-dot {
-  width: 7px;
-  height: 7px;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  background: var(--p-fg2);
-  opacity: 0.35;
-  cursor: pointer;
-}
-.hg-dot[aria-current='true'] {
-  opacity: 1;
-  background: var(--p-fg);
-}
+/* The wall's way to the sheet, under its grid. */
 .hg-edit {
   position: absolute;
-  right: 0;
+  right: var(--side);
+  bottom: 16px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -226,49 +149,19 @@
   text-align: left;
   cursor: pointer;
 }
-.wg-remove {
-  display: none;
-  position: absolute;
-  z-index: 3;
-  border: 0;
-  cursor: pointer;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  font-weight: 750;
-  font-size: 11px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-}
-.wg-remove {
-  top: 8px;
-  left: 8px;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: var(--p-fg);
-  color: var(--p-bg);
-}
-.home[data-editing='true'] .wg-remove {
-  display: flex;
-}
-.home[data-editing='true'] .widget {
-  cursor: grab;
-  animation: jiggle 0.26s ease-in-out infinite alternate;
-}
-.home[data-editing='true'] .widget:nth-of-type(2n) {
-  animation-delay: -0.13s;
-  animation-duration: 0.3s;
-}
-.home[data-editing='true'] .wg-in {
-  pointer-events: none;
-}
+/* The hole a lifted widget will land in (E1): the block, dashed, its content gone. */
 .widget.placeholder {
-  opacity: 0.28;
-  animation: none !important;
+  background: var(--inset);
+  box-shadow: none;
+  outline: 2px dashed var(--p-accent);
+  outline-offset: -2px;
 }
-.widget.placeholder .wg-remove,
-.widget.placeholder .wg-pick {
-  display: none !important;
+.widget.placeholder .wg-in {
+  visibility: hidden;
+}
+/* While a widget is dragged nothing under the pointer reacts. */
+.home[data-dragging] .wg-in {
+  pointer-events: none;
 }
 .drag-ghost {
   z-index: 200;
@@ -288,26 +181,6 @@
     width 0.22s,
     height 0.22s,
     scale 0.22s;
-}
-.drag-ghost .wg-remove,
-.drag-ghost .wg-pick {
-  display: none;
-}
-.widget.dragging {
-  z-index: 30;
-  animation: none !important;
-  cursor: grabbing;
-  box-shadow:
-    inset 0 0 0 1px var(--g-rim),
-    0 30px 60px -12px rgba(0, 0, 0, 0.4);
-}
-@keyframes jiggle {
-  from {
-    rotate: -0.5deg;
-  }
-  to {
-    rotate: 0.5deg;
-  }
 }
 .widget.preview {
   width: calc(var(--pw) * 118px + (var(--pw) - 1) * 12px);
@@ -379,20 +252,27 @@
   box-shadow: 0 0 0 1px var(--p-on-accent);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .home[data-editing='true'] .widget {
-    animation: none;
-  }
-}
-
 /* the Add-widget gallery */
 .gallery-sheet {
   width: min(760px, 100%);
 }
-/* Add a widget: search, the list, a size, the widget as it will be, Add to Home. */
+/* Add a widget: the grid's density and Reset, then search, the list, a size, the widget as it will be, Add to Home. */
+.add-tools {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.add-tools .btn {
+  margin-left: auto;
+}
 .add {
   display: grid;
   gap: 14px;
+}
+.add-hidden {
+  margin: -6px 2px 0;
+  line-height: 1.45;
 }
 .add-list {
   display: grid;
@@ -453,43 +333,13 @@
   justify-content: center;
 }
 
-/* Edit Home: a tapped widget is outlined and offers Small · Medium · Large under it. */
-.home[data-editing='true'] .widget.sel {
-  z-index: 40;
-  animation: none;
-  outline: 2px solid var(--p-accent);
-  outline-offset: -2px;
-}
-.wg-pick {
-  position: absolute;
-  z-index: 41;
-  top: calc(100% + 8px);
-  left: 0;
-  padding: 6px;
-  border-radius: 16px;
-  background: var(--tip-bg);
-  box-shadow:
-    inset 0 0 0 1px var(--line),
-    0 20px 40px -16px rgba(0, 0, 0, 0.5);
-  white-space: nowrap;
-  cursor: default;
-}
-.wg-pick.up {
-  top: auto;
-  bottom: calc(100% + 8px);
-}
-.wg-pick.end {
-  left: auto;
-  right: 0;
-}
-
 /* The widget whose menu is open. */
 .home .widget.held {
   outline: 2px solid var(--p-accent);
   outline-offset: -2px;
 }
 /* The block a picked widget would go in (Add a widget). */
-.home[data-editing='true'] .hg-slot.aim {
+.home[data-sheet] .hg-slot.aim {
   border-color: var(--p-accent);
   border-style: solid;
   color: var(--p-fg);
@@ -501,8 +351,8 @@
 }
 
 /*
-  A widget's menu (SCOPE-shell.md §3f): Edit Home, Change size, Remove
-  widget, on a solid panel like the bar's dropdowns.
+  A widget's menu (SCOPE-shell.md §3f, SCOPE-edit-home.md §3b): Change size,
+  Add a widget, Remove widget, on a solid panel like the bar's dropdowns.
 */
 .wg-menu {
   position: fixed;
@@ -568,12 +418,7 @@
   background: var(--line);
 }
 
-/*
-  Under the bar (SCOPE-shell.md §3e, SCOPE-header.md §3h): the grid fills the page down to the
-  frame's bottom margin, level with the account card, and the page dots sit
-  small in that margin. Edit Home's bar is on the frame's top line and Add a
-  widget is in the menu's place.
-*/
+/* Under the bar (SCOPE-shell.md §3e, SCOPE-header.md §3h): the grid fills the page down to the frame's bottom margin. */
 @media (min-width: 1200px), (min-width: 900px) and (orientation: landscape) {
   .app:has(.home) .main-in {
     padding-bottom: var(--frame);
@@ -582,62 +427,7 @@
   .app:has(.home) .main-in > .page {
     max-width: none;
   }
-  .app .home .hg-foot {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: calc(var(--frame) * -1);
-    height: var(--frame);
-  }
-  .app .home .hg-dots {
-    padding: 4px 8px;
-    gap: 6px;
-  }
-  .app .home .hg-dot {
-    width: 6px;
-    height: 6px;
-  }
   .app .home .hg-scroller {
     --room-h: 100cqh;
-  }
-  .home-edit.on-frame {
-    width: 100%;
-    max-width: none;
-    min-height: 0;
-    flex-wrap: nowrap;
-  }
-  .home-edit.on-frame .home-edit-t b {
-    font-size: 26px;
-  }
-
-  .add-card {
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    padding: 18px 14px 14px !important;
-  }
-  .add-card > h2 {
-    margin: 0 4px;
-    font-family: var(--f-display);
-    font-weight: 600;
-    font-size: 22px;
-    letter-spacing: -0.02em;
-  }
-  .add-card .add {
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-  .add-card .add-list {
-    max-height: none;
-    flex: 0 1 auto;
-    min-height: 0;
-  }
-  .add-card .add-prev {
-    padding: 12px;
   }
 }

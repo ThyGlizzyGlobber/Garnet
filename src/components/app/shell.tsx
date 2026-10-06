@@ -99,7 +99,7 @@ export interface ShellLabels {
     /** The tiles' shorter names. */
     dashboardShort: string;
     settingsShort: string;
-    editHome: string;
+    addWidget: string;
   };
 }
 
@@ -193,7 +193,7 @@ export function AppShell({
         ]),
     { href: '/account/profile', label: am.profile, icon: 'user' },
     { href: '/account/appearance', label: am.appearance, icon: 'sun' },
-    ...(account ? [] : [{ href: '/?edit=1', label: am.editHome, icon: 'pencil' }]),
+    ...(account ? [] : [{ href: '/?add=1', label: am.addWidget, icon: 'plus' }]),
   ];
   const menuGroups: AccountMenuItem[][] = [
     [
@@ -260,14 +260,12 @@ export function AppShell({
             </AccountMenu>
           </div>
           {/* Edit Home's bar takes over the bar here (SCOPE-shell.md §3g). */}
-          <div id="tb-edit" className="tb-edit" />
         </div>
       </header>
 
       <main className="main">
         <div className="main-in">
           {/* Edit Home puts Add a widget here, at the page's left edge (SCOPE-header.md §3f). */}
-          {!account && <div id="nav-add" className="nav-add" />}
           <div className="page">
             {/* A page's way back lands here (TopBack), on the page, never in the bar. */}
             <span id="tb-back" className="tb-back" />

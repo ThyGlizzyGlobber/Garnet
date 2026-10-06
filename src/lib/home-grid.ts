@@ -1,8 +1,10 @@
 /**
- * The Home grid engine (BRAND.md §9, SCOPE-redesign.md R4): a grid of blocks
- * that fits the screen, widgets in block sizes packed first-fit onto pages,
- * whatever doesn't fit flowing onto the next page. Pure functions, shared by
- * the page (defaults, saving) and the client (editing).
+ * The Home grid engine (BRAND.md §9, SCOPE-redesign.md R4, SCOPE-edit-home.md
+ * E-D5): a grid of blocks that fits the screen, widgets in block sizes packed
+ * first-fit onto it. Home is one page (owner, 2026-10-07): a layout's
+ * widgets are one ordered list, the ones that fit the grid are shown and the
+ * rest are hidden, never lost, until there is room again. Pure functions,
+ * shared by the page (defaults, saving) and the client (moving and adding).
  */
 
 /** The four kinds of screen a layout is kept for. */
@@ -21,7 +23,11 @@ export interface Item {
   w: number;
   h: number;
 }
-/** Pages of items, in order; packing decides where each lands. */
+/**
+ * The layout's items, in order; packing decides where each lands. Kept as a
+ * list of pages for the saved rows' sake, but a layout has one page now: a
+ * row saved with several is folded to one when read (parseLayout).
+ */
 export type Pages = Item[][];
 
 export interface Layout {
@@ -54,9 +60,8 @@ const WALL_GRID: Record<Device, [number, number]> = {
 };
 
 /**
- * When the menu is the stack of cards on the frame (src/styles/shell.css): a
- * desktop, or any landscape screen 900 px wide or more. Edit Home then uses
- * the frame (its bar on the top line, Add a widget in the menu's place).
+ * The bar's layout (src/styles/shell.css): a desktop, or any landscape screen
+ * 900 px wide or more. Home's grid then follows the room it has (stackGrid).
  */
 export const STACK_MEDIA = '(min-width: 1200px), (min-width: 900px) and (orientation: landscape)';
 
@@ -84,12 +89,10 @@ export function stackGrid(
   return [cols, rows];
 }
 
-/**
- * A layout's widgets flowed onto pages of a grid, in their order, each page
- * filled before the next: how a stack's Home follows its column count.
- */
-export function flow(pages: Pages, cols: number, rows: number): Pages {
-  return normalise([pages.flat()], cols, rows);
+/** A layout's widgets as one page, in their order (older rows had several). */
+export function toOnePage(pages: Pages): Pages {
+  const all = pages.flat();
+  return all.length ? [all] : [];
 }
 
 /** Which kind of screen a viewport is, for its grid: a desktop from 1200 px, an iPad either way to 640, a phone below. */
@@ -124,7 +127,12 @@ function findSpot(occ: boolean[][], cols: number, rows: number, w: number, h: nu
   return null;
 }
 
-/** Place each page's widgets first-fit; whatever doesn't fit moves to the next page. */
+/**
+ * Place the widgets first-fit. The first page returned is what the grid
+ * shows; anything after it is the widgets that don't fit this grid, which
+ * stay in the layout hidden (E-D5) until there is room. (Packing still works
+ * page by page, so an older multi-page row packs the same way it did.)
+ */
 export function pack(pages: Pages, cols: number, rows: number): Placed[][] {
   const out: Placed[][] = [];
   let carry: Item[] = [];
@@ -150,11 +158,52 @@ export function pack(pages: Pages, cols: number, rows: number): Placed[][] {
   return out;
 }
 
-/** The stored pages brought in step with what packing shows (overflow moves on, empty pages go). */
-export function normalise(pages: Pages, cols: number, rows: number): Pages {
-  return pack(pages, cols, rows)
-    .map((pg) => pg.map(({ id, w, h }) => ({ id, w, h })))
-    .filter((pg) => pg.length > 0);
+/** The widgets that don't fit the grid, in their order: shown in the sheet as "Not on screen". */
+export function hidden(packed: Placed[][]): Item[] {
+  return packed.slice(1).flatMap((pg) => pg.map(({ id, w, h }) => ({ id, w, h })));
+}
+
+/** The one page, with empty pages gone (an older row's pages folded together). */
+export function normalise(pages: Pages): Pages {
+  return toOnePage(pages);
+}
+
+/** The widget an index into a one-page layout: where a drop on a block lands in the order. */
+function indexAt(packed: Placed[][], cell: { r: number; c: number }, cols: number, skip?: string) {
+  const idx = cell.r * cols + cell.c;
+  return (packed[0] ?? []).filter((it) => it.id !== skip && it.r * cols + it.c < idx).length;
+}
+
+/**
+ * A widget added to the layout (the sheet's plus, or a size dragged out of
+ * the sheet and dropped on a block): at the block it was dropped on, else
+ * the first free block it fits. Refused with null when the grid is full for
+ * it: when it would not show, or would push a widget that shows off the grid
+ * (E-D5: "Home is full"). A widget already in the layout is not added twice.
+ */
+export function addItem(
+  pages: Pages,
+  item: Item,
+  cell: { r: number; c: number } | null,
+  cols: number,
+  rows: number,
+): Pages | null {
+  if (locate(pages, item.id)) return null;
+  const packed = pack(pages, cols, rows);
+  const list = (pages[0] ?? []).slice();
+  if (cell) {
+    const on = (packed[0] ?? []).find(
+      (it) => cell.c >= it.c && cell.c < it.c + it.pw && cell.r >= it.r && cell.r < it.r + it.ph,
+    );
+    const at = on ? locate(pages, on.id)!.i : Math.min(indexAt(packed, cell, cols), list.length);
+    list.splice(at, 0, item);
+  } else list.push(item);
+  const next = normalise([list, ...pages.slice(1)]);
+  const after = pack(next, cols, rows);
+  const shown = new Set((after[0] ?? []).map((it) => it.id));
+  if (!shown.has(item.id)) return null;
+  for (const it of packed[0] ?? []) if (!shown.has(it.id)) return null;
+  return next;
 }
 
 /** Where a widget is, by page and index. */
@@ -241,21 +290,20 @@ export function nextSize(
 /**
  * Move a widget to where it was dropped: onto another widget (it takes that
  * one's place in the order) or onto an empty block (it slots in before the
- * widgets that come after that block). Returns new pages.
+ * widgets that come after that block); the others pack around it (Q5).
+ * Returns new pages.
  */
 export function moveItem(
   pages: Pages,
   packed: Placed[][],
   id: string,
-  cell: { page: number; r: number; c: number },
+  cell: { r: number; c: number },
   cols: number,
-  rows: number,
 ): Pages {
   const from = locate(pages, id);
   if (!from) return pages;
   const next = pages.map((pg) => pg.slice());
-  while (next.length <= cell.page) next.push([]);
-  const on = (packed[cell.page] ?? []).find(
+  const on = (packed[0] ?? []).find(
     (it) => cell.c >= it.c && cell.c < it.c + it.pw && cell.r >= it.r && cell.r < it.r + it.ph,
   );
   if (on && on.id === id) return pages;
@@ -266,25 +314,22 @@ export function moveItem(
     const after = from.p === to.p && from.i < to.i;
     next[to.p]!.splice(to.i + (after ? 1 : 0), 0, item);
   } else {
-    const idx = cell.r * cols + cell.c;
-    const before = (packed[cell.page] ?? []).filter(
-      (it) => it.id !== id && it.r * cols + it.c < idx,
-    ).length;
-    const list = next[cell.page]!;
-    list.splice(Math.min(before, list.length), 0, item);
+    const list = next[0] ?? (next[0] = []);
+    list.splice(Math.min(indexAt(packed, cell, cols, id), list.length), 0, item);
   }
-  return normalise(next, cols, rows);
+  return normalise(next);
 }
 
 /* ---------- defaults: a Home that is right from the first visit ---------- */
 
 /**
  * The starting layouts (owner, 2026-10-04: "a default widget grid that is
- * great from the outset"). Each page fills its grid exactly, with no holes:
- * page one is what a person opens the app for (the month, what's due next,
- * money between housemates, the Inbox, the week, adding a bill), page two is
- * for looking further (due dates, activity, the months ahead). Sizes are S
- * 1×1, M 2×1 and L 2×2.
+ * great from the outset"). The first page is what a household starts with
+ * (Home is one page, E-D5): it fills its grid exactly, with no holes, with
+ * what a person opens the app for (the month, what's due next, money between
+ * housemates, the Inbox, the week, adding a bill). The pages after it are
+ * what the old paged Home went on to show and are kept for the record only.
+ * Sizes are S 1×1, M 2×1 and L 2×2.
  *
  * An entry names its widget, or a few separated by "|": the first one the
  * household can show and hasn't placed yet is used (Settle up only when bills
@@ -450,12 +495,12 @@ export function available(id: string, facts: HouseholdFacts): boolean {
   return shows(id, facts) && id !== 'start';
 }
 
-/** The default layout for a screen and household: every entry's first widget it can show, none twice. */
+/** The default layout for a screen and household: the first page's entries, each its first widget it can show, none twice. */
 export function defaultLayout(device: Device, kind: LayoutKind, facts: HouseholdFacts): Layout {
   const def =
     kind === 'wall' ? WALL_DEFAULT : facts.fresh ? FRESH_DEFAULTS[device] : HOME_DEFAULTS[device];
   const seen = new Set<string>();
-  const pages: Pages = def.map((pg) =>
+  const pages: Pages = def.slice(0, 1).map((pg) =>
     pg.flatMap(([ids, size]) => {
       const id = ids
         .split('|')
@@ -473,7 +518,7 @@ export function defaultLayout(device: Device, kind: LayoutKind, facts: Household
   return { density: kind === 'wall' ? 'standard' : HOME_DENSITY[device], pages: upgrade(pages) };
 }
 
-/** A stored layout checked before use: known shape, sane numbers, at most 40 pages. */
+/** A stored layout checked before use: known shape, sane numbers, at most 40 pages, folded to one. */
 export function parseLayout(raw: unknown): Layout | null {
   if (!raw || typeof raw !== 'object') return null;
   const { density, pages } = raw as { density?: unknown; pages?: unknown };
@@ -491,19 +536,18 @@ export function parseLayout(raw: unknown): Layout | null {
     }
     out.push(items);
   }
-  return { density: density as Density, pages: upgrade(out) };
+  return { density: density as Density, pages: toOnePage(upgrade(out)) };
 }
 
 /** The screens whose Home moved to four by three (SCOPE-shell.md §8 Q9). */
 const FOUR_BY_THREE: Device[] = ['desktop', 'tabletL'];
 
 /**
- * A saved Home layout moved onto four by three: the same widgets, sizes and
- * order, packed onto pages of four by three; those that no longer fit on a
- * page move to the next. Other screens, and the wall, are left as they are.
+ * A saved Home layout moved onto four by three (the 2026-10-05 step): the
+ * same widgets, sizes and order at the comfy density. Other screens, and the
+ * wall, are left as they are.
  */
 export function toFourByThree(device: Device, kind: LayoutKind, layout: Layout): Layout {
   if (kind !== 'home' || !FOUR_BY_THREE.includes(device)) return layout;
-  const [cols, rows] = GRIDS[device].comfy;
-  return { density: 'comfy', pages: normalise(layout.pages, cols, rows) };
+  return { density: 'comfy', pages: normalise(layout.pages) };
 }

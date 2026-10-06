@@ -15,8 +15,10 @@ import {
   normalise,
   pack,
   toFourByThree,
+  toOnePage,
+  addItem,
+  hidden,
   stackGrid,
-  flow,
   parseLayout,
   SIZE_LIST,
   sizeName,
@@ -73,9 +75,9 @@ describe('the Home grid engine', () => {
     expect(wide[0]!.map((p) => p.id)).toEqual(['x']);
     expect(wide[0]![0]!.pw).toBe(5);
     expect(wide[1]!.map((p) => p.id)).toEqual(['y']);
-    expect(normalise([[], [{ id: 'y', w: 1, h: 1 }], []], 5, 3)).toEqual([
-      [{ id: 'y', w: 1, h: 1 }],
-    ]);
+    expect(normalise([[], [{ id: 'y', w: 1, h: 1 }], []])).toEqual([[{ id: 'y', w: 1, h: 1 }]]);
+    // What doesn't fit the one page is hidden, not lost (E-D5).
+    expect(hidden(wide).map((x) => x.id)).toEqual(['y']);
   });
 
   it('moves a widget onto another’s place, or onto an empty block', () => {
@@ -88,18 +90,51 @@ describe('the Home grid engine', () => {
     ];
     const packed = pack(pages, 5, 3);
     // c dropped on a: it takes a's place in the order.
-    expect(
-      moveItem(pages, packed, 'c', { page: 0, r: 0, c: 0 }, 5, 3)[0]!.map((x) => x.id),
-    ).toEqual(['c', 'a', 'b']);
+    expect(moveItem(pages, packed, 'c', { r: 0, c: 0 }, 5)[0]!.map((x) => x.id)).toEqual([
+      'c',
+      'a',
+      'b',
+    ]);
     // a dropped on an empty block after everything: it goes to the end.
-    expect(
-      moveItem(pages, packed, 'a', { page: 0, r: 2, c: 4 }, 5, 3)[0]!.map((x) => x.id),
-    ).toEqual(['b', 'c', 'a']);
-    // Dropped onto a later page: the page is made.
-    const moved = moveItem(pages, packed, 'a', { page: 1, r: 0, c: 0 }, 5, 3);
-    expect(moved.map((pg) => pg.map((x) => x.id))).toEqual([['b', 'c'], ['a']]);
+    expect(moveItem(pages, packed, 'a', { r: 2, c: 4 }, 5)[0]!.map((x) => x.id)).toEqual([
+      'b',
+      'c',
+      'a',
+    ]);
     // Dropped on itself: nothing changes.
-    expect(moveItem(pages, packed, 'a', { page: 0, r: 0, c: 0 }, 5, 3)).toBe(pages);
+    expect(moveItem(pages, packed, 'a', { r: 0, c: 0 }, 5)).toBe(pages);
+  });
+
+  it('adds a widget at a block or the first free one, and refuses when Home is full', () => {
+    const pages = [
+      [
+        { id: 'a', w: 1, h: 1 },
+        { id: 'b', w: 1, h: 1 },
+      ],
+    ];
+    // The plus: the first free block, at the end of the order.
+    expect(addItem(pages, { id: 'x', w: 2, h: 1 }, null, 2, 2)![0]!.map((x) => x.id)).toEqual([
+      'a',
+      'b',
+      'x',
+    ]);
+    // Dropped on a widget: it takes that widget's place in the order.
+    expect(
+      addItem(pages, { id: 'x', w: 1, h: 1 }, { r: 0, c: 0 }, 2, 2)![0]!.map((x) => x.id),
+    ).toEqual(['x', 'a', 'b']);
+    // Already in the layout: not twice.
+    expect(addItem(pages, { id: 'a', w: 1, h: 1 }, null, 2, 2)).toBeNull();
+    // No room for it, or it would push a shown widget off: refused (E-D5).
+    expect(addItem(pages, { id: 'x', w: 2, h: 2 }, null, 2, 2)).toBeNull();
+    const full = [[{ id: 'a', w: 2, h: 2 }]];
+    expect(addItem(full, { id: 'x', w: 1, h: 1 }, { r: 0, c: 0 }, 2, 2)).toBeNull();
+    // A saved layout with pages folds to one, in order.
+    expect(toOnePage([[{ id: 'a', w: 1, h: 1 }], [], [{ id: 'b', w: 1, h: 1 }]])).toEqual([
+      [
+        { id: 'a', w: 1, h: 1 },
+        { id: 'b', w: 1, h: 1 },
+      ],
+    ]);
   });
 
   it('cycles a widget’s size through the sizes that fit the grid', () => {
@@ -114,7 +149,7 @@ describe('the Home grid engine', () => {
     expect(nextSize({ id: 'x', w: 2, h: 2 }, sizes, 2, 4)).toEqual([1, 1]);
   });
 
-  it('starts every household on full pages, whatever it can show', () => {
+  it('starts every household on one full page, whatever it can show', () => {
     const noSplit = { split: false, postcode: true, fresh: false };
     expect(available('owes', noSplit)).toBe(false);
     expect(available('postcode', facts)).toBe(false);
@@ -131,7 +166,7 @@ describe('the Home grid engine', () => {
       'owes',
       'inbox',
     ]);
-    // Not splitting: Monthly cost takes Settle up's place, and page two still has no widget twice.
+    // Not splitting: Monthly cost takes Settle up's place, and no widget is there twice.
     const single = defaultLayout('desktop', 'home', noSplit);
     expect(single.pages[0]!.map((x) => x.id)).toContain('trend');
     expect(single.pages.flat().map((x) => x.id)).not.toContain('owes');
@@ -151,13 +186,13 @@ describe('the Home grid engine', () => {
     // The desktop gives no service a widget of its own: they are all in the menu beside it.
     const withServices = defaultLayout('desktop', 'home', { ...facts, services: ['abc', 'def'] });
     expect(withServices.pages.flat().some((x) => x.id.startsWith('svc-'))).toBe(false);
-    // An iPad in portrait still gives the household's first service a widget.
+    // One page (E-D5): an iPad in portrait no longer reaches the page that gave a service its own widget.
     expect(
       defaultLayout('tabletP', 'home', { ...facts, services: ['abc'] })
         .pages.flat()
         .map((x) => x.id),
-    ).toContain('svc-abc');
-    // Every page of every starting layout fills its grid exactly: no holes, nothing pushed on.
+    ).not.toContain('svc-abc');
+    // Every starting layout is one page that fills its grid exactly: no holes, nothing hidden.
     for (const device of ['desktop', 'tabletL', 'tabletP', 'phone'] as const)
       for (const split of [true, false])
         for (const postcode of [true, false])
@@ -167,7 +202,8 @@ describe('the Home grid engine', () => {
               const [cols, rows] = gridFor(device, l.density);
               const ids = l.pages.flat().map((x) => x.id);
               expect(new Set(ids).size).toBe(ids.length);
-              expect(pack(l.pages, cols, rows).length).toBe(l.pages.length);
+              expect(l.pages.length).toBe(1);
+              expect(pack(l.pages, cols, rows).length).toBe(1);
               // A new household's last page may be part-filled; every other page is full.
               l.pages.forEach((pg, i) => {
                 const area = pg.reduce((a, x) => a + x.w * x.h, 0);
@@ -198,8 +234,9 @@ describe('the Home grid engine', () => {
     expect(four.density).toBe('comfy');
     expect(four.pages.flat().map((x) => x.id)).toEqual(five.pages[0]!.map((x) => x.id));
     expect(four.pages.flat().map((x) => [x.w, x.h])).toEqual(five.pages[0]!.map((x) => [x.w, x.h]));
-    expect(four.pages.length).toBe(2);
-    expect(pack(four.pages, 4, 3).length).toBe(2);
+    // One page (E-D5): what four by three has no room for is hidden, not on another page.
+    expect(four.pages.length).toBe(1);
+    expect(hidden(pack(four.pages, 4, 3)).map((x) => x.id)).toEqual(['services', 'actions']);
     // The phone and the wall keep theirs.
     expect(toFourByThree('phone', 'home', five)).toBe(five);
     expect(toFourByThree('desktop', 'wall', five)).toBe(five);
@@ -370,7 +407,7 @@ describe('the three widget sizes', () => {
     ]);
   });
 
-  it('packs a converted page, moving what no longer fits to the next one', () => {
+  it('packs a converted page, hiding what no longer fits', () => {
     const converted = convertPages([
       [
         { id: 'a', w: 2, h: 3 },
@@ -378,14 +415,10 @@ describe('the three widget sizes', () => {
         { id: 'c', w: 2, h: 1 },
       ],
     ]);
-    // A phone at two by four: two Larges fill the page, the Medium moves on.
-    expect(normalise(converted, 2, 4)).toEqual([
-      [
-        { id: 'a', w: 2, h: 2 },
-        { id: 'b', w: 2, h: 2 },
-      ],
-      [{ id: 'c', w: 2, h: 1 }],
-    ]);
+    // A phone at two by four: two Larges fill the page, the Medium is hidden until there is room.
+    const packed = pack(converted, 2, 4);
+    expect(packed[0]!.map((x) => x.id)).toEqual(['a', 'b']);
+    expect(hidden(packed).map((x) => x.id)).toEqual(['c']);
   });
 });
 
@@ -432,7 +465,7 @@ describe('a saved layout brought up to date', () => {
       stored([[{ id: 'owes', w: 2, h: 1 }], [{ id: 'settled', w: 1, h: 1 }]]).map((pg) =>
         pg.map((x) => x.id),
       ),
-    ).toEqual([['owes'], []]);
+    ).toEqual([['owes']]);
     // Only Shares settled: it becomes Settle up, where it was, at its size.
     expect(
       stored([
@@ -475,21 +508,11 @@ describe('a saved layout brought up to date', () => {
     expect(stackGrid('dense', 4000, 500, 14)).toEqual([10, 3]);
   });
 
-  it('flows a layout onto wider pages in its order, each page filled first', () => {
+  it('shows the same one page on a wider grid, with room to spare', () => {
     const l = defaultLayout('desktop', 'home', facts);
-    const five = flow(l.pages, 5, 3);
-    expect(
-      five
-        .flat()
-        .map((x) => x.id)
-        .sort(),
-    ).toEqual(
-      l.pages
-        .flat()
-        .map((x) => x.id)
-        .sort(),
-    );
-    expect(five[0]!.reduce((a, x) => a + x.w * x.h, 0)).toBeGreaterThan(12);
-    expect(flow(l.pages, 4, 3)[0]!.map((x) => x.id)).toEqual(l.pages[0]!.map((x) => x.id));
+    const five = pack(l.pages, 5, 3);
+    expect(five.length).toBe(1);
+    expect(five[0]!.map((x) => x.id)).toEqual(l.pages[0]!.map((x) => x.id));
+    expect(five[0]!.reduce((a, x) => a + x.w * x.h, 0)).toBe(12);
   });
 });

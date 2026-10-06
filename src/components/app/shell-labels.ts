@@ -83,7 +83,7 @@ export async function shellLabels(): Promise<ShellLabels> {
       signOut: tam('signOut'),
       dashboardShort: tam('dashboardShort'),
       settingsShort: tam('settingsShort'),
-      editHome: tam('editHome'),
+      addWidget: tam('addWidget'),
     },
   };
 }

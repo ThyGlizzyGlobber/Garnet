@@ -959,40 +959,6 @@
   background: color-mix(in srgb, var(--p-on-accent) 14%, transparent);
 }
 
-/* ---------- Edit Home on the frame (SCOPE-shell.md §3g, SCOPE-header.md §3f) ---------- */
-/*
-  While Home is being edited on the bar, its bar fills the top bar in place
-  of everything else, and Add a widget sits at the page's left edge (the grid
-  portals both in; empty slots take no room).
-*/
-.tb-edit:empty,
-.nav-add:empty {
-  display: none;
-}
-@media (min-width: 1200px), (min-width: 900px) and (orientation: landscape) {
-  .tb-edit {
-    position: absolute;
-    inset: 0 16px;
-    display: flex;
-    align-items: center;
-  }
-  .tb-in:has(.tb-edit:not(:empty)) > :not(.tb-edit) {
-    visibility: hidden;
-  }
-  .app .main-in:has(.nav-add:not(:empty)),
-  .app:has(.home) .main-in:has(.nav-add:not(:empty)) {
-    display: grid;
-    grid-template-columns: 316px minmax(0, 1fr);
-    align-items: stretch;
-    gap: 24px;
-  }
-  .nav-add {
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-  }
-}
-
 /* ---------- the phone's layout (a phone, or an upright iPad) ---------- */
 /*
   SCOPE-shell.md §8 Q5–Q6: the household as a glass card across the top
