@@ -440,6 +440,29 @@ picks one of two layouts by the screen's shape, written out in
     top-left corner; a tapped one is outlined with a Small · Medium · Large
     picker under it; empty blocks are dashed with a plus and "Drop a widget
     here".
+- **The Services page** (SCOPE-services.md, boards Q, R, S, K and M) is the
+  analytics tool and a tile per service. The tool is one glass card at the
+  left (340 px under the bar; a row that swipes on a phone) headed
+  Analytics, holding three lenses stacked: this month, the calendar year and
+  the financial year, each with its name, period arrows and figure. The lit
+  lens is the page's lens and shows its change line ("↑ 4% on August · 5
+  bills, 2 paid"), a bar a month (last year hollow behind on the year
+  lenses; a bar in the month lens opens that month), a caption and three
+  facts (the month's Paid, To pay, To come; a year's average month, highest
+  month and last year; the financial year's average month, expected total to
+  its end and last year, plus Download bills for that year's zip). The other
+  two lenses fold to their figure and light on a tap; a short accent bar
+  marks the lit one. The lens and its periods live in the URL. The tiles are
+  the shape of a Home Medium widget (three across from 1400 px, two below,
+  one on a phone), in the household's groups with each heading carrying the
+  lens's total, My Services last, quiet tiles last in their group: the icon
+  disc and name in the service's colour (the provider under it only where it
+  differs; a main service its count), a status chip, the ring that says most
+  about that kind of service (overdue in Pyrope, use a day against the limit
+  as an arc, instalments paid, shares in when bills are split, days left, a
+  tick when paid, the icon when nothing is due), the figure, one line and one
+  fact, and a bar a month on the year lenses. Nothing on a tile is said
+  twice. Arrange (admins) and Add service sit at the top right.
 - **The wall** (`/wall`) is the same grid in kiosk mode: a clock, the household
   and the weather on top, four by two bigger blocks, its own layout, nothing to
   tap, Back to Home.
