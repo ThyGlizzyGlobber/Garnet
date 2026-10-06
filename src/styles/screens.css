@@ -3070,7 +3070,8 @@ input.inp-plain[type='color'] {
   position: absolute;
   left: 1px;
   right: 1px;
-  bottom: 14px;
+  /* On the same baseline as the bar in front of it. */
+  bottom: 0;
   border: 1px dashed var(--line-2);
   border-radius: 4px;
   pointer-events: none;
