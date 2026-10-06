@@ -31,7 +31,8 @@ function activeItem(items: NavItem[], pathname: string): NavItem | undefined {
  * The nav's links, the current section marked. `among` is every link in the
  * menu when it's split into lists, so only one is ever marked. `panels` gives
  * a link a dropdown in its place (the bar's Services pill, SCOPE-header.md
- * §3c): the pill opens it on a click and stays lit while it's open.
+ * §3c): the pill's name opens the page, its arrow opens the panel, and the
+ * pill stays lit while the panel is open.
  */
 export function NavItems({
   items,
@@ -75,7 +76,7 @@ export function NavItems({
   );
 }
 
-/** A pill with a dropdown: a click opens it, Escape or a click elsewhere closes it. */
+/** A pill with a dropdown: its arrow opens it, Escape or a click elsewhere closes it. */
 function NavPill({
   item,
   current,
@@ -104,7 +105,7 @@ function NavPill({
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
       setOpen(false);
-      box.current?.querySelector<HTMLButtonElement>('.nav-pill')?.focus();
+      box.current?.querySelector<HTMLButtonElement>('.nav-pill-arrow')?.focus();
     };
     document.addEventListener('click', onClick);
     document.addEventListener('keydown', onKey);
@@ -115,25 +116,36 @@ function NavPill({
   }, [open]);
   return (
     <div ref={box} className="nav-dd" onKeyDown={(e) => open && menuKeys(e)}>
-      <button
-        type="button"
-        className={cx('nav-i nav-pill')}
-        aria-current={current ? 'page' : undefined}
-        aria-expanded={open}
-        aria-haspopup="dialog"
-        onClick={() => setOpen((o) => !o)}
-        onKeyDown={(e) => {
-          // Down opens it and lands on its first row.
-          if (e.key !== 'ArrowDown') return;
-          e.preventDefault();
-          setOpen(true);
-          setTimeout(() => focusFirst(box.current?.querySelector('.sp')), 0);
-        }}
-      >
-        <Icon name={item.icon} width={iconSize} height={iconSize} />
-        <span>{item.label}</span>
-        <Icon name="chevron-down" width={13} height={13} className="nav-chev" />
-      </button>
+      {/* The name opens the page; the arrow opens the panel (owner, 2026-10-06). */}
+      <span className={cx('nav-i nav-pill', current && 'on', open && 'open')}>
+        <Link
+          href={item.href}
+          className="nav-pill-link"
+          aria-current={current ? 'page' : undefined}
+          aria-label={item.label}
+        >
+          <Icon name={item.icon} width={iconSize} height={iconSize} />
+          <span>{item.label}</span>
+          {item.badge ? <i className="badge">{item.badge}</i> : null}
+        </Link>
+        <button
+          type="button"
+          className="nav-pill-arrow"
+          aria-label={item.label}
+          aria-expanded={open}
+          aria-haspopup="dialog"
+          onClick={() => setOpen((o) => !o)}
+          onKeyDown={(e) => {
+            // Down opens it and lands on its first row.
+            if (e.key !== 'ArrowDown') return;
+            e.preventDefault();
+            setOpen(true);
+            setTimeout(() => focusFirst(box.current?.querySelector('.sp')), 0);
+          }}
+        >
+          <Icon name="chevron-down" width={13} height={13} className="nav-chev" />
+        </button>
+      </span>
       {open && <PanelClose.Provider value={() => setOpen(false)}>{panel}</PanelClose.Provider>}
     </div>
   );

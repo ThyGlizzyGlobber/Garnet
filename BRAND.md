@@ -350,7 +350,8 @@ picks one of two layouts by the screen's shape, written out in
   - **The household switcher** hangs from the name: each other household as
     a row shaped like the button (its icon on a small tile and its name),
     then **Dashboard**.
-  - **The Services panel** hangs from its pill, 820 px wide and centred:
+  - **The Services panel** hangs from its pill's arrow (the pill's name
+    opens the Services page), 820 px wide and centred:
     every service as a row, three across, led by a small ring that says
     where it stands this month (filled by the days left, a tick when paid,
     Pyrope when overdue, empty when nothing is due), its name, a status line
