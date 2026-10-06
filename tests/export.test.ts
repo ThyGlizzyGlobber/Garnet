@@ -329,6 +329,19 @@ describe('the export zip', () => {
     expect(bills).not.toContain('Sam Roads');
     expect(files.get(`${root}/README.txt`)!.toString()).toContain('2 bills and 2 files');
 
+    // One financial year (July to June): only the bills filed in it, in a folder named after it.
+    const fy = exportEntries(hh.id, { viewer: jo.id }, '2026-09-29', db, '2026');
+    expect(fy.folder).toBe(`Riverside House ${n} bills FY 2026–27`);
+    const fyNames = [...unzip(await zipBuffer(fy.entries)).keys()].filter((k) =>
+      k.endsWith('.pdf'),
+    );
+    expect(fyNames).toHaveLength(2);
+    expect(
+      exportEntries(hh.id, { viewer: jo.id }, '2026-09-29', db, '2025').entries.filter((e) =>
+        e.name.endsWith('.pdf'),
+      ),
+    ).toHaveLength(0);
+
     // A member: only their own personal bills.
     const mine = exportEntries(hh.id, { owner: sam.id }, '2026-09-29', db);
     const theirs = [...unzip(await zipBuffer(mine.entries)).keys()];

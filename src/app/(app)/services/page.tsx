@@ -34,7 +34,6 @@ export default async function ServicesPage({
   const { hh, me, money } = ctx;
   const t = await getTranslations('services');
   const tl = await getTranslations('services.lens');
-  const tmain = await getTranslations('main');
   const lens: Lens = (LENSES as string[]).includes(q.lens ?? '') ? (q.lens as Lens) : 'month';
   const today = ctx.today;
   const base = defaultPeriods(today, hh.fiscalYearStartMonth);
@@ -192,8 +191,6 @@ export default async function ServicesPage({
             </form>
           </Card>
         )}
-        {/* The main services' names, for the tiles (a category's label is the page's to word). */}
-        <span hidden>{tmain('main.vehicle')}</span>
       </div>
     </div>
   );

@@ -69,13 +69,27 @@ export function exportEntries(
   scope: Scope,
   today: string,
   db: Db = getDb(),
+  /** One financial year only, by the year it starts in ("2026"), for an accountant (SCOPE-services.md V-D5). */
+  fy: string | null = null,
 ): { folder: string; entries: ZipEntry[] } {
   const hh = getHousehold(householdId, db)!;
-  const folder = safeSegment(`${hh.name} bills ${today}`);
-  const bills = listBills(householdId, scope, db).sort(
-    (a, b) =>
-      billDate(a).localeCompare(billDate(b)) || a.service.name.localeCompare(b.service.name),
+  const year =
+    fy && /^\d{4}$/.test(fy)
+      ? fiscalYearBounds(
+          `${fy}-${String(hh.fiscalYearStartMonth).padStart(2, '0')}-01`,
+          hh.fiscalYearStartMonth,
+        )
+      : null;
+  const folder = safeSegment(
+    year ? `${hh.name} bills FY ${year.label}` : `${hh.name} bills ${today}`,
   );
+  const bills = listBills(householdId, scope, db)
+    // The year's bills are the ones filed in it (the month each belongs to, as on the Bills page).
+    .filter((b) => !year || (billDate(b) >= year.start && billDate(b) <= year.end))
+    .sort(
+      (a, b) =>
+        billDate(a).localeCompare(billDate(b)) || a.service.name.localeCompare(b.service.name),
+    );
   const ids = new Set(bills.map((b) => b.id));
   const members = new Map(
     db

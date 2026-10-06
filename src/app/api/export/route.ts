@@ -17,7 +17,7 @@ export const dynamic = 'force-dynamic';
 
 /**
  * Exports.
- *   /api/export?kind=zip                        — everything, zipped: spreadsheets plus every
+ *   /api/export?kind=zip[&fy=<start year>]        — everything (or one financial year), zipped: spreadsheets plus every
  *                                                 source file, filed by year/month/service (the
  *                                                 household's bills and your own personal ones;
  *                                                 members get only their own when the household
@@ -47,7 +47,13 @@ export async function GET(req: Request) {
     });
 
   if (kind === 'zip') {
-    const { folder, entries } = exportEntries(hh.id, exportScope(me, hh), today);
+    const { folder, entries } = exportEntries(
+      hh.id,
+      exportScope(me, hh),
+      today,
+      undefined,
+      url.searchParams.get('fy'),
+    );
     return new NextResponse(zipResponseStream(entries), {
       headers: {
         'Content-Type': 'application/zip',
