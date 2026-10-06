@@ -66,7 +66,9 @@ import {
  * the keyboard moves a focused widget with the arrows and removes it with
  * Delete. Add a widget is the gallery sheet from the bottom (gallery.tsx),
  * reached from the menu, the account menu (/?add=1), or a right-click or
- * press and hold on empty space (Q3). A full grid refuses more and says so;
+ * press and hold on empty space (Q3); a size dragged out of it lands where
+ * it is dropped, and while anything is dragged the sheet is down to its head
+ * (E-D3). A full grid refuses more and says so;
  * widgets that no longer fit a smaller grid stay in the layout hidden.
  * Layouts are saved per person and kind of screen.
  */
@@ -77,6 +79,14 @@ interface Props {
 }
 
 const isShort = () => typeof window !== 'undefined' && window.innerHeight < 760;
+
+/** The blocks a widget being added would take. */
+interface Aim {
+  r: number;
+  c: number;
+  w: number;
+  h: number;
+}
 
 /** A widget's menu, open at a point on the screen. */
 interface WidgetMenu {
@@ -116,10 +126,12 @@ export function HomeGrid({ data, layouts: initial, kind }: Props) {
   const [gallery, setGallery] = useState(false);
   /** A widget's menu (Add a widget · Change size · Remove widget). */
   const [menu, setMenu] = useState<WidgetMenu | null>(null);
-  /** The widget picked in Add a widget: its size, so the grid can mark where it would go. */
-  const [aiming, setAiming] = useState<{ w: number; h: number } | null>(null);
-  /** A widget is being dragged: the empty blocks show. */
+  /** The widget picked in Add a widget and its size, so the grid can mark where it would go. */
+  const [aiming, setAiming] = useState<{ id: string; w: number; h: number } | null>(null);
+  /** A widget is being dragged: the empty blocks show, and the sheet is down to its head (E-D3). */
   const [dragging, setDragging] = useState(false);
+  /** Where a size dragged out of the sheet would land. */
+  const [dragAim, setDragAim] = useState<Aim | null>(null);
   const gridEl = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -280,6 +292,8 @@ export function HomeGrid({ data, layouts: initial, kind }: Props) {
     oy: number;
     cell: string | null;
     moved: boolean;
+    /** A size out of the sheet, not a widget on the grid. */
+    from: { w: number; h: number } | null;
   } | null>(null);
   /** A press that hasn't become a drag yet: where it began and its hold timer. */
   const press = useRef<{
@@ -320,6 +334,7 @@ export function HomeGrid({ data, layouts: initial, kind }: Props) {
       oy: y - r.top,
       cell: null,
       moved: false,
+      from: null,
     };
     setDragging(true);
     try {
@@ -328,15 +343,108 @@ export function HomeGrid({ data, layouts: initial, kind }: Props) {
       /* pointer already released */
     }
   };
-  const cellAt = (x: number, y: number) => {
+  const blocks = () => {
     const g = gridEl.current!.getBoundingClientRect();
     const gap = parseFloat(getComputedStyle(gridEl.current!).columnGap) || 0;
-    const colw = (g.width - (cols - 1) * gap) / cols;
-    const rowh = (g.height - (rows - 1) * gap) / rows;
+    return {
+      g,
+      gap,
+      colw: (g.width - (cols - 1) * gap) / cols,
+      rowh: (g.height - (rows - 1) * gap) / rows,
+    };
+  };
+  const cellAt = (x: number, y: number) => {
+    const { g, gap, colw, rowh } = blocks();
     return {
       c: Math.max(0, Math.min(cols - 1, Math.floor((x - g.left) / (colw + gap)))),
       r: Math.max(0, Math.min(rows - 1, Math.floor((y - g.top) / (rowh + gap)))),
     };
+  };
+  const overGrid = (x: number, y: number) => {
+    const g = gridEl.current?.getBoundingClientRect();
+    return !!g && x >= g.left && x <= g.right && y >= g.top && y <= g.bottom;
+  };
+  /**
+   * Where a widget added at a block (or the first free one) would land: the
+   * order decides and packing is first-fit, so the hole shows the blocks it
+   * will really take, not the block under the pointer. Null when Home is full.
+   */
+  const landing = (
+    id: string,
+    w: number,
+    h: number,
+    cell: { r: number; c: number } | null,
+    cur: Layout | null = layout,
+  ) => {
+    if (!cur) return null;
+    const base = cur.pages.map((p) => p.filter((x) => x.id !== id));
+    const next = addItem(base, { id, w, h }, cell, cols, rows);
+    const at = next && pack(next, cols, rows)[0]?.find((x) => x.id === id);
+    return at ? { r: at.r, c: at.c, w: at.pw, h: at.ph } : null;
+  };
+  // A size dragged out of the sheet (§3d): a ghost the size of its blocks
+  // follows the pointer, the blocks it would take are marked while it is over
+  // the grid, and the sheet stays down to its head until the drop.
+  const startGalleryDrag = (
+    id: string,
+    w: number,
+    h: number,
+    x: number,
+    y: number,
+    pointerId: number,
+    el: HTMLElement,
+  ) => {
+    if (!gridEl.current) return;
+    const { gap, colw, rowh } = blocks();
+    const width = w * colw + (w - 1) * gap;
+    const height = h * rowh + (h - 1) * gap;
+    const ghost = el.cloneNode(true) as HTMLElement;
+    ghost.classList.add('drag-ghost');
+    ghost.classList.remove('preview');
+    ghost.removeAttribute('style');
+    ghost.style.cssText = `position:fixed;left:${x - width / 2}px;top:${y - height / 2}px;width:${width}px;height:${height}px;`;
+    document.body.appendChild(ghost);
+    drag.current = {
+      id,
+      ghost,
+      ox: width / 2,
+      oy: height / 2,
+      cell: null,
+      moved: true,
+      from: { w, h },
+    };
+    setDragging(true);
+    try {
+      el.setPointerCapture(pointerId);
+    } catch {
+      /* pointer already released */
+    }
+    const move = (e: PointerEvent) => {
+      const d = drag.current;
+      if (!d) return;
+      d.ghost.style.left = `${e.clientX - d.ox}px`;
+      d.ghost.style.top = `${e.clientY - d.oy}px`;
+      if (!overGrid(e.clientX, e.clientY)) {
+        setDragAim(null);
+        return;
+      }
+      setDragAim(landing(id, w, h, cellAt(e.clientX, e.clientY), layoutRef.current));
+    };
+    const up = (e: PointerEvent) => {
+      document.removeEventListener('pointermove', move);
+      document.removeEventListener('pointerup', up);
+      document.removeEventListener('pointercancel', up);
+      const d = drag.current;
+      drag.current = null;
+      setDragging(false);
+      setDragAim(null);
+      d?.ghost.remove();
+      if (e.type === 'pointerup' && overGrid(e.clientX, e.clientY))
+        add(id, w, h, cellAt(e.clientX, e.clientY));
+    };
+    document.addEventListener('pointermove', move);
+    document.addEventListener('pointerup', up);
+    document.addEventListener('pointercancel', up);
   };
   const moveGhost = (x: number, y: number) => {
     const d = drag.current;
@@ -463,22 +571,10 @@ export function HomeGrid({ data, layouts: initial, kind }: Props) {
     const [c, r] = gridOf(k);
     return { value: k, label: `${c}×${r}` };
   });
-  // Where a picked widget would go: the first free block it fits in.
-  const aimAt = (() => {
-    if (!gallery || !aiming) return -1;
-    const occ = Array.from({ length: rows }, () => Array<boolean>(cols).fill(false));
-    for (const it of shown)
-      for (let y = it.r; y < it.r + it.ph; y++)
-        for (let x = it.c; x < it.c + it.pw; x++) occ[y]![x] = true;
-    for (let r = 0; r + aiming.h <= rows; r++)
-      for (let c = 0; c + aiming.w <= cols; c++) {
-        let free = true;
-        for (let y = r; y < r + aiming.h && free; y++)
-          for (let x = c; x < c + aiming.w && free; x++) if (occ[y]![x]) free = false;
-        if (free) return r * cols + c;
-      }
-    return -1;
-  })();
+  // Where a picked widget would go: under a size being dragged, else where its plus would put it.
+  const aim: Aim | null =
+    dragAim ??
+    (gallery && aiming && !dragging ? landing(aiming.id, aiming.w, aiming.h, null) : null);
   const menuIt = menu ? shown.find((x) => x.id === menu.id) : undefined;
   const menuSizes = menuIt
     ? SIZES.filter((x) =>
@@ -525,7 +621,16 @@ export function HomeGrid({ data, layouts: initial, kind }: Props) {
           onContextMenu={onContextMenu}
           onDragStart={(e) => e.preventDefault()}
         >
-          <Slots cols={cols} rows={rows} label={t('edit.drop')} aim={aimAt} />
+          <Slots cols={cols} rows={rows} label={t('edit.drop')} />
+          {aim && (
+            <span
+              className="hg-aim"
+              style={{
+                gridColumn: `${aim.c + 1} / span ${aim.w}`,
+                gridRow: `${aim.r + 1} / span ${aim.h}`,
+              }}
+            />
+          )}
           {shown.map((it) => {
             const def = byId.get(it.id);
             if (!def) return null;
@@ -562,6 +667,7 @@ export function HomeGrid({ data, layouts: initial, kind }: Props) {
 
       <Gallery
         open={gallery}
+        lowered={dragging}
         onClose={closeGallery}
         items={galleryItems}
         hidden={notShown.map((x) => byId.get(x.id)).filter((x): x is WidgetDef => !!x)}
@@ -572,6 +678,7 @@ export function HomeGrid({ data, layouts: initial, kind }: Props) {
           if (add(id, w, h)) setAiming(null);
         }}
         onPick={setAiming}
+        onDragSize={startGalleryDrag}
         densities={kind === 'home' ? densities : undefined}
         density={layout.density}
         onDensity={setDensity}
@@ -610,24 +717,13 @@ export function HomeGrid({ data, layouts: initial, kind }: Props) {
 }
 
 /** The grid's empty blocks, shown while something is dragged or the sheet is open. */
-function Slots({
-  cols,
-  rows,
-  label,
-  aim,
-}: {
-  cols: number;
-  rows: number;
-  label: string;
-  /** The block a picked widget would go in (Add a widget), marked; -1 for none. */
-  aim: number;
-}) {
+function Slots({ cols, rows, label }: { cols: number; rows: number; label: string }) {
   return (
     <>
       {Array.from({ length: rows * cols }, (_, i) => (
         <span
           key={i}
-          className={i === aim ? 'hg-slot aim' : 'hg-slot'}
+          className="hg-slot"
           style={{ gridColumn: (i % cols) + 1, gridRow: Math.floor(i / cols) + 1 }}
         >
           <Icon name="plus" width={22} height={22} />

@@ -1,6 +1,12 @@
 'use client';
 
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from 'react';
 import { Icon } from '@/components/app/icons';
 import { Button } from '@/components/ui';
 import { Disc } from '@/components/ui/colour';
@@ -17,11 +23,14 @@ import type { WidgetCtx, WidgetDef } from './catalog';
  * Reset and Done. Its body: search and the widgets not on Home in two
  * columns (the ones in the layout the grid has no room for first, as not on
  * screen), and the picked widget drawn at Small, Medium and Large, each with
- * a plus in its corner that adds it to the first free block (E3 makes the
- * sizes draggable onto the grid). Done, Escape or a press on the page
+ * a plus in its corner that adds it to the first free block, or that is
+ * dragged onto the grid with a mouse or pen (§3d: while something is
+ * dragged the sheet is lowered to its head, so the whole grid is in reach,
+ * and it rises again on the drop). Done, Escape or a press on the page
  * outside it closes it (Q6); a press on a widget doesn't, so the grid can
  * be rearranged with the sheet up. On a phone the same sheet stands taller
- * with the sizes stacked.
+ * with the sizes stacked, and the sizes are added with their plus (a finger
+ * drag over a sheet is a scroll).
  */
 export const SIZES: { size: WidgetSize; w: number; h: number }[] = [
   { size: 'small', w: 1, h: 1 },
@@ -31,6 +40,7 @@ export const SIZES: { size: WidgetSize; w: number; h: number }[] = [
 
 export function Gallery({
   open,
+  lowered,
   onClose,
   items,
   hidden,
@@ -39,6 +49,7 @@ export function Gallery({
   render,
   onAdd,
   onPick,
+  onDragSize,
   densities,
   density,
   onDensity,
@@ -47,6 +58,8 @@ export function Gallery({
   data,
 }: {
   open: boolean;
+  /** Something is being dragged: the sheet is down to its head. */
+  lowered: boolean;
   onClose: () => void;
   /** The widgets not in the layout. */
   items: WidgetDef[];
@@ -56,8 +69,18 @@ export function Gallery({
   rows: number;
   render: (def: WidgetDef, w: number, h: number) => ReactNode;
   onAdd: (id: string, w: number, h: number) => void;
-  /** The picked widget's blocks (or null), so the grid can mark where it would go. */
-  onPick: (dims: { w: number; h: number } | null) => void;
+  /** The picked widget and its blocks (or null), so the grid can mark where it would go. */
+  onPick: (pick: { id: string; w: number; h: number } | null) => void;
+  /** A size dragged out of the sheet: the widget, its blocks, the pointer and the preview it came from. */
+  onDragSize: (
+    id: string,
+    w: number,
+    h: number,
+    x: number,
+    y: number,
+    pointerId: number,
+    el: HTMLElement,
+  ) => void;
   /** The grid's densities, when the screen has them (Home, not the wall). */
   densities?: { value: Density; label: string }[];
   density: Density;
@@ -69,6 +92,16 @@ export function Gallery({
   const box = useRef<HTMLDivElement>(null);
   const [q, setQ] = useState('');
   const [pickedId, setPickedId] = useState<string | null>(null);
+  /** A press on a size that hasn't moved yet. */
+  const press = useRef<{
+    id: string;
+    w: number;
+    h: number;
+    x: number;
+    y: number;
+    pointerId: number;
+    el: HTMLElement;
+  } | null>(null);
   useEffect(() => {
     if (!open) return;
     const away = (e: PointerEvent) => {
@@ -100,7 +133,7 @@ export function Gallery({
   const pick = (def: WidgetDef) => {
     setPickedId(def.id);
     const d = fits[1] ?? fits[0];
-    onPick(d ? { w: d.w, h: d.h } : null);
+    onPick(d ? { id: def.id, w: d.w, h: d.h } : null);
   };
   const sections: [string, WidgetDef[]][] = [
     [t('edit.secHidden'), hidden.filter(matches)],
@@ -127,11 +160,37 @@ export function Gallery({
       </button>
     );
   };
+  const onSizeDown = (e: ReactPointerEvent<HTMLElement>, w: number, h: number) => {
+    if (!picked || e.button > 0 || e.pointerType === 'touch') return;
+    press.current = {
+      id: picked.id,
+      w,
+      h,
+      x: e.clientX,
+      y: e.clientY,
+      pointerId: e.pointerId,
+      el: e.currentTarget,
+    };
+  };
+  const onSizeMove = (e: ReactPointerEvent<HTMLElement>) => {
+    const p = press.current;
+    if (!p || Math.hypot(e.clientX - p.x, e.clientY - p.y) <= 6) return;
+    press.current = null;
+    onDragSize(p.id, p.w, p.h, e.clientX, e.clientY, p.pointerId, p.el);
+  };
+  const onSizeUp = () => {
+    press.current = null;
+  };
   return (
-    <div ref={box} className="hg-sheet" role="dialog" aria-label={t('edit.addTitle')}>
+    <div
+      ref={box}
+      className={lowered ? 'hg-sheet lowered' : 'hg-sheet'}
+      role="dialog"
+      aria-label={t('edit.addTitle')}
+    >
       <div className="hg-sheet-h">
         <h2>{t('edit.addTitle')}</h2>
-        <span className="hg-sheet-hint">{t('edit.hint')}</span>
+        <span className="hg-sheet-hint">{t(lowered ? 'edit.dropHint' : 'edit.hint')}</span>
         <span className="hg-sheet-sp" />
         {densities && (
           <Segmented
@@ -203,6 +262,11 @@ export function Gallery({
                       data-w={x.w}
                       data-h={x.h}
                       style={{ ['--pw' as string]: x.w, ['--ph' as string]: x.h }}
+                      onPointerDown={(e) => onSizeDown(e, x.w, x.h)}
+                      onPointerMove={onSizeMove}
+                      onPointerUp={onSizeUp}
+                      onPointerCancel={onSizeUp}
+                      onDragStart={(e) => e.preventDefault()}
                     >
                       <div className="wg-in">{render(picked, x.w, x.h)}</div>
                     </section>

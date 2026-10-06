@@ -2566,6 +2566,7 @@
     "edit": {
       "addTitle": "Add a widget",
       "hint": "Drag a widget onto Home, or add it",
+      "dropHint": "Drop it on Home · the sheet comes back after",
       "secHidden": "Not on screen",
       "secHousehold": "Household",
       "secServices": "Services",
