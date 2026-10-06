@@ -182,11 +182,6 @@
     height 0.22s,
     scale 0.22s;
 }
-.widget.preview {
-  width: calc(var(--pw) * 118px + (var(--pw) - 1) * 12px);
-  height: calc(var(--ph) * 118px + (var(--ph) - 1) * 12px);
-  flex: none;
-}
 .cal-grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
@@ -252,47 +247,121 @@
   box-shadow: 0 0 0 1px var(--p-on-accent);
 }
 
-/* the Add-widget gallery */
-.gallery-sheet {
-  width: min(760px, 100%);
+/*
+  Add a widget (SCOPE-edit-home.md §3c, board E3): the gallery sheet. Under
+  the bar it rises from the bottom of the page in the bar's glass, inside
+  the site-wide cap, 440 px tall, and the grid keeps every column under it.
+  On a phone it stands taller with the sizes stacked.
+*/
+.hg-sheet {
+  position: fixed;
+  z-index: 60;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: min(440px, 62dvh);
+  display: flex;
+  flex-direction: column;
+  border-radius: 24px 24px 0 0;
+  background: var(--dd-bg);
+  -webkit-backdrop-filter: blur(var(--g-blur)) saturate(var(--g-sat));
+  backdrop-filter: blur(var(--g-blur)) saturate(var(--g-sat));
+  box-shadow:
+    inset 0 0 0 1px var(--g-rim),
+    0 -30px 70px -30px rgba(0, 0, 0, 0.5);
+  --p-fg2: var(--dd-fg2);
+  --p-fg3: var(--dd-fg3);
+  animation: hg-rise 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
-/* Add a widget: the grid's density and Reset, then search, the list, a size, the widget as it will be, Add to Home. */
-.add-tools {
+@keyframes hg-rise {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hg-sheet {
+    animation: none;
+  }
+}
+.hg-sheet-h {
+  flex: none;
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 14px;
+  gap: 12px;
+  min-height: 60px;
+  padding: 0 14px 0 22px;
+  border-bottom: 1px solid var(--line);
 }
-.add-tools .btn {
-  margin-left: auto;
+.hg-sheet-h h2 {
+  margin: 0;
+  font-family: var(--f-display);
+  font-weight: var(--fw-display);
+  font-size: 19px;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
 }
-.add {
+.hg-sheet-hint {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--p-fg3);
+}
+.hg-sheet-sp {
+  flex: 1;
+}
+.hg-sheet-b {
+  flex: 1;
+  min-height: 0;
   display: grid;
-  gap: 14px;
+  grid-template-columns: 300px minmax(0, 1fr);
 }
-.add-hidden {
-  margin: -6px 2px 0;
-  line-height: 1.45;
+.hg-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  padding: 14px 12px;
+  border-right: 1px solid var(--line);
+}
+.hg-list .search {
+  flex: none;
+}
+.hg-list-in {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.hg-sec h3 {
+  margin: 0 6px 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--p-fg3);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 .add-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
-  max-height: 208px;
-  overflow-y: auto;
+  gap: 1px 6px;
 }
 .add-pick {
   display: flex;
   align-items: center;
   gap: 8px;
   min-width: 0;
-  height: 40px;
-  padding: 0 12px;
+  height: 32px;
+  padding: 0 8px;
   border: 0;
-  border-radius: 12px;
+  border-radius: 9px;
   background: none;
   color: var(--p-fg);
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 600;
   text-align: left;
   cursor: pointer;
@@ -306,31 +375,161 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.add-pick:hover {
+  background: var(--inset);
+}
 .add-pick[aria-pressed='true'] {
   background: var(--inset-2);
 }
-.add-about {
-  display: grid;
-  gap: 2px;
+.add-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  margin: 0 4px;
+  border-radius: 50%;
+  background: var(--svc);
 }
-.add-about b {
+.hg-pv {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 16px 28px 18px;
+}
+.hg-pv-hint {
+  margin: auto;
+  max-width: 360px;
+  text-align: center;
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+.hg-about {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.hg-about > div {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+.hg-about b {
   font-family: var(--f-display);
   font-weight: var(--fw-display);
   font-size: 15px;
 }
-/* The preview sits on a plain backdrop, so it reads as glass without the scene's glow. */
-.add-prev {
+.hg-about-ic {
   display: grid;
   place-items: center;
-  padding: 16px;
-  border-radius: var(--r-inner);
-  background: var(--inset);
-  overflow: auto;
-  scrollbar-width: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: var(--inset-2);
+  color: var(--p-fg);
 }
-.add .btn {
-  justify-self: stretch;
+/* The three sizes side by side, each with its plus in the corner (E6's plus on E3). */
+.hg-sizes {
+  flex: 1;
+  min-height: 0;
+  display: flex;
   justify-content: center;
+  align-items: flex-end;
+  gap: 32px;
+  padding: 18px 0 4px;
+  overflow: hidden;
+}
+.hg-size {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 0 0 10px;
+}
+.hg-size .widget.preview {
+  cursor: grab;
+}
+.hg-plus {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--p-accent);
+  color: var(--p-on-accent);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+}
+.hg-plus:hover {
+  filter: brightness(1.1);
+}
+.hg-size-n {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--p-fg2);
+}
+.widget.preview {
+  width: calc(var(--pw) * 118px + (var(--pw) - 1) * 12px);
+  height: calc(var(--ph) * 118px + (var(--ph) - 1) * 12px);
+  flex: none;
+}
+/* Under the bar the sheet sits inside the site-wide cap, with the bar's side margin. */
+@media (min-width: 1200px), (min-width: 900px) and (orientation: landscape) {
+  .hg-sheet {
+    left: max(16px, calc((100vw - var(--site-w)) / 2 + 16px));
+    right: max(16px, calc((100vw - var(--site-w)) / 2 + 16px));
+  }
+}
+/* A phone, or an upright iPad: taller, one column, the sizes stacked. */
+@media (max-width: 899px), (max-width: 1199px) and (orientation: portrait) {
+  .hg-sheet {
+    height: min(720px, 86dvh);
+    border-radius: 20px 20px 0 0;
+  }
+  .hg-sheet-h {
+    flex-wrap: wrap;
+    gap: 8px 10px;
+    padding: 10px 12px 10px 16px;
+  }
+  .hg-sheet-hint {
+    display: none;
+  }
+  .hg-sheet-b {
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  .hg-list {
+    flex: none;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .hg-list-in {
+    max-height: 220px;
+  }
+  .hg-pv {
+    flex: none;
+    padding: 14px 16px 24px;
+  }
+  .hg-pv-hint {
+    margin: 24px auto;
+  }
+  .hg-sizes {
+    flex: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 22px;
+    padding: 14px 0 8px;
+    overflow: visible;
+  }
 }
 
 /* The widget whose menu is open. */
@@ -344,10 +543,6 @@
   border-style: solid;
   color: var(--p-fg);
   background: var(--inset);
-}
-.add-hint {
-  margin: 4px 2px 0;
-  line-height: 1.45;
 }
 
 /*

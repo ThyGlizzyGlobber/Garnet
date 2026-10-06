@@ -17,9 +17,7 @@ import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Icon } from '@/components/app/icons';
-import { Button } from '@/components/ui';
 import { Segmented } from '@/components/ui/controls';
-import { Sheet } from '@/components/ui/sheet';
 import { useToast } from '@/components/ui/toast';
 import type { HomeData } from '@/lib/home-data';
 import {
@@ -46,6 +44,7 @@ import {
   type WidgetSize,
 } from '@/lib/home-grid';
 import { ALWAYS, WHEN_NEEDED, catalogFor, type WidgetCtx, type WidgetDef } from './catalog';
+import { Gallery, SIZES } from './gallery';
 import { WxCard } from './pieces';
 import { emptySpec } from './widgets';
 import { makeFmt } from './fmt';
@@ -65,7 +64,7 @@ import {
  * (E-D6). The menu (press and hold, right-click, or the menu key / Shift+F10
  * on a focused widget) offers Add a widget, Change size and Remove widget;
  * the keyboard moves a focused widget with the arrows and removes it with
- * Delete. Add a widget is a sheet (E2 makes it the gallery from the bottom)
+ * Delete. Add a widget is the gallery sheet from the bottom (gallery.tsx),
  * reached from the menu, the account menu (/?add=1), or a right-click or
  * press and hold on empty space (Q3). A full grid refuses more and says so;
  * widgets that no longer fit a smaller grid stay in the layout hidden.
@@ -209,10 +208,15 @@ export function HomeGrid({ data, layouts: initial, kind }: Props) {
     pages[at.p]![at.i] = { ...pages[at.p]![at.i]!, w: dims.w, h: dims.h };
     update({ ...layout, pages: normalise(pages) });
   };
-  /** A widget added at a block, or the first free one; a full grid says so and adds nothing. */
+  /**
+   * A widget added at a block, or the first free one; a full grid says so and
+   * adds nothing. A widget already in the layout but hidden (no room) is
+   * moved to where it is added, so it shows.
+   */
   const add = (id: string, w: number, h: number, cell: { r: number; c: number } | null = null) => {
     if (!layout) return false;
-    const next = addItem(layout.pages, { id, w, h }, cell, cols, rows);
+    const base = layout.pages.map((p) => p.filter((x) => x.id !== id));
+    const next = addItem(base, { id, w, h }, cell, cols, rows);
     if (!next) {
       toast(t('edit.full'));
       return false;
@@ -556,41 +560,25 @@ export function HomeGrid({ data, layouts: initial, kind }: Props) {
         )}
       </div>
 
-      <Sheet
+      <Gallery
         open={gallery}
         onClose={closeGallery}
-        eyebrow={t('edit.homeEyebrow')}
-        title={t('edit.addTitle')}
-        className="gallery-sheet"
-      >
-        <div className="add-tools">
-          {kind === 'home' && (
-            <Segmented
-              small
-              items={densities}
-              value={layout.density}
-              label={t('edit.grid')}
-              onChange={(v) => setDensity(v as Density)}
-            />
-          )}
-          <Button variant="secondary" size="sm" onClick={reset}>
-            {t('edit.reset')}
-          </Button>
-        </div>
-        <AddPanel
-          items={galleryItems}
-          hidden={notShown.map((x) => x.id)}
-          cols={cols}
-          rows={rows}
-          render={renderWidget}
-          onAdd={(id, w, h) => {
-            if (add(id, w, h)) closeGallery();
-          }}
-          onPick={setAiming}
-          t={t}
-          data={data}
-        />
-      </Sheet>
+        items={galleryItems}
+        hidden={notShown.map((x) => byId.get(x.id)).filter((x): x is WidgetDef => !!x)}
+        cols={cols}
+        rows={rows}
+        render={renderWidget}
+        onAdd={(id, w, h) => {
+          if (add(id, w, h)) setAiming(null);
+        }}
+        onPick={setAiming}
+        densities={kind === 'home' ? densities : undefined}
+        density={layout.density}
+        onDensity={setDensity}
+        onReset={reset}
+        t={t}
+        data={data}
+      />
       {menu &&
         menuIt &&
         createPortal(
@@ -652,13 +640,6 @@ function Slots({
 
 const SIZE_OF = { small: 's', medium: 'm', large: 'l' } as const;
 
-/** The three sizes with their blocks, in the order the pickers show them. */
-const SIZES: { size: WidgetSize; w: number; h: number }[] = [
-  { size: 'small', w: 1, h: 1 },
-  { size: 'medium', w: 2, h: 1 },
-  { size: 'large', w: 2, h: 2 },
-];
-
 /** A widget with nothing to show yet, in the same three sizes. */
 function Empty({ def, w, h, t }: { def: WidgetDef; w: number; h: number; t: WidgetCtx['t'] }) {
   const key = def.id.startsWith('svc-') ? 'service' : def.id;
@@ -669,133 +650,6 @@ function Empty({ def, w, h, t }: { def: WidgetDef; w: number; h: number; t: Widg
     t(`empty.${key}.body`),
   );
   return <WxCard spec={spec} size={SIZE_OF[sizeName(w, h)]} />;
-}
-
-/**
- * Add a widget: search the ones not on Home yet, pick one, choose Small,
- * Medium or Large, see it as it will be, add it. Widgets in the layout that
- * the grid has no room for are listed too, as not on screen (E-D5).
- */
-function AddPanel({
-  items,
-  hidden: notShown,
-  cols,
-  rows,
-  render,
-  onAdd,
-  onPick,
-  t,
-  data,
-}: {
-  items: WidgetDef[];
-  /** Widgets in the layout the grid has no room for. */
-  hidden: string[];
-  cols: number;
-  rows: number;
-  render: (def: WidgetDef, w: number, h: number) => ReactNode;
-  onAdd: (id: string, w: number, h: number) => void;
-  /** The picked widget's blocks (or null), so the grid can mark where it would go. */
-  onPick?: (dims: { w: number; h: number } | null) => void;
-  t: WidgetCtx['t'];
-  data: HomeData;
-}) {
-  const [q, setQ] = useState('');
-  const [pickedId, setPickedId] = useState<string | null>(null);
-  const [size, setSize] = useState<WidgetSize>('medium');
-  const service = (def: WidgetDef) => data.services.find((s) => `svc-${s.id}` === def.id);
-  const key = (def: WidgetDef) => (def.id.startsWith('svc-') ? 'service' : def.id);
-  const name = (def: WidgetDef) =>
-    t(`widgets.${key(def)}.name`, { service: service(def)?.name ?? '' });
-  const words = q.trim().toLowerCase().split(/\s+/).filter(Boolean);
-  const shown = items.filter((w) => words.every((x) => name(w).toLowerCase().includes(x)));
-  // Nothing is picked until someone picks (the design canvas, board Z8): a hint until then.
-  const picked = shown.find((w) => w.id === pickedId) ?? null;
-  const fits = SIZES.filter((x) => x.w <= cols && x.h <= rows);
-  const dims = fits.find((x) => x.size === size) ?? fits[0]!;
-  const pick = (id: string | null, sz: WidgetSize = size) => {
-    setPickedId(id);
-    setSize(sz);
-    const d = fits.find((x) => x.size === sz) ?? fits[0]!;
-    onPick?.(id ? { w: d.w, h: d.h } : null);
-  };
-  if (items.length === 0 && notShown.length === 0)
-    return <p className="muted">{t('edit.allOn')}</p>;
-  return (
-    <div className="add">
-      <label className="search">
-        <Icon name="search" width={16} height={16} />
-        <input
-          type="search"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder={t('edit.search')}
-          aria-label={t('edit.search')}
-        />
-      </label>
-      {notShown.length > 0 && !q && (
-        <p className="muted small add-hidden">
-          {t('edit.notOnScreen', {
-            n: notShown.length,
-            names: notShown
-              .map((id) => {
-                const def = items.find((w) => w.id === id) ?? null;
-                return def
-                  ? name(def)
-                  : (t(`widgets.${id.startsWith('svc-') ? 'service' : id}.name`, {
-                      service: service({ id } as WidgetDef)?.name ?? '',
-                    }) as string);
-              })
-              .join(', '),
-          })}
-        </p>
-      )}
-      <div className="add-list">
-        {shown.map((w) => (
-          <button
-            key={w.id}
-            type="button"
-            className="add-pick"
-            aria-pressed={picked?.id === w.id}
-            onClick={() => pick(w.id)}
-          >
-            <Icon name={w.icon} width={16} height={16} />
-            <span>{name(w)}</span>
-          </button>
-        ))}
-        {shown.length === 0 && <p className="muted small">{t('edit.none')}</p>}
-      </div>
-      {picked && (
-        <>
-          <div className="add-about">
-            <b>{name(picked)}</b>
-            <span className="muted small">
-              {t(`widgets.${key(picked)}.desc`, { provider: service(picked)?.provider ?? '' })}
-            </span>
-          </div>
-          <Segmented
-            label={t('edit.size')}
-            value={dims.size}
-            items={fits.map((x) => ({ value: x.size, label: t(`edit.sizes.${x.size}`) }))}
-            onChange={(v) => pick(picked.id, v as WidgetSize)}
-          />
-          <div className="add-prev">
-            <section
-              className="widget glass preview"
-              data-w={dims.w}
-              data-h={dims.h}
-              style={{ ['--pw' as string]: dims.w, ['--ph' as string]: dims.h }}
-            >
-              <div className="wg-in">{render(picked, dims.w, dims.h)}</div>
-            </section>
-          </div>
-          <Button icon="plus" onClick={() => onAdd(picked.id, dims.w, dims.h)}>
-            {t('edit.addToHome')}
-          </Button>
-        </>
-      )}
-      {!picked && shown.length > 0 && <p className="add-hint muted small">{t('edit.pickHint')}</p>}
-    </div>
-  );
 }
 
 /**

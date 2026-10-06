@@ -2565,7 +2565,11 @@
     },
     "edit": {
       "addTitle": "Add a widget",
-      "homeEyebrow": "Home",
+      "hint": "Drag a widget onto Home, or add it",
+      "secHidden": "Not on screen",
+      "secHousehold": "Household",
+      "secServices": "Services",
+      "addSize": "Add {size}",
       "allOn": "Every widget is already on Home. Remove one to add it at another size.",
       "grid": "Grid",
       "reset": "Reset",
@@ -2574,7 +2578,6 @@
       "size": "Change size",
       "search": "Search widgets",
       "none": "No widget by that name.",
-      "addToHome": "Add to Home",
       "sizes": {
         "small": "Small",
         "medium": "Medium",
@@ -2582,8 +2585,7 @@
       },
       "drop": "Drop a widget here",
       "full": "Home is full · remove or shrink a widget first",
-      "notOnScreen": "{n, plural, one {Not on screen: {names}. It will show} other {Not on screen: {names}. They will show}} when there is room.",
-      "pickHint": "Pick a widget to see it here, choose its size, then add it to Home."
+      "pickHint": "Pick a widget to see it at its three sizes, then drag one onto Home or add it with its plus."
     },
     "wx": {
       "paid": "Paid",
