@@ -106,13 +106,13 @@ tile opens the service's page.
 
 **Which metric leads** (board I, amended):
 
-| Service | The ring | The figure | The line and the fact |
-|---|---|---|---|
-| Rent, Internet, Subscriptions, any fixed price | Shares in when bills are split ("1 / 3 shares in"); days left to the due date when they aren't | What is due this month | Same every month, with the due day · your share |
-| Electricity, Gas, Water | Use a day against the limit (an arc; the reading alone with no limit set) | What is due this month | Against the limit · against last year |
-| Council Rates (an instalment plan) | Instalments paid of the year | This instalment | What is left of the notice · the next instalment |
-| A main service with nothing due | Its icon; days left when something is | What is due, or a dash | Nothing this month · the next thing coming |
-| Just yours | As the household's, "Just yours" under the name | | A tax receipt line for a donation |
+| Service                                        | The ring                                                                                       | The figure             | The line and the fact                            |
+| ---------------------------------------------- | ---------------------------------------------------------------------------------------------- | ---------------------- | ------------------------------------------------ |
+| Rent, Internet, Subscriptions, any fixed price | Shares in when bills are split ("1 / 3 shares in"); days left to the due date when they aren't | What is due this month | Same every month, with the due day · your share  |
+| Electricity, Gas, Water                        | Use a day against the limit (an arc; the reading alone with no limit set)                      | What is due this month | Against the limit · against last year            |
+| Council Rates (an instalment plan)             | Instalments paid of the year                                                                   | This instalment        | What is left of the notice · the next instalment |
+| A main service with nothing due                | Its icon; days left when something is                                                          | What is due, or a dash | Nothing this month · the next thing coming       |
+| Just yours                                     | As the household's, "Just yours" under the name                                                |                        | A tax receipt line for a donation                |
 
 ### 3c. The lens changes the tiles (G)
 

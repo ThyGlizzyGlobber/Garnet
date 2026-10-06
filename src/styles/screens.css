@@ -3491,3 +3491,480 @@ button.ov-row:hover {
     order: 3;
   }
 }
+
+/* ---------- Services: the analytics tool and a tile per service (SCOPE-services.md) ---------- */
+.sv-page {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--gap);
+  align-items: start;
+}
+.sv-right {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  min-width: 0;
+}
+.sv-sec {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.sv-sec-h {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin: 4px 2px 0;
+  font-family: var(--f-display);
+  font-weight: var(--fw-display);
+  font-size: 19px;
+  letter-spacing: var(--ls-display);
+}
+.sv-sec-h em {
+  font: 600 13px var(--f-body);
+  font-variant-numeric: tabular-nums;
+  color: var(--p-fg2);
+  letter-spacing: 0;
+}
+.sv-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+/* A tile: the shape of a Home Medium widget. */
+.sv-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 150px;
+  padding: 12px 14px;
+  color: inherit;
+  text-decoration: none;
+  transition: transform 0.15s ease;
+}
+.sv-tile:hover {
+  transform: translateY(-2px);
+}
+.sv-tile.is-quiet .sv-fig,
+.sv-tile.is-quiet .sv-ring .st-ring > span {
+  color: var(--p-fg2);
+}
+.sv-th {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+.sv-tn {
+  display: grid;
+  min-width: 0;
+  line-height: 1.2;
+}
+.sv-tn b {
+  font-size: 14px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sv-tn span {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--p-fg3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sv-th .chip {
+  font-size: 10.5px;
+}
+.sv-tb {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-height: 0;
+}
+.sv-ring {
+  width: 76px;
+  height: 76px;
+}
+.sv-ring circle {
+  stroke-width: 10;
+}
+.sv-ring .st-ring-fill {
+  stroke: var(--svc);
+}
+.sv-ring.is-bad .st-ring-fill {
+  stroke: var(--overdue);
+}
+.sv-ring.is-bad > span {
+  color: var(--overdue);
+}
+.sv-ring.is-ok > span {
+  color: var(--svc);
+}
+.sv-ring.is-icon .st-ring-track {
+  stroke: var(--inset-2);
+}
+.sv-ring > span {
+  display: grid;
+  place-items: center;
+  line-height: 1;
+}
+.sv-ring > span b {
+  font-family: var(--f-display);
+  font-weight: 600;
+  font-size: 18px;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.sv-ring > span small {
+  margin-top: 2px;
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--p-fg3);
+  white-space: nowrap;
+}
+.sv-tx {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  gap: 2px;
+}
+.sv-fig {
+  font-size: 26px;
+  line-height: 30px;
+}
+.sv-line {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--p-fg2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sv-fact {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+}
+.sv-fact span {
+  color: var(--p-fg2);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.sv-fact b {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* The year lenses: a bar a month at the tile's right. */
+.sv-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  flex: none;
+  width: 72px;
+  height: 44px;
+}
+.sv-bars i {
+  flex: 1;
+  min-height: 3px;
+  border-radius: 2px;
+  background: var(--svc);
+  opacity: 0.85;
+}
+.sv-bars i.empty {
+  height: 3px;
+  background: var(--line-2);
+  opacity: 1;
+}
+
+/* The analytics tool: one card, the three lenses stacked. */
+.an {
+  display: flex;
+  flex-direction: column;
+  padding: 14px 18px 10px;
+}
+.an-h {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 2px 10px;
+}
+.an-h b {
+  font-family: var(--f-display);
+  font-weight: var(--fw-display);
+  font-size: 20px;
+  letter-spacing: var(--ls-display);
+}
+.an-h span {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--p-fg3);
+}
+.an-s {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+  color: inherit;
+  text-decoration: none;
+}
+.an-s:first-of-type {
+  border-top: 0;
+}
+.an-s.lit::before {
+  content: '';
+  position: absolute;
+  left: -18px;
+  top: 14px;
+  bottom: 14px;
+  width: 3px;
+  border-radius: 3px;
+  background: var(--p-accent);
+}
+.an-s.fold {
+  opacity: 0.9;
+  border-radius: 12px;
+}
+.an-s.fold:hover,
+.an-s.fold:focus-visible {
+  opacity: 1;
+  outline: none;
+}
+.an-s.fold .an-fig {
+  font-size: 22px;
+  line-height: 26px;
+  margin-top: 4px;
+}
+.an-t {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+}
+.an-name {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--p-fg2);
+}
+.an-when {
+  margin-left: auto;
+  font-size: 13.5px;
+  font-weight: 700;
+}
+.an-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+.an-nav b {
+  font-size: 13.5px;
+  font-weight: 700;
+  min-width: 0;
+}
+.an-ar,
+.an-ar.ibtn {
+  width: 26px;
+  height: 26px;
+  flex: none;
+}
+.an-ar.is-off {
+  display: block;
+}
+.an-fig {
+  font-size: 30px;
+  line-height: 34px;
+  margin-top: 6px;
+}
+.an-sub {
+  margin-top: 3px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--p-fg2);
+}
+.an-sub b {
+  font-weight: 700;
+  color: var(--p-fg);
+}
+.an-bars {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 5px;
+  height: 84px;
+  margin-top: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+}
+.an-col {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: stretch;
+  min-width: 0;
+  text-decoration: none;
+  color: inherit;
+}
+.an-col .an-bar {
+  display: block;
+  border-radius: 4px;
+  background: var(--inset-2);
+  min-height: 4px;
+}
+.an-col .an-bar.lit {
+  background: var(--p-accent);
+}
+.an-col .an-bar.empty {
+  height: 3px;
+  background: var(--line-2);
+}
+.an-col .an-ghost {
+  position: absolute;
+  left: 1px;
+  right: 1px;
+  bottom: 14px;
+  border: 1px dashed var(--line-2);
+  border-radius: 4px;
+  pointer-events: none;
+}
+.an-col > span {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -14px;
+  font-size: 9.5px;
+  font-weight: 600;
+  color: var(--p-fg3);
+  text-align: center;
+}
+.an-col > span.on {
+  color: var(--p-fg);
+  font-weight: 700;
+}
+.an-cap {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--p-fg3);
+}
+.an-dl {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--p-fg2);
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.an-dl:hover {
+  color: var(--p-fg);
+}
+.an-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px 10px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+.an-stat {
+  display: grid;
+  line-height: 1.2;
+  min-width: 0;
+}
+.an-stat span {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--p-fg3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.an-stat b {
+  margin-top: 2px;
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.an-stat em {
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--p-fg3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sv-tile {
+    transition: none;
+  }
+}
+/* Under the bar: the tool in the left column, the tiles beside it. */
+@media (min-width: 1200px), (min-width: 900px) and (orientation: landscape) {
+  .sv-page {
+    grid-template-columns: 340px minmax(0, 1fr);
+    gap: 16px;
+  }
+  .sv-left {
+    position: sticky;
+    top: calc(var(--safe-t) + var(--bar-h, 60px) + 32px);
+  }
+}
+/* Three across from 1400 px, two below (V-D10). */
+@media (min-width: 1400px) {
+  .sv-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+/* A phone, or an upright iPad: the tool is a row that swipes, one lens a screen, above the tiles. */
+@media (max-width: 899px), (max-width: 1199px) and (orientation: portrait) {
+  .an {
+    flex-direction: row;
+    gap: 14px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    padding: 12px 14px;
+  }
+  .an::-webkit-scrollbar {
+    display: none;
+  }
+  .an-h {
+    display: none;
+  }
+  .an-s,
+  .an-s:first-of-type {
+    flex: none;
+    width: min(300px, 82vw);
+    padding: 4px 0;
+    border-top: 0;
+    scroll-snap-align: start;
+  }
+  .an-s.lit::before {
+    display: none;
+  }
+}
+@media (max-width: 639px) {
+  .sv-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

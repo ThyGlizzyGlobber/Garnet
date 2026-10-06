@@ -643,13 +643,49 @@
     "nextBill": "Next bill about {amount} · due {date}",
     "noHistory": "No bills yet",
     "tile": {
-      "next": "Next bill",
-      "due": "due {date}",
-      "noHistory": "No bills yet",
-      "payer": "Paid by {name}",
-      "noPayer": "No payer set",
-      "cadence": "{cadence}",
-      "perDay": "{amount} / day"
+      "count": "{count, plural, one {# service} other {# services}}",
+      "vehicles": "{count, plural, one {# vehicle} other {# vehicles}}",
+      "yours": "Just yours",
+      "chip": {
+        "unusual": "Unusual",
+        "expected": "Expected {date}",
+        "none": "Nothing due"
+      },
+      "ring": {
+        "daysOver": "days over",
+        "aDay": "a day",
+        "instalments": "instalments",
+        "sharesIn": "shares in",
+        "daysLeft": "days left",
+        "paid": "paid"
+      },
+      "line": {
+        "samePrice": "Same price every bill",
+        "samePriceDue": "Same price every bill · due {date}",
+        "usageOfLimit": "{pct} of your limit",
+        "usage": "{qty} {unit} a day",
+        "vsLastYear": "{pct} on this time last year",
+        "instalmentsLeft": "{left} left of {total}",
+        "nothing": "Nothing this month",
+        "next": "Next about {date}",
+        "nextAmount": "Next about {date} · ~{amount}",
+        "bills": "{period} · {count, plural, one {# bill} other {# bills}}",
+        "unusual": "{pct} on this time last year"
+      },
+      "fact": {
+        "yourShare": "Your share",
+        "paid": "· paid",
+        "onLastYear": "On last year",
+        "paidOn": "Paid",
+        "next": "Next",
+        "about": "about {date}",
+        "nextInstalment": "Next instalment",
+        "highest": "Highest",
+        "lastYear": "Last year",
+        "aMonth": "A month",
+        "thisYear": "This year",
+        "taxReceipt": "{amount} · tax receipt"
+      }
     },
     "edit": "Edit",
     "onlyYou": "Only you",
@@ -840,7 +876,58 @@
       "myServices": "My Services"
     },
     "arrange": "Arrange",
-    "arrangeDone": "Done arranging"
+    "arrangeDone": "Done arranging",
+    "lens": {
+      "analytics": "Analytics",
+      "month": "This month",
+      "year": "This year",
+      "fy": "Financial year",
+      "prev": {
+        "month": "Previous month",
+        "year": "Previous year",
+        "fy": "Previous financial year"
+      },
+      "next": {
+        "month": "Next month",
+        "year": "Next year",
+        "fy": "Next financial year"
+      },
+      "open": "Look through {lens}",
+      "soFar": "so far",
+      "change": {
+        "up": "↑ {pct} on {period}",
+        "down": "↓ {pct} on {period}",
+        "same": "Same as {period}",
+        "none": "First {what}"
+      },
+      "whatMonth": "month",
+      "whatYear": "year",
+      "toDate": "{period} to date",
+      "bills": "{count, plural, =0 {no bills} one {# bill} other {# bills}}",
+      "paidOf": "{count} paid",
+      "caption": {
+        "month": "The twelve months to {month}",
+        "year": "January – December · hollow: {year}",
+        "fy": "{from} – {to} · hollow: {year}"
+      },
+      "openMonth": "Open {month}",
+      "facts": {
+        "paid": "Paid",
+        "toPay": "To pay",
+        "toCome": "To come",
+        "expected": "expected",
+        "overdue": "{count} overdue",
+        "aMonth": "A month",
+        "average": "on average",
+        "highest": "Highest",
+        "lastYear": "{year}",
+        "wholeYear": "whole year",
+        "toEnd": "To {month}",
+        "toEndSub": "expected",
+        "download": "Download bills",
+        "downloadSub": "for your accountant"
+      }
+    }
   },
   "members": {
     "title": "Members",

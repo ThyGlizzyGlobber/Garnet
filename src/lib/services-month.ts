@@ -47,7 +47,7 @@ export interface MonthItem {
 }
 
 /** key: the side menu's (src/lib/nav-layout.ts); mine: one of the viewer's own (My Services). */
-export type MonthEntry = { key: string; mine: boolean } & (
+type MonthEntry = { key: string; mine: boolean } & (
   | { kind: 'service'; item: MonthItem }
   | {
       kind: 'group';

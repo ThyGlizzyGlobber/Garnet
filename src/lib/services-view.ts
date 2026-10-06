@@ -31,7 +31,7 @@ export interface Periods {
   fy: string;
 }
 
-export interface LensBar {
+interface LensBar {
   /** "2026-09" */
   month: string;
   minor: number;
@@ -42,7 +42,7 @@ export interface LensBar {
   future: boolean;
 }
 
-export type LensFacts =
+type LensFacts =
   | {
       lens: 'month';
       paidMinor: number;
@@ -79,7 +79,7 @@ export interface LensFigure {
 }
 
 /** The ring that says most about the service (SCOPE-services.md §3b). */
-export type TileRing =
+type TileRing =
   | { kind: 'overdue'; days: number }
   | { kind: 'usage'; perDay: number; unit: string; limitPerDay: number | null }
   | { kind: 'instalments'; paid: number; of: number }
