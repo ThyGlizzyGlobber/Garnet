@@ -47,7 +47,17 @@
       "developer": "Developer",
       "primary": "Primary"
     },
-    "householdCount": "{count, plural, one {# Household} other {# Households}}"
+    "householdCount": "{count, plural, one {# Household} other {# Households}}",
+    "panel": {
+      "title": "Services",
+      "all": "All services · {amount} this month",
+      "toPayWeek": "{count, plural, =0 {nothing to pay this week} one {# to pay this week} other {# to pay this week}}",
+      "add": "Add service",
+      "open": "Open {name}",
+      "parts": "Show its services",
+      "nothing": "Nothing this month",
+      "none": "No services yet"
+    }
   },
   "setup": {
     "title": "Set up your household.",

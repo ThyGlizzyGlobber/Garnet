@@ -34,6 +34,7 @@ export default async function AccountLayout({ children }: { children: ReactNode 
     mine: [],
     lines: [],
     inboxCount: 0,
+    toPayWeek: 0,
     address: null,
     me: {
       name,

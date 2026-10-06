@@ -1101,6 +1101,9 @@
     position: sticky;
     top: 0;
     padding: calc(var(--safe-t) + 16px) var(--gut) 0;
+    /* Its own stacking context, so the dim behind an open dropdown (a layer
+       under the bar) still sits over the page. */
+    isolation: isolate;
   }
   .tb-in {
     grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
@@ -1399,4 +1402,277 @@
   --dd-bg: rgba(24, 24, 24, 0.74);
   --dd-fg2: rgba(245, 245, 245, 0.72);
   --dd-fg3: rgba(245, 245, 245, 0.6);
+}
+
+/* ---------- the bar's Services panel (SCOPE-header.md §3c, §3d) ---------- */
+@media (min-width: 1200px), (min-width: 900px) and (orientation: landscape) {
+  .tb-nav {
+    position: relative;
+  }
+  .nav-dd {
+    position: static;
+  }
+  .nav-pill {
+    font: inherit;
+    font-weight: 600;
+    font-size: 13.5px;
+  }
+  .nav-pill .nav-chev {
+    margin: 0 -4px 0 -2px;
+    color: var(--p-fg3);
+    transition: transform 0.18s ease;
+  }
+  .nav-pill[aria-current='page'] .nav-chev {
+    color: inherit;
+  }
+  .nav-pill[aria-expanded='true'] {
+    background: var(--inset-2);
+    color: var(--p-fg);
+  }
+  .nav-pill[aria-expanded='true'] .nav-chev {
+    transform: rotate(180deg);
+  }
+  /* The panel: 820 px, centred under the pills, hanging off the bar's edge in its glass. */
+  .sp {
+    position: absolute;
+    z-index: 60;
+    top: calc(100% + 11px);
+    left: 50%;
+    transform: translateX(-50%);
+    width: 820px;
+    max-width: calc(100vw - 2 * var(--gut) - 24px);
+    box-sizing: border-box;
+    padding: 14px 14px 10px;
+    border-radius: 0 0 24px 24px;
+    background: var(--dd-bg);
+    -webkit-backdrop-filter: blur(var(--g-blur)) saturate(var(--g-sat));
+    backdrop-filter: blur(var(--g-blur)) saturate(var(--g-sat));
+    box-shadow:
+      inset 0 0 0 1px var(--g-rim),
+      0 30px 60px -20px rgba(0, 0, 0, 0.5);
+    color: var(--p-fg);
+    --p-fg2: var(--dd-fg2);
+    --p-fg3: var(--dd-fg3);
+    text-align: left;
+    font-weight: 500;
+  }
+  .sp-h {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 2px 8px 8px;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--p-fg3);
+  }
+  .sp-g {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .sp-r {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    border-radius: 16px;
+    background: var(--dd-row);
+  }
+  .sp-l {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    height: 56px;
+    padding: 0 12px;
+    border-radius: 16px;
+    color: inherit;
+    text-decoration: none;
+  }
+  .sp-r:has(.sp-arrow) .sp-l {
+    padding-right: 4px;
+  }
+  .sp-r:hover,
+  .sp-r:focus-within {
+    background: var(--dd-row-on);
+  }
+  .sp-ring {
+    width: 30px;
+    height: 30px;
+  }
+  .sp-ring circle {
+    stroke-width: 11;
+  }
+  .sp-ring .st-ring-fill {
+    stroke: var(--svc);
+  }
+  .sp-ring.is-bad .st-ring-fill {
+    stroke: var(--overdue);
+  }
+  .sp-ring > span {
+    font-size: 10.5px;
+    font-weight: 700;
+  }
+  .sp-ring.is-ok > span {
+    color: var(--svc);
+  }
+  .sp-ring.is-bad > span {
+    color: var(--overdue);
+  }
+  .sp-n {
+    display: grid;
+    min-width: 0;
+    line-height: 1.2;
+  }
+  .sp-n b {
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .sp-n span {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--p-fg3);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .sp-f {
+    font-family: var(--f-num);
+    font-size: 13px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .sp-r.quiet .sp-f {
+    color: var(--p-fg2);
+  }
+  .sp-arrow {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    margin-right: 8px;
+    border: 0;
+    border-radius: 9px;
+    background: none;
+    color: var(--p-fg3);
+    cursor: pointer;
+  }
+  .sp-arrow .ic {
+    transition: transform 0.18s ease;
+  }
+  /* A main service's row grows downward into its parts: one piece with its list (T10). */
+  .sp-r.open {
+    z-index: 2;
+    border-radius: 16px 16px 0 0;
+    background: var(--dd-row-on);
+  }
+  .sp-r.open .sp-arrow .ic {
+    transform: rotate(180deg);
+  }
+  .sp-kids {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    display: grid;
+    gap: 1px;
+    padding: 0 6px 6px;
+    border-radius: 0 0 16px 16px;
+    background: var(--dd-row-on);
+    box-shadow: 0 20px 40px -18px rgba(0, 0, 0, 0.5);
+  }
+  .sp-k {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    height: 34px;
+    padding: 0 8px;
+    border-radius: 10px;
+    color: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .sp-k:hover,
+  .sp-k:focus-visible {
+    background: var(--inset-2);
+    outline: none;
+  }
+  .sp-k i {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--svc);
+  }
+  .sp-k span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .sp-k b {
+    font-family: var(--f-num);
+    font-size: 12.5px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .sp-k.sp-open {
+    grid-template-columns: minmax(0, 1fr) auto;
+    margin-top: 2px;
+    border-top: 1px solid var(--line);
+    border-radius: 0 0 10px 10px;
+    color: var(--p-fg2);
+    font-size: 12px;
+  }
+  .sp-ft {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 6px 2px;
+    border-top: 1px solid var(--line);
+  }
+  .sp-all {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    color: var(--p-fg2);
+    font-size: 12.5px;
+    font-weight: 700;
+    text-decoration: none;
+  }
+  .sp-all:hover {
+    color: var(--p-fg);
+  }
+  .sp-all span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .sp-empty {
+    margin: 4px 8px 12px;
+    font-size: 13px;
+    color: var(--p-fg2);
+  }
+}
+/* The panel's rows: a well on the glass, and a solid for a row grown into its list. */
+:root {
+  --dd-row: rgba(28, 28, 28, 0.05);
+  --dd-row-on: #e6e6e6;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --dd-row: rgba(255, 255, 255, 0.06);
+    --dd-row-on: #2c2c2c;
+  }
+}
+:root[data-theme='dark'] {
+  --dd-row: rgba(255, 255, 255, 0.06);
+  --dd-row-on: #2c2c2c;
 }

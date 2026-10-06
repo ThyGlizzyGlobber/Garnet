@@ -3,7 +3,9 @@ import type { ReactNode } from 'react';
 import { Avatar } from '@/components/ui/colour';
 import { IconButton } from '@/components/ui/controls';
 import { formatMoney, formatMoneyParts, formatMonth } from '@/lib/format';
-import type { ShellView } from '@/lib/shell';
+import { colourCss } from '@/lib/palette';
+import type { ShellEntry, ShellStatus, ShellView } from '@/lib/shell';
+import { ServicesPanel, type PanelRow, type PanelSection } from './services-panel';
 import { logout } from '@/app/login/actions';
 import { AccountMenu, type AccountMenuItem } from './account-menu';
 import { AddBillButton } from './add-bill';
@@ -47,6 +49,23 @@ export interface ShellLabels {
     nothingDue: string;
     /** The ring, for screen readers: "12% of this month's bills paid". */
     ring: (percent: string) => string;
+  };
+  /** Categories that are main services: "Vehicles", "Health". */
+  main: Record<string, string>;
+  /** The bar's Services panel (SCOPE-header.md §3c). */
+  panel: {
+    title: string;
+    all: (amount: string) => string;
+    toPayWeek: (count: number) => string;
+    add: string;
+    open: (name: string) => string;
+    parts: string;
+    nothing: string;
+    none: string;
+    /** "Paid", "3 days overdue", "Due 12 Oct": the ui.status words. */
+    status: (key: string, n: number, date: string) => string;
+    otherServices: string;
+    myServices: string;
   };
   /** The product's name, under the household's on a phone's Home. */
   product: string;
@@ -186,6 +205,7 @@ export function AppShell({
     sub: view.me.email ?? (account ? labels.account : `${myRole} · ${view.household.name}`),
   };
   const card = account || !view.month ? null : householdCard(view, labels, locale);
+  const panel = account ? null : servicesPanel(view, labels, locale);
   return (
     <div className="app">
       {/* The bar (SCOPE-header.md §3a); on a phone the household card and the
@@ -214,7 +234,11 @@ export function AppShell({
           </div>
           {/* The links as pills, the current one filled (the phone's are along the bottom). */}
           <nav className="tb-nav" aria-label="Main">
-            <NavItems items={items} iconSize={17} />
+            <NavItems
+              items={items}
+              iconSize={17}
+              panels={panel ? { '/services': panel } : undefined}
+            />
           </nav>
           <div className="tb-r">
             {!account && <IconButton icon="search" label={labels.search} href="/bills?find=1" />}
@@ -257,6 +281,93 @@ export function AppShell({
         />
       </nav>
     </div>
+  );
+}
+
+/**
+ * The bar's Services panel (SCOPE-header.md §3c): every service as a row
+ * led by its ring and where it stands, in the household's groups with their
+ * totals, then My Services, worded here from shellView().
+ */
+function servicesPanel(view: ShellView, labels: ShellLabels, locale: string): ReactNode {
+  const money = (minor: number) => formatMoney(minor, view.currency, locale, { whole: true });
+  const figure = (minor: number) => (minor ? money(minor) : '—');
+  const dm = new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', timeZone: 'UTC' });
+  const dmy = new Intl.DateTimeFormat(locale, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
+  const thisYear = view.month?.month.slice(0, 4);
+  const date = (ymd: string) =>
+    (ymd.slice(0, 4) === thisYear ? dm : dmy).format(new Date(`${ymd}T00:00:00Z`));
+  // The ring: filled by the days left (full at 30 and over), a tick when paid,
+  // Pyrope when overdue, empty when nothing is due this month.
+  const ring = (s: ShellStatus): PanelRow['ring'] & { status: string } => {
+    if (!s) return { pct: 0, centre: '', tick: false, tone: 'none', status: labels.panel.nothing };
+    const status = labels.panel.status(s.key, Math.abs(s.days), date(s.dueDate));
+    if (s.key === 'paid') return { pct: 1, centre: '', tick: true, tone: 'ok', status };
+    if (s.key === 'overdue')
+      return { pct: 1, centre: String(-s.days), tick: false, tone: 'bad', status };
+    return {
+      pct: 1 - Math.min(s.days, 30) / 30,
+      centre: String(s.days),
+      tick: false,
+      tone: s.days <= 7 ? 'warn' : 'neutral',
+      status,
+    };
+  };
+  const nameOf = (e: ShellEntry) =>
+    e.kind === 'group' && e.category ? (labels.main[e.category] ?? e.name) : e.name;
+  const row = (e: ShellEntry): PanelRow => {
+    const { status, ...r } = ring(e.status);
+    return {
+      key: e.key,
+      href: e.href,
+      name: nameOf(e),
+      colour: colourCss(e.colour),
+      figure: figure(e.minor),
+      ring: r,
+      status,
+      children:
+        e.kind === 'group'
+          ? e.children.map((c) => ({
+              id: c.id,
+              href: c.href,
+              name: c.name,
+              figure: figure(c.minor),
+            }))
+          : undefined,
+      openLabel: e.kind === 'group' ? labels.panel.open(nameOf(e)) : undefined,
+    };
+  };
+  const sectionsOf = (secs: ShellView['sections'], other: string): PanelSection[] =>
+    secs.map((sec) => ({
+      name: sec.group?.name ?? (secs.length > 1 ? other : ''),
+      total: money(sec.entries.reduce((sum, e) => sum + e.minor, 0)),
+      rows: sec.entries.map(row),
+    }));
+  const sections = sectionsOf(view.sections, labels.panel.otherServices);
+  // The household's services in no group, headed "Services" when they are the only section.
+  if (sections.length === 1 && !sections[0]!.name) sections[0]!.name = labels.panel.title;
+  const mine = sectionsOf(view.mine, labels.panel.otherServices).map((s) => ({
+    ...s,
+    name: s.name ? `${labels.panel.myServices} · ${s.name}` : labels.panel.myServices,
+  }));
+  const total = view.month ? money(view.month.totalMinor) : money(0);
+  return (
+    <ServicesPanel
+      sections={sections}
+      mine={mine}
+      labels={{
+        title: labels.panel.title,
+        all: `${labels.panel.all(total)} · ${labels.panel.toPayWeek(view.toPayWeek)}`,
+        add: labels.panel.add,
+        parts: labels.panel.parts,
+        none: labels.panel.none,
+      }}
+    />
   );
 }
 

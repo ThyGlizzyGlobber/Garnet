@@ -192,6 +192,53 @@ describe('shellView', () => {
     expect(after?.kind === 'group' && after.children.map((c) => c.name)).toEqual(['Yoga', 'Gym']);
   });
 
+  it('says where each service stands this month, for the bar’s panel', () => {
+    const hh = createHousehold(
+      {
+        name: 'Standing',
+        currency: 'AUD',
+        locale: 'en-AU',
+        timezone: 'Australia/Melbourne',
+        fiscalYearStartMonth: 7,
+        splitMode: 'shared',
+      },
+      db,
+    );
+    const kim = createMember(hh.id, { name: 'Kim', role: 'owner', activeFrom: '2026-01-01' }, db);
+    const svc = (typeSlug: string, name: string) =>
+      createService(hh.id, { typeSlug, name, provider: name, payerMemberId: kim.id }, db);
+    const water = svc('water', 'Water');
+    const power = svc('electricity', 'Electricity');
+    svc('gas', 'Gas');
+    const bill = (serviceId: string, dueDate: string) =>
+      createBill(
+        hh.id,
+        {
+          serviceId,
+          amountMinor: 10_000,
+          periodStart: '2026-06-01',
+          periodEnd: '2026-08-31',
+          dueDate,
+          source: 'manual',
+        },
+        db,
+      );
+    bill(water.id, '2026-09-12');
+    bill(power.id, '2026-10-03');
+    const view = shellView(hh, kim, '2026-09-29', db);
+    const standing = Object.fromEntries(
+      view.sections.flatMap((x) => x.entries.map((e) => [e.name, e.status])),
+    );
+    // Water was due 17 days ago; power is due next month, so nothing this month; gas has no bill.
+    expect(standing).toMatchObject({
+      Water: { key: 'overdue', days: -17, dueDate: '2026-09-12' },
+      Electricity: null,
+      Gas: null,
+    });
+    // Overdue counts as to pay this week; next week's bill does too once it is within seven days.
+    expect(view.toPayWeek).toBe(2);
+  });
+
   it('shares the household’s groups with everyone, and only admins change them', () => {
     const hh = createHousehold(
       {

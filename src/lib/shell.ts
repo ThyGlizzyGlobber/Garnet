@@ -3,7 +3,8 @@ import { householdTiles, type HouseholdTile } from '@/lib/account';
 import type { HouseholdType } from '@/lib/household-types';
 import { getDb, type Db } from '@/db/client';
 import { listAssets } from '@/lib/assets';
-import { listBills } from '@/lib/bills';
+import { listBills, type BillListItem } from '@/lib/bills';
+import { billStatus, type BillStatus } from '@/lib/bill-status';
 import { dueParts } from '@/lib/instalments';
 import { listActiveMembers } from '@/lib/members';
 import { monthDue, type MonthDue } from '@/lib/month-due';
@@ -44,7 +45,15 @@ interface ShellService {
   /** Minor units: what's due on it this month. */
   minor: number;
   href: string;
+  /** Where it stands this month, for the bar's Services panel (SCOPE-header.md §3c). */
+  status: ShellStatus;
 }
+
+/**
+ * The most pressing of a service's bills (or instalments) due this month:
+ * overdue, then due, then paid; null when nothing is due on it this month.
+ */
+export type ShellStatus = Pick<BillStatus, 'key' | 'days' | 'dueDate'> | null;
 
 /**
  * A line in the nav's services: a service on its own, or a main service with
@@ -62,6 +71,7 @@ export type ShellEntry =
       category: GroupedCategory | null;
       colour: string;
       minor: number;
+      status: ShellStatus;
       children: ShellService[];
     };
 
@@ -91,6 +101,8 @@ export interface ShellView {
   /** What each line is, for naming a group (the menu's editor). */
   lines: NavLine[];
   inboxCount: number;
+  /** Bills (and instalments) still to pay that are due within a week or overdue, for the panel's foot. */
+  toPayWeek: number;
   /** The household's bills address, for the Add bill sheet. */
   address: string | null;
   me: {
@@ -116,7 +128,10 @@ export function shellView(hh: Household, me: Member, today: string, db: Db = get
   // Vehicles, each with what's due on it this month.
   const bills = listBills(hh.id, scope, db);
   const vehicleBills = bills.filter((b) => b.assetId);
-  const vehicles = (owner: string | null): ShellService[] =>
+  const vehicles = (
+    owner: string | null,
+    status: (assetId: string) => ShellStatus,
+  ): ShellService[] =>
     listAssets(hh.id, owner ? { kind: 'vehicle', owner } : { kind: 'vehicle' }, db).map((a) => ({
       id: a.id,
       name: a.name,
@@ -127,14 +142,28 @@ export function shellView(hh: Household, me: Member, today: string, db: Db = get
         .filter((p) => p.dueDate.slice(0, 7) === today.slice(0, 7))
         .reduce((sum, p) => sum + p.amountMinor, 0),
       href: `/services/vehicles/${a.id}`,
+      status: status(a.id),
     }));
   const minor = (s: ServiceWithType) => due.get(s.id) ?? 0;
+  // Where each service stands this month: the most pressing of its parts due this month.
+  const thisMonth = today.slice(0, 7);
+  const parts = (b: BillListItem) =>
+    dueParts(b)
+      .filter((p) => p.dueDate.slice(0, 7) === thisMonth)
+      .map((p) => billStatus(p.paidAt, p.dueDate, today));
+  const statusOf = (ids: string[]): ShellStatus =>
+    worst(bills.filter((b) => ids.includes(b.serviceId)).flatMap(parts));
+  const vehicleStatus = (id: string): ShellStatus =>
+    worst(vehicleBills.filter((b) => b.assetId === id).flatMap(parts));
   // The household's services, arranged in the viewer's groups; then My Services, their own.
   const layout = getNavLayout(me, db);
   const groups = groupServices(listServices(hh.id, {}, db));
-  const all = entries(groups, minor, vehicles(null), false, layout);
+  const all = entries(groups, minor, statusOf, vehicles(null, vehicleStatus), false, layout);
   const ownGroups = groupServices(listServices(hh.id, { owner: me.id }, db));
-  const own = entries(ownGroups, minor, vehicles(me.id), true, layout);
+  const own = entries(ownGroups, minor, statusOf, vehicles(me.id, vehicleStatus), true, layout);
+  const toPayWeek = bills
+    .flatMap((b) => dueParts(b))
+    .filter((p) => !p.paidAt && billStatus(null, p.dueDate, today).days <= 7).length;
   const essential = (e: ShellEntry) =>
     e.kind === 'service' && isEssential(groups.find((g) => navKey(g) === e.key)!.services[0]!.type);
   return {
@@ -155,6 +184,7 @@ export function shellView(hh: Household, me: Member, today: string, db: Db = get
     mine: arrangeMine(own, (e) => e.key, layout),
     lines: [...navLines(groups), ...navLines(ownGroups, true)],
     inboxCount: documentCounts(hh.id, { viewer: me.id }, db).needs_review,
+    toPayWeek,
     address: billsAddress(hh, db),
     me: { name: me.name, colour: me.colour, admin: isAdmin(me), role: me.role },
     developer: false,
@@ -170,9 +200,25 @@ export function navLines(groups: ServiceGroup<ServiceWithType>[], mine = false):
   }));
 }
 
+const RANK: Record<BillStatus['key'], number> = {
+  overdue: 0,
+  today: 1,
+  tomorrow: 2,
+  soon: 3,
+  due: 4,
+  paid: 5,
+};
+/** The most pressing status, or null with none. */
+function worst(xs: BillStatus[]): ShellStatus {
+  const w = xs.reduce<BillStatus | null>((a, s) => (!a || RANK[s.key] < RANK[a.key] ? s : a), null);
+  return w && { key: w.key, days: w.days, dueDate: w.dueDate };
+}
+
 function entries(
   groups: ServiceGroup<ServiceWithType>[],
   minor: (s: ServiceWithType) => number,
+  /** Where a set of services stands this month. */
+  statusOf: (ids: string[]) => ShellStatus,
   /** Vehicles' lines: the vehicles themselves, when there are any. */
   vehicles: ShellService[],
   /** The viewer's own (My Services). */
@@ -187,6 +233,7 @@ function entries(
     colour: s.colour,
     minor: minor(s),
     href: `/services/${s.id}`,
+    status: statusOf([s.id]),
   });
   return groups.map((g): ShellEntry => {
     const key = navKey(g, mine);
@@ -203,6 +250,7 @@ function entries(
               colour: type.colour,
               minor: of.reduce((sum, s) => sum + minor(s), 0),
               href: '/services/category/vehicle',
+              status: statusOf(of.map((s) => s.id)),
             }))
           : g.services.map(line);
     return {
@@ -214,6 +262,7 @@ function entries(
       colour: g.colour,
       // Its services' month added up, like every other line.
       minor: g.services.reduce((sum, s) => sum + minor(s), 0),
+      status: statusOf(g.services.map((s) => s.id)),
       children: orderChildren(children, (c) => c.id, layout, [key]),
     };
   });
