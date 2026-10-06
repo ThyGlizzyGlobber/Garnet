@@ -1,7 +1,8 @@
 # Scope: Edit Home without a mode
 
 _Drafted 2026-10-07 from the design canvas "Garnet Edit Home"
-(https://claude.ai/artifact/LfLK2PCemxkhAFVB9eyRMQ). The settled boards are E1
+(https://claude.ai/artifact/LfLK2PCemxkhAFVB9eyRMQ); **built the same day**
+(E1–E4, the decisions log in CLAUDE.md). The settled boards are E1
 (moving without a mode), E3 (the gallery sheet, with the plus in each size's
 corner and no caption under the sizes) and E4 (the sheet dropping to a strip
 while something is dragged). E2 is today's widget menu drawn with the new

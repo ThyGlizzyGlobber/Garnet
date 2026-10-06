@@ -259,13 +259,11 @@ export function AppShell({
               <Avatar name={view.me.name} colour={view.me.colour} photo={view.me.photo} />
             </AccountMenu>
           </div>
-          {/* Edit Home's bar takes over the bar here (SCOPE-shell.md §3g). */}
         </div>
       </header>
 
       <main className="main">
         <div className="main-in">
-          {/* Edit Home puts Add a widget here, at the page's left edge (SCOPE-header.md §3f). */}
           <div className="page">
             {/* A page's way back lands here (TopBack), on the page, never in the bar. */}
             <span id="tb-back" className="tb-back" />

@@ -374,8 +374,8 @@ picks one of two layouts by the screen's shape, written out in
   heading). Everyone arranges their own My Services the same way. The panel,
   the Services page and each main service's page show the same order.
 - **The page's way back** ("← Bills") sits on the page above its title, never
-  in the bar. **Edit Home**'s bar takes over the bar, and Add a widget sits in
-  a column at the page's left edge until Done.
+  in the bar. Nothing takes the bar over: Add a widget is a sheet from the
+  bottom of the page (below).
 - **The phone's layout (everything else: a phone, an upright iPad a size up,
   a narrow landscape window).** The household as a glass card across the top
   (its ring, name and total; it drops the plain list of households), search,
@@ -425,21 +425,36 @@ picks one of two layouts by the screen's shape, written out in
   - **States:** overdue (the ring full and red), all paid (full, a tick),
     nothing due (empty, a tick), no bills yet (empty, the service's icon
     filled), loading (empty, grey bars).
+  - **One page** (SCOPE-edit-home.md E-D5): Home is the grid the screen
+    has, with no paging and no dots. What the grid has no room for stays in
+    the layout hidden and comes back when there is room; a full grid refuses
+    a widget and says so.
+  - **Moving needs no mode** (E-D1): press a widget and move it and it lifts
+    into a ghost with a dashed hole where it will land; a click still opens
+    it. On touch, press and hold opens the menu, and moving on from the hold
+    lifts the widget. Dropping saves. Empty blocks show dashed, with a plus
+    and "Drop a widget here", only while something is dragged or the sheet
+    is open.
   - **A widget's menu** (press and hold, right-click, or the menu key /
-    Shift+F10 on a focused widget): Edit Home, Change size (Small · Medium ·
-    Large), Remove widget in the overdue red. Moving on from a press and
-    hold lifts the widget into Edit Home. There is no Edit Home button on
-    Home; the account menu has Edit Home too.
-  - **Edit Home**: under the bar its own bar takes over it ("Edit Home"
-    and "Drag to move · tap a widget to change its size"; the grid density,
-    Reset, Done) and **Add a widget** takes a column at the page's left edge until Done: search,
-    the list, a hint until one is picked, then its size, the widget as it
-    will be, Add to Home, with the block it would go in marked on the grid.
-    Elsewhere the bar sits over the grid with an Add widget button and the
-    same panel in a sheet. Widgets show a round remove button in the
-    top-left corner; a tapped one is outlined with a Small · Medium · Large
-    picker under it; empty blocks are dashed with a plus and "Drop a widget
-    here".
+    Shift+F10 on a focused widget): Change size (Small · Medium · Large),
+    Add a widget, Remove widget in the overdue red. The account menu has Add
+    a widget too, and a right-click or press and hold on empty space opens
+    it; the wall has a button under its grid.
+  - **Add a widget** (board E3 of the canvas "Garnet Edit Home") is a sheet
+    that rises from the bottom of the page in the bar's glass, inside the
+    site-wide cap, 440 px tall; the grid keeps every column under it. Its
+    head: the title, "Drag a widget onto Home, or add it", the grid's
+    density, Reset and Done. Its body: search and the widgets not on Home in
+    two columns (Not on screen, Household, Services, each service with its
+    colour dot) on the left; on the right the picked widget's name and line
+    and the widget drawn at Small, Medium and Large side by side, each with
+    a plus in its top-left corner that adds it to the first free block, and
+    each draggable onto the grid with a mouse or pen. While anything is
+    dragged, from the sheet or on the grid, the sheet drops to its head
+    ("Drop it on Home · the sheet comes back after") and rises on the drop.
+    Done, Escape or a press on the page outside closes it; a press on a
+    widget doesn't. On a phone the sheet stands taller with the sizes
+    stacked, added with their plus.
 - **The Services page** (SCOPE-services.md, boards Q, R, S, K and M) is the
   analytics tool and a tile per service. The tool is one glass card at the
   left (340 px under the bar; a row that swipes on a phone) headed
