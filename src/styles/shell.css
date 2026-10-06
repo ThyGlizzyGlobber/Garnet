@@ -1688,3 +1688,45 @@
   --dd-row: rgba(255, 255, 255, 0.06);
   --dd-row-on: #2c2c2c;
 }
+
+/* ---------- an iPad on its side (SCOPE-header.md §3g) ---------- */
+/* The bar keeps every link with its name; the mark stands for the word Garnet. */
+@media (min-width: 900px) and (max-width: 1199px) and (orientation: landscape) {
+  .tb-in {
+    padding: 0 10px 0 14px;
+    gap: 6px;
+  }
+  .tb-logo span {
+    display: none;
+  }
+  .tb-logo {
+    padding-right: 2px;
+  }
+  .topbar .tb-hh {
+    padding-left: 10px;
+  }
+  .tb-hh .brand-t b {
+    max-width: 170px;
+  }
+  .sw-fit {
+    max-width: 20ch;
+  }
+  .tb-nav .nav-items {
+    gap: 2px;
+  }
+  .tb-nav .nav-i {
+    padding: 0 11px;
+    gap: 6px;
+    font-size: 13px;
+  }
+  .tb-add span {
+    display: none;
+  }
+  .tb-add {
+    width: 38px;
+    padding: 0;
+  }
+  .sp {
+    width: 760px;
+  }
+}
