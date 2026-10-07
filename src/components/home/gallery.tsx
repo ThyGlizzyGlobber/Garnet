@@ -239,7 +239,12 @@ export function Gallery({
             <>
               <div className="hg-about">
                 {service(picked) ? (
-                  <Disc icon={picked.icon} colour={service(picked)!.colour} size="sm" />
+                  <Disc
+                    icon={picked.icon}
+                    colour={service(picked)!.colour}
+                    size={36}
+                    iconSize={18}
+                  />
                 ) : (
                   <span className="hg-about-ic">
                     <Icon name={picked.icon} width={18} height={18} />

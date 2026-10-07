@@ -301,7 +301,8 @@
   align-items: center;
   gap: 12px;
   min-height: 60px;
-  padding: 0 14px 0 22px;
+  /* One left edge for the title, the search field and the list's rows: 20 px in. */
+  padding: 0 14px 0 20px;
   border-bottom: 1px solid var(--line);
 }
 .hg-sheet-h h2 {
@@ -331,7 +332,7 @@
   flex-direction: column;
   gap: 10px;
   min-height: 0;
-  padding: 14px 12px;
+  padding: 14px 20px 14px 20px;
   border-right: 1px solid var(--line);
 }
 .hg-list .search {
@@ -347,7 +348,7 @@
   gap: 10px;
 }
 .hg-sec h3 {
-  margin: 0 6px 4px;
+  margin: 0 0 4px;
   font-size: 11px;
   font-weight: 700;
   color: var(--p-fg3);
@@ -358,6 +359,8 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1px 6px;
+  /* The rows' own padding sits outside the edge, so their icons line up with the field's. */
+  margin: 0 -8px;
 }
 .add-pick {
   display: flex;
@@ -506,6 +509,9 @@
     flex-wrap: wrap;
     gap: 8px 10px;
     padding: 10px 12px 10px 16px;
+  }
+  .hg-list {
+    padding: 14px 16px;
   }
   .hg-sheet-hint {
     display: none;
