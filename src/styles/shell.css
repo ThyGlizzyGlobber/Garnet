@@ -1389,9 +1389,8 @@
 }
 /* ---------- the bar's Services panel (SCOPE-header.md §3c, §3d) ---------- */
 @media (min-width: 1200px), (min-width: 900px) and (orientation: landscape) {
-  .tb-nav {
-    position: relative;
-  }
+  /* The panel is placed against the bar itself, so it can centre under the bar and never run past its edges. */
+  .tb-nav,
   .nav-dd {
     position: static;
   }
@@ -1457,10 +1456,11 @@
   .sp {
     position: absolute;
     z-index: 60;
-    top: calc(100% + 18px);
-    left: 0;
+    top: calc(100% + 10px);
+    left: 50%;
+    transform: translateX(-50%);
     width: 820px;
-    max-width: calc(100vw - 2 * var(--gut) - 24px);
+    max-width: 100%;
     box-sizing: border-box;
     padding: 14px 14px 10px;
     border-radius: 24px;
@@ -1721,6 +1721,6 @@
     padding: 0;
   }
   .sp {
-    width: 760px;
+    width: min(760px, 100%);
   }
 }
