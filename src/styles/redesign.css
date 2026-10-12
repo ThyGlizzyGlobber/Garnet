@@ -2075,3 +2075,88 @@ details.more-rows[open] > summary {
     padding: 20px;
   }
 }
+
+/*
+  Home fits the window on a desktop or an iPad on its side (SCOPE-redesign-2.md
+  §4: the reference fits one screen): the page is as tall as the room under
+  the bar, the bottom row keeps its height, the top row takes the rest, and
+  inside the hero the bill list and the chart shrink to fit (the list scrolls
+  if a month has many bills). A very short window still scrolls the page.
+*/
+@media (min-width: 1200px), (min-width: 900px) and (orientation: landscape) {
+  .hm {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    height: calc(100dvh - var(--safe-t) - 16px - var(--bar-h, 60px) - 20px - var(--gut));
+    min-height: 560px;
+  }
+  .hm > * {
+    flex: none;
+  }
+  .hm > .two-up:has(.hm-hero) {
+    flex: 1 1 auto;
+    min-height: 0;
+    gap: 16px;
+  }
+  .hm > .two-up:has(.hm-week) {
+    gap: 16px;
+  }
+  /* The top row's cards are exactly as tall as the row, so what's inside shrinks to fit. */
+  .hm > .two-up:has(.hm-hero) > * {
+    height: 100%;
+    min-height: 0;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+  /* One line of two columns (a wrapped line never shrinks below its content), so the columns take the card's height. */
+  .hm-hero {
+    padding: 26px 32px;
+    gap: 28px;
+    flex-wrap: nowrap;
+    align-items: stretch;
+  }
+  .hm-hero-l,
+  .hm-fig {
+    flex: 1 1 0;
+    min-height: 0;
+  }
+  .hm-hero-l {
+    min-height: 0;
+    gap: 16px;
+  }
+  .hm-list {
+    flex: 0 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+  .hm-list li {
+    padding: 11px 0;
+  }
+  .hm-hero-l .tlink {
+    margin-top: auto;
+    min-height: 36px;
+  }
+  .hm-fig {
+    min-height: 0;
+  }
+  .hm-fig .bars {
+    min-height: 140px;
+  }
+  .hm-next {
+    padding: 24px 28px;
+    gap: 16px;
+  }
+  .hm-week,
+  .hm-ahead {
+    padding: 22px 28px;
+    gap: 16px;
+  }
+  .hm-week-line {
+    padding-top: 14px;
+  }
+  .hm-ahead-rows {
+    gap: 14px;
+  }
+}
