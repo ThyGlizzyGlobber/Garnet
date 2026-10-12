@@ -237,7 +237,14 @@ export function AppShell({
             />
           </nav>
           <div className="tb-r">
-            {!account && <IconButton icon="search" label={labels.search} href="/bills?find=1" />}
+            {!account && (
+              <IconButton
+                icon="search"
+                label={labels.search}
+                href="/bills?find=1"
+                className="tb-search"
+              />
+            )}
             {!account && <AddBillButton address={view.address} className="tb-add" />}
             <AccountMenu
               place="topbar"
@@ -379,7 +386,9 @@ function householdCard(view: ShellView, labels: ShellLabels, locale: string): Re
       </StackRing>
       <span className="st-hh-t">
         <span>
-          {view.household.name} · {formatMonth(m.month, locale)}
+          {view.household.name}
+          {/* The month goes on a phone, where the card has no room for it. */}
+          <span className="st-month"> · {formatMonth(m.month, locale)}</span>
         </span>
         <b>
           {fig.main}
