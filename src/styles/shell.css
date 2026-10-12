@@ -1077,8 +1077,9 @@
     isolation: isolate;
   }
   .tb-in {
-    /* The sides never shrink below what they hold (the brand and household, the buttons); the pills sit between. */
-    grid-template-columns: minmax(max-content, 1fr) auto minmax(max-content, 1fr);
+    /* Equal sides when there's room (the pills centred in the bar); each side can shrink to
+       what it holds when there isn't, and the household name keeps a few characters. */
+    grid-template-columns: minmax(min-content, 1fr) auto minmax(min-content, 1fr);
     height: var(--bar-h);
     padding: 0 12px 0 16px;
     gap: 8px;
@@ -1248,6 +1249,7 @@
     font-weight: 650;
     font-size: 15px;
     letter-spacing: 0;
+    min-width: 9ch;
     max-width: 260px;
   }
   .tb-hh .sw-btn > .sw-chev {
@@ -1374,8 +1376,9 @@
     padding: 0 11px;
   }
 }
-/* With a seventh pill (Money, where bills are split) the same under 1500 px. */
-@media (min-width: 1200px) and (max-width: 1499px) {
+/* With a seventh pill (Money, where bills are split) the same at every desktop width: seven
+   labelled pills and the household's name don't fit the 1280 px bar together. */
+@media (min-width: 1200px) {
   .tb-nav .nav-items:has(> :nth-child(7)) .nav-i:not([aria-current='page']) > span,
   .tb-nav .nav-items:has(> :nth-child(7)) .nav-pill:not(.on) .nav-pill-link > span {
     display: none;
