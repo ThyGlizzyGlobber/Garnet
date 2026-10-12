@@ -1013,6 +1013,15 @@
     top: calc(100% + 12px);
     width: min(340px, calc(100vw - 2 * var(--gut)));
   }
+  /* The account menu hangs under the whole top bar, clear of the household card beside the avatar. */
+  .am.am-topbar {
+    position: static;
+  }
+  .am-topbar .am-menu {
+    top: calc(100% + 8px);
+    right: 0;
+    width: min(300px, 100%);
+  }
   /* The links: one glass card. */
   .nav.bar {
     border-radius: 24px;
