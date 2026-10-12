@@ -2088,16 +2088,34 @@ details.more-rows[open] > summary {
     display: flex;
     flex-direction: column;
     gap: 16px;
-    height: calc(100dvh - var(--safe-t) - 16px - var(--bar-h, 60px) - 20px - var(--gut));
-    min-height: 560px;
+    /* The room under the bar, but never so little that the cards are crushed: a short window scrolls instead. */
+    height: max(
+      calc(100dvh - var(--safe-t) - 16px - var(--bar-h, 60px) - 20px - var(--gut)),
+      760px
+    );
   }
   .hm > * {
     flex: none;
   }
+  /* The hero and Next due stay side by side (a wrapped card would overflow the row's height). */
   .hm > .two-up:has(.hm-hero) {
     flex: 1 1 auto;
+    flex-wrap: nowrap;
     min-height: 0;
     gap: 16px;
+  }
+  .hm > .two-up > .hm-hero {
+    flex: 2 1 0;
+  }
+  .hm > .two-up > .hm-next {
+    flex: 1 1 0;
+    min-width: 280px;
+  }
+  .hm-hero .hero-num {
+    font-size: clamp(56px, 6.5vw, 96px);
+  }
+  .hm-hero .hero-num .cents {
+    font-size: 0.46em;
   }
   .hm > .two-up:has(.hm-week) {
     gap: 16px;
@@ -2127,7 +2145,8 @@ details.more-rows[open] > summary {
   }
   .hm-list {
     flex: 0 1 auto;
-    min-height: 0;
+    /* At least three rows show before the list scrolls. */
+    min-height: 138px;
     overflow-y: auto;
     scrollbar-width: thin;
   }
@@ -2142,7 +2161,7 @@ details.more-rows[open] > summary {
     min-height: 0;
   }
   .hm-fig .bars {
-    min-height: 140px;
+    min-height: 120px;
   }
   .hm-next {
     padding: 24px 28px;
