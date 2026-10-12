@@ -19,10 +19,11 @@ import { HouseholdSwitcher, type SwitcherLabels, type SwitcherRow } from './hous
 import { roleKey, typeIcon } from '@/lib/household-types';
 
 /**
- * The app's frame (BRAND.md §9, SCOPE-header.md): the scene behind, and on
- * a desktop or an iPad on its side one glass bar across the top: the brand
- * and the household on the left, the links as pills in the middle, search,
- * Add bill and you on the right. The household's name drops its switcher,
+ * The app's frame (BRAND.md §9, SCOPE-redesign-2.md §3 TopNav): the scene
+ * behind, and on a desktop or an iPad on its side one pill bar across the
+ * top: the brand and the household on the left, the links as pills in the
+ * middle (Home, Services, Bills, Budget, Members, Inbox; Money after Budget
+ * where bills are split), search, Add bill and you on the right. The household's name drops its switcher,
  * your avatar the account menu, and (H2) Services drops a panel of every
  * service. The page has the whole width under the bar, inside a site-wide
  * cap. A phone, or an upright iPad, keeps the household as a card across the
@@ -34,6 +35,7 @@ export interface ShellLabels {
     home: string;
     services: string;
     bills: string;
+    budget: string;
     money: string;
     members: string;
     inbox: string;
@@ -76,13 +78,11 @@ export interface ShellLabels {
   console: string;
   /** "Your households": the switcher's name in the account area. */
   yourHouseholds: string;
-  /** The account area's pills: Overview, then My Account's pages. */
+  /** The account area's three pills (SCOPE-redesign-2.md §4): Households, Notifications, Account. */
   acct: {
-    overview: string;
-    profile: string;
+    households: string;
     notifications: string;
-    security: string;
-    appearance: string;
+    account: string;
   };
   switcher: SwitcherLabels & {
     /** A household's ring, for screen readers: "Maple Street: 64% of this month's bills paid". */
@@ -91,15 +91,13 @@ export interface ShellLabels {
   accountMenu: {
     open: string;
     notifications: string;
-    appearance: string;
-    profile: string;
+    account: string;
     wall: string;
     backend: string;
     signOut: string;
     /** The tiles' shorter names. */
     dashboardShort: string;
     settingsShort: string;
-    addWidget: string;
   };
 }
 
@@ -121,27 +119,23 @@ export function AppShell({
   children: ReactNode;
 }) {
   const account = variant === 'account';
-  // The account area (SCOPE-accounts.md §3): Overview, Households, then My Account's pages.
-  const accountItems: NavItem[] = [
-    { href: '/account/profile', label: labels.acct.profile, icon: 'user' },
-    { href: '/account/notifications', label: labels.acct.notifications, icon: 'bell' },
-    { href: '/account/security', label: labels.acct.security, icon: 'lock' },
-    { href: '/account/appearance', label: labels.acct.appearance, icon: 'sun' },
-  ];
+  // The account area (SCOPE-redesign-2.md §4): Households, Notifications, Account.
   const developerItems: NavItem[] = view.developer
     ? [{ href: '/console', label: labels.console, icon: 'shield' }]
     : [];
+  // The three money views sit together: Bills, Budget, then Money where bills are split.
   const items: NavItem[] = account
     ? [
-        { href: '/account/overview', label: labels.acct.overview, icon: 'chart' },
-        { href: '/account', label: labels.households, icon: 'home' },
-        ...accountItems,
+        { href: '/account', label: labels.acct.households, icon: 'home' },
+        { href: '/account/notifications', label: labels.acct.notifications, icon: 'bell' },
+        { href: '/account/profile', label: labels.acct.account, icon: 'user' },
         ...developerItems,
       ]
     : [
         { href: '/', label: labels.nav.home, icon: 'home' },
         { href: '/services', label: labels.nav.services, icon: 'services' },
         { href: '/bills', label: labels.nav.bills, icon: 'bills' },
+        { href: '/budget', label: labels.nav.budget, icon: 'wallet' },
         ...(view.split
           ? [{ href: '/money', label: labels.nav.money, icon: 'money', badge: view.owedBy }]
           : []),
@@ -182,7 +176,7 @@ export function AppShell({
     labels.roles[roleKey(view.me.role, view.household.type)] ??
     (view.me.admin ? labels.admin : labels.member);
   const am = labels.accountMenu;
-  // The main places (tiles in the menu, SCOPE-shell.md §3h), then the rest as rows.
+  // The main places, then the rest as rows.
   const menuTiles: AccountMenuItem[] = [
     { href: '/account', label: am.dashboardShort, icon: 'dashboard' },
     ...(account
@@ -191,9 +185,7 @@ export function AppShell({
           { href: '/settings', label: am.settingsShort, icon: 'sliders' },
           { href: '/account/notifications', label: am.notifications, icon: 'bell' },
         ]),
-    { href: '/account/profile', label: am.profile, icon: 'user' },
-    { href: '/account/appearance', label: am.appearance, icon: 'sun' },
-    ...(account ? [] : [{ href: '/?add=1', label: am.addWidget, icon: 'plus' }]),
+    { href: '/account/profile', label: am.account, icon: 'user' },
   ];
   const menuGroups: AccountMenuItem[][] = [
     [
@@ -217,7 +209,7 @@ export function AppShell({
         <BarScroll />
         <div className="tb-in">
           <div className="tb-start">
-            <Link href={account ? '/account/overview' : '/'} className="tb-logo">
+            <Link href={account ? '/account' : '/'} className="tb-logo">
               <GarnetMark size={30} />
               <span>{labels.product}</span>
             </Link>
@@ -273,12 +265,9 @@ export function AppShell({
         </div>
       </main>
 
-      {/* A phone's bar keeps five: Members is reached from Settings there. */}
-      <nav className="nav glass horizontal bar" aria-label="Main">
-        <NavItems
-          items={account ? items.slice(0, 5) : items.filter((it) => it.href !== '/members')}
-          iconSize={22}
-        />
+      {/* A phone's bar leaves Members out (it's reached from Settings there). */}
+      <nav className="nav glass-strong horizontal bar" aria-label="Main">
+        <NavItems items={items.filter((it) => it.href !== '/members')} iconSize={22} />
       </nav>
     </div>
   );

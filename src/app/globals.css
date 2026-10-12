@@ -5,26 +5,28 @@
 @import '../styles/home.css' layer(components);
 @import '../styles/widgets.css' layer(components);
 @import '../styles/screens.css' layer(components);
+@import '../styles/redesign.css' layer(components);
 
 /*
-  Design tokens: "Almanac 2" with the Frost Glass material (BRAND.md). The
-  reference for every value is the Redesign Studio,
-  brand-identity/inspiration/redesign-studio/ (direction 6).
+  Design tokens: the Garnet redesign of October 2026 (SCOPE-redesign-2.md §2,
+  BRAND.md §2). One scheme, Garnet, in a dark set (the design as drawn: a deep
+  wine ground, warm off-white text, flat translucent cards) and a light set
+  derived from it. The root layout sets data-palette="garnet" and data-theme
+  (light or dark; absent = follow the device).
 
   Three kinds of token, all on <html>:
-  - The colour scheme (--p-*): Garnet, with a light and a dark set. The root
-    layout sets data-palette="garnet" and data-theme (light or dark; absent =
-    follow the device).
-  - Mode tokens: status colours, neutrals and the glass, light and dark.
-  - Shape and type: one set, the Frost Glass pack.
+  - The colour scheme (--p-*): page, text, the primary (light) fill.
+  - Mode tokens: status colours (green paid, amber due, red overdue), neutrals,
+    the card material, the controls.
+  - Shape and type: one set. Bricolage Grotesque for everything.
 
-  Component CSS never branches on light/dark itself: every difference between
-  the themes is a token here. Fonts come from next/font in layout.tsx.
+  Colour means status only: green is paid or on, amber is due or expected, red
+  is overdue. Everything else is neutral. Component CSS never branches on
+  light/dark itself: every difference between the themes is a token here.
 */
 
 /*
-  Tailwind names. "inline" makes each utility read the token directly, so an
-  element with its own data-palette recolours everything inside it.
+  Tailwind names. "inline" makes each utility read the token directly.
 */
 @theme inline {
   --font-sans: var(--f-body);
@@ -56,9 +58,8 @@
   --radius-inner: var(--r-inner);
 
   /*
-    The names the screens used before the redesign, mapped onto the new tokens
-    so they wear the new colours until R2–R6 replace them. Don't use them in
-    new code.
+    The names the screens used before the redesigns, mapped onto the tokens so
+    they wear the colours. Don't use them in new code.
   */
   --color-fg-muted: var(--p-fg2);
   --color-accent-fg: var(--p-on-accent);
@@ -69,98 +70,125 @@
   --color-border: var(--ctl-rim);
   --color-border-strong: var(--line-2);
   --color-success: var(--ok);
-  --color-success-soft: color-mix(in srgb, var(--ok) 14%, transparent);
+  --color-success-soft: var(--ok-bg);
   --color-warning: var(--warn);
-  --color-warning-soft: color-mix(in srgb, var(--warn) 16%, transparent);
+  --color-warning-soft: var(--warn-bg);
   --color-danger: var(--bad);
-  --color-danger-soft: color-mix(in srgb, var(--bad) 13%, transparent);
+  --color-danger-soft: var(--bad-bg);
   --color-hatch: var(--hatch);
   --radius-window: var(--r-win);
 }
 
-/* ---- Shape, type and material (Frost Glass), the same in both themes ---- */
+/* ---- Shape, type and material, the same in both themes ---- */
 :root {
-  --f-display: var(--font-bricolage), var(--font-figtree), system-ui, sans-serif;
-  --f-body: var(--font-figtree), system-ui, sans-serif;
+  --f-display: var(--font-bricolage), system-ui, sans-serif;
+  --f-body: var(--font-bricolage), system-ui, sans-serif;
   --f-num: var(--f-body);
   --f-mono: var(--font-jetbrains), ui-monospace, 'SF Mono', Menlo, monospace;
-  --fw-display: 620;
+  --fw-display: 600;
   --fw-num: 600;
   --ls-display: -0.03em;
   --fs-body: 15px;
-  --fs-small: 13px;
+  --fs-small: 14px;
   --fs-eyebrow: 11px;
   --fs-h1: 32px;
-  --fs-h2: 21px;
-  --fs-h3: 17px;
+  --fs-h2: 22px;
+  --fs-h3: 18px;
 
-  --r-win: 26px;
-  --r-card: 24px;
-  --r-inner: 16px;
+  --r-win: 28px;
+  --r-card: 28px;
+  --r-inner: 18px;
+  --r-tile: 14px;
   --r-ctl: 999px;
   --r-chip: 999px;
-  --r-disc: 999px;
-  --r-nav: 999px;
-  --pad: 20px;
+  --r-disc: 14px;
+  --r-nav: 32px;
+  --pad: 28px;
   --wpad: 16px;
-  --gap: 14px;
+  --gap: 20px;
 
-  --g-blur: 30px;
-  --g-sat: 150%;
-  /* Cards are clear glass, so the scene's colour shows
-     through, softened only a little (owner, 2026-10-01: "too frosted"). */
-  --g-card-blur: 8px;
-  --g-card-sat: 135%;
+  --g-blur: 20px;
+  --g-sat: 120%;
+  --g-card-blur: 0px;
+  --g-card-sat: 100%;
   --g-card-bright: 1;
   --ring-w: 7;
-  /* instruments: glow strength and tick marks (Frost Glass: a soft glow, no ticks) */
-  --glow-k: 0.35;
+  --glow-k: 0;
   --ticks: 0;
-  --btn-h: 42px;
-  --btn-h-sm: 34px;
-  --nav-h: 58px;
+  --btn-h: 44px;
+  --btn-h-sm: 40px;
+  --nav-h: 60px;
   --nav-gap: 16px;
-  --nav-on-fg: var(--p-fg);
-  --chip-weight: 600;
+  --nav-on-fg: var(--p-on-accent);
+  --chip-weight: 500;
 }
 
-/* ---- Mode tokens: light ---- */
+/* ---- Mode tokens: light (derived from the dark design) ---- */
 :root {
   color-scheme: light;
-  --ok: #4a6079;
+  --ok: #1f7a4a;
+  --ok-bg: rgba(31, 122, 74, 0.1);
+  --ok-rim: rgba(31, 122, 74, 0.36);
   --warn: #8a5a00;
-  --bad: #a8141f;
-  /* An overdue widget's ring and words: brighter than Pyrope 600, the same in dark (SCOPE-widgets.md Q4). */
-  --overdue: #d3212d;
-  --line: rgba(28, 28, 28, 0.1);
-  --line-2: rgba(28, 28, 28, 0.16);
-  --inset: rgba(28, 28, 28, 0.05);
-  --inset-2: rgba(28, 28, 28, 0.08);
-  --track: rgba(28, 28, 28, 0.09);
-  --hatch: rgba(28, 28, 28, 0.3);
-  --tip-bg: #fafafa;
-  /* A solid dropdown (a widget's menu, a phone's switcher), and the tiles in it. */
+  --warn-bg: rgba(138, 90, 0, 0.1);
+  --warn-rim: rgba(138, 90, 0, 0.36);
+  --bad: #b3261e;
+  --bad-bg: rgba(179, 38, 30, 0.1);
+  --bad-rim: rgba(179, 38, 30, 0.36);
+  --overdue: #b3261e;
+  --line: rgba(26, 13, 16, 0.08);
+  --line-2: rgba(26, 13, 16, 0.14);
+  --inset: rgba(26, 13, 16, 0.05);
+  --inset-2: rgba(26, 13, 16, 0.08);
+  --track: rgba(26, 13, 16, 0.08);
+  --hatch: rgba(26, 13, 16, 0.3);
+  --tip-bg: #ffffff;
   --menu-bg: #ffffff;
-  --menu-well: rgba(28, 28, 28, 0.05);
+  --menu-well: rgba(26, 13, 16, 0.05);
   --paper: #fdfcf9;
   --paper-ink: #25231f;
+  /* The card: a flat tint with a hairline rim (no blur). */
+  --card-bg: rgba(26, 13, 16, 0.04);
+  --card-rim: rgba(26, 13, 16, 0.12);
+  --card-hover: rgba(26, 13, 16, 0.04);
+  /* The icon tile at the head of a row. */
+  --tile-bg: rgba(26, 13, 16, 0.07);
+  --tile-bg-quiet: rgba(26, 13, 16, 0.045);
+  /* Fills and rims drawn in the text colour at a strength, so component CSS never branches on the theme. */
+  --fill-16: rgba(26, 13, 16, 0.16);
+  --fill-30: rgba(26, 13, 16, 0.3);
+  --fill-32: rgba(26, 13, 16, 0.32);
+  --fill-86: rgba(26, 13, 16, 0.86);
+  --rim-22: rgba(26, 13, 16, 0.22);
+  --rim-28: rgba(26, 13, 16, 0.28);
+  --rim-38: rgba(26, 13, 16, 0.38);
+  --rim-40: rgba(26, 13, 16, 0.4);
+  --fg-78: rgba(26, 13, 16, 0.78);
+  --fg-82: rgba(26, 13, 16, 0.82);
+  /* The nav bar and anything that floats over content. */
+  --nav-bg: rgba(255, 255, 255, 0.72);
+  --dd-bg: rgba(255, 255, 255, 0.9);
+  --dd-fg2: rgba(26, 13, 16, 0.7);
+  --dd-fg3: rgba(26, 13, 16, 0.56);
+  --dd-row: rgba(26, 13, 16, 0.05);
+  --dd-row-on: #ece6e6;
 
-  --g-bg: rgba(250, 250, 250, 0.32);
-  --g-bg-strong: color-mix(in srgb, var(--p-bg) 62%, rgba(255, 255, 255, 0.3));
-  --g-bright: 1.05;
-  --g-rim: rgba(255, 255, 255, 0.34);
-  --g-hi: rgba(255, 255, 255, 0.85);
-  --g-lens: rgba(255, 255, 255, 0.2);
-  --g-spec: rgba(255, 255, 255, 0.92);
-  --g-shadow: 0 28px 56px -30px rgba(0, 0, 0, 0.3), 0 2px 8px -4px rgba(0, 0, 0, 0.08);
-  --g-solid: #f7f7f7;
-  /* A switch that's on: iOS green (owner, 2026-10-02); iOS's dark-mode green in dark. */
-  --toggle-on: #34c759;
-  --ctl-bg: rgba(255, 255, 255, 0.42);
-  --ctl-rim: rgba(255, 255, 255, 0.7);
-  --nav-on-bg: rgba(255, 255, 255, 0.78);
-  --nav-on-ic: var(--p-accent);
-  --seg-on: rgba(255, 255, 255, 0.88);
+  --g-bg: var(--card-bg);
+  --g-bg-strong: var(--nav-bg);
+  --g-bright: 1;
+  --g-rim: var(--card-rim);
+  --g-hi: transparent;
+  --g-lens: transparent;
+  --g-spec: transparent;
+  --g-shadow: none;
+  --g-solid: #ffffff;
+  --toggle-on: var(--ok);
+  --ctl-bg: rgba(26, 13, 16, 0.05);
+  --ctl-rim: rgba(26, 13, 16, 0.16);
+  --nav-on-bg: var(--p-accent);
+  --nav-on-ic: var(--p-on-accent);
+  --seg-on: var(--p-accent);
+  --seg-on-fg: var(--p-on-accent);
 
   /* service discs: the service colour mixed into a pale base */
   --disc-base: rgba(255, 255, 255, 0.55);
@@ -229,43 +257,68 @@
   --sc-red-8: #f4b6b6;
 }
 
-/* ---- Mode tokens: dark (forced in Settings, or the device's choice) ---- */
+/* ---- Mode tokens: dark (the design as drawn; forced in Account, or the device's choice) ---- */
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --ok: #93aac1;
-  --warn: #e8c47c;
-  --bad: #ea868b;
-  --line: rgba(255, 255, 255, 0.11);
-  --line-2: rgba(255, 255, 255, 0.18);
-  --inset: rgba(255, 255, 255, 0.06);
-  --inset-2: rgba(255, 255, 255, 0.1);
-  --track: rgba(255, 255, 255, 0.11);
+  --ok: #86d9a6;
+  --ok-bg: rgba(134, 217, 166, 0.12);
+  --ok-rim: rgba(134, 217, 166, 0.38);
+  --warn: #f0be62;
+  --warn-bg: rgba(240, 190, 98, 0.1);
+  --warn-rim: rgba(240, 190, 98, 0.38);
+  --bad: #f08c8c;
+  --bad-bg: rgba(240, 140, 140, 0.12);
+  --bad-rim: rgba(240, 140, 140, 0.38);
+  --overdue: #f08c8c;
+  --line: rgba(255, 255, 255, 0.08);
+  --line-2: rgba(255, 255, 255, 0.14);
+  --inset: rgba(255, 255, 255, 0.05);
+  --inset-2: rgba(255, 255, 255, 0.08);
+  --track: rgba(255, 255, 255, 0.08);
   --hatch: rgba(255, 255, 255, 0.32);
-  --tip-bg: #242424;
-  --menu-bg: #1b1b1b;
+  --tip-bg: #221417;
+  --menu-bg: #1e1215;
   --menu-well: rgba(255, 255, 255, 0.06);
   --paper: #f3f1ec;
   --paper-ink: #23211d;
+  --card-bg: rgba(255, 255, 255, 0.05);
+  --card-rim: rgba(255, 255, 255, 0.14);
+  --card-hover: rgba(255, 255, 255, 0.04);
+  --tile-bg: rgba(255, 255, 255, 0.08);
+  --tile-bg-quiet: rgba(255, 255, 255, 0.05);
+  --fill-16: rgba(255, 255, 255, 0.16);
+  --fill-30: rgba(244, 238, 238, 0.3);
+  --fill-32: rgba(244, 238, 238, 0.32);
+  --fill-86: rgba(244, 238, 238, 0.86);
+  --rim-22: rgba(255, 255, 255, 0.22);
+  --rim-28: rgba(255, 255, 255, 0.28);
+  --rim-38: rgba(255, 255, 255, 0.38);
+  --rim-40: rgba(244, 238, 238, 0.4);
+  --fg-78: rgba(244, 238, 238, 0.78);
+  --fg-82: rgba(244, 238, 238, 0.82);
+  --nav-bg: rgba(14, 7, 9, 0.6);
+  --dd-bg: rgba(20, 11, 13, 0.92);
+  --dd-fg2: rgba(244, 238, 238, 0.7);
+  --dd-fg3: rgba(244, 238, 238, 0.56);
+  --dd-row: rgba(255, 255, 255, 0.06);
+  --dd-row-on: #2a1b1f;
 
-  /* Dark cards are smoked glass: a tint of the scheme's page colour, dimmed a
-     little, so coloured lines and figures on them stay easy to read. */
-  --g-bg: color-mix(in srgb, var(--p-bg) 30%, transparent);
-  --g-card-sat: 125%;
-  --g-card-bright: 0.88;
-  --g-bg-strong: color-mix(in srgb, var(--p-bg) 72%, transparent);
-  --g-bright: 0.96;
-  --g-rim: rgba(255, 255, 255, 0.13);
-  --g-hi: rgba(255, 255, 255, 0.22);
-  --g-lens: rgba(255, 255, 255, 0.06);
-  --g-spec: rgba(255, 255, 255, 0.45);
-  --g-shadow: 0 30px 60px -28px rgba(0, 0, 0, 0.7), 0 2px 8px -4px rgba(0, 0, 0, 0.3);
-  --g-solid: #262626;
-  --toggle-on: #30d158;
-  --ctl-bg: rgba(255, 255, 255, 0.09);
+  --g-bg: var(--card-bg);
+  --g-bg-strong: var(--nav-bg);
+  --g-bright: 1;
+  --g-rim: var(--card-rim);
+  --g-hi: transparent;
+  --g-lens: transparent;
+  --g-spec: transparent;
+  --g-shadow: none;
+  --g-solid: #1a0f12;
+  --toggle-on: var(--ok);
+  --ctl-bg: rgba(255, 255, 255, 0.06);
   --ctl-rim: rgba(255, 255, 255, 0.16);
-  --nav-on-bg: rgba(255, 255, 255, 0.15);
-  --nav-on-ic: var(--p-fg);
-  --seg-on: rgba(255, 255, 255, 0.18);
+  --nav-on-bg: var(--p-accent);
+  --nav-on-ic: var(--p-on-accent);
+  --seg-on: var(--p-accent);
+  --seg-on-fg: var(--p-on-accent);
 
   --disc-base: rgba(255, 255, 255, 0.05);
   --disc-mix: 26%;
@@ -334,38 +387,65 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
     color-scheme: dark;
-    --ok: #93aac1;
-    --warn: #e8c47c;
-    --bad: #ea868b;
-    --line: rgba(255, 255, 255, 0.11);
-    --line-2: rgba(255, 255, 255, 0.18);
-    --inset: rgba(255, 255, 255, 0.06);
-    --inset-2: rgba(255, 255, 255, 0.1);
-    --track: rgba(255, 255, 255, 0.11);
+    --ok: #86d9a6;
+    --ok-bg: rgba(134, 217, 166, 0.12);
+    --ok-rim: rgba(134, 217, 166, 0.38);
+    --warn: #f0be62;
+    --warn-bg: rgba(240, 190, 98, 0.1);
+    --warn-rim: rgba(240, 190, 98, 0.38);
+    --bad: #f08c8c;
+    --bad-bg: rgba(240, 140, 140, 0.12);
+    --bad-rim: rgba(240, 140, 140, 0.38);
+    --overdue: #f08c8c;
+    --line: rgba(255, 255, 255, 0.08);
+    --line-2: rgba(255, 255, 255, 0.14);
+    --inset: rgba(255, 255, 255, 0.05);
+    --inset-2: rgba(255, 255, 255, 0.08);
+    --track: rgba(255, 255, 255, 0.08);
     --hatch: rgba(255, 255, 255, 0.32);
-    --tip-bg: #242424;
-    --menu-bg: #1b1b1b;
+    --tip-bg: #221417;
+    --menu-bg: #1e1215;
     --menu-well: rgba(255, 255, 255, 0.06);
     --paper: #f3f1ec;
     --paper-ink: #23211d;
+    --card-bg: rgba(255, 255, 255, 0.05);
+    --card-rim: rgba(255, 255, 255, 0.14);
+    --card-hover: rgba(255, 255, 255, 0.04);
+    --tile-bg: rgba(255, 255, 255, 0.08);
+    --tile-bg-quiet: rgba(255, 255, 255, 0.05);
+    --fill-16: rgba(255, 255, 255, 0.16);
+    --fill-30: rgba(244, 238, 238, 0.3);
+    --fill-32: rgba(244, 238, 238, 0.32);
+    --fill-86: rgba(244, 238, 238, 0.86);
+    --rim-22: rgba(255, 255, 255, 0.22);
+    --rim-28: rgba(255, 255, 255, 0.28);
+    --rim-38: rgba(255, 255, 255, 0.38);
+    --rim-40: rgba(244, 238, 238, 0.4);
+    --fg-78: rgba(244, 238, 238, 0.78);
+    --fg-82: rgba(244, 238, 238, 0.82);
+    --nav-bg: rgba(14, 7, 9, 0.6);
+    --dd-bg: rgba(20, 11, 13, 0.92);
+    --dd-fg2: rgba(244, 238, 238, 0.7);
+    --dd-fg3: rgba(244, 238, 238, 0.56);
+    --dd-row: rgba(255, 255, 255, 0.06);
+    --dd-row-on: #2a1b1f;
 
-    --g-bg: color-mix(in srgb, var(--p-bg) 30%, transparent);
-    --g-card-sat: 125%;
-    --g-card-bright: 0.88;
-    --g-bg-strong: color-mix(in srgb, var(--p-bg) 72%, transparent);
-    --g-bright: 0.96;
-    --g-rim: rgba(255, 255, 255, 0.13);
-    --g-hi: rgba(255, 255, 255, 0.22);
-    --g-lens: rgba(255, 255, 255, 0.06);
-    --g-spec: rgba(255, 255, 255, 0.45);
-    --g-shadow: 0 30px 60px -28px rgba(0, 0, 0, 0.7), 0 2px 8px -4px rgba(0, 0, 0, 0.3);
-    --g-solid: #262626;
-    --toggle-on: #30d158;
-    --ctl-bg: rgba(255, 255, 255, 0.09);
+    --g-bg: var(--card-bg);
+    --g-bg-strong: var(--nav-bg);
+    --g-bright: 1;
+    --g-rim: var(--card-rim);
+    --g-hi: transparent;
+    --g-lens: transparent;
+    --g-spec: transparent;
+    --g-shadow: none;
+    --g-solid: #1a0f12;
+    --toggle-on: var(--ok);
+    --ctl-bg: rgba(255, 255, 255, 0.06);
     --ctl-rim: rgba(255, 255, 255, 0.16);
-    --nav-on-bg: rgba(255, 255, 255, 0.15);
-    --nav-on-ic: var(--p-fg);
-    --seg-on: rgba(255, 255, 255, 0.18);
+    --nav-on-bg: var(--p-accent);
+    --nav-on-ic: var(--p-on-accent);
+    --seg-on: var(--p-accent);
+    --seg-on-fg: var(--p-on-accent);
 
     --disc-base: rgba(255, 255, 255, 0.05);
     --disc-mix: 26%;
@@ -434,55 +514,70 @@
 }
 
 /*
-  ---- The colour scheme: Garnet (BRAND.md §2) ----
-  Neutral grey ground, Graphite for buttons and links (--p-accent), and
-  Pyrope red only for the brand and for warnings (--bad, and a faint glow in
-  the scene). SCHEME_BG in src/lib/appearance.ts repeats --p-bg for the
-  browser's theme-color; tests/appearance.test.ts keeps the two in step.
+  ---- The colour scheme: Garnet (BRAND.md §2; SCOPE-redesign-2.md §2) ----
+  Dark: a deep wine page (#120a0c) with one wine glow off the left edge, warm
+  off-white text, and the primary fill is that off-white at 92% (buttons, the
+  current nav pill). Light is the same scheme turned over: a warm near-white
+  page, the text #1a0d10 and the primary fill that ink. SCHEME_BG in
+  src/lib/appearance.ts repeats --p-bg for the browser's theme-color;
+  tests/appearance.test.ts keeps the two in step.
 */
 [data-palette='garnet'] {
-  --p-bg: #f5f5f5;
-  --p-ground: linear-gradient(160deg, #fafafa 0%, #f5f5f5 55%, #efefef 100%);
-  --p-glow1: rgba(168, 20, 31, 0.16);
-  --p-glow2: rgba(184, 184, 184, 0.55);
-  --p-glow3: rgba(117, 117, 117, 0.22);
-  --p-accent: #3a3a3a;
-  --p-accent2: #5c5c5c;
-  --p-on-accent: #ffffff;
-  --p-fg: #1c1c1c;
-  --p-fg2: #5c5c5c;
-  --p-fg3: #757575;
+  --p-bg: #f8f3f3;
+  --p-ground: #f8f3f3;
+  --p-glow1: rgba(130, 32, 44, 0.16);
+  --p-glow2: rgba(130, 32, 44, 0);
+  --p-glow3: rgba(130, 32, 44, 0);
+  --p-accent: #1a0d10;
+  --p-accent2: #3a2a2d;
+  --p-on-accent: #f8f3f3;
+  --p-fg: #1a0d10;
+  --p-fg2: rgba(26, 13, 16, 0.66);
+  --p-fg3: rgba(26, 13, 16, 0.56);
 }
 [data-theme='dark'][data-palette='garnet'],
 [data-theme='dark'] [data-palette='garnet'] {
-  --p-bg: #1c1c1c;
-  --p-ground: linear-gradient(160deg, #242424 0%, #1c1c1c 55%, #181818 100%);
-  --p-glow1: rgba(168, 20, 31, 0.38);
-  --p-glow2: rgba(92, 92, 92, 0.45);
-  --p-glow3: rgba(129, 14, 24, 0.24);
-  --p-accent: #d6d6d6;
-  --p-accent2: #b8b8b8;
-  --p-on-accent: #1c1c1c;
-  --p-fg: #f5f5f5;
-  --p-fg2: rgba(245, 245, 245, 0.7);
-  --p-fg3: rgba(245, 245, 245, 0.5);
+  --p-bg: #120a0c;
+  --p-ground: #120a0c;
+  --p-glow1: rgba(130, 32, 44, 0.55);
+  --p-glow2: rgba(130, 32, 44, 0);
+  --p-glow3: rgba(130, 32, 44, 0);
+  --p-accent: rgba(244, 238, 238, 0.92);
+  --p-accent2: rgba(244, 238, 238, 0.78);
+  --p-on-accent: #1a0d10;
+  --p-fg: #f4eeee;
+  --p-fg2: rgba(244, 238, 238, 0.66);
+  --p-fg3: rgba(244, 238, 238, 0.56);
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light'])[data-palette='garnet'],
   :root:not([data-theme='light']) [data-palette='garnet'] {
-    --p-bg: #1c1c1c;
-    --p-ground: linear-gradient(160deg, #242424 0%, #1c1c1c 55%, #181818 100%);
-    --p-glow1: rgba(168, 20, 31, 0.38);
-    --p-glow2: rgba(92, 92, 92, 0.45);
-    --p-glow3: rgba(129, 14, 24, 0.24);
-    --p-accent: #d6d6d6;
-    --p-accent2: #b8b8b8;
-    --p-on-accent: #1c1c1c;
-    --p-fg: #f5f5f5;
-    --p-fg2: rgba(245, 245, 245, 0.7);
-    --p-fg3: rgba(245, 245, 245, 0.5);
+    --p-bg: #120a0c;
+    --p-ground: #120a0c;
+    --p-glow1: rgba(130, 32, 44, 0.55);
+    --p-glow2: rgba(130, 32, 44, 0);
+    --p-glow3: rgba(130, 32, 44, 0);
+    --p-accent: rgba(244, 238, 238, 0.92);
+    --p-accent2: rgba(244, 238, 238, 0.78);
+    --p-on-accent: #1a0d10;
+    --p-fg: #f4eeee;
+    --p-fg2: rgba(244, 238, 238, 0.66);
+    --p-fg3: rgba(244, 238, 238, 0.56);
   }
 }
+/* The fourth text step (disabled, dashes): the scheme's text at 40%. */
+:root {
+  --p-fg4: rgba(26, 13, 16, 0.4);
+}
+:root[data-theme='dark'] {
+  --p-fg4: rgba(244, 238, 238, 0.4);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --p-fg4: rgba(244, 238, 238, 0.4);
+  }
+}
+
 @layer base {
   html {
     -webkit-text-size-adjust: 100%;
@@ -512,18 +607,20 @@
     letter-spacing: var(--ls-display);
     text-wrap: balance;
   }
+  a {
+    color: inherit;
+  }
 }
 
 /*
   Component classes live in the components layer so utilities on the same
-  element win (glass + bg-accent-soft tints a tile; fixed beats relative).
+  element win.
 */
 @layer components {
   /*
-    The scene (BRAND.md §3; owner, 2026-10-03): the ground with three soft
-    glows that hold still. Pyrope in the top-left corner, a grey one off the
-    right edge, and a third low on the left (grey in light, deep Pyrope in
-    dark). Each glow keeps a minimum size so a phone still gets the wash.
+    The scene (SCOPE-redesign-2.md §2): the page colour and one soft wine glow
+    off the left edge, holding still. The glow keeps a minimum size so a phone
+    still gets the wash.
   */
   .scene {
     position: fixed;
@@ -531,110 +628,50 @@
     z-index: 0;
     pointer-events: none;
     background:
-      radial-gradient(max(520px, 50vw) max(420px, 46vh) at 12% 6%, var(--p-glow1), transparent 70%),
       radial-gradient(
-        max(620px, 58vw) max(520px, 56vh) at 92% 38%,
-        var(--p-glow2),
-        transparent 70%
-      ),
-      radial-gradient(
-        max(560px, 52vw) max(460px, 50vh) at 20% 92%,
-        var(--p-glow3),
-        transparent 70%
+        ellipse max(60%, 520px) max(70%, 520px) at 0% 45%,
+        var(--p-glow1),
+        rgba(130, 32, 44, 0) 70%
       ),
       var(--p-ground);
   }
 
   /*
-    ---- Frost Glass ----
-    Clear glass: a lens glow inside the edge, a highlight along the top and a
-    soft specular rim catching light from the top-left (the ::before, masked
-    to a 1 px ring). .glass is a card; .glass-strong is for anything that
-    floats over content (sheets, the nav); .glass-ctl is a small capsule that
-    sits on glass (buttons, search, segmented controls).
+    ---- The card ----
+    A flat tint with a hairline rim, 28 px corners (SCOPE-redesign-2.md §2).
+    .glass is a card; .glass-strong is for anything that floats over content
+    (sheets, popovers, the nav), which also blurs what's behind it; .glass-ctl
+    is a small capsule that sits on a card (buttons, search, segmented
+    controls). The old names stay so every screen wears the new material.
   */
   .glass,
   .glass-strong,
   .window,
   .glass-nav {
     position: relative;
-    isolation: isolate;
     border-radius: var(--r-card);
-    background: var(--g-bg);
-    -webkit-backdrop-filter: blur(var(--g-blur)) saturate(var(--g-sat)) brightness(var(--g-bright));
-    backdrop-filter: blur(var(--g-blur)) saturate(var(--g-sat)) brightness(var(--g-bright));
-    box-shadow:
-      inset 0 0 18px var(--g-lens),
-      inset 0 1px 0 var(--g-hi),
-      var(--g-shadow);
+    background: var(--card-bg);
+    box-shadow: inset 0 0 0 1px var(--card-rim);
   }
   .glass-strong,
   .window,
   .glass-nav {
-    background: var(--g-bg-strong);
-  }
-  /* A card: clear glass, a crisp rim, no milky inner glow. */
-  .glass {
-    -webkit-backdrop-filter: blur(var(--g-card-blur)) saturate(var(--g-card-sat))
-      brightness(var(--g-card-bright));
-    backdrop-filter: blur(var(--g-card-blur)) saturate(var(--g-card-sat))
-      brightness(var(--g-card-bright));
-    box-shadow:
-      inset 0 0 0 1px var(--g-rim),
-      inset 0 1px 0 var(--g-hi),
-      var(--g-shadow);
-  }
-  .glass::before,
-  .glass-strong::before,
-  .window::before,
-  .glass-nav::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    border-radius: inherit;
-    padding: 1px;
-    pointer-events: none;
-    background: linear-gradient(
-      145deg,
-      var(--g-spec),
-      rgba(255, 255, 255, 0.14) 30%,
-      rgba(255, 255, 255, 0) 52%,
-      rgba(255, 255, 255, 0.08) 74%,
-      color-mix(in srgb, var(--g-spec) 55%, transparent)
-    );
-    -webkit-mask:
-      linear-gradient(#000 0 0) content-box,
-      linear-gradient(#000 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
+    background: var(--nav-bg);
+    -webkit-backdrop-filter: blur(var(--g-blur)) saturate(var(--g-sat));
+    backdrop-filter: blur(var(--g-blur)) saturate(var(--g-sat));
   }
   .glass-ctl {
     background: var(--ctl-bg);
-    box-shadow:
-      inset 0 0 0 1px var(--ctl-rim),
-      inset 0 1px 0 var(--g-hi);
+    box-shadow: inset 0 0 0 1px var(--ctl-rim);
   }
-
-  /* The screens from before the redesign (R3 replaces the window with the nav column). */
   .window {
     border-radius: var(--r-win);
   }
   .lift {
-    transition:
-      transform 0.25s ease,
-      box-shadow 0.25s ease;
-  }
-  .lift:hover {
-    transform: translateY(-2px);
+    transition: background 0.15s ease;
   }
   .hatch {
     background: repeating-linear-gradient(135deg, var(--hatch) 0 4px, transparent 4px 9px);
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .lift:hover {
-      transform: none;
-    }
   }
 }
 

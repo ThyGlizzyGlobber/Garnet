@@ -339,6 +339,14 @@ export const service = sqliteTable(
       .notNull()
       .default([]),
     notes: text('notes'),
+    /**
+     * A bill added by hand on the Budget page before any bill has arrived
+     * (SCOPE-redesign-2.md §5 quick-add): its usual amount and roughly when
+     * it falls (YYYY-MM-DD). The expected bills step from there by the
+     * cadence until a real bill comes in, which takes over. Null = none.
+     */
+    expectedAmountMinor: integer('expected_amount_minor'),
+    expectedOn: text('expected_on'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
@@ -825,6 +833,23 @@ export const regionalStat = sqliteTable(
     computedAt: text('computed_at').notNull(),
   },
   (t) => [primaryKey({ columns: [t.level, t.area, t.serviceType, t.month, t.sizeBand, t.metric] })],
+);
+
+/**
+ * A household's yearly budget for its bills (SCOPE-redesign-2.md §5), one per
+ * year on the household's basis: `year` is "fy-2026" for the financial year
+ * starting 1 July 2026, or "cy-2026" for the calendar year. Optional: the
+ * Budget page shows only the projection until one is set.
+ */
+export const householdBudget = sqliteTable(
+  'household_budget',
+  {
+    householdId: householdId(),
+    year: text('year').notNull(),
+    amountMinor: integer('amount_minor').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.householdId, t.year] })],
 );
 
 /** One row per email sent about something, so nothing is sent twice. */

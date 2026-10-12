@@ -13,7 +13,8 @@ import { hasHousemates, listActiveMembers, listMembers } from '@/lib/members';
 import { monthDue } from '@/lib/month-due';
 import { ownershipQuestions } from '@/lib/ownership';
 import { addMonths, lastMonths, monthBounds } from '@/lib/periods';
-import { nextMonth, projectMonth } from '@/lib/projections';
+import { nextExpected } from '@/lib/expected';
+import { nextMonth, perDayFallback, projectMonth } from '@/lib/projections';
 import { documentCounts } from '@/lib/review';
 import { priceChange } from '@/lib/recurring';
 import { seasonAhead } from '@/lib/seasons';
@@ -104,7 +105,31 @@ export interface HomeData {
     vsLastMonth: number | null;
     byService: { id: string; minor: number }[];
     yourMinor: number | null;
+    /**
+     * Every bill (or instalment) the viewer sees due this month, the
+     * household's and their own, soonest first: Home's hero list. The same
+     * parts the Services page's summary adds up, so the two always agree
+     * (SCOPE-redesign-2.md §6).
+     */
+    list: {
+      billId: string;
+      serviceId: string;
+      serviceName: string;
+      amountMinor: number;
+      dueDate: string;
+      paid: boolean;
+      instalment: { n: number; of: number } | null;
+    }[];
   };
+  /** The next bill expected to arrive (not in yet), across the viewer's services. */
+  nextExpected: {
+    serviceId: string;
+    serviceName: string;
+    dueDate: string;
+    amountMinor: number;
+  } | null;
+  /** How many services the viewer sees (the household's and their own). */
+  serviceCount: number;
   monthly: { month: string; totalMinor: number; byService: Record<string, number> }[];
   forecast: { month: string; totalMinor: number }[];
   upcoming: Upcoming[];
@@ -285,6 +310,45 @@ export function homeData(hh: Household, me: Member, today: string, db: Db = getD
 
   // The household's bills and instalments due this month, and which the provider has.
   const dueThisMonth = monthDue(bills, mStart, mEnd);
+  // Every part the viewer sees due this month (their own bills too), soonest first.
+  const monthList: HomeData['month']['list'] = [];
+  for (const b of bills) {
+    const svc = serviceById.get(b.serviceId);
+    if (!svc) continue;
+    const parts = paysByInstalments(b)
+      ? b.instalments.map((i) => ({
+          amountMinor: i.amountMinor,
+          dueDate: i.dueDate,
+          paid: !!i.paidToProviderAt,
+          instalment: { n: i.seq, of: b.instalments.length },
+        }))
+      : [
+          {
+            amountMinor: b.amountMinor,
+            dueDate: b.dueDate,
+            paid: !!b.paidToProviderAt,
+            instalment: null,
+          },
+        ];
+    for (const p of parts)
+      if (p.dueDate >= mStart && p.dueDate <= mEnd)
+        monthList.push({ billId: b.id, serviceId: b.serviceId, serviceName: svc.name, ...p });
+  }
+  monthList.sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+  // The next bill expected to arrive, across the services the viewer sees.
+  const viewerServices = listServices(hh.id, { viewer: me.id }, db);
+  let soonest: HomeData['nextExpected'] = null;
+  for (const svc of viewerServices) {
+    const own = bills.filter((b) => b.serviceId === svc.id);
+    const e = nextExpected(svc, own, perDayFallback(hh.id, svc, today, db));
+    if (e && e.dueDate >= today && (!soonest || e.dueDate < soonest.dueDate))
+      soonest = {
+        serviceId: svc.id,
+        serviceName: svc.name,
+        dueDate: e.dueDate,
+        amountMinor: e.amountMinor,
+      };
+  }
 
   // What the viewer pays next (a month ahead).
   const upcoming: Upcoming[] = [];
@@ -612,7 +676,10 @@ export function homeData(hh: Household, me: Member, today: string, db: Db = getD
       vsLastMonth: lastMonthTotal > 0 ? (thisMonth.total - lastMonthTotal) / lastMonthTotal : null,
       byService: thisMonth.byService.map((t) => ({ id: t.service.id, minor: t.minor })),
       yourMinor: bad(yourMinor) ? null : yourMinor,
+      list: monthList,
     },
+    nextExpected: soonest,
+    serviceCount: viewerServices.length,
     monthly: series.map((r) => ({ month: r.month, totalMinor: r.total, byService: r.byService })),
     forecast: fresh
       ? []

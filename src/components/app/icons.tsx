@@ -8,6 +8,16 @@ import type { ComponentProps } from 'react';
  */
 const ICONS: Record<string, string> = {
   home: 'M3.5 10.5 12 3.5l8.5 7V20a1 1 0 0 1-1 1H15v-6.5H9V21H4.5a1 1 0 0 1-1-1z',
+  /* The Budget nav item (SCOPE-redesign-2.md §3): a wallet. */
+  wallet: '<rect x="3" y="6" width="18" height="13" rx="3"/><path d="M3 10h18M16 14.5h2"/>',
+  /* Three columns, for a month-by-month chart's heading. */
+  bars: 'M5 20V10 M12 20V4 M19 20v-7',
+  /* A piggy bank, for the set-aside card. */
+  piggy:
+    '<path d="M5 12.5a7 7 0 0 1 7-7h2.5a6 6 0 0 1 5.8 4.5H21v4h-1.2a6 6 0 0 1-1.8 2.6V19h-3v-1.5h-4V19H8v-2.6A7 7 0 0 1 5 12.5z"/><path d="M3.5 11.5 5 12.5M9.5 6l-.8-2.3"/><circle cx="15.5" cy="11" r="0.8" fill="currentColor" stroke="none"/>',
+  /* A split bar, for "Where it goes". */
+  'split-bar':
+    '<rect x="3" y="9" width="7.5" height="6" rx="2"/><rect x="13.5" y="9" width="7.5" height="6" rx="2"/>',
   services:
     '<rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="3.5"/>',
   bills: 'M6 3h12v18l-3-2-3 2-3-2-3 2z M9 8h6 M9 12h6 M9 16h3',

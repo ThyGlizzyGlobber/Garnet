@@ -10,6 +10,8 @@ import { authState, setActiveMember, startDemoSession } from '@/lib/auth/session
 import { todayIn } from '@/lib/dates';
 import { getHousehold } from '@/lib/households';
 import { leaveBlocker, leaveHousehold, makePrimary } from '@/lib/members';
+import { setNotifyPref, type NotifyCategory } from '@/lib/notifications';
+import { membershipsFor } from '@/lib/accounts';
 import { MAX_NAME, MAX_PHOTO_BYTES, removePhoto, renameEverywhere, savePhoto } from '@/lib/profile';
 
 /** The memberships this session may switch between (the account's; in the demo, the demo person's). */
@@ -45,16 +47,19 @@ export async function makePrimaryAction(fd: FormData): Promise<void> {
   redirect('/account');
 }
 
-/** Leave a household (§3d): allowed once settled, never for the last admin. */
-export async function leaveHouseholdAction(_prev: ActionState, fd: FormData): Promise<ActionState> {
+/**
+ * Leave a household (§3d): allowed once settled, never for the last admin.
+ * From the row's More options menu (SCOPE-redesign-2.md §4); when it can't be
+ * left yet the page says why.
+ */
+export async function leaveHouseholdAction(fd: FormData): Promise<void> {
   const { s, memberships } = await mine();
   const target = memberships.find((m) => m.id === str(fd, 'memberId'));
   if (!target || s.kind !== 'ok' || s.demo) redirect('/account');
   const hh = getHousehold(target.householdId);
   if (!hh) redirect('/account');
-  const t = await getTranslations('account.leave');
   const why = leaveBlocker(hh.id, target);
-  if (why) return { error: t(`blocked.${why}`, { household: hh.name }) };
+  if (why) redirect(`/account?blocked=${why}&hh=${encodeURIComponent(hh.name)}`);
   leaveHousehold(hh.id, target, todayIn(hh.timezone));
   if (s.member.id === target.id) {
     const next = memberships.find((m) => m.id !== target.id);
@@ -62,6 +67,22 @@ export async function leaveHouseholdAction(_prev: ActionState, fd: FormData): Pr
   }
   revalidatePath('/', 'layout');
   redirect('/account?left=1');
+}
+
+/** One notification switch, saved as it's flipped (SCOPE-redesign-2.md §4 Notifications). */
+export async function toggleNotifyAction(
+  memberId: string,
+  kind: NotifyCategory,
+  on: boolean,
+): Promise<void> {
+  const s = await authState();
+  const acct = s.kind === 'ok' || s.kind === 'no-household' ? s.account : null;
+  if (!acct) redirect('/account');
+  const me = membershipsFor(acct.id).find((m) => m.id === memberId);
+  if (!me) redirect('/account');
+  if (!['bills', 'reminders', 'problems'].includes(kind)) return;
+  setNotifyPref(me.householdId, me.id, { [kind]: on });
+  revalidatePath('/account/notifications');
 }
 
 /** The signed-in account (demo people have none, so they can't change a profile). */

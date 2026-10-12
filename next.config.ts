@@ -21,6 +21,10 @@ const nextConfig: NextConfig = {
       { source: '/ledger', destination: '/money', permanent: true },
       { source: '/review', destination: '/inbox', permanent: true },
       { source: '/review/:id', destination: '/inbox/:id', permanent: true },
+      // The account area's six tabs became three (SCOPE-redesign-2.md §4).
+      { source: '/account/overview', destination: '/account', permanent: true },
+      { source: '/account/security', destination: '/account/profile', permanent: true },
+      { source: '/account/appearance', destination: '/account/profile', permanent: true },
     ];
   },
   async headers() {

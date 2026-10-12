@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Garnet inbox - proposed</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:rgba(244,238,238,0.72);text-decoration:none}
+a:hover{color:#F4EEEE}
+button{font-family:inherit}
+.row{display:grid;grid-template-columns:44px minmax(0,1fr) 230px 20px;align-items:center;gap:18px;padding:16px 28px;border-top:1px solid rgba(255,255,255,0.08);color:#F4EEEE;min-height:44px}
+.row:first-child{border-top:0}
+.row:hover{background:rgba(255,255,255,0.04)}
+.ico{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:14px;background:rgba(255,255,255,0.08);color:rgba(244,238,238,0.82)}
+.name{font-size:18px;font-weight:600;letter-spacing:-0.005em;overflow-wrap:anywhere}
+.sub{margin-top:3px;font-size:14px;color:rgba(244,238,238,0.56)}
+.filed{text-align:right}
+.filed .a{font-size:20px;font-weight:600;letter-spacing:-0.01em;font-variant-numeric:tabular-nums}
+.filed .l{margin-top:3px;font-size:14px;color:rgba(244,238,238,0.56)}
+.chev{color:rgba(244,238,238,0.4)}
+.card{box-sizing:border-box;border:1px solid rgba(255,255,255,0.14);border-radius:28px;background:rgba(255,255,255,0.05);overflow:hidden}
+.pillbtn{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 20px;border:1px solid rgba(255,255,255,0.16);border-radius:999px;background:rgba(255,255,255,0.06);color:#F4EEEE;font-size:15px;font-weight:500;cursor:pointer}
+.seg{display:inline-flex;align-items:center;padding:4px;border:1px solid rgba(255,255,255,0.14);border-radius:999px;background:rgba(255,255,255,0.05)}
+.seg button{min-height:40px;padding:0 18px;border:0;border-radius:999px;background:transparent;color:rgba(244,238,238,0.72);font-size:15px;font-weight:500;cursor:pointer}
+.seg button[aria-pressed="true"]{background:rgba(244,238,238,0.92);color:#1a0d10;font-weight:600}
+.month{display:grid;grid-template-columns:240px minmax(0,1fr);gap:32px;align-items:start}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:999px;font-size:14px;font-weight:500;white-space:nowrap;color:#86D9A6;border:1px solid rgba(134,217,166,0.38);background:rgba(134,217,166,0.12)}
+@media (max-width:900px){.month{grid-template-columns:1fr;gap:14px}.row{grid-template-columns:44px minmax(0,1fr) 16px;gap:12px;padding:14px 18px}.row .filed{display:none}}
+</style>
+</helmet>
+<div style="box-sizing: border-box; min-height: 100%; padding: 24px 40px 56px; background: radial-gradient(ellipse 60% 70% at 0% 45%, rgba(130,32,44,0.55), rgba(130,32,44,0) 70%), #120a0c; color: #F4EEEE; font-family: 'Bricolage Grotesque', system-ui, sans-serif;">
+<div style="max-width: 1280px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px;">
+
+<nav aria-label="Primary" style="display: flex; align-items: center; flex-wrap: wrap; gap: 14px; min-height: 60px; padding: 8px 14px 8px 20px; box-sizing: border-box; border: 1px solid rgba(255,255,255,0.14); border-radius: 32px; background: rgba(14,7,9,0.6);">
+<div style="display: flex; align-items: center; gap: 10px;">
+<svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true"><path d="M14 1.5 26.5 14 14 26.5 1.5 14z" fill="#C8283C"/><path d="M14 1.5 26.5 14 14 14z" fill="#E8495D"/><path d="M1.5 14 14 14 14 26.5z" fill="#9E1B2D"/></svg>
+<span style="font-size: 22px; font-weight: 600; letter-spacing: -0.01em;">Garnet</span>
+</div>
+<div style="width: 1px; height: 28px; background: rgba(255,255,255,0.18);"></div>
+<button type="button" style="display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 12px 0 6px; border: 0; border-radius: 14px; background: transparent; color: #F4EEEE; font-size: 15px; font-weight: 600; cursor: pointer;">
+<span style="display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 10px; background: rgba(255,255,255,0.1);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v9a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-9"/></svg></span>
+Smith Household
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+</button>
+<div style="display: flex; align-items: center; flex-wrap: wrap; gap: 4px; margin-left: 24px;">
+<a href="#" style="display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; font-size: 15px; font-weight: 500;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v9a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-9"/></svg>Home</a>
+<a href="#" style="display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; font-size: 15px; font-weight: 500;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="6" height="6" rx="1.5"/><rect x="14" y="4" width="6" height="6" rx="1.5"/><rect x="4" y="14" width="6" height="6" rx="1.5"/><rect x="14" y="14" width="6" height="6" rx="1.5"/></svg>Services</a>
+<a href="#" style="display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; font-size: 15px; font-weight: 500;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg>Bills</a>
+<a href="#" style="display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; font-size: 15px; font-weight: 500;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="3"/><path d="M3 10h18M16 14.5h2"/></svg>Budget</a>
+<a href="#" style="display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; font-size: 15px; font-weight: 500;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.5"/><path d="M17 14c2.5 0 4 2 4 5"/></svg>Members</a>
+<a href="#" aria-current="page" style="display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 18px; border-radius: 999px; background: rgba(244,238,238,0.92); color: #1a0d10; font-size: 15px; font-weight: 600;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 13l3-8h12l3 8v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M3 13h5l1 3h6l1-3h5"/></svg>Inbox</a>
+</div>
+<div style="flex: 1 1 24px;"></div>
+<div style="display: flex; align-items: center; gap: 10px;">
+<button type="button" aria-label="Search" style="display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border: 1px solid rgba(255,255,255,0.16); border-radius: 50%; background: rgba(255,255,255,0.06); color: #F4EEEE; cursor: pointer;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4-4"/></svg></button>
+<button type="button" style="display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 20px; border: 0; border-radius: 999px; background: rgba(244,238,238,0.92); color: #1a0d10; font-size: 15px; font-weight: 600; cursor: pointer;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Add bill</button>
+<span aria-label="Signed in as Lisa" style="display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; background: #C98A1B; color: #1a0d10; font-size: 16px; font-weight: 600;">L</span>
+</div>
+</nav>
+
+<header style="display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 20px; padding: 8px 8px 0;">
+<div>
+<h1 style="margin: 0; font-size: 56px; line-height: 1; font-weight: 600; letter-spacing: -0.03em;">Inbox</h1>
+<p style="margin: 12px 0 0; font-size: 17px; color: rgba(244,238,238,0.66);">Forward a bill from your own email and it's analysed and filed within a minute.</p>
+</div>
+<button type="button" class="pillbtn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V5M7.5 9.5 12 5l4.5 4.5M5 20h14"/></svg>Upload a bill</button>
+</header>
+
+<section class="card" aria-label="Forwarding address" style="padding: 28px 32px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 20px 32px;">
+<div style="display: flex; align-items: center; gap: 20px; min-width: 0;">
+<span style="display: inline-flex; flex: none; align-items: center; justify-content: center; width: 60px; height: 60px; border-radius: 18px; background: rgba(255,255,255,0.1);"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M4 8l8 5.5L20 8"/></svg></span>
+<div style="min-width: 0;">
+<p style="margin: 0 0 6px; font-size: 16px; color: rgba(244,238,238,0.66);">Forward bills to</p>
+<p style="margin: 0; font-size: 32px; line-height: 1.1; font-weight: 600; letter-spacing: -0.02em; overflow-wrap: anywhere;">smith-zz6cm@brjlabs.com</p>
+</div>
+</div>
+<button type="button" style="display: inline-flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 28px; border: 0; border-radius: 999px; background: rgba(244,238,238,0.92); color: #1a0d10; font-size: 16px; font-weight: 600; cursor: pointer;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V6.5A2.5 2.5 0 0 0 13.5 4h-7A2.5 2.5 0 0 0 4 6.5v7A2.5 2.5 0 0 0 6.5 16H8"/></svg>Copy address</button>
+</section>
+
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px;">
+<div class="seg" role="group" aria-label="Show">
+<button type="button" aria-pressed="true">All</button>
+<button type="button" aria-pressed="false">To confirm</button>
+<button type="button" aria-pressed="false">Bills</button>
+<button type="button" aria-pressed="false">Receipts</button>
+<button type="button" aria-pressed="false">Other</button>
+</div>
+<label style="flex: 1 1 280px; max-width: 460px; display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 20px; box-sizing: border-box; border: 1px solid rgba(255,255,255,0.14); border-radius: 999px; background: rgba(255,255,255,0.05); color: rgba(244,238,238,0.56);">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4-4"/></svg>
+<input type="search" placeholder="Search by provider, month or file name" aria-label="Search the inbox" style="flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: #F4EEEE; font-family: inherit; font-size: 16px;">
+</label>
+<div style="flex: 1 1 24px;"></div>
+<span class="pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Nothing to confirm</span>
+</div>
+
+<section class="month" aria-labelledby="oct" style="margin-top: 8px;">
+<div>
+<h2 id="oct" style="margin: 0; font-size: 40px; line-height: 1; font-weight: 600; letter-spacing: -0.025em;">October</h2>
+<p style="margin: 10px 0 0; font-size: 16px; color: rgba(244,238,238,0.56);">2026 · 1 item</p>
+</div>
+<div class="card">
+<a href="#" class="row">
+<span class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M4 8l8 5.5L20 8"/></svg></span>
+<span><div class="name">Alinta Energy bill</div><div class="sub">Bill · forwarded by Norm Smith · 7 Oct</div></span>
+<span class="filed"><div class="a">$62.77</div><div class="l">Filed to Electricity</div></span>
+<svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+</a>
+</div>
+</section>
+
+<section class="month" aria-labelledby="sep" style="margin-top: 16px;">
+<div>
+<h2 id="sep" style="margin: 0; font-size: 40px; line-height: 1; font-weight: 600; letter-spacing: -0.025em;">September</h2>
+<p style="margin: 10px 0 0; font-size: 16px; color: rgba(244,238,238,0.56);">2026 · 6 items</p>
+</div>
+<div class="card">
+<a href="#" class="row">
+<span class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l5 5v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg></span>
+<span><div class="name">BMW INSURANCE.pdf</div><div class="sub">Document · uploaded by Lisa Smith · 29 Sept</div></span>
+<span class="filed"></span>
+<svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+</a>
+<a href="#" class="row">
+<span class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l5 5v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg></span>
+<span><div class="name">Aussie Broadband payment receipt #65045068</div><div class="sub">Receipt · emailed in · 28 Sept</div></span>
+<span class="filed"></span>
+<svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+</a>
+<a href="#" class="row">
+<span class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l5 5v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg></span>
+<span><div class="name">Aussie Broadband payment receipt #62825671.pdf</div><div class="sub">Receipt · uploaded · 28 Sept</div></span>
+<span class="filed"></span>
+<svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+</a>
+<a href="#" class="row">
+<span class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l5 5v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg></span>
+<span><div class="name">Lumo Energy Australia bill</div><div class="sub">Bill · forwarded by Norm Smith · 21 Sept</div></span>
+<span class="filed"><div class="a">$542.94</div><div class="l">Filed to Electricity</div></span>
+<svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+</a>
+<a href="#" class="row">
+<span class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M4 8l8 5.5L20 8"/></svg></span>
+<span><div class="name">Aussie Broadband email</div><div class="sub">Email · forwarded by Bejay Smith · 14 Sept</div></span>
+<span class="filed"></span>
+<svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+</a>
+<div style="border-top: 1px solid rgba(255,255,255,0.08); padding: 6px 28px;">
+<a href="#" style="display: inline-flex; align-items: center; gap: 8px; min-height: 44px; font-size: 15px; font-weight: 500;">Show 1 more<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></a>
+</div>
+</div>
+</section>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1300}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

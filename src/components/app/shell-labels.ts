@@ -34,6 +34,7 @@ export async function shellLabels(): Promise<ShellLabels> {
       home: t('home'),
       services: t('services'),
       bills: t('bills'),
+      budget: t('budget'),
       money: t('money'),
       members: t('members'),
       inbox: t('inbox'),
@@ -61,11 +62,9 @@ export async function shellLabels(): Promise<ShellLabels> {
     console: t('console'),
     yourHouseholds: t('yourHouseholds'),
     acct: {
-      overview: t('acct.overview'),
-      profile: t('acct.profile'),
+      households: t('acct.households'),
       notifications: t('acct.notifications'),
-      security: t('acct.security'),
-      appearance: t('acct.appearance'),
+      account: t('acct.account'),
     },
     switcher: {
       title: ts('title'),
@@ -76,14 +75,12 @@ export async function shellLabels(): Promise<ShellLabels> {
     accountMenu: {
       open: tam('open'),
       notifications: tam('notifications'),
-      appearance: tam('appearance'),
-      profile: tam('profile'),
+      account: tam('account'),
       wall: tam('wall'),
       backend: tam('backend'),
       signOut: tam('signOut'),
       dashboardShort: tam('dashboardShort'),
       settingsShort: tam('settingsShort'),
-      addWidget: tam('addWidget'),
     },
   };
 }

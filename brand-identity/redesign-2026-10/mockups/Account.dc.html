@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Garnet account - proposed</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:rgba(244,238,238,0.72);text-decoration:none}
+a:hover{color:#F4EEEE}
+button{font-family:inherit}
+input{font-family:inherit}
+.card{box-sizing:border-box;border:1px solid rgba(255,255,255,0.14);border-radius:28px;background:rgba(255,255,255,0.05);overflow:hidden}
+.lbl{margin:0;font-size:17px;font-weight:500;color:rgba(244,238,238,0.66)}
+.num{font-variant-numeric:tabular-nums}
+.sub{margin-top:3px;font-size:14px;color:rgba(244,238,238,0.56)}
+.h2{display:flex;align-items:center;gap:10px;color:rgba(244,238,238,0.66)}
+.h2 h2{margin:0;font-size:17px;font-weight:500}
+.pillbtn{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 20px;border:1px solid rgba(255,255,255,0.16);border-radius:999px;background:rgba(255,255,255,0.06);color:#F4EEEE;font-size:15px;font-weight:500;cursor:pointer}
+.primary{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 22px;border:0;border-radius:999px;background:rgba(244,238,238,0.92);color:#1a0d10;font-size:15px;font-weight:600;cursor:pointer}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:999px;font-size:14px;font-weight:500;white-space:nowrap}
+.okp{color:#86D9A6;border:1px solid rgba(134,217,166,0.38);background:rgba(134,217,166,0.12)}
+.soon{color:#F0BE62;border:1px solid rgba(240,190,98,0.38);background:rgba(240,190,98,0.1)}
+.tag{display:inline-flex;align-items:center;padding:3px 11px;border-radius:999px;font-size:13px;font-weight:500;color:rgba(244,238,238,0.82);border:1px solid rgba(255,255,255,0.22);background:rgba(255,255,255,0.06);white-space:nowrap}
+.tag.q{color:rgba(244,238,238,0.62);border-color:rgba(255,255,255,0.12);background:transparent}
+.paidtxt{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:500;color:#86D9A6}
+.ico{display:inline-flex;align-items:center;justify-content:center;flex:none;width:52px;height:52px;border-radius:16px;background:rgba(255,255,255,0.08);color:#F4EEEE}
+.av{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;font-size:14px;font-weight:600;color:#1a0d10;box-sizing:border-box;border:2px solid #1c1214}
+.stack .av+.av{margin-left:-8px}
+.iconbtn{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border:0;border-radius:50%;background:transparent;color:rgba(244,238,238,0.7);cursor:pointer}
+.iconbtn:hover{background:rgba(255,255,255,0.08);color:#F4EEEE}
+.hrow{display:grid;grid-template-columns:52px minmax(0,1fr) 150px 130px 44px;align-items:center;gap:20px;padding:20px 28px;border-top:1px solid rgba(255,255,255,0.1);color:#F4EEEE;min-height:44px}
+.hrow:first-child{border-top:0}
+.hrow:hover{background:rgba(255,255,255,0.04)}
+.name{display:flex;align-items:center;flex-wrap:wrap;gap:10px;font-size:20px;font-weight:600;letter-spacing:-0.01em}
+.val{text-align:right}
+.val .a{font-size:22px;font-weight:600;letter-spacing:-0.015em;font-variant-numeric:tabular-nums}
+.val .l{margin-top:3px;font-size:14px;color:rgba(244,238,238,0.56)}
+.crow{display:grid;grid-template-columns:minmax(0,1fr) 220px 120px;align-items:center;gap:18px;padding:16px 28px;border-top:1px solid rgba(255,255,255,0.08)}
+.crow:first-child{border-top:0}
+.cname{font-size:18px;font-weight:600}
+.opt{display:flex;flex-direction:column;align-items:flex-start;gap:14px;flex:1 1 380px;box-sizing:border-box;padding:24px 26px}
+.opt b{font-size:19px;font-weight:600}
+.opt p{margin:0;font-size:15px;color:rgba(244,238,238,0.62);line-height:1.45}
+.field{flex:1 1 160px;min-width:0;box-sizing:border-box;min-height:48px;padding:0 20px;border:1px solid rgba(255,255,255,0.18);border-radius:999px;background:rgba(255,255,255,0.06);color:#F4EEEE;font-size:16px;outline:0}
+.field::placeholder{color:rgba(244,238,238,0.4)}
+.sw{position:relative;flex:none;display:inline-flex;align-items:center;width:88px;height:44px;padding:0 14px;box-sizing:border-box;border-radius:999px;cursor:pointer;font-size:16px;font-weight:600;letter-spacing:0.01em}
+.sw .k{position:absolute;top:4px;width:36px;height:36px;border-radius:50%;background:#F4EEEE;display:inline-flex;align-items:center;justify-content:center;color:#1a0d10}
+.sw[aria-checked="true"]{justify-content:flex-start;background:#86D9A6;border:1.5px solid #86D9A6;color:#0E2A1B}
+.sw[aria-checked="true"] .k{right:4px}
+.sw[aria-checked="false"]{justify-content:flex-end;background:rgba(255,255,255,0.08);border:1.5px solid rgba(255,255,255,0.38);color:rgba(244,238,238,0.82)}
+.sw[aria-checked="false"] .k{left:4px;background:rgba(244,238,238,0.55)}
+.sw:focus-visible{outline:2px solid #F4EEEE;outline-offset:3px}
+.nrow{display:grid;grid-template-columns:minmax(0,1fr) 150px 150px;align-items:center;gap:18px;padding:20px 28px;border-top:1px solid rgba(255,255,255,0.08)}
+.nhead{display:grid;grid-template-columns:minmax(0,1fr) 150px 150px;align-items:center;gap:18px;padding:22px 28px 14px;font-size:16px;font-weight:600}
+.nhead span{text-align:center}
+.nrow .cell{display:flex;justify-content:center}
+.nrow .cell::before{display:none}
+.srow{display:grid;grid-template-columns:220px minmax(0,1fr) auto;align-items:center;gap:18px;padding:16px 28px;border-top:1px solid rgba(255,255,255,0.08);min-height:44px}
+.srow .k{font-size:16px;color:rgba(244,238,238,0.62)}
+.srow .v{font-size:17px;font-weight:500}
+.shead{padding:24px 28px 12px}
+.shead h2{margin:0;font-size:22px;font-weight:600;letter-spacing:-0.01em}
+.shead p{margin:6px 0 0;font-size:15px;color:rgba(244,238,238,0.56)}
+.note{margin:0;padding:14px 28px 20px;font-size:14px;color:rgba(244,238,238,0.5);line-height:1.5}
+.seg{display:inline-flex;align-items:center;padding:4px;border:1px solid rgba(255,255,255,0.14);border-radius:999px;background:rgba(255,255,255,0.05)}
+.seg button{display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 18px;border:0;border-radius:999px;background:transparent;color:rgba(244,238,238,0.72);font-size:15px;font-weight:500;cursor:pointer}
+.seg button[aria-pressed="true"]{background:rgba(244,238,238,0.92);color:#1a0d10;font-weight:600}
+.tlink{display:inline-flex;align-items:center;gap:8px;min-height:44px;font-size:15px;font-weight:500}
+@media (max-width:900px){
+.hrow{grid-template-columns:52px minmax(0,1fr) 44px;gap:14px;padding:18px}
+.hrow .val{display:none}
+.crow{grid-template-columns:minmax(0,1fr) auto;gap:10px;padding:14px 18px}
+.crow .st{display:none}
+.nhead{display:none}
+.nrow{grid-template-columns:1fr 1fr;gap:10px 14px;padding:18px}
+.nrow .t{grid-column:1/-1}
+.nrow .cell{justify-content:space-between;align-items:center;grid-column:1/-1}
+.nrow .cell::before{display:block;content:attr(data-h);font-size:15px;color:rgba(244,238,238,0.66)}
+.srow{grid-template-columns:1fr auto;padding:14px 18px}
+.srow .k{grid-column:1/-1}
+}
+</style>
+</helmet>
+<div style="box-sizing:border-box;min-height:100%;padding:24px 40px 56px;background:radial-gradient(ellipse 60% 70% at 0% 45%, rgba(130,32,44,0.55), rgba(130,32,44,0) 70%), #120a0c;color:#F4EEEE;font-family:'Bricolage Grotesque', system-ui, sans-serif;">
+<div style="max-width:1280px;margin:0 auto;display:flex;flex-direction:column;gap:24px;">
+<nav aria-label="Account" style="display:flex;align-items:center;flex-wrap:wrap;gap:14px;min-height:60px;padding:8px 14px 8px 20px;box-sizing:border-box;border:1px solid rgba(255,255,255,0.14);border-radius:32px;background:rgba(14,7,9,0.6);">
+<div style="display:flex;align-items:center;gap:10px;">
+<svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true"><path d="M14 1.5 26.5 14 14 26.5 1.5 14z" fill="#C8283C"/><path d="M14 1.5 26.5 14 14 14z" fill="#E8495D"/><path d="M1.5 14 14 14 14 26.5z" fill="#9E1B2D"/></svg>
+<span style="font-size:22px;font-weight:600;letter-spacing:-0.01em;">Garnet</span>
+</div>
+<div style="width:1px;height:28px;background:rgba(255,255,255,0.18);"></div>
+<a href="#" style="display:flex;align-items:center;gap:10px;min-height:44px;padding:0 12px 0 6px;border-radius:14px;color:#F4EEEE;font-size:15px;font-weight:600;">
+<span style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:10px;background:rgba(255,255,255,0.1);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="6" height="6" rx="1.5"/><rect x="14" y="4" width="6" height="6" rx="1.5"/><rect x="4" y="14" width="6" height="6" rx="1.5"/><rect x="14" y="14" width="6" height="6" rx="1.5"/></svg></span>Your households</a>
+<div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin-left:24px;">
+<a href="#" style="display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 14px;font-size:15px;font-weight:500;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v9a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-9"/></svg>Households</a>
+<a href="#" style="display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 14px;font-size:15px;font-weight:500;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 21h4"/></svg>Notifications</a>
+<a href="#" aria-current="page" style="display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 18px;border-radius:999px;background:rgba(244,238,238,0.92);color:#1a0d10;font-size:15px;font-weight:600;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.9 3.1-7 7-7s7 3.1 7 7"/></svg>Account</a>
+</div>
+<div style="flex:1 1 24px;"></div>
+<span aria-label="Signed in as Lisa" style="display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;background:#C98A1B;color:#1a0d10;font-size:16px;font-weight:600;">L</span>
+</nav>
+<header style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:20px;padding:8px 8px 0;">
+<div>
+<h1 style="margin:0;font-size:56px;line-height:1;font-weight:600;letter-spacing:-0.03em;">Account</h1>
+<p style="margin:12px 0 0;font-size:17px;color:rgba(244,238,238,0.66);">Your details, how you sign in, and how Garnet looks.</p>
+</div>
+
+</header>
+<div style="max-width:880px;display:flex;flex-direction:column;gap:20px;">
+
+<section class="card" aria-label="You" style="padding:28px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:18px;">
+<div style="display:flex;align-items:center;gap:20px;">
+<span style="display:inline-flex;align-items:center;justify-content:center;width:72px;height:72px;border-radius:50%;background:#C98A1B;color:#1a0d10;font-size:30px;font-weight:600;" aria-hidden="true">L</span>
+<div><div style="font-size:28px;font-weight:600;letter-spacing:-0.02em;">Lisa Smith</div><div class="sub" style="font-size:16px;margin-top:4px;">smithfamilybgo@gmail.com</div></div>
+</div>
+<button type="button" class="pillbtn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V5M7.5 9.5 12 5l4.5 4.5M5 20h14"/></svg>Add photo</button>
+</section>
+
+<section class="card" aria-labelledby="pd">
+<div class="shead"><h2 id="pd">Personal details</h2></div>
+<div class="srow"><span class="k">Name</span><span class="v">Lisa Smith</span><span><a href="#" class="tlink">Edit</a></span></div>
+<div class="srow"><span class="k">Email</span><span class="v">smithfamilybgo@gmail.com</span><span></span></div>
+<div class="srow"><span class="k">Photo</span><span class="v"><span style="color:rgba(244,238,238,0.66);font-weight:400;">None yet, so your initial shows</span></span><span></span></div>
+<p class="note">Your name and photo are the same in all 2 of your households.</p>
+</section>
+
+<section class="card" aria-labelledby="si">
+<div class="shead"><h2 id="si">Sign-in and security</h2></div>
+<div class="srow"><span class="k">Signs in with</span><span class="v">An emailed code</span><span></span></div>
+<div class="srow"><span class="k">Account created</span><span class="v">28 Sept 2026</span><span></span></div>
+<div class="srow"><span class="k">Last sign-in</span><span class="v">9 Oct 2026</span><span></span></div>
+<div class="srow"><span class="k">PIN</span><span class="v"><span>Set</span><span style="color:rgba(244,238,238,0.56);font-weight:400;"> · asked again every 7 days</span></span><span><button type="button" class="pillbtn">Change PIN</button></span></div>
+<p class="note">There's no password: you sign in with Google or a code emailed to you.</p>
+</section>
+
+<section class="card" aria-labelledby="ap">
+<div class="shead"><h2 id="ap">Appearance</h2><p>Yours on every device you sign in on.</p></div>
+<div class="srow"><span class="k">Light or dark</span><span class="v" style="display:flex;flex-direction:column;gap:6px;align-items:flex-start;"><span class="seg" role="group" aria-label="Theme"><button type="button" aria-pressed="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg>Light</button><button type="button" aria-pressed="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"/></svg>Dark</button><button type="button" aria-pressed="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>Automatic</button></span><span style="font-size:14px;font-weight:400;color:rgba(244,238,238,0.5);">Automatic follows your phone or computer.</span></span><span></span></div>
+<div style="height:8px;"></div>
+</section>
+
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1400}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

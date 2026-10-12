@@ -20,10 +20,22 @@ import { billAfter, upcomingCharge } from '@/lib/recurring';
  *  - anything else (rego, insurance, servicing, a cleaner): the latest price
  *    for yearly bills, else the average of the last three.
  * Irregular bills have no next date, so nothing is expected of them.
+ *  - a bill added by hand on Budget before any has arrived (its usual amount
+ *    and roughly when): that amount on that day, then every cadence after,
+ *    until a real bill comes in and takes over.
  */
 
 export type ExpectedBasis =
-  'recurring' | 'fixed' | 'lastYear' | 'weather' | 'area' | 'recent' | 'latest' | 'single';
+  | 'recurring'
+  | 'fixed'
+  | 'lastYear'
+  | 'weather'
+  | 'area'
+  | 'recent'
+  | 'latest'
+  | 'single'
+  /** A bill added by hand on Budget, before any bill has arrived (quick-add). */
+  | 'added';
 
 export interface ExpectedBill {
   serviceId: string;
@@ -37,7 +49,8 @@ export interface ExpectedBill {
 type ServiceFields = Pick<
   Service,
   'id' | 'isActive' | 'cancelledAt' | 'cadence' | 'usageUnit' | 'seasonal' | 'recurringSince'
->;
+> &
+  Partial<Pick<Service, 'expectedAmountMinor' | 'expectedOn'>>;
 type BillFields = Pick<Bill, 'amountMinor' | 'periodStart' | 'periodEnd' | 'dueDate'> & {
   paymentPlan?: Bill['paymentPlan'];
 };
@@ -126,7 +139,8 @@ export function expectedBills(
   untilMonth: string,
   fallback?: PerDayFallback,
 ): ExpectedBill[] {
-  if (!svc.isActive || svc.cancelledAt || svc.cadence === 'irregular' || !bills.length) return [];
+  if (!svc.isActive || svc.cancelledAt || svc.cadence === 'irregular') return [];
+  if (!bills.length) return addedByHand(svc, untilMonth);
   const sorted = byStart(bills);
   const latest = sorted.at(-1)!;
   const charges = daysInclusive(latest.periodStart, latest.periodEnd) < CHARGE_DAYS;
@@ -168,6 +182,29 @@ export function expectedBills(
       basis: amount.basis,
     });
     from = { ...next, amountMinor: amount.minor };
+  }
+  return out;
+}
+
+/**
+ * A service with no bills yet, added by hand on Budget with its usual amount
+ * and roughly when it falls: that bill on that day (a charge on the day),
+ * then one every cadence, up to the end of `untilMonth`.
+ */
+function addedByHand(svc: ServiceFields, untilMonth: string): ExpectedBill[] {
+  const amount = svc.expectedAmountMinor ?? null;
+  const on = svc.expectedOn ?? null;
+  if (!amount || !on) return [];
+  const out: ExpectedBill[] = [];
+  let next: { periodStart: string; periodEnd: string; dueDate: string } | null = {
+    periodStart: on,
+    periodEnd: on,
+    dueDate: on,
+  };
+  for (let i = 0; i < 120 && next; i++) {
+    if (next.dueDate.slice(0, 7) > untilMonth) break;
+    out.push({ serviceId: svc.id, ...next, amountMinor: amount, basis: 'added' });
+    next = billAfter(svc.cadence, { ...next, amountMinor: amount });
   }
   return out;
 }

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { ComponentProps, ReactNode } from 'react';
+import { useTranslations } from 'next-intl';
 import { Icon } from '@/components/app/icons';
 import { TopBack } from '@/components/app/top-back';
 import { cx } from './cx';
@@ -121,8 +122,10 @@ export function Segmented({
 }
 
 /**
- * A switch backed by a checkbox, so it works in any form without script.
- * The label is for assistive tech; put the visible words beside it.
+ * A switch backed by a checkbox, so it works in any form without script
+ * (SCOPE-redesign-2.md §4: 88 × 44, the word On or Off in the track, a tick
+ * on the knob when on). The label is for assistive tech; put the visible
+ * words beside it. For a switch that saves at once, see switch.tsx.
  */
 export function Toggle({
   name,
@@ -141,6 +144,7 @@ export function Toggle({
   value?: string;
   disabled?: boolean;
 }) {
+  const t = useTranslations('common');
   return (
     <label className="toggle">
       <input
@@ -154,6 +158,12 @@ export function Toggle({
         onChange={onChange}
         disabled={disabled}
       />
+      <span className="sw-on" aria-hidden="true">
+        {t('on')}
+      </span>
+      <span className="sw-off" aria-hidden="true">
+        {t('off')}
+      </span>
       <i aria-hidden="true" />
     </label>
   );

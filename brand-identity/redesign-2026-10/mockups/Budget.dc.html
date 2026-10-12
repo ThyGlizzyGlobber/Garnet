@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Garnet budget - proposed</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:rgba(244,238,238,0.72);text-decoration:none}
+a:hover{color:#F4EEEE}
+button{font-family:inherit}
+.card{box-sizing:border-box;border:1px solid rgba(255,255,255,0.14);border-radius:28px;background:rgba(255,255,255,0.05)}
+.lbl{margin:0;font-size:17px;font-weight:500;color:rgba(244,238,238,0.66)}
+.h2{display:flex;align-items:center;gap:10px;color:rgba(244,238,238,0.66)}
+.h2 h2{margin:0;font-size:17px;font-weight:500}
+.num{font-variant-numeric:tabular-nums}
+.pillbtn{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 20px;border:1px solid rgba(255,255,255,0.16);border-radius:999px;background:rgba(255,255,255,0.06);color:#F4EEEE;font-size:15px;font-weight:500;cursor:pointer}
+.pillok{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:999px;font-size:15px;font-weight:500;color:#86D9A6;border:1px solid rgba(134,217,166,0.38);background:rgba(134,217,166,0.12);white-space:nowrap}
+.bar{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:8px;height:100%;padding:0;border:0;background:transparent;color:rgba(244,238,238,0.6);font-size:13px;cursor:pointer}
+.bar .col{display:flex;flex-direction:column;justify-content:flex-end;width:100%}
+.est{display:block;width:100%;box-sizing:border-box;border:1.5px dashed rgba(244,238,238,0.5);border-radius:10px;background:rgba(255,255,255,0.04)}
+.sol{display:block;width:100%;border-radius:10px;background:rgba(244,238,238,0.92)}
+.bar .val{font-size:12px;color:rgba(244,238,238,0.72);font-variant-numeric:tabular-nums}
+.mrow{display:grid;grid-template-columns:84px minmax(0,1fr) 84px;align-items:center;gap:14px}
+.opt{display:flex;flex-direction:column;align-items:flex-start;gap:6px;flex:1 1 320px;box-sizing:border-box;padding:20px 22px;border:1px solid rgba(255,255,255,0.14);border-radius:20px;background:transparent;color:#F4EEEE;text-align:left;cursor:pointer;min-height:44px}
+.opt:hover{background:rgba(255,255,255,0.05)}
+.opt b{font-size:18px;font-weight:600}
+.opt span{font-size:15px;color:rgba(244,238,238,0.62);line-height:1.4}
+@media (max-width:760px){.bar .val{display:none}}
+</style>
+</helmet>
+<div style="box-sizing: border-box; min-height: 100%; padding: 24px 40px 56px; background: radial-gradient(ellipse 60% 70% at 0% 45%, rgba(130,32,44,0.55), rgba(130,32,44,0) 70%), #120a0c; color: #F4EEEE; font-family: 'Bricolage Grotesque', system-ui, sans-serif;">
+<div style="max-width: 1280px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px;">
+
+<nav aria-label="Primary" style="display: flex; align-items: center; flex-wrap: wrap; gap: 14px; min-height: 60px; padding: 8px 14px 8px 20px; box-sizing: border-box; border: 1px solid rgba(255,255,255,0.14); border-radius: 32px; background: rgba(14,7,9,0.6);">
+<div style="display: flex; align-items: center; gap: 10px;">
+<svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true"><path d="M14 1.5 26.5 14 14 26.5 1.5 14z" fill="#C8283C"/><path d="M14 1.5 26.5 14 14 14z" fill="#E8495D"/><path d="M1.5 14 14 14 14 26.5z" fill="#9E1B2D"/></svg>
+<span style="font-size: 22px; font-weight: 600; letter-spacing: -0.01em;">Garnet</span>
+</div>
+<div style="width: 1px; height: 28px; background: rgba(255,255,255,0.18);"></div>
+<button type="button" style="display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 12px 0 6px; border: 0; border-radius: 14px; background: transparent; color: #F4EEEE; font-size: 15px; font-weight: 600; cursor: pointer;">
+<span style="display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 10px; background: rgba(255,255,255,0.1);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v9a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-9"/></svg></span>
+Smith Household
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+</button>
+<div style="display: flex; align-items: center; flex-wrap: wrap; gap: 4px; margin-left: 24px;">
+<a href="#" style="display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; font-size: 15px; font-weight: 500;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v9a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-9"/></svg>Home</a>
+<a href="#" style="display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; font-size: 15px; font-weight: 500;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="6" height="6" rx="1.5"/><rect x="14" y="4" width="6" height="6" rx="1.5"/><rect x="4" y="14" width="6" height="6" rx="1.5"/><rect x="14" y="14" width="6" height="6" rx="1.5"/></svg>Services</a>
+<a href="#" style="display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; font-size: 15px; font-weight: 500;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg>Bills</a>
+<a href="#" aria-current="page" style="display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 18px; border-radius: 999px; background: rgba(244,238,238,0.92); color: #1a0d10; font-size: 15px; font-weight: 600;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="3"/><path d="M3 10h18M16 14.5h2"/></svg>Budget</a>
+<a href="#" style="display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; font-size: 15px; font-weight: 500;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.5"/><path d="M17 14c2.5 0 4 2 4 5"/></svg>Members</a>
+<a href="#" style="display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; font-size: 15px; font-weight: 500;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 13l3-8h12l3 8v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M3 13h5l1 3h6l1-3h5"/></svg>Inbox</a>
+</div>
+<div style="flex: 1 1 24px;"></div>
+<div style="display: flex; align-items: center; gap: 10px;">
+<button type="button" aria-label="Search" style="display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border: 1px solid rgba(255,255,255,0.16); border-radius: 50%; background: rgba(255,255,255,0.06); color: #F4EEEE; cursor: pointer;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4-4"/></svg></button>
+<button type="button" style="display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 20px; border: 0; border-radius: 999px; background: rgba(244,238,238,0.92); color: #1a0d10; font-size: 15px; font-weight: 600; cursor: pointer;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Add bill</button>
+<span aria-label="Signed in as Lisa" style="display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; background: #C98A1B; color: #1a0d10; font-size: 16px; font-weight: 600;">L</span>
+</div>
+</nav>
+
+<header style="display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 20px; padding: 8px 8px 0;">
+<div>
+<h1 style="margin: 0; font-size: 56px; line-height: 1; font-weight: 600; letter-spacing: -0.03em;">Budget</h1>
+<p style="margin: 12px 0 0; font-size: 17px; color: rgba(244,238,238,0.66);">Your year ahead · Financial year 1 Jul 2026 to 30 Jun 2027</p>
+</div>
+<button type="button" class="pillbtn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17z"/></svg>Edit yearly budget</button>
+</header>
+
+<div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: stretch;">
+
+<section class="card" aria-labelledby="hero-t" style="flex: 2 1 600px; min-width: 0; padding: 32px; display: flex; flex-direction: column; gap: 26px;">
+<div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+<h2 id="hero-t" class="lbl">Projected for FY 2026&ndash;27</h2>
+<span class="pillok"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>On track</span>
+</div>
+<div>
+<div class="num" style="font-size: 88px; line-height: 0.95; font-weight: 600; letter-spacing: -0.035em;"><span style="font-size: 44px; color: rgba(244,238,238,0.5); letter-spacing: -0.01em;">&asymp;</span>$35,648</div>
+<p style="margin: 14px 0 0; font-size: 17px; color: rgba(244,238,238,0.66);">about $2,352 under your $38,000 budget</p>
+</div>
+
+<div>
+<div role="img" aria-label="Paid so far 35 percent of budget, still to come 59 percent, budget limit at the right" style="position: relative; height: 18px; border-radius: 9px; background: rgba(255,255,255,0.08); display: flex; overflow: hidden;">
+<span style="display: block; width: 35.27%; background: rgba(244,238,238,0.92);"></span>
+<span style="display: block; width: 58.54%; box-sizing: border-box; border: 1.5px dashed rgba(244,238,238,0.5); border-left: 0; background: rgba(255,255,255,0.05);"></span>
+</div>
+<div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 13px; color: rgba(244,238,238,0.56);"><span>$0</span><span>Budget $38,000</span></div>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 20px 40px; padding-top: 22px; border-top: 1px solid rgba(255,255,255,0.12);">
+<div><p style="margin: 0 0 6px; font-size: 15px; color: rgba(244,238,238,0.56);">Paid so far</p><p class="num" style="margin: 0; font-size: 28px; font-weight: 600; letter-spacing: -0.02em;">$13,401.06</p><p style="margin: 4px 0 0; font-size: 14px; color: rgba(244,238,238,0.5);">22 bills</p></div>
+<div><p style="margin: 0 0 6px; font-size: 15px; color: rgba(244,238,238,0.56);">Still to come</p><p class="num" style="margin: 0; font-size: 28px; font-weight: 600; letter-spacing: -0.02em;">&asymp;$22,247</p><p style="margin: 4px 0 0; font-size: 14px; color: rgba(244,238,238,0.5);">estimated</p></div>
+</div>
+
+<p style="margin: 0; display: flex; align-items: flex-start; gap: 10px; font-size: 15px; line-height: 1.45; color: rgba(244,238,238,0.62);">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none; margin-top: 2px;"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.5"/></svg>
+Based on 4 months of bills (Jul to Oct) and 4 yearly bills. Estimates are shown with dashed outlines.
+</p>
+</section>
+
+<section class="card" aria-labelledby="aside-t" style="flex: 1 1 320px; min-width: 0; padding: 28px; display: flex; flex-direction: column; gap: 20px;">
+<div class="h2">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="3"/><path d="M3 10h18M16 14.5h2"/></svg>
+<h2 id="aside-t">Set aside each month</h2>
+</div>
+<p class="num" style="margin: 0; font-size: 56px; line-height: 1; font-weight: 600; letter-spacing: -0.03em;">$2,971</p>
+<p style="margin: 0; font-size: 16px; line-height: 1.5; color: rgba(244,238,238,0.66);">Put this aside every month and the big bills, like November, are already covered.</p>
+<p class="num" style="margin: auto 0 0; padding-top: 18px; border-top: 1px solid rgba(255,255,255,0.12); font-size: 14px; color: rgba(244,238,238,0.5);">Projected $35,648 &divide; 12 months</p>
+</section>
+
+</div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: stretch;">
+
+<section class="card" aria-labelledby="chart-t" style="flex: 2 1 600px; min-width: 0; padding: 28px 32px 24px; display: flex; flex-direction: column; gap: 18px;">
+<div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+<div class="h2">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 20V10M12 20V4M19 20v-7"/></svg>
+<h2 id="chart-t">Month by month</h2>
+</div>
+<div style="display: flex; align-items: center; gap: 18px; font-size: 14px; color: rgba(244,238,238,0.66);">
+<span style="display: inline-flex; align-items: center; gap: 8px;"><span style="display: inline-block; width: 16px; height: 12px; border-radius: 4px; background: rgba(244,238,238,0.92);"></span>Paid</span>
+<span style="display: inline-flex; align-items: center; gap: 8px;"><span style="display: inline-block; width: 16px; height: 12px; box-sizing: border-box; border-radius: 4px; border: 1.5px dashed rgba(244,238,238,0.5);"></span>Estimated</span>
+</div>
+</div>
+
+<div style="height: 280px; display: flex; align-items: flex-end; gap: 8px;">
+<button type="button" class="bar" aria-label="July, $2,310 paid"><span class="col" style="flex: 1 1 auto;"><span class="sol" style="height: 64px;"></span></span>Jul</button>
+<button type="button" class="bar" aria-label="August, $2,514 paid"><span class="col" style="flex: 1 1 auto;"><span class="sol" style="height: 70px;"></span></span>Aug</button>
+<button type="button" class="bar" aria-label="September, $7,900 paid"><span class="val">$7.9k</span><span class="col" style="flex: 1 1 auto;"><span class="sol" style="height: 220px;"></span></span>Sep</button>
+<button type="button" class="bar" aria-label="October, this month, $677 paid and $464 still expected" style="color: #F4EEEE; font-weight: 600;"><span class="col" style="flex: 1 1 auto;"><span class="est" style="height: 13px; border-bottom: 0; border-radius: 10px 10px 0 0;"></span><span class="sol" style="height: 19px; border-radius: 0 0 10px 10px;"></span></span>Oct</button>
+<button type="button" class="bar" aria-label="November, about $6,544 estimated"><span class="val">&asymp;$6.5k</span><span class="col" style="flex: 1 1 auto;"><span class="est" style="height: 182px;"></span></span>Nov</button>
+<button type="button" class="bar" aria-label="December, about $2,364 estimated"><span class="col" style="flex: 1 1 auto;"><span class="est" style="height: 66px;"></span></span>Dec</button>
+<button type="button" class="bar" aria-label="January, about $1,755 estimated"><span class="col" style="flex: 1 1 auto;"><span class="est" style="height: 49px;"></span></span>Jan</button>
+<button type="button" class="bar" aria-label="February, about $2,420 estimated"><span class="col" style="flex: 1 1 auto;"><span class="est" style="height: 67px;"></span></span>Feb</button>
+<button type="button" class="bar" aria-label="March, about $2,180 estimated"><span class="col" style="flex: 1 1 auto;"><span class="est" style="height: 61px;"></span></span>Mar</button>
+<button type="button" class="bar" aria-label="April, about $2,050 estimated"><span class="col" style="flex: 1 1 auto;"><span class="est" style="height: 57px;"></span></span>Apr</button>
+<button type="button" class="bar" aria-label="May, about $2,150 estimated"><span class="col" style="flex: 1 1 auto;"><span class="est" style="height: 60px;"></span></span>May</button>
+<button type="button" class="bar" aria-label="June, about $2,320 estimated"><span class="col" style="flex: 1 1 auto;"><span class="est" style="height: 65px;"></span></span>Jun</button>
+</div>
+<p style="margin: 0; font-size: 14px; color: rgba(244,238,238,0.5);">Tap a month to see its bills.</p>
+</section>
+
+<section class="card" aria-labelledby="ahead-t" style="flex: 1 1 320px; min-width: 0; padding: 28px; display: flex; flex-direction: column; gap: 22px;">
+<div class="h2">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+<h2 id="ahead-t">Big bills ahead</h2>
+</div>
+<div style="display: flex; flex-direction: column; gap: 20px;">
+<div>
+<div class="mrow"><span style="font-size: 16px; font-weight: 500;">November</span><span style="display: block; height: 12px; border-radius: 6px; background: rgba(255,255,255,0.08);"><span style="display: block; width: 100%; height: 100%; border-radius: 6px; background: rgba(244,238,238,0.86);"></span></span><span class="num" style="font-size: 16px; text-align: right;">&asymp;$6,544</span></div>
+<p style="margin: 6px 0 0; font-size: 14px; color: rgba(244,238,238,0.56);">Includes Building Insurance, about 3 Nov</p>
+</div>
+<div class="mrow"><span style="font-size: 16px; font-weight: 500;">December</span><span style="display: block; height: 12px; border-radius: 6px; background: rgba(255,255,255,0.08);"><span style="display: block; width: 36%; height: 100%; border-radius: 6px; background: rgba(244,238,238,0.32);"></span></span><span class="num" style="font-size: 16px; text-align: right;">&asymp;$2,364</span></div>
+<div class="mrow"><span style="font-size: 16px; font-weight: 500;">January</span><span style="display: block; height: 12px; border-radius: 6px; background: rgba(255,255,255,0.08);"><span style="display: block; width: 27%; height: 100%; border-radius: 6px; background: rgba(244,238,238,0.32);"></span></span><span class="num" style="font-size: 16px; text-align: right;">&asymp;$1,755</span></div>
+</div>
+<a href="#" style="margin-top: auto; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; font-size: 15px; font-weight: 500;">All twelve months<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+</section>
+
+</div>
+
+<section class="card" aria-labelledby="split-t" style="padding: 28px 32px; display: flex; flex-direction: column; gap: 20px;">
+<div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+<div class="h2">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="6" height="6" rx="1.5"/><rect x="14" y="4" width="6" height="6" rx="1.5"/><rect x="4" y="14" width="6" height="6" rx="1.5"/><rect x="14" y="14" width="6" height="6" rx="1.5"/></svg>
+<h2 id="split-t">Where it goes</h2>
+</div>
+<a href="#" style="display: inline-flex; align-items: center; gap: 8px; min-height: 44px; font-size: 15px; font-weight: 500;">See services<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+</div>
+<div role="img" aria-label="Essentials 40 percent, Other services 60 percent" style="display: flex; height: 18px; border-radius: 9px; overflow: hidden; gap: 3px;">
+<span style="display: block; width: 40%; background: rgba(244,238,238,0.92); border-radius: 9px 0 0 9px;"></span>
+<span style="display: block; width: 60%; background: rgba(244,238,238,0.3); border-radius: 0 9px 9px 0;"></span>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 16px 56px;">
+<div style="display: flex; align-items: baseline; gap: 14px;"><span style="display: inline-block; width: 12px; height: 12px; border-radius: 4px; background: rgba(244,238,238,0.92);"></span><span style="font-size: 18px; font-weight: 600;">Essentials</span><span class="num" style="font-size: 18px;">&asymp;$14,420</span><span style="font-size: 14px; color: rgba(244,238,238,0.5);">40%</span></div>
+<div style="display: flex; align-items: baseline; gap: 14px;"><span style="display: inline-block; width: 12px; height: 12px; border-radius: 4px; background: rgba(244,238,238,0.3);"></span><span style="font-size: 18px; font-weight: 600;">Other services</span><span class="num" style="font-size: 18px;">&asymp;$21,228</span><span style="font-size: 14px; color: rgba(244,238,238,0.5);">60%</span></div>
+</div>
+</section>
+
+<section class="card" aria-labelledby="acc-t" style="padding: 28px 32px; display: flex; flex-direction: column; gap: 20px;">
+<div>
+<h2 id="acc-t" style="margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em;">Make this more accurate</h2>
+<p style="margin: 6px 0 0; font-size: 16px; color: rgba(244,238,238,0.62);">Yearly bills like rego, insurance and council rates are what a few months of data can't show.</p>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 16px;">
+<button type="button" class="opt" style="border-color: rgba(244,238,238,0.4);"><b>Add last year's bills</b><span>Forward or upload the last 12 months. This gives the best picture.</span></button>
+<button type="button" class="opt"><b>Add yearly bills by hand</b><span>Name, usual amount, how often, and roughly when. About a minute.</span></button>
+</div>
+</section>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1750}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

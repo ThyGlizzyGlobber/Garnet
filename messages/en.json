@@ -38,11 +38,9 @@
     "allowance": "Allowance",
     "console": "Backend management",
     "acct": {
-      "overview": "Overview",
-      "profile": "Profile",
       "notifications": "Notifications",
-      "security": "Security & Access",
-      "appearance": "Appearance"
+      "account": "Account",
+      "households": "Households"
     },
     "panel": {
       "title": "Services",
@@ -53,7 +51,8 @@
       "parts": "Show its services",
       "nothing": "Nothing this month",
       "none": "No services yet"
-    }
+    },
+    "budget": "Budget"
   },
   "setup": {
     "title": "Set up your household.",
@@ -514,6 +513,22 @@
       "now": "Up to this month",
       "upcoming": "Upcoming",
       "all": "All months"
+    },
+    "rd": {
+      "covers": "covers {range}",
+      "toPay": "To pay",
+      "expected": "Expected",
+      "paid": "Paid",
+      "allPaid": "All paid",
+      "stillToCome": "Still to come",
+      "showAll": "Show all {count, plural, one {# bill} other {# bills}}",
+      "assumedPaid": "assumed paid",
+      "expectedOn": "Expected {date}",
+      "unusual": "Unusual",
+      "recurring": "Recurring",
+      "instalment": "instalment {n} of {of}",
+      "openBill": "Open {name}",
+      "openService": "Open {name}"
     }
   },
   "services": {
@@ -896,6 +911,32 @@
         "download": "Download bills",
         "downloadSub": "for your accountant"
       }
+    },
+    "rd": {
+      "lede": "Who you pay, and what they charge · {count, plural, one {# service} other {# services}}",
+      "soFar": "{month} so far",
+      "billsPaid": "{count, plural, one {# bill paid} other {# bills paid}}",
+      "expected": "{count, plural, one {# expected} other {# expected}}",
+      "analytics": "Full analytics",
+      "essentials": "Essentials",
+      "other": "Other services",
+      "thisMonth": "{amount} this month",
+      "paid": "Paid",
+      "paidOn": "Paid {date}",
+      "expectedOn": "Expected {date}",
+      "unusual": "Unusual",
+      "nothingDue": "Nothing due",
+      "nothingThisMonth": "Nothing this month",
+      "nextAbout": "Next about {date}",
+      "nextNamed": "{name}, about {date}",
+      "nextIs": "next is about {amount}",
+      "samePrice": "same price every bill",
+      "usage": "{qty} {unit} a day",
+      "lower": "{pct} lower than last year",
+      "higher": "{pct} higher than last year",
+      "ofLimit": "{pct} of your limit",
+      "yours": "just yours",
+      "approx": "≈{amount}"
     }
   },
   "members": {
@@ -1020,6 +1061,14 @@
       "title": "Remove from household",
       "body": "Their paid shares stay in the history. Unpaid shares need settling first.",
       "cta": "Remove {name}"
+    },
+    "rd": {
+      "lede": "{count, plural, one {# person lives} other {# people live}} at {household}",
+      "since": "since {date}",
+      "you": "You",
+      "invited": "Invited · hasn’t joined yet",
+      "notJoined": "Not joined yet",
+      "open": "Open {name}"
     }
   },
   "settings": {
@@ -1455,6 +1504,15 @@
       "notABillConfirm": "Move this to Other emails? It's kept, and you can move it back with “It's a bill”.",
       "viewFile": "View file",
       "noText": "No text could be made out in this file."
+    },
+    "rd": {
+      "items": "{count, plural, one {# item} other {# items}}",
+      "filedTo": "Filed to {service}",
+      "nothingToConfirm": "Nothing to confirm",
+      "toConfirm": "{count, plural, one {# to confirm} other {# to confirm}}",
+      "showMore": "Show {count} more",
+      "copyAddress": "Copy address",
+      "open": "Open {title}"
     }
   },
   "upload": {
@@ -2158,7 +2216,11 @@
     "copy": "Copy",
     "copied": "Copied",
     "close": "Close",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "on": "On",
+    "off": "Off",
+    "more": "More options",
+    "showAll": "Show all {count, plural, one {# item} other {# items}}"
   },
   "appearance": {
     "title": "Appearance",
@@ -2671,6 +2733,34 @@
       "uploadBill": "Upload a bill",
       "invite": "Invite someone",
       "download": "Download bills"
+    },
+    "page": {
+      "weather": "{temp}° {conditions} · {place}",
+      "allPaid": "All paid",
+      "paidLine": "paid this month · {left} left to pay",
+      "leftLine": "left to pay this month · {paid} paid",
+      "nothingThisMonth": "Nothing due this month",
+      "allServices": "All {count, plural, one {# service} other {# services}}",
+      "lastSix": "Last six months",
+      "tapMonth": "Tap a month for its bills",
+      "barLabel": "{month}, {amount}",
+      "barLabelNow": "{month}, this month, {amount}",
+      "nextDue": "Next due",
+      "nothingDue": "Nothing due",
+      "nextLine": "{service} · {status}",
+      "nextUp": "Next up",
+      "upcoming": "Upcoming",
+      "expectedOn": "Expected {date}",
+      "seeBills": "See all bills",
+      "thisWeek": "This week",
+      "quiet": "A quiet week: nothing due in the next seven days.",
+      "weekLine": "{count, plural, one {# bill due this week} other {# bills due this week}}, {amount} in all.",
+      "weekItem": "{service} · {day}",
+      "comingUp": "Coming up",
+      "approx": "≈{amount}",
+      "allSix": "All six months",
+      "paidMark": "Paid",
+      "dueMark": "To pay"
     }
   },
   "money": {
@@ -2961,14 +3051,12 @@
   "accountMenu": {
     "open": "Account menu",
     "notifications": "Notifications",
-    "appearance": "Appearance",
     "wall": "Wall display",
     "backend": "Backend management",
     "signOut": "Sign out",
-    "profile": "Profile",
     "settingsShort": "Settings",
     "dashboardShort": "Dashboard",
-    "addWidget": "Add a widget"
+    "account": "Account"
   },
   "account": {
     "title": "Hey, {name}.",
@@ -3004,6 +3092,36 @@
         "owed": "Housemates in {household} still owe you. Settle up first.",
         "personal": "You have personal services or vehicles in {household}. Move or delete them first."
       }
+    },
+    "rd": {
+      "title": "Your households",
+      "lede": "{count, plural, =0 {No households yet} one {# household you belong to} other {# households you belong to}}",
+      "youOwe": "You owe",
+      "nothingOwed": "Nothing owed anywhere. Nice.",
+      "oweLine": "Across your households.",
+      "dueAll": "Due this month, all households",
+      "nothingOverdue": "Nothing overdue",
+      "overdue": "{count, plural, one {# overdue} other {# overdue}}",
+      "nothingToConfirm": "Nothing to confirm",
+      "toConfirm": "{count, plural, one {# to confirm} other {# to confirm}}",
+      "households": "Households",
+      "primary": "Primary",
+      "members": "{count, plural, one {# member} other {# members}}",
+      "thisMonth": "this month",
+      "youOweShort": "you owe",
+      "more": "More options for {household}",
+      "makePrimary": "Make primary",
+      "leave": "Leave",
+      "start": "Start a household",
+      "startBody": "Name it, then invite the people you live with.",
+      "join": "Join with a code",
+      "joinBody": "The code from your invite, or open the link in the email.",
+      "comingUp": "Coming up across your households",
+      "allBills": "All bills",
+      "dueIn": "Due {date} · {when}",
+      "inDays": "{count, plural, =0 {today} one {in # day} other {in # days}}",
+      "overdueBy": "{count, plural, one {# day overdue} other {# days overdue}}",
+      "mixed": "In more than one currency"
     }
   },
   "roles": {
@@ -3273,11 +3391,42 @@
       "lede": "Emails go to {email}. Choose what each household sends you.",
       "demo": "Demo people don’t get emails.",
       "emptyTitle": "No households yet",
-      "emptyBody": "Start or join a household and its emails show up here."
+      "emptyBody": "Start or join a household and its emails show up here.",
+      "saveAsYouGo": "Changes save as you go.",
+      "emailMeWhen": "Email me when",
+      "switchLabel": "{kind}, {household}"
     },
     "appearance": {
       "title": "Appearance",
       "lede": "Yours on every device you sign in on."
+    },
+    "rd": {
+      "title": "Account",
+      "lede": "Your details, how you sign in, and how Garnet looks.",
+      "personal": "Personal details",
+      "name": "Name",
+      "email": "Email",
+      "photo": "Photo",
+      "edit": "Edit",
+      "cancel": "Cancel",
+      "security": "Sign-in and security",
+      "signsInWith": "Signs in with",
+      "created": "Account created",
+      "lastSignIn": "Last sign-in",
+      "pin": "PIN",
+      "pinSet": "Set",
+      "pinEvery": " · asked again every {days, plural, one {day} other {# days}}",
+      "pinNone": "Not set",
+      "changePin": "Change PIN",
+      "noPassword": "There’s no password: you sign in with Google or a code emailed to you.",
+      "appearance": "Appearance",
+      "appearanceLede": "Yours on every device you sign in on.",
+      "lightOrDark": "Light or dark",
+      "devices": "Devices signed in as you",
+      "devicesLine": "{count, plural, one {This device only} other {# devices}}",
+      "signOutOthers": "Sign out the others",
+      "signOut": "Sign out",
+      "everywhere": "{count, plural, =0 {Your name and photo go with you into every household you join.} one {Your name and photo are what your household sees.} other {Your name and photo are the same in all # of your households.}}"
     }
   },
   "accountOverview": {
@@ -3316,6 +3465,94 @@
       "soon": "Due soon",
       "due": "To pay",
       "paid": "Paid"
+    }
+  },
+  "budget": {
+    "title": "Budget",
+    "lede": "Your year ahead · {period}",
+    "fyPeriod": "Financial year {from} to {to}",
+    "cyPeriod": "Calendar year {year}",
+    "fyShort": "FY {from}–{to}",
+    "cyShort": "{year}",
+    "editBudget": "Edit yearly budget",
+    "setBudget": "Set a yearly budget",
+    "projected": "Projected for {year}",
+    "onTrack": "On track",
+    "over": "{amount} over budget",
+    "underLine": "about {amount} under your {budget} budget",
+    "overLine": "about {amount} over your {budget} budget",
+    "noBudgetLine": "Set a yearly budget to see whether you’re on track.",
+    "barLabel": "Paid so far {paid} percent of budget, still to come {come} percent, budget limit at the right",
+    "zero": "$0",
+    "budgetMark": "Budget {amount}",
+    "paidSoFar": "Paid so far",
+    "paidBills": "{count, plural, one {# bill} other {# bills}}",
+    "stillToCome": "Still to come",
+    "estimated": "estimated",
+    "basis": "Based on {months, plural, one {# month} other {# months}} of bills ({from} to {to}) and {yearly, plural, =0 {no yearly bills} one {# yearly bill} other {# yearly bills}}. Estimates are shown with dashed outlines.",
+    "basisNoMonths": "No bills have come in yet this year, so everything here is estimated from earlier bills.",
+    "probablyLow": "Nothing is known about yearly bills like rego, insurance or council rates yet, so this total is probably low.",
+    "addLastYear": "Add last year’s bills to improve this.",
+    "setAside": "Set aside each month",
+    "setAsideBody": "Put this aside every month and the big bills, like {month}, are already covered.",
+    "setAsideBodyPlain": "Put this aside every month and the year’s bills are already covered.",
+    "setAsideNote": "Projected {total} ÷ 12 months",
+    "monthByMonth": "Month by month",
+    "legendPaid": "Paid",
+    "legendEstimated": "Estimated",
+    "tapMonth": "Tap a month to see its bills.",
+    "monthPaid": "{month}, {amount} paid",
+    "monthMixed": "{month}, {paid} paid and {expected} still expected",
+    "monthExpected": "{month}, about {amount} estimated",
+    "monthNothing": "{month}, nothing",
+    "thisMonth": "this month",
+    "bigBills": "Big bills ahead",
+    "includes": "Includes {name}, about {date}",
+    "allTwelve": "All twelve months",
+    "whereItGoes": "Where it goes",
+    "seeServices": "See services",
+    "essentials": "Essentials",
+    "other": "Other services",
+    "splitLabel": "Essentials {ess} percent, other services {other} percent",
+    "accurate": "Make this more accurate",
+    "accurateBody": "Yearly bills like rego, insurance and council rates are what a few months of data can’t show.",
+    "optBackfill": "Add last year’s bills",
+    "optBackfillBody": "Forward or upload the last 12 months. This gives the best picture.",
+    "optQuick": "Add yearly bills by hand",
+    "optQuickBody": "Name, usual amount, how often, and roughly when. About a minute.",
+    "approx": "≈{amount}",
+    "approxK": "≈{amount}",
+    "edit": {
+      "title": "Yearly budget",
+      "lede": "One amount for the whole {year}. Leave it blank for no budget.",
+      "amount": "Yearly budget ({currency})",
+      "hint": "Everything you expect to pay for bills over the year.",
+      "save": "Save",
+      "clear": "Remove the budget",
+      "saved": "Saved.",
+      "adminsOnly": "Only admins set the budget.",
+      "invalid": "Enter an amount, like 38000."
+    },
+    "quick": {
+      "title": "Yearly bills by hand",
+      "lede": "Which bills don’t come monthly? Each one you add is counted in the year ahead until its real bill arrives.",
+      "name": "What is it",
+      "namePlaceholder": "e.g. Car rego, Home insurance, Council rates",
+      "amount": "Usual amount ({currency})",
+      "cadence": "How often",
+      "when": "Roughly when",
+      "whenHint": "The next month it falls in.",
+      "add": "Add it",
+      "added": "Added. It’s counted in the year ahead now.",
+      "listTitle": "Already counted",
+      "listLine": "{amount} · {cadence} · about {date}",
+      "done": "Done",
+      "cadences": {
+        "annual": "Once a year",
+        "quarterly": "Every three months",
+        "bimonthly": "Every two months",
+        "monthly": "Every month"
+      }
     }
   }
 }

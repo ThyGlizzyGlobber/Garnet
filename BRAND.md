@@ -1,11 +1,55 @@
 # Garnet — Brand & Design System
 
-The single reference for how the product looks, sounds and moves. The design is
-**Almanac 2** with the **Frost Glass** material, chosen by the owner in the
-Redesign Studio (`brand-identity/inspiration/redesign-studio/`, open
-`index.html` and press `6`). The studio is the visual source of truth: where
-this file and the studio disagree, the studio wins and this file gets fixed.
-`SCOPE-redesign.md` says how and in what order the app is brought to match it.
+The single reference for how the product looks, sounds and moves.
+
+## 0. The October 2026 redesign (current)
+
+The look since 2026-10-12 is the redesign the owner's mum settled with the
+designer in October 2026: `SCOPE-redesign-2.md` is its source of truth, and the
+mockups in `brand-identity/redesign-2026-10/mockups/` are the visual reference
+(design-tool files; serve the folder and open them in a browser). Where §1–§13
+below describe the earlier Almanac 2 / Frost Glass system and disagree with it,
+the redesign wins. In short:
+
+- **Tokens** (`src/app/globals.css`). Dark is the design as drawn: a deep wine
+  page `#120a0c` with one wine glow off the left edge, text `#F4EEEE` with
+  muted steps at 66 / 56 / 40 %, flat cards `rgba(255,255,255,0.05)` with a
+  hairline rim `rgba(255,255,255,0.14)` and 28 px corners (no blur on cards),
+  44 px icon tiles with 14 px corners, a light primary fill
+  `rgba(244,238,238,0.92)` with `#1a0d10` text. Light is the same scheme turned
+  over (page `#f8f3f3`, ink `#1a0d10`). **Colour means status only**: green
+  `#86D9A6` is paid, complete or on; amber `#F0BE62` is due or expected; red is
+  overdue; everything else is neutral. Bricolage Grotesque 400 / 500 / 600 for
+  everything; numbers tabular.
+- **Shared pieces** (`src/components/ui/list-row.tsx`, `switch.tsx`,
+  `more-menu.tsx`; `src/styles/redesign.css`): the page header (56 px title, one
+  muted line, actions right), the list row (icon tile, name and muted line,
+  status, amount, chevron; `quiet` and `paid` variants), the status pill (a word
+  beside its icon), the segmented control (pressed = light fill), the month
+  section (month column left, card of rows right), the 88 × 44 switch that says
+  On or Off in words, the three-dots menu, and the bar chart whose bars are
+  buttons.
+- **The bar** (`src/styles/shell.css`): a 60 px pill bar, 32 px corners, tint
+  `rgba(14,7,9,0.6)`; Home · Services · Bills · Budget · Members · Inbox (Money
+  after Budget where bills are split); search, Add bill and you on the right.
+  The account area's bar has Households · Notifications · Account.
+- **Pages**: Home is four cards (the month hero with its bills and six-month
+  bars, Next due, This week, Coming up); Services is one summary card and
+  grouped cards of rows (Essentials and Other services, or the household's own
+  groups); Bills groups each month by To pay, Expected, Paid; Members is one
+  card of people; Inbox leads with the forwarding address; **Budget** is new
+  (the year's projection, a yearly budget, set-aside, month by month, big bills
+  ahead, where it goes); the account area is Households, Notifications (a grid
+  of switches that save as you go) and Account.
+- The wall (`/wall`) keeps the widget grid of the earlier design.
+
+The sections below are kept for the material they still describe (the mark,
+the ramps, the icons, the instruments on the service and bill pages, the wall).
+
+The design before it was **Almanac 2** with the **Frost Glass** material, chosen
+by the owner in the Redesign Studio (`brand-identity/inspiration/redesign-studio/`,
+open `index.html` and press `6`). `SCOPE-redesign.md` says how and in what order
+the app was brought to match it.
 
 Code reads these values from `src/app/globals.css` (every token),
 `src/components/ui` (primitives), `src/components/charts` (instruments) and

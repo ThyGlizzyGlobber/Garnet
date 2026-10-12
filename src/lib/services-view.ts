@@ -60,7 +60,7 @@ type LensFacts =
     }
   | { lens: 'fy'; aMonthMinor: number; expectedMinor: number; lastYearMinor: number };
 
-export interface LensFigure {
+interface LensFigure {
   lens: Lens;
   period: string;
   /** The financial year's label ("2026–27"); the year's and month's are theirs to word. */
@@ -113,6 +113,8 @@ export interface ServiceTile {
   key: string;
   mine: boolean;
   kind: 'service' | 'group';
+  /** One of the everyday bills, or the Home & Property main service: the Essentials card (SCOPE-redesign-2.md §4). */
+  essential: boolean;
   href: string;
   name: string;
   /** Under the name, only where it differs from the name (null otherwise). */
@@ -140,7 +142,7 @@ export interface ServiceTile {
   quiet: boolean;
 }
 
-export interface TileSection {
+interface TileSection {
   group: NavGroup | null;
   totalMinor: number;
   tiles: ServiceTile[];
@@ -367,6 +369,7 @@ export function servicesPage(
       key: navKey({ category: null, typeSlug: null, services: [svc] }, mine),
       mine,
       kind: 'service' as const,
+      essential: isEssential(svc.type),
       href: `/services/${svc.id}`,
       name: svc.name,
       provider: svc.provider && svc.provider !== svc.name ? svc.provider : null,
@@ -575,6 +578,7 @@ export function servicesPage(
       key: navKey(g, mine),
       mine,
       kind: 'group',
+      essential: g.category === 'home',
       href: g.category ? `/services/category/${g.category}` : `/services/group/${g.typeSlug}`,
       name: g.label,
       provider: null,
@@ -627,8 +631,7 @@ export function servicesPage(
     services.filter((s) => s.ownerMemberId === me.id && (s.isActive || monthItems.has(s.id))),
     true,
   );
-  const essential = (t: ServiceTile) =>
-    t.kind === 'service' && isEssential(services.find((s) => t.key.endsWith(`s:${s.id}`))!.type);
+  const essential = (t: ServiceTile) => t.essential;
   const toSection = (sec: { group: NavGroup | null; entries: ServiceTile[] }): TileSection => ({
     group: sec.group,
     totalMinor: sec.entries.reduce((s, t) => s + (t.figureMinor ?? 0), 0),

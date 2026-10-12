@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Bricolage_Grotesque, Figtree, JetBrains_Mono } from 'next/font/google';
+import { Bricolage_Grotesque, JetBrains_Mono } from 'next/font/google';
 import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getMessages, getTranslations } from 'next-intl/server';
 import { RegisterServiceWorker } from '@/components/app/pwa';
@@ -10,14 +10,14 @@ import { SCHEME, themeColor } from '@/lib/appearance';
 import { getAppearance } from '@/lib/auth/appearance';
 import './globals.css';
 
-// Display: Bricolage Grotesque with its optical-size axis (tighter at big sizes). Body: Figtree.
+// One face for everything (SCOPE-redesign-2.md §2): Bricolage Grotesque with
+// its optical-size axis (tighter at big sizes), in 400, 500 and 600.
 const display = Bricolage_Grotesque({
   subsets: ['latin'],
   variable: '--font-bricolage',
   display: 'swap',
   axes: ['opsz'],
 });
-const body = Figtree({ subsets: ['latin'], variable: '--font-figtree', display: 'swap' });
 const mono = JetBrains_Mono({
   subsets: ['latin'],
   variable: '--font-jetbrains',
@@ -63,7 +63,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html
       lang={locale}
-      className={`${display.variable} ${body.variable} ${mono.variable}`}
+      className={`${display.variable} ${mono.variable}`}
       data-palette={SCHEME}
       data-theme={theme === 'auto' ? undefined : theme}
     >

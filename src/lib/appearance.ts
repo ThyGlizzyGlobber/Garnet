@@ -8,9 +8,10 @@ import { THEMES } from '@/db/schema';
  * glass is always glass: there is no setting for it, and the device's Reduce
  * transparency setting is not followed (owner, 2026-10-03).
  *
- * There is one colour scheme, Garnet (BRAND.md §2; owner, 2026-10-02): neutral
- * grey, Graphite buttons, Pyrope red for the brand and warnings. Its tokens
- * live in globals.css keyed on data-palette.
+ * There is one colour scheme, Garnet (BRAND.md §2; SCOPE-redesign-2.md §2): a
+ * deep wine page with warm off-white text in dark, turned over in light; green
+ * is paid, amber due, red overdue. Its tokens live in globals.css keyed on
+ * data-palette.
  */
 export const SCHEME = 'garnet';
 export type Theme = (typeof THEMES)[number];
@@ -27,7 +28,7 @@ export const isTheme = (v: unknown): v is Theme => (THEMES as readonly unknown[]
  * The scheme's page colour (its --p-bg in globals.css), for the browser's
  * theme-color. tests/appearance.test.ts keeps it in step with the CSS.
  */
-export const SCHEME_BG = { light: '#f5f5f5', dark: '#1c1c1c' };
+export const SCHEME_BG = { light: '#f8f3f3', dark: '#120a0c' };
 
 /**
  * The cookie's form, e.g. "dark". Older cookies read "dark.clear" or

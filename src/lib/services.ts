@@ -180,6 +180,9 @@ export interface ServiceInput {
   /** Set up from a bill this member brought in; they're asked whether it's theirs (src/lib/ownership.ts). */
   setUpByMemberId?: string | null;
   ownerAskedAt?: string | null;
+  /** Added by hand on Budget before any bill: its usual amount and roughly when it falls (src/lib/expected.ts). */
+  expectedAmountMinor?: number | null;
+  expectedOn?: string | null;
 }
 
 /** A payer from another household would leak data across households; refuse it. */
@@ -231,6 +234,8 @@ export function createService(
       notes: rest.notes ?? null,
       trustedSenders: rest.trustedSenders ?? [],
       autoPay: rest.autoPay ?? false,
+      expectedAmountMinor: rest.expectedAmountMinor ?? null,
+      expectedOn: rest.expectedOn ?? null,
       notSplitWith:
         rest.notSplitWith ??
         listMembers(householdId, db)

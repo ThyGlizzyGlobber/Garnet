@@ -1,50 +1,69 @@
 import Link from 'next/link';
+import type { ReactNode } from 'react';
 import { getTranslations } from 'next-intl/server';
 import { Icon } from '@/components/app/icons';
 import { PopoverClose } from '@/components/app/popover-close';
-import { billRowFor, rowCtx, upcomingRowFor } from '@/components/app/bill-rows';
-import { Highlight } from '@/components/app/highlight';
-import { Button, Card, Field, LinkButton, Select } from '@/components/ui';
+import { rowCtx } from '@/components/app/bill-rows';
+import { Button, Field, LinkButton, Select } from '@/components/ui';
 import { EmptyCard, PageTitle } from '@/components/ui/blocks';
-import { Segmented, SearchField } from '@/components/ui/controls';
-import { BillRow, Rows, type BillRowModel } from '@/components/ui/rows';
-import { billsAddress } from '@/lib/bills-address';
-import { listBills } from '@/lib/bills';
-import { pageContext } from '@/lib/context';
-import { canExportHousehold } from '@/lib/export';
-import { groupServices, listServices } from '@/lib/services';
-import { groupByMonth } from '@/lib/bill-month';
-import { billEntry, filterBills } from '@/lib/bill-search';
-import { listDocuments, searchDocuments } from '@/lib/review';
 import { CopyButton } from '@/components/ui/copy';
+import { Segmented, SearchField } from '@/components/ui/controls';
+import {
+  GroupLabel,
+  ListRow,
+  MonthSection,
+  MoreRows,
+  PaidText,
+  StatusPill,
+} from '@/components/ui/list-row';
 import { Pager } from '@/components/ui/pager';
+import { billsAddress } from '@/lib/bills-address';
+import { listBills, type BillListItem } from '@/lib/bills';
+import { billDue } from '@/lib/bill-status';
+import { groupByMonth } from '@/lib/bill-month';
+import { billEntry, filterBills, type BillEntry } from '@/lib/bill-search';
+import { pageContext } from '@/lib/context';
+import { expectedBills } from '@/lib/expected';
+import { canExportHousehold } from '@/lib/export';
+import { formatMoneyParts, formatPeriod } from '@/lib/format';
 import { pageParam, paginateGroups } from '@/lib/paging';
-import { upcomingCharge } from '@/lib/recurring';
-import { matchesAll } from '@/lib/search';
+import { addMonths } from '@/lib/periods';
+import { perDayFallback } from '@/lib/projections';
+import { isRecurring } from '@/lib/recurring';
+import { listDocuments, searchDocuments } from '@/lib/review';
+import { groupServices, listServices, type ServiceWithType } from '@/lib/services';
 
 type Filter = 'all' | 'unpaid' | 'paid' | 'unusual' | 'overdue';
 /** Household bills, my personal bills, or both. */
 type Whose = 'all' | 'household' | 'mine';
-/** One row in the list: a bill, or a recurring service's upcoming charge. */
-interface ListItem {
-  key: string;
-  /** The day it's filed under. */
-  date: string;
-  amountMinor: number;
-  /** Someone's own: left out of the month's household total. */
-  personal: boolean;
-  row: BillRowModel;
-}
 /** Up to this month (the default), the months after it, or every month. */
 type When = 'now' | 'upcoming' | 'all';
 const FILTERS: Filter[] = ['all', 'unpaid', 'paid', 'unusual'];
 /** About this many bills a page; a month is never split across pages. */
 const BILLS_PER_PAGE = 30;
+/** Older months show this many rows, then "Show all N bills". */
+const SHOWN = 4;
+
+/** One row in a month: a bill in, or a bill a service is expected to send. */
+type Item =
+  | { kind: 'bill'; key: string; date: string; e: BillEntry; personal: boolean }
+  | {
+      kind: 'expected';
+      key: string;
+      date: string;
+      svc: ServiceWithType;
+      amountMinor: number;
+      periodStart: string;
+      periodEnd: string;
+      personal: boolean;
+    };
 
 /**
- * Bills, filed by the month each belongs to (billDate), one row per bill (a
- * bill paid by instalments carries its next instalment). The numbers come
- * from filterBills; the rows from billRowFor.
+ * Bills (SCOPE-redesign-2.md §4), filed by the month each belongs to. Within
+ * a month the rows are grouped by what to do: To pay first, then Expected
+ * (the bills each service is due to send, by date), then Paid, dimmed. The
+ * month column carries the month's total and its paid / still-to-come split,
+ * or one All paid pill. Older months show four rows and "Show all N bills".
  */
 export default async function BillsPage({
   searchParams,
@@ -57,6 +76,8 @@ export default async function BillsPage({
     o?: string;
     /** Which months: up to this one (default), upcoming, or all. */
     w?: string;
+    /** One month only (Home's bar chart): YYYY-MM. */
+    m?: string;
     /** A main service's sub-services together (Subscriptions), by type. */
     t?: string;
     /** The Filters panel's service: s:<id> or t:<main service>. */
@@ -84,92 +105,87 @@ export default async function BillsPage({
   const ctx = await pageContext();
   const { hh, me, money, month } = ctx;
   const t = await getTranslations('bills');
+  const tr = await getTranslations('bills.rd');
   const tu = await getTranslations('ui');
   const tp = await getTranslations('ui.pager');
   const ta = await getTranslations('main');
   const rc = rowCtx(ctx, tu);
+  const thisMonth = ctx.today.slice(0, 7);
+  const onlyMonth = /^\d{4}-\d{2}$/.test(params.m ?? '') ? params.m! : null;
   // The household's bills and this member's own (nobody else's personal bills).
   const everything = listBills(hh.id, { viewer: me.id });
   const hasPersonal = everything.some((b) => b.ownerMemberId);
   const whose: Whose =
     hasPersonal && (params.o === 'mine' || params.o === 'household') ? params.o : 'all';
-  const all = everything.filter((b) =>
-    whose === 'mine' ? b.ownerMemberId : whose === 'household' ? !b.ownerMemberId : true,
-  );
+  const inWhose = (ownerMemberId: string | null) =>
+    whose === 'mine' ? !!ownerMemberId : whose === 'household' ? !ownerMemberId : true;
+  const all = everything.filter((b) => inWhose(b.ownerMemberId));
   const services = listServices(hh.id, { includeInactive: true, viewer: me.id }).filter((svc) =>
     all.some((b) => b.serviceId === svc.id),
   );
   const serviceId = services.some((svc) => svc.id === params.s) ? params.s! : null;
-  // A main service's sub-services are one chip (Subscriptions); picking it
-  // shows a chip for each of them.
-  // Vehicles and Health are one chip each too (t=vehicle), their services under it.
+  // A main service's sub-services are one choice (Subscriptions); Vehicles and Health too (t=vehicle).
   const serviceGroups = groupServices(services);
   const groupKey = (g: (typeof serviceGroups)[number]) => g.typeSlug ?? g.category;
   const picked = serviceGroups.find((g) => groupKey(g) && groupKey(g) === params.t);
   const typeSlug = picked ? params.t! : null;
   const category = picked?.category ?? null;
-  const when: When = params.w === 'upcoming' || params.w === 'all' ? params.w : 'now';
+  // One month (from Home's chart) shows that month whatever it is; otherwise up to this month.
+  const when: When = onlyMonth
+    ? 'all'
+    : params.w === 'upcoming' || params.w === 'all'
+      ? params.w
+      : 'now';
   const years = [...new Set(all.map(billEntry).map((e) => e.date.slice(0, 4)))].sort().reverse();
   const year = years.includes(params.y ?? '') ? params.y! : null;
   const hasServices = listServices(hh.id, { viewer: me.id }).length > 0;
   const address = billsAddress(hh);
-  const {
-    entries,
-    tokens,
-    later: laterBills,
-  } = filterBills(
+  const { entries } = filterBills(
     all,
     { q, status: filter, serviceId, year, when, typeSlug: category ? null : typeSlug, category },
     { locale: hh.locale, today: ctx.today },
   );
-  // Recurring services' next charges (not bills yet), filed like bills and
-  // passing the same filters: shown as "Upcoming" at the latest price.
-  const thisMonth = ctx.today.slice(0, 7);
-  const upcoming = listServices(hh.id, { viewer: me.id })
-    .filter((svc) =>
-      whose === 'mine' ? svc.ownerMemberId : whose === 'household' ? !svc.ownerMemberId : true,
-    )
-    .filter(
-      (svc) =>
-        (!serviceId || svc.id === serviceId) &&
-        (!typeSlug || (category ? svc.type.category === category : svc.typeSlug === typeSlug)),
-    )
-    .flatMap((svc) => {
-      const charge = upcomingCharge(
-        svc,
-        everything.filter((b) => b.serviceId === svc.id),
-      );
-      if (!charge || filter === 'paid' || filter === 'unusual' || filter === 'overdue') return [];
-      if (year && charge.periodStart.slice(0, 4) !== year) return [];
-      const hay = `${svc.name} ${svc.provider} ${svc.type.label} upcoming recurring`.toLowerCase();
-      if (tokens.length && !matchesAll(hay, tokens)) return [];
-      return [{ svc, charge, date: charge.periodStart }];
-    });
-  const upcomingLater = upcoming.filter((u) => u.date.slice(0, 7) > thisMonth);
-  const shownUpcoming = upcoming.filter((u) =>
-    when === 'all'
-      ? true
-      : when === 'upcoming'
-        ? u.date.slice(0, 7) > thisMonth
-        : u.date.slice(0, 7) <= thisMonth,
-  );
-  const later = laterBills + upcomingLater.length;
-  // Bills and upcoming charges as one list of rows.
-  const items: ListItem[] = [
-    ...entries.map((e) => ({
-      key: e.bill.id,
-      date: e.date,
-      amountMinor: e.amountMinor,
-      personal: !!e.bill.ownerMemberId,
-      row: billRowFor(e.bill, rc, { share: hh.splitMode === 'shared' }),
-    })),
-    ...shownUpcoming.map((u) => ({
-      key: `up-${u.svc.id}`,
-      date: u.date,
-      amountMinor: u.charge.amountMinor,
-      personal: !!u.svc.ownerMemberId,
-      row: upcomingRowFor(u.charge, u.svc, rc, { personal: !!u.svc.ownerMemberId }),
-    })),
+
+  // The bills each service is expected to send (SCOPE-redesign-2.md §4 Bills 1):
+  // this month's (late ones included) and, when looking ahead, the next twelve months'.
+  const expectedItems: Item[] = [];
+  if (filter === 'all' && !q) {
+    const until = when === 'now' ? thisMonth : addMonths(thisMonth, 12);
+    for (const svc of listServices(hh.id, { viewer: me.id })) {
+      if (!inWhose(svc.ownerMemberId)) continue;
+      if (serviceId && svc.id !== serviceId) continue;
+      if (typeSlug && (category ? svc.type.category !== category : svc.typeSlug !== typeSlug))
+        continue;
+      const own = everything.filter((b) => b.serviceId === svc.id);
+      for (const e of expectedBills(svc, own, until, perDayFallback(hh.id, svc, ctx.today))) {
+        const m = e.dueDate.slice(0, 7);
+        if (when === 'now' ? m > thisMonth : when === 'upcoming' ? m <= thisMonth : false) continue;
+        if (year && e.dueDate.slice(0, 4) !== year) continue;
+        if (onlyMonth && m !== onlyMonth) continue;
+        expectedItems.push({
+          kind: 'expected',
+          key: `x-${svc.id}-${e.dueDate}`,
+          date: e.dueDate,
+          svc,
+          amountMinor: e.amountMinor,
+          periodStart: e.periodStart,
+          periodEnd: e.periodEnd,
+          personal: !!svc.ownerMemberId,
+        });
+      }
+    }
+  }
+  const items: Item[] = [
+    ...entries
+      .filter((e) => !onlyMonth || e.date.slice(0, 7) === onlyMonth)
+      .map((e): Item => ({
+        kind: 'bill',
+        key: e.bill.id,
+        date: e.date,
+        e,
+        personal: !!e.bill.ownerMemberId,
+      })),
+    ...expectedItems,
   ];
   const groups = groupByMonth(items, (e) => e.date);
   // Coming up reads soonest first; everything else latest first.
@@ -189,13 +205,25 @@ export default async function BillsPage({
     o?: Whose;
     w?: When;
     t?: string | null;
+    m?: string | null;
     /** Any other change starts again at the first page. */
     p?: number;
   }) => {
-    const next = { f: filter, s: serviceId, y: year, q, o: whose, w: when, t: typeSlug, ...change };
+    const next = {
+      f: filter,
+      s: serviceId,
+      y: year,
+      q,
+      o: whose,
+      w: when,
+      t: typeSlug,
+      m: onlyMonth,
+      ...change,
+    };
     const u = new URLSearchParams();
     if (next.o !== 'all') u.set('o', next.o);
-    if (next.w !== 'now') u.set('w', next.w);
+    if (next.m) u.set('m', next.m);
+    else if (next.w !== 'now') u.set('w', next.w);
     if (next.t) u.set('t', next.t);
     if (next.f && next.f !== 'all') u.set('f', next.f);
     if (next.s) u.set('s', next.s);
@@ -206,24 +234,125 @@ export default async function BillsPage({
     return qs ? `/bills?${qs}` : '/bills';
   };
   const filtered =
-    filter !== 'all' || !!serviceId || !!typeSlug || !!year || !!q || whose !== 'all';
-  // The Filters panel: what it has set, as pills that each take one away.
+    filter !== 'all' ||
+    !!serviceId ||
+    !!typeSlug ||
+    !!year ||
+    !!q ||
+    whose !== 'all' ||
+    !!onlyMonth;
+  // What the Filters panel has set, as pills that each take one away.
   const pickedService = services.find((svc) => svc.id === serviceId);
   const groupName = (g: (typeof serviceGroups)[number]) =>
     g.category ? ta(`main.${g.category}`) : g.label;
   const pills = [
+    onlyMonth ? { key: 'm', label: month(onlyMonth, 'long-year'), href: href({ m: null }) } : null,
     typeSlug && picked ? { key: 't', label: groupName(picked), href: href({ t: null }) } : null,
     pickedService ? { key: 's', label: pickedService.name, href: href({ s: null }) } : null,
     year ? { key: 'y', label: year, href: href({ y: null }) } : null,
     whose !== 'all'
       ? { key: 'o', label: t(`whoseFilter.${whose}`), href: href({ o: 'all' }) }
       : null,
-    when !== 'now' ? { key: 'w', label: t(`when.${when}`), href: href({ w: 'now' }) } : null,
+    when !== 'now' && !onlyMonth
+      ? { key: 'w', label: t(`when.${when}`), href: href({ w: 'now' }) }
+      : null,
   ].filter((x): x is { key: string; label: string; href: string } => !!x);
   const inboxMatches = q
     ? searchDocuments(listDocuments(hh.id, { viewer: me.id }), q, hh.locale).docs.length
     : 0;
   const canExport = canExportHousehold(me, hh) ? everything.length > 0 : hasPersonal;
+  const clearHref = href({ s: null, t: null, y: null, o: 'all', w: 'now', m: null });
+
+  /** "Alinta Energy · covers 7 Sept – 6 Oct": the provider where it differs, then the period. */
+  const subFor = (name: string, provider: string, start: string, end: string, extra: string[]) =>
+    [
+      provider && provider !== name ? provider : null,
+      ...extra,
+      tr('covers', { range: formatPeriod(start, end, hh.locale) }),
+    ]
+      .filter(Boolean)
+      .join(' · ');
+  const repeatMark = (
+    svc: Pick<ServiceWithType, 'recurringSince' | 'isActive' | 'cancelledAt' | 'cadence' | 'id'>,
+  ) =>
+    isRecurring(svc) ? (
+      <Icon
+        name="repeat"
+        width={16}
+        height={16}
+        className="rep"
+        aria-label={tr('recurring')}
+        role="img"
+      />
+    ) : undefined;
+
+  const billRow = (it: Extract<Item, { kind: 'bill' }>) => {
+    const b: BillListItem = it.e.bill;
+    const due = billDue(b, ctx.today);
+    const paid = !!it.e.paidAt;
+    const extra: string[] = [];
+    if (b.asset) extra.push(b.asset.name);
+    if (due.instalment)
+      extra.push(tr('instalment', { n: due.instalment.n, of: due.instalment.of }));
+    const sub =
+      subFor(b.service.name, b.service.provider, b.periodStart, b.periodEnd, extra) +
+      (b.assumed && paid ? ` · ${tr('assumedPaid')}` : '');
+    return (
+      <ListRow
+        key={it.key}
+        href={`/bills/${b.id}`}
+        icon={b.service.type.icon}
+        name={b.service.name}
+        mark={
+          <>
+            {!paid && repeatMark(b.service)}
+            {b.isAnomaly && (
+              <StatusPill tone="soon" icon={null}>
+                {tr('unusual')}
+              </StatusPill>
+            )}
+          </>
+        }
+        sub={sub}
+        status={
+          paid ? (
+            <PaidText>{tr('paid')}</PaidText>
+          ) : due.status.key === 'overdue' ? (
+            <StatusPill tone="bad">
+              {tu('status.overdue', {
+                n: Math.abs(due.status.days),
+                date: rc.dateYear(due.status.dueDate),
+              })}
+            </StatusPill>
+          ) : (
+            <StatusPill tone="soon">
+              {tu('status.due', { date: rc.dateYear(due.status.dueDate) })}
+            </StatusPill>
+          )
+        }
+        amount={money(it.e.amountMinor, b.currency)}
+        variant={paid ? 'paid' : undefined}
+        ariaLabel={tr('openBill', { name: b.service.name })}
+      />
+    );
+  };
+  const expectedRow = (it: Extract<Item, { kind: 'expected' }>) => (
+    <ListRow
+      key={it.key}
+      href={`/services/${it.svc.id}`}
+      icon={it.svc.type.icon}
+      name={it.svc.name}
+      mark={repeatMark(it.svc)}
+      sub={subFor(it.svc.name, it.svc.provider, it.periodStart, it.periodEnd, [])}
+      status={
+        <StatusPill tone="soon" icon={null}>
+          {tr('expectedOn', { date: rc.dateYear(it.date) })}
+        </StatusPill>
+      }
+      amount={money(it.amountMinor)}
+      ariaLabel={tr('openService', { name: it.svc.name })}
+    />
+  );
 
   if (all.length === 0)
     return (
@@ -252,7 +381,7 @@ export default async function BillsPage({
     );
 
   return (
-    <div className="scr d3-billsl">
+    <div className="scr">
       <PageTitle
         title={t('title')}
         lede={t('lede')}
@@ -261,14 +390,12 @@ export default async function BillsPage({
             <a
               href="/api/export?kind=zip"
               download
-              className="btn btn-glass btn-sm"
+              className="btn btn-glass"
               title={t(canExportHousehold(me, hh) ? 'downloadHint' : 'downloadMineHint')}
               aria-label={t(canExportHousehold(me, hh) ? 'download' : 'downloadMine')}
             >
-              <Icon name="download" width={15} height={15} />
-              <span className="hidden sm:inline">
-                {t(canExportHousehold(me, hh) ? 'download' : 'downloadMine')}
-              </span>
+              <Icon name="download" width={18} height={18} />
+              <span>{t(canExportHousehold(me, hh) ? 'download' : 'downloadMine')}</span>
             </a>
           )
         }
@@ -278,12 +405,12 @@ export default async function BillsPage({
         <form action="/bills" method="get" className="bf-search">
           {whose !== 'all' && <input type="hidden" name="o" value={whose} />}
           {filter !== 'all' && <input type="hidden" name="f" value={filter} />}
-          {when !== 'now' && <input type="hidden" name="w" value={when} />}
+          {when !== 'now' && !onlyMonth && <input type="hidden" name="w" value={when} />}
+          {onlyMonth && <input type="hidden" name="m" value={onlyMonth} />}
           {typeSlug && <input type="hidden" name="t" value={typeSlug} />}
           {serviceId && <input type="hidden" name="s" value={serviceId} />}
           {year && <input type="hidden" name="y" value={year} />}
           <SearchField
-            small
             autoFocus={!!raw.find}
             placeholder={t('search.placeholder')}
             label={t('search.label')}
@@ -292,7 +419,6 @@ export default async function BillsPage({
           />
         </form>
         <Segmented
-          small
           label={t('filters.label')}
           value={filter}
           className="bf-status"
@@ -304,8 +430,8 @@ export default async function BillsPage({
         />
         <details className="bf-more" data-popover>
           <PopoverClose />
-          <summary className={`btn btn-glass btn-sm${pills.length ? ' is-on' : ''}`}>
-            <Icon name="sliders" width={15} height={15} />
+          <summary className={`btn btn-glass${pills.length ? ' is-on' : ''}`}>
+            <Icon name="sliders" width={18} height={18} />
             {t('filters.more')}
             {pills.length > 0 && <span className="bf-count">{pills.length}</span>}
           </summary>
@@ -367,7 +493,7 @@ export default async function BillsPage({
               </Field>
             )}
             <Field label={t('filters.when')}>
-              <Select name="w" defaultValue={when}>
+              <Select name="w" defaultValue={onlyMonth ? 'now' : when}>
                 {(['now', 'upcoming', 'all'] as const).map((w) => (
                   <option key={w} value={w}>
                     {t(`when.${w}`)}
@@ -379,17 +505,14 @@ export default async function BillsPage({
               <Button type="submit" size="sm">
                 {t('filters.apply')}
               </Button>
-              <Link
-                href={href({ s: null, t: null, y: null, o: 'all', w: 'now' })}
-                className="btn btn-plain btn-sm"
-              >
+              <Link href={clearHref} className="btn btn-plain btn-sm">
                 {t('filters.reset')}
               </Link>
             </div>
           </form>
         </details>
       </div>
-      {(pills.length > 0 || (when === 'now' && later > 0)) && (
+      {pills.length > 0 && (
         <div className="bf-pills">
           {pills.map((p) => (
             <Link
@@ -403,34 +526,22 @@ export default async function BillsPage({
             </Link>
           ))}
           {pills.length > 1 && (
-            <Link
-              href={href({ s: null, t: null, y: null, o: 'all', w: 'now' })}
-              className="bf-clear"
-            >
+            <Link href={clearHref} className="bf-clear">
               {t('filters.clearAll')}
-            </Link>
-          )}
-          {when === 'now' && later > 0 && (
-            <Link href={href({ w: 'upcoming' })} className="bf-clear bf-later">
-              <Icon name="calendar" width={13} height={13} />
-              {t('upcoming', { count: later })}
             </Link>
           )}
         </div>
       )}
       {filtered && (
-        <p className="muted small -mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+        <p className="rd-note">
           {q
             ? t('searchResults', { count: items.length, q })
             : t('filterResults', { count: items.length })}
-          <Link href="/bills" className="font-semibold text-accent">
+          <Link href="/bills" className="tlink">
             {t('clearSearch')}
           </Link>
           {inboxMatches > 0 && (
-            <Link
-              href={`/inbox?f=all&q=${encodeURIComponent(q)}`}
-              className="font-semibold text-accent"
-            >
+            <Link href={`/inbox?f=all&q=${encodeURIComponent(q)}`} className="tlink">
               {t('search.inInbox', { count: inboxMatches })}
             </Link>
           )}
@@ -441,19 +552,8 @@ export default async function BillsPage({
         <EmptyCard
           icon="search"
           title={t('empty.noMatch')}
-          body={
-            when === 'now' && later > 0
-              ? t('upcomingOnly', { count: later })
-              : q
-                ? t('searchResults', { count: 0, q })
-                : t('filterResults', { count: 0 })
-          }
+          body={q ? t('searchResults', { count: 0, q }) : t('filterResults', { count: 0 })}
         >
-          {when === 'now' && later > 0 && (
-            <LinkButton href={href({ w: 'upcoming' })} variant="primary" icon="calendar">
-              {t('upcoming', { count: later })}
-            </LinkButton>
-          )}
           {filtered && (
             <LinkButton href="/bills" variant="secondary">
               {t('clearSearch')}
@@ -461,30 +561,108 @@ export default async function BillsPage({
           )}
         </EmptyCard>
       ) : (
-        paged.items.map(([m, items]) => (
-          <section key={m} className="d3-month">
-            <div className="d3-month-h">
-              <h2>
-                <Highlight text={month(m, 'long')} tokens={tokens} />
-              </h2>
-              <span className="muted">
-                {m.slice(0, 4)} · {t('summary.count', { count: items.length })} ·{' '}
-                {money(
-                  items.reduce((sum, e) => sum + (e.personal ? 0 : e.amountMinor), 0),
-                  hh.currency,
-                  { whole: true },
-                )}
-              </span>
-            </div>
-            <Card className="p-2">
-              <Rows>
-                {items.map((e) => (
-                  <BillRow key={e.key} bill={e.row} />
-                ))}
-              </Rows>
-            </Card>
-          </section>
-        ))
+        paged.items.map(([m, monthItems]) => {
+          const bills = monthItems.filter(
+            (x): x is Extract<Item, { kind: 'bill' }> => x.kind === 'bill',
+          );
+          const expected = monthItems.filter(
+            (x): x is Extract<Item, { kind: 'expected' }> => x.kind === 'expected',
+          );
+          const toPay = bills
+            .filter((x) => !x.e.paidAt)
+            .sort((a, b) => a.e.dueDate.localeCompare(b.e.dueDate));
+          const paid = bills
+            .filter((x) => !!x.e.paidAt)
+            .sort((a, b) => b.e.dueDate.localeCompare(a.e.dueDate));
+          expected.sort((a, b) => a.date.localeCompare(b.date));
+          // The month's figures count everything listed: the household's bills and the viewer's own.
+          const sum = (xs: Item[]) =>
+            xs.reduce((s, x) => s + (x.kind === 'bill' ? x.e.amountMinor : x.amountMinor), 0);
+          const total = sum(monthItems);
+          const paidMinor = sum(paid);
+          const allPaid = toPay.length === 0 && expected.length === 0 && paid.length > 0;
+          const fig = formatMoneyParts(total, hh.currency, hh.locale);
+          // The rows in action order, with a label over each run.
+          const rows: ReactNode[] = [];
+          if (toPay.length) {
+            rows.push(
+              <GroupLabel
+                key="l-pay"
+                tone={
+                  toPay.some((x) => billDue(x.e.bill, ctx.today).status.key === 'overdue')
+                    ? 'bad'
+                    : 'soon'
+                }
+                count={toPay.length}
+              >
+                {tr('toPay')}
+              </GroupLabel>,
+            );
+            rows.push(...toPay.map(billRow));
+          }
+          if (expected.length) {
+            rows.push(
+              <GroupLabel key="l-exp" count={expected.length}>
+                {tr('expected')}
+              </GroupLabel>,
+            );
+            rows.push(...expected.map(expectedRow));
+          }
+          if (paid.length) {
+            // A fully paid month says Paid once, in the column: no label needed on the rows.
+            if (toPay.length || expected.length)
+              rows.push(
+                <GroupLabel key="l-paid" tone="ok" count={paid.length}>
+                  {tr('paid')}
+                </GroupLabel>,
+              );
+            rows.push(...paid.map(billRow));
+          }
+          const current = m === thisMonth || !!onlyMonth;
+          const rowItems = rows.filter(
+            (r) => !(typeof r === 'object' && r && 'key' in r && String(r.key).startsWith('l-')),
+          );
+          return (
+            <MonthSection
+              key={m}
+              id={`bills-${m}`}
+              month={month(m, 'long')}
+              sub={`${m.slice(0, 4)} · ${t('summary.count', { count: monthItems.length })}`}
+              figure={fig}
+              below={
+                allPaid ? (
+                  <div className="msec-pill">
+                    <StatusPill tone="ok">{tr('allPaid')}</StatusPill>
+                  </div>
+                ) : (
+                  <div className="msec-split">
+                    <div>
+                      <span>{tr('paid')}</span>
+                      <span>{money(paidMinor)}</span>
+                    </div>
+                    <div>
+                      <span>{tr('stillToCome')}</span>
+                      <span>{money(total - paidMinor)}</span>
+                    </div>
+                  </div>
+                )
+              }
+            >
+              {current || rowItems.length <= SHOWN ? (
+                <>
+                  {rows}
+                  <div className="msec-end" />
+                </>
+              ) : (
+                <MoreRows
+                  shown={rows.slice(0, cutAt(rows, SHOWN))}
+                  rest={rows.slice(cutAt(rows, SHOWN))}
+                  label={tr('showAll', { count: monthItems.length })}
+                />
+              )}
+            </MonthSection>
+          );
+        })
       )}
       <Pager
         page={paged.page}
@@ -499,4 +677,16 @@ export default async function BillsPage({
       />
     </div>
   );
+}
+
+/** The index in `rows` after the first `n` rows that aren't group labels. */
+function cutAt(rows: ReactNode[], n: number): number {
+  let seen = 0;
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
+    const label = typeof r === 'object' && r && 'key' in r && String(r.key).startsWith('l-');
+    if (!label) seen++;
+    if (seen === n) return i + 1;
+  }
+  return rows.length;
 }

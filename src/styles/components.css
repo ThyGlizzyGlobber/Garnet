@@ -1,10 +1,12 @@
 /*
-  Components, carried over from the Redesign Studio's app.css with the Frost
-  and Frost Glass pack finishes folded in (BRAND.md §7). Imported into the
-  components layer by globals.css, so a utility on the same element wins.
-  Every light/dark difference is a token in globals.css; nothing here branches
-  on the theme. Two studio names differ here so they never meet a Tailwind
-  utility: the ring is .gauge and the inset well is .well.
+  Components (BRAND.md §7), restyled for the October 2026 redesign
+  (SCOPE-redesign-2.md §2–§3): pill buttons at least 44 px tall, status pills
+  that are a word beside an icon in green, amber or red, a light-filled
+  segmented control, and the 88 × 44 switch that says On or Off in words.
+  Imported into the components layer by globals.css, so a utility on the same
+  element wins. Every light/dark difference is a token in globals.css; nothing
+  here branches on the theme. Two studio names differ here so they never meet
+  a Tailwind utility: the ring is .gauge and the inset well is .well.
 */
 
 /* ---------- type helpers ---------- */
@@ -61,15 +63,16 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 7px;
-  height: var(--btn-h);
-  padding: 0 16px;
+  gap: 8px;
+  min-height: var(--btn-h);
+  padding: 0 20px;
   border: 0;
   border-radius: var(--r-ctl);
-  font-weight: 650;
-  font-size: 14px;
+  font-weight: 500;
+  font-size: 15px;
   white-space: nowrap;
   cursor: pointer;
+  text-decoration: none;
   transition:
     transform 0.15s,
     filter 0.15s,
@@ -83,20 +86,18 @@
   cursor: default;
 }
 .btn-sm {
-  height: var(--btn-h-sm);
-  padding: 0 12px;
-  font-size: 13px;
-  gap: 6px;
+  min-height: var(--btn-h-sm);
+  padding: 0 16px;
+  font-size: 14px;
+  gap: 7px;
 }
 .btn-primary {
   background: var(--p-accent);
   color: var(--p-on-accent);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.35),
-    0 10px 22px -12px var(--p-accent);
+  font-weight: 600;
 }
 .btn-primary:hover {
-  filter: brightness(1.08);
+  filter: brightness(1.06);
 }
 .btn-glass,
 .ibtn,
@@ -118,17 +119,17 @@
 }
 .btn-plain {
   background: transparent;
-  color: var(--p-fg);
+  color: var(--p-fg2);
   padding-inline: 8px;
-  text-decoration: underline;
-  text-underline-offset: 3px;
 }
 .btn-plain:hover {
+  color: var(--p-fg);
   background: var(--inset);
 }
 .btn-danger {
-  background: color-mix(in srgb, var(--bad) 13%, transparent);
+  background: var(--bad-bg);
   color: var(--bad);
+  box-shadow: inset 0 0 0 1px var(--bad-rim);
 }
 .btn-danger:hover {
   background: color-mix(in srgb, var(--bad) 20%, transparent);
@@ -137,8 +138,8 @@
   position: relative;
   display: grid;
   place-items: center;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border-radius: var(--r-ctl);
   border: 0;
   cursor: pointer;
@@ -164,14 +165,14 @@
   position: absolute;
   top: -3px;
   right: -3px;
-  min-width: 17px;
-  height: 17px;
-  padding: 0 4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
   border-radius: 9px;
-  background: var(--bad);
-  color: #fff;
-  font-size: 10.5px;
-  font-weight: 800;
+  background: var(--warn);
+  color: #1a0d10;
+  font-size: 11px;
+  font-weight: 600;
   font-style: normal;
   display: grid;
   place-items: center;
@@ -179,8 +180,9 @@
 }
 .seg {
   display: inline-flex;
-  gap: 2px;
-  padding: 3px;
+  align-items: center;
+  gap: 0;
+  padding: 4px;
   border-radius: var(--r-ctl);
   max-width: 100%;
   overflow-x: auto;
@@ -189,31 +191,32 @@
 .seg-b {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  height: 32px;
-  padding: 0 13px;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 18px;
   border: 0;
-  border-radius: calc(var(--r-ctl) - 3px);
+  border-radius: var(--r-ctl);
   background: transparent;
   color: var(--p-fg2);
-  font-weight: 650;
-  font-size: 13px;
+  font-weight: 500;
+  font-size: 15px;
   white-space: nowrap;
   cursor: pointer;
   text-decoration: none;
 }
+.seg-b:hover {
+  color: var(--p-fg);
+}
 .seg-b[aria-pressed='true'],
 .seg-b[aria-current] {
   background: var(--seg-on);
-  color: var(--p-fg);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.9),
-    0 3px 10px -4px rgba(0, 0, 0, 0.2);
+  color: var(--seg-on-fg);
+  font-weight: 600;
 }
 .seg-sm .seg-b {
-  height: 28px;
-  padding: 0 11px;
-  font-size: 12.5px;
+  min-height: 36px;
+  padding: 0 14px;
+  font-size: 14px;
 }
 .chip-btn {
   display: inline-flex;
@@ -236,17 +239,36 @@
   color: var(--p-on-accent);
   box-shadow: none;
 }
-.toggle {
+/*
+  The switch (SCOPE-redesign-2.md §4 Notifications): 88 × 44, the word On or
+  Off written in the track, a knob with a tick when on. Green means on, the
+  same meaning as paid; the words and the tick carry it for anyone who can't
+  tell the colours apart. .toggle wraps a checkbox so it works in a plain
+  form; .sw2 is the same look on a button that saves at once.
+*/
+.toggle,
+.sw2 {
   position: relative;
-  display: inline-block;
-  width: 46px;
-  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  width: 88px;
+  height: 44px;
+  padding: 0 14px;
+  box-sizing: border-box;
   border-radius: 999px;
-  border: 0;
-  background: var(--track);
+  border: 1.5px solid var(--rim-38);
+  background: var(--inset-2);
+  color: var(--p-fg);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
   cursor: pointer;
   flex: none;
-  transition: background 0.2s;
+  justify-content: flex-end;
+  transition:
+    background 0.2s,
+    border-color 0.2s;
 }
 .toggle input {
   position: absolute;
@@ -255,40 +277,90 @@
   margin: 0;
   cursor: pointer;
 }
-.toggle i {
+.toggle i,
+.sw2 .k {
   position: absolute;
   top: 3px;
   left: 3px;
-  width: 22px;
-  height: 22px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
-  transition: transform 0.2s;
+  background: var(--p-fg);
+  opacity: 0.55;
+  display: grid;
+  place-items: center;
+  color: #0e2a1b;
+  transition:
+    transform 0.2s,
+    opacity 0.2s;
   pointer-events: none;
 }
-/* On is iOS green in every theme (owner, 2026-10-02); off keeps the pale track. */
+.toggle i::after,
+.sw2 .k::after {
+  content: '';
+  width: 14px;
+  height: 8px;
+  border: 2.25px solid currentColor;
+  border-top: 0;
+  border-right: 0;
+  transform: translateY(-2px) rotate(-45deg);
+  opacity: 0;
+}
+.toggle .sw-on,
+.toggle .sw-off,
+.sw2 .sw-on,
+.sw2 .sw-off {
+  pointer-events: none;
+}
+.toggle .sw-on,
+.sw2 .sw-on {
+  display: none;
+}
 .toggle[aria-checked='true'],
-.toggle:has(input:checked) {
+.toggle:has(input:checked),
+.sw2[aria-checked='true'] {
+  justify-content: flex-start;
   background: var(--toggle-on);
+  border-color: var(--toggle-on);
+  color: #0e2a1b;
 }
-.toggle[aria-checked='true'] i,
-.toggle:has(input:checked) i {
-  transform: translateX(18px);
+.toggle:has(input:checked) .sw-on,
+.sw2[aria-checked='true'] .sw-on {
+  display: inline;
 }
-.toggle:has(input:focus-visible) {
-  outline: 2px solid var(--p-accent);
-  outline-offset: 2px;
+.toggle:has(input:checked) .sw-off,
+.sw2[aria-checked='true'] .sw-off {
+  display: none;
+}
+.toggle:has(input:checked) i,
+.sw2[aria-checked='true'] .k {
+  transform: translateX(44px);
+  opacity: 1;
+  background: #f4eeee;
+}
+.toggle:has(input:checked) i::after,
+.sw2[aria-checked='true'] .k::after {
+  opacity: 1;
+}
+.toggle:has(input:focus-visible),
+.sw2:focus-visible {
+  outline: 2px solid var(--p-fg);
+  outline-offset: 3px;
+}
+.sw2:disabled {
+  opacity: 0.6;
+  cursor: wait;
 }
 .search {
   display: flex;
   align-items: center;
-  gap: 8px;
-  height: 40px;
-  padding: 0 14px;
+  gap: 12px;
+  min-height: 52px;
+  padding: 0 20px;
   border-radius: var(--r-ctl);
-  color: var(--p-fg2);
+  color: var(--p-fg3);
   min-width: 0;
+  box-sizing: border-box;
 }
 .search input {
   flex: 1;
@@ -299,12 +371,15 @@
   font: inherit;
   outline: none;
 }
+.search input {
+  font-size: 16px;
+}
 .search input::placeholder {
-  color: var(--p-fg2);
+  color: var(--p-fg3);
 }
 .search-sm {
-  height: 32px;
-  width: 200px;
+  min-height: 44px;
+  width: 260px;
 }
 .field {
   display: grid;
@@ -337,107 +412,133 @@
   outline-offset: 1px;
 }
 
-/* ---------- chips: a word with a coloured dot ---------- */
-.chip {
+/* ---------- chips: a status pill, a word beside its icon ---------- */
+/*
+  Green is paid (or on), amber is due or expected, red is overdue; everything
+  else is a quiet outlined pill (SCOPE-redesign-2.md §1 rule 5). Never colour
+  alone: every tone has its icon.
+*/
+.chip,
+.spill {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 22px;
-  padding: 0 2px 0 0;
+  padding: 5px 12px;
   border-radius: var(--r-chip);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: var(--chip-weight);
   white-space: nowrap;
+  line-height: 1.2;
   --t: var(--p-fg2);
-  color: var(--p-fg2);
+  --t-bg: transparent;
+  --t-rim: var(--line-2);
+  color: var(--t);
+  background: var(--t-bg);
+  box-shadow: inset 0 0 0 1px var(--t-rim);
   flex: none;
-}
-.chip::before {
-  content: '';
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--t);
-  flex: none;
-}
-.chip.t-analysed::before {
-  border-radius: 2px;
-  transform: rotate(45deg);
-  width: 7px;
-  height: 7px;
 }
 .chip .ic {
-  display: none;
+  stroke-width: 2.25;
 }
-.t-ok {
+.t-ok,
+.spill.ok {
   --t: var(--ok);
+  --t-bg: var(--ok-bg);
+  --t-rim: var(--ok-rim);
 }
-.t-warn {
+.t-warn,
+.spill.soon {
   --t: var(--warn);
+  --t-bg: var(--warn-bg);
+  --t-rim: var(--warn-rim);
 }
-.t-bad {
+.t-bad,
+.spill.bad {
   --t: var(--bad);
+  --t-bg: var(--bad-bg);
+  --t-rim: var(--bad-rim);
 }
 .t-info,
 .t-analysed {
-  --t: var(--p-accent);
+  --t: var(--p-fg);
+  --t-bg: var(--inset-2);
+  --t-rim: var(--rim-28);
 }
-.t-neutral {
+.t-neutral,
+.spill.neutral {
   --t: var(--p-fg2);
+  --t-bg: transparent;
+  --t-rim: var(--line-2);
+}
+/* A plain tone word with its icon, no pill: "Paid" beside a dimmed row. */
+.pill-txt {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ok);
+  white-space: nowrap;
+}
+.pill-txt .ic {
+  stroke-width: 2.25;
 }
 
 /* ---------- identity ---------- */
+/*
+  A service's icon on a neutral tile (SCOPE-redesign-2.md §1 rule 5: colour
+  means status only, so the tile no longer takes the service's colour; charts
+  still do). 44 px, 14 px corners.
+*/
 .disc {
   display: grid;
   place-items: center;
-  width: 38px;
-  height: 38px;
-  border-radius: var(--r-disc);
+  width: 44px;
+  height: 44px;
+  border-radius: var(--r-tile);
   flex: none;
-  background: color-mix(in srgb, var(--svc) var(--disc-mix), var(--disc-base));
-  color: color-mix(in srgb, var(--svc) 85%, var(--p-fg));
-  box-shadow:
-    inset 0 0 0 1px color-mix(in srgb, var(--svc) var(--disc-rim), transparent),
-    inset 0 1px 0 var(--disc-hi);
+  background: var(--tile-bg);
+  color: var(--p-fg);
 }
 .disc .ic {
-  stroke-width: 2;
+  stroke-width: 1.75;
 }
 .disc-sm {
-  width: 30px;
-  height: 30px;
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
 }
 .disc-lg {
-  width: 54px;
-  height: 54px;
+  width: 60px;
+  height: 60px;
+  border-radius: 18px;
 }
 .av {
   display: grid;
   place-items: center;
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
-  color: #fff;
-  font-weight: 750;
-  font-size: 14px;
+  color: #1a0d10;
+  font-weight: 600;
+  font-size: 16px;
   flex: none;
-  background: linear-gradient(
-    140deg,
-    color-mix(in srgb, var(--m) 80%, #fff),
-    var(--m) 55%,
-    color-mix(in srgb, var(--m) 60%, var(--p-accent))
-  );
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  background: var(--m);
 }
 .av-sm {
-  width: 24px;
-  height: 24px;
-  font-size: 11px;
+  width: 32px;
+  height: 32px;
+  font-size: 14px;
 }
 .av-lg {
-  width: 46px;
-  height: 46px;
-  font-size: 19px;
+  width: 56px;
+  height: 56px;
+  font-size: 22px;
+}
+.av-xl {
+  width: 72px;
+  height: 72px;
+  font-size: 30px;
 }
 /* A profile photo in place of the initial. */
 .av-photo {
@@ -453,9 +554,12 @@
 .avs {
   display: inline-flex;
 }
+.avs .av {
+  box-sizing: border-box;
+  border: 2px solid var(--g-solid);
+}
 .avs .av + .av {
-  margin-left: -7px;
-  box-shadow: 0 0 0 2px var(--g-solid);
+  margin-left: -8px;
 }
 .me {
   border: 0;
@@ -607,34 +711,25 @@
 .inst-dots i.next {
   background: var(--warn);
 }
+/* The document's icon on a neutral tile: an envelope for email, a page for files (no type labels). */
 .doc-ic {
   position: relative;
   display: grid;
-  place-items: start center;
-  padding-top: 6px;
-  width: 34px;
-  height: 42px;
-  border-radius: 7px;
-  background: var(--inset-2);
-  color: var(--p-fg2);
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--r-tile);
+  background: var(--tile-bg);
+  color: var(--p-fg);
   flex: none;
-  box-shadow: inset 0 0 0 1px var(--line);
 }
 .doc-ic i {
-  position: absolute;
-  bottom: 4px;
-  left: 0;
-  right: 0;
-  text-align: center;
-  font-style: normal;
-  font-size: 8px;
-  font-weight: 800;
-  letter-spacing: 0.05em;
+  display: none;
 }
 .doc-ic.sm {
-  width: 28px;
-  height: 32px;
-  padding-top: 7px;
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
 }
 .doc-row.needs .doc-ic {
   color: var(--warn);
@@ -649,7 +744,7 @@
   display: grid;
   grid-template-columns: minmax(96px, 38%) 1fr;
   gap: 12px;
-  padding: 9px 0;
+  padding: 12px 0;
   border-top: 1px solid var(--line);
 }
 .kv-r:first-child {
@@ -658,10 +753,12 @@
 }
 .kv dt {
   color: var(--p-fg2);
+  font-size: 16px;
 }
 .kv dd {
   margin: 0;
-  font-weight: 600;
+  font-weight: 500;
+  font-size: 17px;
   min-width: 0;
 }
 .sec-head {
@@ -673,7 +770,7 @@
   flex-wrap: wrap;
 }
 .sec-head h3 {
-  font-size: var(--fs-h3);
+  font-size: var(--fs-h2);
 }
 .sec-right {
   display: flex;
@@ -1084,11 +1181,11 @@
 .address-ic {
   display: grid;
   place-items: center;
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--p-accent) 16%, transparent);
-  color: var(--p-accent);
+  width: 44px;
+  height: 44px;
+  border-radius: var(--r-tile);
+  background: var(--tile-bg);
+  color: var(--p-fg);
 }
 .address-t {
   display: grid;
@@ -1108,7 +1205,7 @@
   display: grid;
   place-items: center;
   padding: 24px;
-  background: rgba(10, 12, 20, 0.28);
+  background: rgba(10, 4, 6, 0.45);
   animation: fade 0.2s ease-out;
 }
 .sheet {
@@ -1168,6 +1265,9 @@
 }
 .toast .ic {
   color: var(--ok);
+}
+.toast.glass-strong {
+  background: var(--tip-bg);
 }
 .toast.out {
   opacity: 0;
