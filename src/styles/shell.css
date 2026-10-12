@@ -1,10 +1,9 @@
 /*
   The app's frame (BRAND.md §9, SCOPE-redesign-2.md §3 TopNav). Two layouts, by shape:
   - the bar: on a desktop, and any landscape screen 900 px wide or more (an
-    iPad on its side): one pill bar across the top (60 px, 32 px corners, a
-    translucent wine tint) holding the brand, the household, the links as
-    pills with the current one filled light, search, Add bill and you; the
-    page has the whole width under it, inside a site-wide cap;
+    iPad on its side): one glass bar across the top holding the brand, the
+    household, the links as pills, search, Add bill and you; the page has the
+    whole width under it, and the bar and the page share one cap and gutters;
     (min-width: 1200px), (min-width: 900px) and (orientation: landscape)
   - the phone's: everywhere else (a phone, an upright iPad, a narrow landscape
     window): the household card across the top, the links in a glass bar
@@ -158,7 +157,8 @@
   padding: 6px var(--gut) calc(var(--gut) + var(--in-b) + var(--safe-b));
   min-height: 100%;
   width: 100%;
-  max-width: var(--site-w);
+  /* The cap plus the gutters, so the page's content is exactly as wide as the bar. */
+  max-width: calc(var(--site-w) + 2 * var(--gut));
   margin-inline: auto;
   box-sizing: border-box;
 }
@@ -187,9 +187,9 @@
   border: 0;
   background: transparent;
   color: var(--p-fg2);
-  font-weight: 500;
+  font-weight: 600;
   font-size: 13.5px;
-  border-radius: 999px;
+  border-radius: calc(var(--r-nav) - 4px);
   cursor: pointer;
   white-space: nowrap;
   text-decoration: none;
@@ -203,7 +203,10 @@
 .nav-i[aria-current='page'] {
   background: var(--nav-on-bg);
   color: var(--nav-on-fg);
-  font-weight: 600;
+  box-shadow:
+    inset 0 0 0 1px var(--ctl-rim),
+    inset 0 1px 0 var(--g-hi),
+    0 6px 16px -8px rgba(0, 0, 0, 0.25);
 }
 .nav-i[aria-current='page'] .ic {
   color: var(--nav-on-ic);
@@ -1051,15 +1054,15 @@
 
 /* ---------- the bar (a desktop, or an iPad on its side) ---------- */
 /*
-  SCOPE-redesign-2.md §3 TopNav: one pill bar, 60 px tall, 32 px corners, a
-  translucent wine tint with a hairline rim. Left: the Garnet mark and name,
-  a hairline rule, the household as its type's icon on a small tile with its
-  name and the switcher's arrow. Middle: the links as pills, the current one
-  filled light. Right: a round search button, Add bill (primary), you. Its
-  dropdowns hang off the bar's bottom edge (§3b).
+  SCOPE-header.md §3a: one glass bar, 60 px tall, 16 px in from the edges.
+  Left: the Garnet mark and name, a hairline rule, the household as its type's
+  icon and name with the switcher's arrow. Middle: the links as pills, the
+  current one filled. Right: search, Add bill, you. Its dropdowns wear the
+  bar's own glass and hang off its bottom edge (§3b).
 */
 @media (min-width: 1200px), (min-width: 900px) and (orientation: landscape) {
   .app {
+    /* The bar and the page share the cap (--site-w) and these gutters, so their edges line up. */
     --gut: 40px;
     --bar-h: 60px;
     /* The frame's bottom margin, where Home's page dots sit (home.css). */
@@ -1068,19 +1071,19 @@
   .topbar {
     position: sticky;
     top: 0;
-    padding: calc(var(--safe-t) + 24px) var(--gut) 0;
+    padding: calc(var(--safe-t) + 16px) var(--gut) 0;
     /* Its own stacking context, so the dim behind an open dropdown (a layer
        under the bar) still sits over the page. */
     isolation: isolate;
   }
   .tb-in {
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    min-height: var(--bar-h);
-    height: auto;
-    padding: 8px 14px 8px 20px;
-    gap: 14px;
-    border-radius: var(--r-nav);
-    background: var(--nav-bg);
+    /* The sides never shrink below what they hold (the brand and household, the buttons); the pills sit between. */
+    grid-template-columns: minmax(max-content, 1fr) auto minmax(max-content, 1fr);
+    height: var(--bar-h);
+    padding: 0 12px 0 16px;
+    gap: 8px;
+    border-radius: 22px;
+    background: var(--g-bg-strong);
     box-shadow: inset 0 0 0 1px var(--card-rim);
     transition:
       background 0.25s,
@@ -1103,12 +1106,17 @@
     background: none;
     -webkit-mask: none;
     mask: none;
-    -webkit-backdrop-filter: blur(var(--g-blur)) saturate(var(--g-sat));
-    backdrop-filter: blur(var(--g-blur)) saturate(var(--g-sat));
+    -webkit-backdrop-filter: blur(var(--g-blur)) saturate(var(--g-sat)) brightness(var(--g-bright));
+    backdrop-filter: blur(var(--g-blur)) saturate(var(--g-sat)) brightness(var(--g-bright));
   }
-  /* Once the page has scrolled: a stronger tint, so rows passing behind the bar never fight its labels. */
+  /* Once the page has scrolled: a stronger tint and a hairline, so rows
+     passing behind the bar never fight its labels (§3e). */
   .topbar.scrolled .tb-in {
     background: var(--dd-bg);
+    box-shadow:
+      inset 0 0 0 1px var(--card-rim),
+      0 1px 0 var(--line),
+      0 10px 30px -14px rgba(0, 0, 0, 0.45);
   }
   .main-in {
     padding-top: 20px;
@@ -1116,52 +1124,46 @@
   .tb-start {
     grid-column: 1;
     height: 100%;
-    gap: 14px;
   }
   .tb-logo {
     display: flex;
     align-items: center;
     gap: 10px;
     flex: none;
-    padding: 0;
+    padding: 0 6px 0 0;
     color: var(--p-fg);
     text-decoration: none;
   }
   .tb-logo span {
     font-family: var(--f-display);
     font-weight: 600;
-    font-size: 22px;
-    letter-spacing: -0.01em;
+    font-size: 21px;
+    letter-spacing: -0.015em;
     line-height: 1;
   }
   .tb-logo .mark-gem {
     flex: none;
+    filter: drop-shadow(0 4px 10px rgba(168, 20, 31, 0.45));
   }
   /* The links as pills, centred in the bar. */
   .tb-nav {
     display: flex;
     grid-column: 2;
-    justify-self: start;
-    margin-left: 10px;
+    justify-self: center;
   }
   .tb-nav .nav-items {
     gap: 4px;
-    flex-wrap: wrap;
   }
   .tb-nav .nav-i {
-    min-height: 44px;
+    height: 38px;
     padding: 0 14px;
     gap: 8px;
     border-radius: 999px;
-    font-size: 15px;
-    font-weight: 500;
+    font-size: 13.5px;
   }
-  .tb-nav .nav-i[aria-current='page'],
-  .tb-nav .nav-pill.on {
-    padding: 0 18px;
+  .tb-nav .nav-i[aria-current='page'] {
     background: var(--p-accent);
     color: var(--p-on-accent);
-    font-weight: 600;
     box-shadow: none;
   }
   .tb-nav .nav-i[aria-current='page'] .ic {
@@ -1177,25 +1179,20 @@
     grid-column: 3;
     justify-self: end;
     height: 100%;
-    gap: 10px;
   }
   .tb-r .ibtn {
-    width: 44px;
-    height: 44px;
-    background: var(--ctl-bg);
-    box-shadow: inset 0 0 0 1px var(--ctl-rim);
+    background: var(--inset);
+    box-shadow: none;
   }
-  .tb-r .ibtn:hover {
-    background: var(--inset-2);
-  }
-  /* The household beside the brand, after a thin rule: its icon on a small tile, its name and the switcher's arrow. */
+  /* The household beside the brand, after a thin rule: its icon and name and
+     the arrow of its switcher. No glass, no figures. */
   .topbar .tb-hh {
     position: relative;
     display: flex;
     align-items: center;
     min-width: 0;
     height: 100%;
-    margin-left: 0;
+    margin-left: 2px;
     padding: 0 0 0 14px;
     border-radius: 0;
     background: none;
@@ -1210,8 +1207,8 @@
     left: 0;
     top: 50%;
     width: 1px;
-    height: 28px;
-    margin-top: -14px;
+    height: 24px;
+    margin-top: -12px;
     padding: 0;
     background: var(--line-2);
     -webkit-mask: none;
@@ -1225,8 +1222,8 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    min-height: 44px;
-    padding: 0 12px 0 6px;
+    height: 44px;
+    padding: 0 10px 0 6px;
     border-radius: 14px;
     cursor: pointer;
   }
@@ -1248,7 +1245,7 @@
   }
   .tb-hh .brand-t b {
     font-family: var(--f-body);
-    font-weight: 600;
+    font-weight: 650;
     font-size: 15px;
     letter-spacing: 0;
     max-width: 260px;
@@ -1256,13 +1253,18 @@
   .tb-hh .sw-btn > .sw-chev {
     flex: none;
     margin-left: auto;
-    color: var(--p-fg);
+    color: var(--p-fg2);
     transition: transform 0.18s ease;
   }
   .tb-hh .sw-btn[aria-expanded='true'] > .sw-chev {
     transform: rotate(180deg);
   }
-  /* The dropdowns are rounded cards in the bar's tint, 10 px under the bar's edge. */
+  /*
+    The dropdowns are rounded cards in the bar's glass (owner, 2026-10-07: a
+    little space between them and the bar, not sat against it): the same
+    glass with a stronger tint so their rows have a steady ground, 10 px
+    under the bar's edge. The open button sits in the bar's well.
+  */
   .tb-hh .brand[aria-expanded='true'],
   .tb-r .am-trigger[aria-expanded='true'] {
     background: var(--inset-2);
@@ -1281,6 +1283,7 @@
     --p-fg3: var(--dd-fg3);
   }
   .tb-hh .sw-menu {
+    /* The button's bottom is 8 px above the bar's edge; 10 px of air after that. */
     top: calc(100% + 18px);
     left: -8px;
     width: calc(100% + 16px);
@@ -1305,8 +1308,8 @@
     margin: 4px 10px;
   }
   .am-topbar .am-menu {
-    top: calc(100% + 18px);
-    right: -8px;
+    top: calc(100% + 24px);
+    right: -12px;
     width: 300px;
     padding: 6px 8px 6px;
   }
@@ -1319,7 +1322,7 @@
   }
   .am-topbar .am-tiles {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 6px;
     padding-bottom: 8px;
   }
@@ -1333,8 +1336,8 @@
     border-radius: 14px;
     background: var(--inset);
     color: var(--p-fg);
-    font-size: 12px;
-    font-weight: 600;
+    font-size: 11.5px;
+    font-weight: 700;
     text-decoration: none;
   }
   .am-tile .ic {
@@ -1360,11 +1363,7 @@
     pointer-events: none;
   }
 }
-/*
-  When the bar would wrap, the inactive pills show their icons alone
-  (SCOPE-redesign-2.md §9): under about 1380 px, and under 1500 px once a
-  seventh pill joins (Money, where bills are split).
-*/
+/* Under about 1380 px the inactive pills show their icons alone, so the bar never wraps (SCOPE-redesign-2.md §9). */
 @media (min-width: 900px) and (max-width: 1379px) and (orientation: landscape),
   (min-width: 1200px) and (max-width: 1379px) {
   .tb-nav .nav-i:not([aria-current='page']) > span,
@@ -1372,16 +1371,17 @@
     display: none;
   }
   .tb-nav .nav-i:not([aria-current='page']) {
-    padding: 0 12px;
+    padding: 0 11px;
   }
 }
+/* With a seventh pill (Money, where bills are split) the same under 1500 px. */
 @media (min-width: 1200px) and (max-width: 1499px) {
   .tb-nav .nav-items:has(> :nth-child(7)) .nav-i:not([aria-current='page']) > span,
   .tb-nav .nav-items:has(> :nth-child(7)) .nav-pill:not(.on) .nav-pill-link > span {
     display: none;
   }
   .tb-nav .nav-items:has(> :nth-child(7)) .nav-i:not([aria-current='page']) {
-    padding: 0 12px;
+    padding: 0 11px;
   }
 }
 /* ---------- the bar's Services panel (SCOPE-header.md §3c, §3d) ---------- */
