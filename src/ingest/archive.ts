@@ -195,13 +195,13 @@ function billUses(docId: string, db: Db): boolean {
     .get();
 }
 
-/** Remove a document for good, row and file, unless a bill still uses it. */
 /** Where a scan's file is kept exactly as it arrived, once it has been turned upright. */
 export function originalPath(doc: Pick<SourceDocument, 'id' | 'path'>): string {
   return path.join(dataPaths().root, 'originals', `${doc.id}${path.extname(doc.path)}`);
 }
 
-function deleteDocument(householdId: string, id: string, db: Db = getDb()): boolean {
+/** Remove a document for good, row and file, unless a bill still uses it. */
+export function deleteDocument(householdId: string, id: string, db: Db = getDb()): boolean {
   const doc = getDocument(householdId, id, db);
   if (!doc || billUses(doc.id, db)) return false;
   db.delete(sourceDocument)

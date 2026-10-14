@@ -529,6 +529,14 @@
       "instalment": "instalment {n} of {of}",
       "openBill": "Open {name}",
       "openService": "Open {name}"
+    },
+    "moveHousehold": {
+      "title": "Move to another household",
+      "body": "Came into the wrong household? Send it to another of yours. It’s analysed again there and taken out of this one.",
+      "label": "Household",
+      "button": "Move",
+      "confirm": "Move this to {household}? It will be taken out of this household and its shares here removed.",
+      "notice": "This is a receipt or payment notice for a bill here, so it stays with that bill."
     }
   },
   "services": {

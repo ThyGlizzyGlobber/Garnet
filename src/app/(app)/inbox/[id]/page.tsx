@@ -14,7 +14,9 @@ import { addressOf, trustTarget } from '@/lib/sender-auth';
 import { listServices } from '@/lib/services';
 import { listUnits } from '@/lib/units';
 import { matchService } from '@/ingest/pipeline';
-import { readAsBillAction, reprocessDocumentAction } from '../actions';
+import { moveToHouseholdAction, readAsBillAction, reprocessDocumentAction } from '../actions';
+import { MoveHousehold } from '@/components/app/move-household';
+import { moveTargets } from '@/ingest/move-household';
 import { ReviewForm } from './review-form';
 
 /**
@@ -22,8 +24,15 @@ import { ReviewForm } from './review-form';
  * the details that couldn't be read marked to check, then Create bill. A
  * receipt or notice says what it was instead, with "It's a bill" to insist.
  */
-export default async function ReviewItemPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ReviewItemPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ moved?: string }>;
+}) {
   const { id } = await params;
+  const { moved } = await searchParams;
   const ctx = await pageContext();
   const { hh, me, date } = ctx;
   const t = await getTranslations('review');
@@ -85,6 +94,19 @@ export default async function ReviewItemPage({ params }: { params: Promise<{ id:
           : t('confirm.ledeAll')
   }`;
 
+  const otherHouseholds = moveTargets(me).map((h) => ({ memberId: h.member.id, name: h.name }));
+  const moveCard =
+    otherHouseholds.length > 0 ? (
+      <Card>
+        <MoveHousehold
+          action={moveToHouseholdAction}
+          hidden={{ documentId: d.id }}
+          households={otherHouseholds}
+          error={moved === 'notice' ? tb('moveHousehold.notice') : null}
+        />
+      </Card>
+    ) : null;
+
   const form = (
     <ReviewForm
       documentId={d.id}
@@ -137,45 +159,48 @@ export default async function ReviewItemPage({ params }: { params: Promise<{ id:
         <div className="confirm-doc">
           <DocPaper doc={d} view={view} text={d.extraction?.textPreview ?? ''} />
         </div>
-        {isNotice ? (
-          <Card className="form-main">
-            <SectionHead
-              title={t('detail.noticeTitle')}
-              right={<DocChip state={d.status === 'ignored' ? 'analysed' : 'analysed'} />}
-            />
-            <p className="muted">
-              {d.status === 'ignored' ? t('detail.ignoredBody') : t('detail.noticeBody')}
-            </p>
-            <div className="form-acts">
-              <InlineAction
-                action={readAsBillAction}
-                hidden={{ documentId: d.id }}
-                label={t('detail.readAsBill')}
-                variant="primary"
+        <div className="form-main">
+          {isNotice ? (
+            <Card className="form-main">
+              <SectionHead
+                title={t('detail.noticeTitle')}
+                right={<DocChip state={d.status === 'ignored' ? 'analysed' : 'analysed'} />}
               />
-              <LinkButton
-                href={`/api/documents/${d.id}/file`}
-                target="_blank"
-                rel="noreferrer"
-                variant="ghost"
-                icon="eye"
-              >
-                {t('confirm.viewFile')}
-              </LinkButton>
-            </div>
-            <p className="muted small">{t('detail.readAsBillHint')}</p>
-            <details className="wiz-more">
-              <summary className="link small">{t('detail.addAnyway')}</summary>
-              {form}
-            </details>
-          </Card>
-        ) : waiting ? (
-          <Card>{form}</Card>
-        ) : (
-          <Card className="form-main">
-            <p className="muted">{t('detail.alreadyBill')}</p>
-          </Card>
-        )}
+              <p className="muted">
+                {d.status === 'ignored' ? t('detail.ignoredBody') : t('detail.noticeBody')}
+              </p>
+              <div className="form-acts">
+                <InlineAction
+                  action={readAsBillAction}
+                  hidden={{ documentId: d.id }}
+                  label={t('detail.readAsBill')}
+                  variant="primary"
+                />
+                <LinkButton
+                  href={`/api/documents/${d.id}/file`}
+                  target="_blank"
+                  rel="noreferrer"
+                  variant="ghost"
+                  icon="eye"
+                >
+                  {t('confirm.viewFile')}
+                </LinkButton>
+              </div>
+              <p className="muted small">{t('detail.readAsBillHint')}</p>
+              <details className="wiz-more">
+                <summary className="link small">{t('detail.addAnyway')}</summary>
+                {form}
+              </details>
+            </Card>
+          ) : waiting ? (
+            <Card>{form}</Card>
+          ) : (
+            <Card className="form-main">
+              <p className="muted">{t('detail.alreadyBill')}</p>
+            </Card>
+          )}
+          {moveCard}
+        </div>
       </div>
     </div>
   );

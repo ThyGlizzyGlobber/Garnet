@@ -37,6 +37,9 @@ import {
 import { BillFilesCard } from './bill-files';
 import { FiguresCard } from './figures-card';
 import { MoveBill, type MoveTarget } from './move-bill';
+import { MoveHousehold } from '@/components/app/move-household';
+import { moveTargets as householdTargets } from '@/ingest/move-household';
+import { moveToHouseholdAction } from '../../inbox/actions';
 import { Paper } from './paper';
 import { PaymentPlan } from './payment-plan';
 import { SharesCard } from './shares-card';
@@ -46,8 +49,15 @@ import { SharesCard } from './shares-card';
  * page and its files on the left; on the right its cost and status, the
  * details, how it's split, how it's paid, and every figure read off it.
  */
-export default async function BillPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function BillPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ moved?: string }>;
+}) {
   const { id } = await params;
+  const { moved } = await searchParams;
   const ctx = await pageContext();
   const { hh, me, money, date, today } = ctx;
   const t = await getTranslations('bills');
@@ -58,6 +68,10 @@ export default async function BillPage({ params }: { params: Promise<{ id: strin
   // Another member's personal bill doesn't exist, as far as anyone else can tell.
   if (!b || !visibleTo(b.ownerMemberId, me.id)) notFound();
   const personal = !!b.ownerMemberId;
+  const otherHouseholds = householdTargets(me).map((h) => ({
+    memberId: h.member.id,
+    name: h.name,
+  }));
   const split = hh.splitMode === 'shared' && !personal;
   const byInstalments = paysByInstalments(b);
   const due = billDue(b, today);
@@ -560,6 +574,17 @@ export default async function BillPage({ params }: { params: Promise<{ id: strin
                 currentAssetId={b.assetId}
                 targets={moveTargets}
                 assets={assets}
+              />
+            </Card>
+          )}
+
+          {b.sourceDocumentId && otherHouseholds.length > 0 && (
+            <Card id="move-household">
+              <MoveHousehold
+                action={moveToHouseholdAction}
+                hidden={{ billId: b.id }}
+                households={otherHouseholds}
+                error={moved === 'notice' ? t('moveHousehold.notice') : null}
               />
             </Card>
           )}

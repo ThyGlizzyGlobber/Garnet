@@ -6,9 +6,11 @@ import { z } from 'zod';
 import type { ActionState } from '@/components/ui/form';
 import { approveDocument } from '@/ingest/approve';
 import { archiveDocument, getDocument, setDocumentStatus } from '@/ingest/archive';
+import { moveDocumentToHousehold, moveTargets } from '@/ingest/move-household';
 import { processDocument } from '@/ingest/pipeline';
 import { errorText, fieldErrors, str, zodToState } from '@/lib/actions';
-import { requireMember } from '@/lib/auth/session';
+import { requireMember, setActiveMember, startDemoSession } from '@/lib/auth/session';
+import { getBill } from '@/lib/bills';
 import { isIsoDate } from '@/lib/dates';
 import { parseMoneyToMinor } from '@/lib/format';
 import { getHousehold } from '@/lib/households';
@@ -188,4 +190,39 @@ export async function uploadBillAction(_prev: ActionState, fd: FormData): Promis
   revalidatePath('/inbox');
   revalidatePath('/bills');
   redirect(files.length === 1 && last ? last : '/bills/upload');
+}
+
+/**
+ * Move a document (and the bill made from it) to another of the person's
+ * households, read it there, and open it there (owner: a bill that came into
+ * the wrong household). Takes a documentId, or a billId for the bill page.
+ */
+export async function moveToHouseholdAction(fd: FormData): Promise<void> {
+  const me = await requireMember();
+  const hh = getHousehold(me.householdId)!;
+  const billId = str(fd, 'billId');
+  const b = billId ? getBill(me.householdId, billId) : null;
+  const documentId = b ? b.sourceDocumentId : str(fd, 'documentId');
+  const back = b ? `/bills/${b.id}` : `/inbox/${documentId}`;
+  // Only what this member can see here, and only to a household of theirs.
+  if (b && !visibleTo(b.ownerMemberId, me.id)) redirect('/bills');
+  if (
+    !documentId ||
+    (!b && !getReviewItem(me.householdId, documentId, undefined, { viewer: me.id }))
+  )
+    redirect(back);
+  const to = moveTargets(me).find((t) => t.member.id === str(fd, 'memberId'))?.member;
+  if (!to) redirect(back);
+
+  const moved = moveDocumentToHousehold(me.householdId, documentId, to);
+  if (!moved.ok) redirect(`${back}?moved=${moved.reason}`);
+  const outcome = moved.duplicate ? null : await processDocument(to.householdId, moved.doc.id);
+  if (hh.isDemo) await startDemoSession(to.id);
+  else await setActiveMember(to.id);
+  revalidatePath('/', 'layout');
+  redirect(
+    outcome?.status === 'extracted' && outcome.billId
+      ? `/bills/${outcome.billId}`
+      : `/inbox/${moved.doc.id}`,
+  );
 }
