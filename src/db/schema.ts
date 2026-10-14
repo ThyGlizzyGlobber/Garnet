@@ -347,6 +347,14 @@ export const service = sqliteTable(
      */
     expectedAmountMinor: integer('expected_amount_minor'),
     expectedOn: text('expected_on'),
+    /**
+     * A recurring charge's new price, set by hand (owner, 2026-10-14: a
+     * provider changes the regular amount): charges due on or after
+     * `recurringPriceFrom` (YYYY-MM-DD) cost this until a bill on or after
+     * that day is in, whose own price then carries on. Null = none.
+     */
+    recurringPriceMinor: integer('recurring_price_minor'),
+    recurringPriceFrom: text('recurring_price_from'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },

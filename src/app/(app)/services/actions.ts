@@ -29,7 +29,8 @@ import {
 } from '@/lib/services';
 import { splitProblem } from '@/lib/splits';
 import { UNITS } from '@/lib/units';
-import { setRecurring } from '@/lib/recurring';
+import { setChargeAmount, setRecurring } from '@/lib/recurring';
+import { isIsoDate } from '@/lib/dates';
 import { isAdmin } from '@/lib/roles';
 
 const schema = z.object({
@@ -278,6 +279,35 @@ export async function resumeServiceAction(fd: FormData): Promise<void> {
 }
 
 /** Recurring on or off from the service's page (or a bill's): the next charge is expected at the latest price. */
+/**
+ * A recurring service's new regular amount (owner, 2026-10-14: providers
+ * change it): from a chosen charge on, or the first charge when no bill has
+ * come in yet.
+ */
+export async function setChargeAmountAction(
+  _prev: ActionState,
+  fd: FormData,
+): Promise<ActionState> {
+  const me = await requireMember();
+  const id = str(fd, 'id');
+  const svc = getService(me.householdId, id);
+  if (!svc || !visibleTo(svc.ownerMemberId, me.id)) return {};
+  const te = await errorText();
+  const minor = parseMoneyToMinor(str(fd, 'amount').trim(), getHousehold(me.householdId)!.currency);
+  const from = str(fd, 'from');
+  const errors: Record<string, string> = {};
+  if (minor === null || minor <= 0) errors.amount = te('enterAmount');
+  if (!isIsoDate(from)) errors.from = te('validDate');
+  if (Object.keys(errors).length) return { fieldErrors: errors };
+  setChargeAmount(me.householdId, id, minor!, from);
+  revalidatePath(`/services/${id}`);
+  revalidatePath('/services');
+  revalidatePath('/bills');
+  revalidatePath('/budget');
+  revalidatePath('/');
+  return { ok: true };
+}
+
 export async function setRecurringAction(fd: FormData): Promise<void> {
   const me = await requireMember();
   const id = str(fd, 'id');

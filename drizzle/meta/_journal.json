@@ -365,6 +365,13 @@
       "when": 1791802358888,
       "tag": "0051_budget",
       "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "6",
+      "when": 1791946474292,
+      "tag": "0052_recurring_price",
+      "breakpoints": true
     }
   ]
 }

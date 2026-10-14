@@ -851,7 +851,7 @@
     "recurring": {
       "chip": "Recurring",
       "upcomingHead": "Upcoming",
-      "upcomingNote": "Expected at the latest price",
+      "upcomingNote": "Expected at its regular price",
       "label": "Recurring",
       "nextCharge": "Yes, {cadence} · next {date} at {amount}",
       "onNoBill": "Yes, from its first bill",
@@ -860,7 +860,19 @@
       "start": "Make it recurring",
       "priceUp": "Price up from {from} to {to}",
       "priceDown": "Price down from {from} to {to}",
-      "priceBody": "The latest bill changed the price. Upcoming charges use the new one."
+      "priceBody": "The latest bill changed the price. Upcoming charges use the new one.",
+      "amount": {
+        "open": "Change amount",
+        "amount": "New amount ({currency})",
+        "from": "Starting from",
+        "fromHint": "Charges before this stay as they are.",
+        "firstOn": "First charge on",
+        "nextCharge": "The next charge · {date}",
+        "laterCharge": "The charge on {date}",
+        "save": "Save amount",
+        "newPrice": "New price",
+        "newPriceValue": "{amount} from {date}"
+      }
     },
     "month": {
       "thisMonth": "This month",

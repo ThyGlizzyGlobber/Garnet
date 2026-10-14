@@ -28,7 +28,14 @@ import { getMember } from '@/lib/members';
 import { chargedAfterCancel, getService, mainServiceOf } from '@/lib/services';
 import { listBills } from '@/lib/bills';
 import { InlineAction } from '@/components/ui/form';
-import { cancelServiceAction, resumeServiceAction, setRecurringAction } from '../actions';
+import {
+  cancelServiceAction,
+  resumeServiceAction,
+  setChargeAmountAction,
+  setRecurringAction,
+} from '../actions';
+import { ChargeAmount } from './charge-amount';
+import { formatMinorPlain } from '@/lib/format';
 import { unitLabel } from '@/lib/units';
 import { formatMonth } from '@/lib/format';
 import { partText } from '../split-text';
@@ -752,8 +759,41 @@ export default async function ServicePage({
                       ? ts('recurring.onNoBill')
                       : ts('recurring.off'),
                 ],
+                o.recurring.setPrice
+                  ? [
+                      ts('recurring.amount.newPrice'),
+                      ts('recurring.amount.newPriceValue', {
+                        amount: money(o.recurring.setPrice.amountMinor),
+                        date: rc.dateYear(o.recurring.setPrice.from),
+                      }),
+                    ]
+                  : null,
               ]}
             />
+            {o.recurring.on && (
+              <ChargeAmount
+                action={setChargeAmountAction}
+                serviceId={svc.id}
+                currency={hh.currency}
+                amount={(() => {
+                  const m =
+                    o.recurring.setPrice?.amountMinor ??
+                    o.recurring.upcoming?.amountMinor ??
+                    svc.expectedAmountMinor;
+                  return m ? formatMinorPlain(m, hh.currency) : '';
+                })()}
+                starts={o.recurring.chargeDates.map((d, i) => ({
+                  value: d,
+                  label: ts(
+                    i === 0 ? 'recurring.amount.nextCharge' : 'recurring.amount.laterCharge',
+                    {
+                      date: rc.dateYear(d),
+                    },
+                  ),
+                }))}
+                firstOn={svc.expectedOn ?? ''}
+              />
+            )}
             {svc.cadence !== 'irregular' && !svc.cancelledAt && (
               <div className="mt-3">
                 <InlineAction

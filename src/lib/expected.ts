@@ -2,7 +2,7 @@ import type { Bill, Cadence, Service } from '@/db/schema';
 import { costPerDay, mean } from '@/lib/averages';
 import { addDays, daysInclusive, overlapDays } from '@/lib/dates';
 import { fixedPrice } from '@/lib/cadence';
-import { billAfter, upcomingCharge } from '@/lib/recurring';
+import { billAfter, priceAfter, upcomingCharge } from '@/lib/recurring';
 
 /**
  * The one rule for the bills a service is expected to send next (owner,
@@ -50,7 +50,12 @@ type ServiceFields = Pick<
   Service,
   'id' | 'isActive' | 'cancelledAt' | 'cadence' | 'usageUnit' | 'seasonal' | 'recurringSince'
 > &
-  Partial<Pick<Service, 'expectedAmountMinor' | 'expectedOn'>>;
+  Partial<
+    Pick<
+      Service,
+      'expectedAmountMinor' | 'expectedOn' | 'recurringPriceMinor' | 'recurringPriceFrom'
+    >
+  >;
 type BillFields = Pick<Bill, 'amountMinor' | 'periodStart' | 'periodEnd' | 'dueDate'> & {
   paymentPlan?: Bill['paymentPlan'];
 };
@@ -164,14 +169,20 @@ export function expectedBills(
   };
 
   const out: ExpectedBill[] = [];
-  // A recurring charge is expected at its latest price, from its own date.
+  // A recurring charge is expected at its latest price (or one set by hand), from its own date.
   const charge = upcomingCharge(svc, sorted);
   let from: BillFields = latest;
   for (let i = 0; i < 120; i++) {
     const next = i === 0 && charge ? charge : billAfter(svc.cadence, from);
     if (!next || next.dueDate.slice(0, 7) > untilMonth) break;
     const amount = charge
-      ? { minor: charge.amountMinor, basis: 'recurring' as const }
+      ? {
+          minor:
+            i === 0
+              ? charge.amountMinor
+              : priceAfter(svc, from.dueDate, from.amountMinor, next.dueDate),
+          basis: 'recurring' as const,
+        }
       : amountFor(next.periodStart, next.periodEnd);
     out.push({
       serviceId: svc.id,

@@ -27,7 +27,13 @@ export interface ExpectedCharge {
 type RecurringFields = Pick<
   Service,
   'id' | 'recurringSince' | 'isActive' | 'cancelledAt' | 'cadence'
->;
+> &
+  Partial<
+    Pick<
+      Service,
+      'recurringPriceMinor' | 'recurringPriceFrom' | 'expectedAmountMinor' | 'expectedOn'
+    >
+  >;
 
 /** Recurring and still going: switched on, active, not cancelled, with a cadence to follow. */
 export function isRecurring(svc: RecurringFields): boolean {
@@ -38,10 +44,49 @@ type ChargeBill = Pick<Bill, 'amountMinor' | 'periodStart' | 'periodEnd' | 'dueD
 
 const STEP_DAYS: Partial<Record<Service['cadence'], number>> = { weekly: 7, fortnightly: 14 };
 
-/** The charge after this one, at its price (see billAfter). */
+/**
+ * The price of the charge due on `due`, after one due on `prevDue` at
+ * `prevMinor`: the price set by hand once its day is reached (the step over
+ * `recurringPriceFrom`), else the same as before. A bill on or after that day
+ * carries its own price on, so a real bill at another price still wins.
+ */
+export function priceAfter(
+  svc: RecurringFields,
+  prevDue: string,
+  prevMinor: number,
+  due: string,
+): number {
+  const set = svc.recurringPriceMinor;
+  const from = svc.recurringPriceFrom;
+  return set && from && prevDue < from && due >= from ? set : prevMinor;
+}
+
+/** The charge after this one, at its price (see billAfter, priceAfter). */
 function chargeAfter(svc: RecurringFields, b: ChargeBill): ExpectedCharge | null {
   const next = billAfter(svc.cadence, b);
-  return next && { serviceId: svc.id, ...next, amountMinor: b.amountMinor };
+  return (
+    next && {
+      serviceId: svc.id,
+      ...next,
+      amountMinor: priceAfter(svc, b.dueDate, b.amountMinor, next.dueDate),
+    }
+  );
+}
+
+/**
+ * The first charge of a service with no bill yet, when someone said what it
+ * costs and when it falls (on its page, or on Budget): a charge on that day.
+ */
+function firstCharge(svc: RecurringFields): ExpectedCharge | null {
+  const on = svc.expectedOn;
+  if (!svc.expectedAmountMinor || !on) return null;
+  return {
+    serviceId: svc.id,
+    periodStart: on,
+    periodEnd: on,
+    dueDate: on,
+    amountMinor: svc.expectedAmountMinor,
+  };
 }
 
 /**
@@ -88,11 +133,11 @@ export function upcomingCharge(
   if (!isRecurring(svc)) return null;
   const latest = latestOf(bills);
   // A bill paid by instalments isn't one repeating price.
-  if (!latest || latest.paymentPlan === 'instalments') return null;
+  if (latest?.paymentPlan === 'instalments') return null;
   // Charges due before it was made recurring are never assumed, so the next
   // one is the first on or after that day.
   const since = svc.recurringSince!.slice(0, 10);
-  let next = chargeAfter(svc, latest);
+  let next = latest ? chargeAfter(svc, latest) : firstCharge(svc);
   for (let i = 0; next && next.dueDate < since && i < 520; i++) next = chargeAfter(svc, next);
   return next;
 }
@@ -126,11 +171,11 @@ export function recordRecurringCharges(now = new Date(), db: Db = getDb()): numb
     for (const svc of listServices(hh.id, { everyone: true }, db).filter(isRecurring)) {
       const since = svc.recurringSince!.slice(0, 10);
       const bills = db.select().from(bill).where(eq(bill.serviceId, svc.id)).all();
-      let from = latestOf(bills);
-      if (!from || from.paymentPlan === 'instalments') continue;
+      const latest = latestOf(bills);
+      if (latest?.paymentPlan === 'instalments') continue;
+      let next = latest ? chargeAfter(svc, latest) : firstCharge(svc);
       // At most two years of charges at once (a long outage); usually one.
       for (let i = 0; i < 24; i++) {
-        const next = chargeAfter(svc, from);
         if (!next || next.dueDate > today) break;
         if (next.dueDate >= since) {
           createBill(
@@ -149,7 +194,7 @@ export function recordRecurringCharges(now = new Date(), db: Db = getDb()): numb
           );
           recorded++;
         }
-        from = { ...from, ...next };
+        next = chargeAfter(svc, next);
       }
     }
   }
@@ -172,6 +217,53 @@ export function priceChange(
   return { billId: latest.id, fromMinor: previous.amountMinor, toMinor: latest.amountMinor };
 }
 
+/**
+ * The due dates of a recurring service's next `n` charges, for choosing when
+ * a new price starts. Empty when nothing is expected.
+ */
+export function nextChargeDates(
+  svc: RecurringFields,
+  bills: (ChargeBill & { paymentPlan?: Bill['paymentPlan'] })[],
+  n = 6,
+): string[] {
+  const out: string[] = [];
+  let next = upcomingCharge(svc, bills);
+  while (next && out.length < n) {
+    out.push(next.dueDate);
+    next = chargeAfter(svc, next);
+  }
+  return out;
+}
+
+/**
+ * Change what a service's regular charge costs (owner, 2026-10-14). With
+ * bills in, charges due on or after `from` cost `amountMinor` (see
+ * priceAfter); with none yet, it's the first charge's amount and day
+ * (`expected_amount_minor`/`expected_on`, as a bill added on Budget).
+ */
+export function setChargeAmount(
+  householdId: string,
+  serviceId: string,
+  amountMinor: number,
+  from: string,
+  db: Db = getDb(),
+): void {
+  const hasBills = !!db
+    .select({ id: bill.id })
+    .from(bill)
+    .where(and(eq(bill.householdId, householdId), eq(bill.serviceId, serviceId)))
+    .get();
+  db.update(service)
+    .set({
+      ...(hasBills
+        ? { recurringPriceMinor: amountMinor, recurringPriceFrom: from }
+        : { expectedAmountMinor: amountMinor, expectedOn: from }),
+      updatedAt: new Date().toISOString(),
+    })
+    .where(and(eq(service.householdId, householdId), eq(service.id, serviceId)))
+    .run();
+}
+
 /** Everything a service's page needs about its recurring charge. */
 export function recurringView(
   svc: ServiceWithType,
@@ -181,5 +273,20 @@ export function recurringView(
     on: isRecurring(svc),
     upcoming: upcomingCharge(svc, bills),
     priceChange: priceChange(svc, bills),
+    chargeDates: nextChargeDates(svc, bills),
+    /** A new price set by hand that starts after the next charge ("$24.99 from 5 Dec"). */
+    setPrice: pendingPrice(svc, bills),
   };
+}
+
+/** A price set by hand that no bill has reached yet, when it isn't already the next charge's. */
+function pendingPrice(
+  svc: RecurringFields,
+  bills: ChargeBill[],
+): { amountMinor: number; from: string } | null {
+  const set = svc.recurringPriceMinor;
+  const from = svc.recurringPriceFrom;
+  if (!isRecurring(svc) || !set || !from) return null;
+  if (bills.some((b) => b.dueDate >= from)) return null;
+  return { amountMinor: set, from };
 }

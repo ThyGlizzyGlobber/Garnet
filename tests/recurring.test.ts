@@ -12,10 +12,13 @@ import { createMember } from '@/lib/members';
 import {
   isRecurring,
   priceChange,
+  nextChargeDates,
   recordRecurringCharges,
+  setChargeAmount,
   setRecurring,
   upcomingCharge,
 } from '@/lib/recurring';
+import { expectedBills } from '@/lib/expected';
 import { createService, getService, updateService } from '@/lib/services';
 
 let dir: string;
@@ -259,5 +262,84 @@ describe('recurring services', () => {
     expect(
       upcomingCharge(getService(hid, svc.id, db)!, listBills(hid, { serviceId: svc.id }, db)),
     ).toMatchObject({ periodStart: '2026-10-05', periodEnd: '2026-10-05', dueDate: '2026-10-05' });
+  });
+});
+
+describe('changing a recurring charge’s amount', () => {
+  it('prices charges from the chosen one on, and leaves earlier ones alone', () => {
+    const { svc } = subscription('Priced Later');
+    const bills = listBills(hid, { everyone: true }, db).filter((b) => b.serviceId === svc.id);
+    expect(nextChargeDates(svc, bills, 3)).toEqual(['2026-10-05', '2026-11-05', '2026-12-05']);
+    // The provider says the price goes up from the November charge.
+    setChargeAmount(hid, svc.id, 2499, '2026-11-05', db);
+    const priced = getService(hid, svc.id, db)!;
+    expect(upcomingCharge(priced, bills)!.amountMinor).toBe(2299);
+    expect(expectedBills(priced, bills, '2027-01').map((e) => [e.dueDate, e.amountMinor])).toEqual([
+      ['2026-10-05', 2299],
+      ['2026-11-05', 2499],
+      ['2026-12-05', 2499],
+      ['2027-01-05', 2499],
+    ]);
+    // The assumed charges are recorded at those prices as their days pass.
+    recordRecurringCharges(at('2026-11-06'), db);
+    const amounts = listBills(hid, { everyone: true }, db)
+      .filter((b) => b.serviceId === svc.id)
+      .sort((a, b) => a.dueDate.localeCompare(b.dueDate))
+      .map((b) => b.amountMinor);
+    expect(amounts).toEqual([2299, 2299, 2499]);
+  });
+
+  it('starts at once when chosen for the next charge', () => {
+    const { svc } = subscription('Priced Now');
+    setChargeAmount(hid, svc.id, 1999, '2026-10-05', db);
+    const bills = listBills(hid, { everyone: true }, db).filter((b) => b.serviceId === svc.id);
+    expect(upcomingCharge(getService(hid, svc.id, db)!, bills)!.amountMinor).toBe(1999);
+  });
+
+  it('lets a real bill at another price take over again', () => {
+    const { svc } = subscription('Real Wins');
+    setChargeAmount(hid, svc.id, 2499, '2026-10-05', db);
+    createBill(
+      hid,
+      {
+        serviceId: svc.id,
+        amountMinor: 2599,
+        periodStart: '2026-10-05',
+        periodEnd: '2026-11-04',
+        issueDate: '2026-10-05',
+        dueDate: '2026-10-05',
+        source: 'manual',
+      },
+      db,
+    );
+    const bills = listBills(hid, { everyone: true }, db).filter((b) => b.serviceId === svc.id);
+    expect(upcomingCharge(getService(hid, svc.id, db)!, bills)!.amountMinor).toBe(2599);
+  });
+
+  it('sets the first charge of a recurring service with no bill yet', () => {
+    const fresh = createService(
+      hid,
+      {
+        typeSlug: 'subscriptions',
+        name: 'No Bill Yet',
+        provider: 'No Bill Yet',
+        cadence: 'monthly',
+        payerMemberId: alex,
+      },
+      db,
+    );
+    db.update(service)
+      .set({ recurringSince: '2026-09-01T00:00:00.000Z' })
+      .where(eq(service.id, fresh.id))
+      .run();
+    expect(upcomingCharge(getService(hid, fresh.id, db)!, [])).toBeNull();
+    setChargeAmount(hid, fresh.id, 1500, '2026-10-20', db);
+    const svc = getService(hid, fresh.id, db)!;
+    expect(upcomingCharge(svc, [])).toMatchObject({ dueDate: '2026-10-20', amountMinor: 1500 });
+    recordRecurringCharges(at('2026-10-21'), db);
+    const made = listBills(hid, { everyone: true }, db).filter((b) => b.serviceId === fresh.id);
+    expect(made.map((b) => [b.dueDate, b.amountMinor, b.assumed])).toEqual([
+      ['2026-10-20', 1500, true],
+    ]);
   });
 });
